@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import './contacto.css'
 import GoogleInput from './GoogleInput'
+import ravekh from '../assets/ravekh.png';
 export const Contacto = () => {
     const [email, setEmail] = useState("");
     const handleEmailChange = (e) => {
@@ -39,7 +40,7 @@ export const Contacto = () => {
             </form>
             <img
             alt='foto'
-            src='src/assets/ravekh.png'
+            src={ravekh}
             className='md:w-1/4 object-contain md:h-72'/>
         </div>
     )

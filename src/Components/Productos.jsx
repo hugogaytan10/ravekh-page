@@ -1,16 +1,17 @@
 import React from 'react'
-
+import ecommer from '../assets/ecommer.png';
+import app from '../assets/PR1.png';
 export const Productos = () => {
     const productos = [
         {
             titulo: 'Tienda Online',
             descripcion: 'Vende y administra tu negocio de forma totalmente digital',
-            img: '../assets/ecommer.png'
+            img: ecommer
         },
         {
             titulo: 'Aplicaciones Moviles',
             descripcion: 'Aplicaciones a la medida de tus necesidades para android & IOS',
-            img: '../assets/PR1.png'
+            img: app
         }
     ]
     return (

@@ -1,5 +1,5 @@
 import React from 'react'
-
+import laptop from '../assets/latop.png';
 export const Caracteristicas = () => {
     const caracteristicas = [
         {
@@ -32,11 +32,11 @@ export const Caracteristicas = () => {
                     })
                 }
             </div>
-            <div className='h-80 overflow-hidden md:h-96'>
+            <div className='h-80 overflow-hidden md:h-96 md:w-2/4'>
                 <img
                     className='object-contain w-full h-full'
                     alt='desarrollo'
-                    src='../assets/latop.png' />
+                    src={laptop} />
             </div>
         </div>
     )
