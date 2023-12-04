@@ -13,7 +13,7 @@ export const BannerSecundario = () => {
             <div className='text-left mt-10 ml-10 w-1/4  md:w-1/12'>
                 <a className='text-xl rounded-md p-1 text-gray-50 underline font-bold flex justify-around items-start gap-2'>
                     Empezar
-                    <img src='src/assets/arrow-forward-white.svg' alt='flecha' />
+                    <img src='../assets/arrow-forward-white.svg' alt='flecha' />
                 </a>
             </div>
         </div>

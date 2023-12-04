@@ -5,12 +5,12 @@ export const Productos = () => {
         {
             titulo: 'Tienda Online',
             descripcion: 'Vende y administra tu negocio de forma totalmente digital',
-            img: 'src/assets/ecommer.png'
+            img: '../assets/ecommer.png'
         },
         {
             titulo: 'Aplicaciones Moviles',
             descripcion: 'Aplicaciones a la medida de tus necesidades para android & IOS',
-            img: 'src/assets/PR1.png'
+            img: '../assets/PR1.png'
         }
     ]
     return (

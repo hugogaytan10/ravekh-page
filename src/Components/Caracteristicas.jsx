@@ -36,7 +36,7 @@ export const Caracteristicas = () => {
                 <img
                     className='object-contain w-full h-full'
                     alt='desarrollo'
-                    src='src/assets/latop.png' />
+                    src='../assets/latop.png' />
             </div>
         </div>
     )
