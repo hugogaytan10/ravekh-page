@@ -1,0 +1,43 @@
+import React from 'react'
+
+export const Caracteristicas = () => {
+    const caracteristicas = [
+        {
+            titulo: 'Destaca entre los demás',
+            descripcion: 'Una pagina web es el primer paso para una nueva venta'
+        },
+        {
+            titulo: 'Un sitio a tu medida',
+            descripcion: 'Una solución adaptada y personalizada solo para ti'
+        },
+        {
+            titulo: 'Lleva tus redes al siguiente nivel',
+            descripcion: 'Incrementa tus ventas con campañas personalizadas para tu empresa'
+        }
+    ]
+    return (
+        <div className='mt-32 md:flex md:justify-between'>
+            <div>
+                {
+                    caracteristicas.map((item, idx) => {
+                        return (
+                            <div className='p-4' key={idx}>
+                                <h3 className='font-bold text-lg'>{item.titulo}</h3>
+                                <p className='text-base mt-2'>
+                                    {item.descripcion}
+                                </p>
+                                <span className='block h-0.5 w-100 bg-gray-800 mt-2'></span>
+                            </div>
+                        )
+                    })
+                }
+            </div>
+            <div className='h-80 overflow-hidden md:h-96'>
+                <img
+                    className='object-contain w-full h-full'
+                    alt='desarrollo'
+                    src='src/assets/latop.png' />
+            </div>
+        </div>
+    )
+}

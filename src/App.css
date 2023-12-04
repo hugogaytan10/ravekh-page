@@ -1,0 +1,26 @@
+.banner{
+    min-height: 400px;
+}
+.banner > h1 {
+    text-shadow: 2px 3px rgb(4, 73, 98);
+}
+.btn-empezar{
+    border: 1px solid #00B8F2;
+    box-shadow: 0px 0px 1px 0px#00B8F2;
+    transition: all 0.8s;
+}
+.btn-empezar:hover{
+    box-shadow: 0px 0px 16px 0px#00B8F2;
+    cursor: pointer;
+}
+
+.banner-secundario{
+    min-height: 397px;
+}
+@media (min-width: 570px) {
+    .banner{
+        background-image: url('src/assets/FotoBanner.png');
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+}

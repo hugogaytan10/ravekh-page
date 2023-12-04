@@ -1,0 +1,34 @@
+.google-input-container {
+    position: relative;
+    margin-bottom: 16px;
+}
+
+.google-input {
+    width: 90%;
+    padding: 8px;
+    margin: auto;
+    display: block;
+    font-size: 16px;
+    border: 1px solid #00B8F2;
+    color: #fff;
+    background-color: #162436;
+    border-radius: 5px;
+    outline: none;
+    transition: border-color 0.3s ease-in-out;
+}
+
+.google-input:focus,
+.google-input:not(:placeholder-shown) {
+    border-color: #4285f4;
+}
+
+.google-input-container.focused .google-input {
+    border-color: #4285f4;
+    
+}
+
+.google-input-container.focused .google-input::placeholder {
+    color: #ffffff;
+    transform: translateY(-50%);
+    transition: transform 0.3s ease-in-out, color 0.3s ease-in-out;
+}
