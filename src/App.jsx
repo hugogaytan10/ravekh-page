@@ -4,6 +4,7 @@ import { BannerSecundario } from './Components/BannerSecundario'
 import { Contacto } from './Components/Contacto'
 import { Productos } from './Components/Productos'
 import { Caracteristicas } from './Components/Caracteristicas'
+import { Footer } from './Components/Footer'
 
 function App() {
 
@@ -14,6 +15,7 @@ function App() {
       <Caracteristicas/>
       <Productos/>
       <Contacto/>
+      <Footer/>
     </>
   )
 }

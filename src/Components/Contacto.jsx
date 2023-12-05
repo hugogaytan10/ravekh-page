@@ -4,31 +4,45 @@ import GoogleInput from './GoogleInput'
 import ravekh from '../assets/ravekh.png';
 export const Contacto = () => {
     const [email, setEmail] = useState("");
+    const [nombre, setNombre] = useState("");
+    const [apellido, setApellido] = useState("");
+    const [mensaje, setMensaje] = useState("");
     const handleEmailChange = (e) => {
         setEmail(e.target.value);
     };
+    const handleNombreChange = (e) => {
+        setNombre(e.target.value);
+    };
+    const handleApellidoChange = (e) => {
+        setApellido(e.target.value);
+    };
+    const handleMensajeChange = (e) => {
+        setMensaje(e.target.value);
+    };
 
     return (
-        <div className='bg-bg-contacto mt-64 mb-20 md:flex md:justify-around md:flex-wrap'>
+        <div className='bg-bg-contacto mt-64  md:flex md:justify-around md:flex-wrap'>
             <h3 className='text-3xl text-white text-center block w-full'>Contáctanos</h3>
-            <form className='mt-10  h-96 md:w-2/4'>
+            <form 
+            action='mailto:ravekh.team@gmail.com'
+            className='mt-10  h-96 md:w-2/4'>
                 <GoogleInput
                     type="text"
                     placeholder="Nombre"
-                    value={email}
-                    onChange={handleEmailChange}
+                    value={nombre}
+                    onChange={handleNombreChange}
                 />
                 <GoogleInput
                     type="text"
                     placeholder="Apellido"
-                    value={email}
-                    onChange={handleEmailChange}
+                    value={apellido}
+                    onChange={handleApellidoChange}
                 />
                 <GoogleInput
                     type="textarea"
                     placeholder="Mensaje"
-                    value={email}
-                    onChange={handleEmailChange}
+                    value={mensaje}
+                    onChange={handleMensajeChange}
                 />
                 <GoogleInput
                     type="email"

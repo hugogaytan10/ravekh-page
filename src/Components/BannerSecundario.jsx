@@ -11,7 +11,9 @@ export const BannerSecundario = () => {
                 imaginabas, creando conexiones personalizadas con tus clientes
             </p>
             <div className='text-left mt-10 ml-10 w-1/4  md:w-1/12'>
-                <a className='text-xl rounded-md p-1 text-gray-50 underline font-bold flex justify-around items-start gap-2'>
+                <a
+                    href='https://api.whatsapp.com/send?phone=524451113370'
+                    className='text-xl rounded-md p-1 text-gray-50 underline font-bold flex justify-around items-start gap-2'>
                     Empezar
                     <img src={flecha} alt='flecha' />
                 </a>

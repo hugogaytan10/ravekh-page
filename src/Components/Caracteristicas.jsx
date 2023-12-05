@@ -16,7 +16,7 @@ export const Caracteristicas = () => {
         }
     ]
     return (
-        <div className='mt-32 md:flex md:justify-between'>
+        <div className='mt-4 md:flex md:justify-between'>
             <div>
                 {
                     caracteristicas.map((item, idx) => {
