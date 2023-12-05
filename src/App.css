@@ -41,6 +41,7 @@
     visibility: hidden;
     transform: translate(0, 10vh);
     transition: all 1s;
+   
 }
 
 .fadeRight {
