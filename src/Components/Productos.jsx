@@ -21,7 +21,7 @@ export const Productos = () => {
                 {
                     productos.map((item, idx) => {
                         return (
-                            <div className='mt-4 h-96 w-72  border-4 rounded-md border-gray-50 bg-white ' key={idx}>
+                            <div className='mt-4 h-96 w-72  border-4 rounded-md border-gray-50 bg-white scroll-content fadeLeft' key={idx}>
                                 <img
                                     src={item.img}
                                     alt='producto'

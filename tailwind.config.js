@@ -7,7 +7,7 @@ export default {
   theme: {
     extend: {
       colors:{
-        'azul-banner': '#162436',
+        'azul-banner': '#ff821f',
         'negro': '#252424',
         'azul-celeste': '#00F2EA',
         'rojo-claro': '#FF0050',

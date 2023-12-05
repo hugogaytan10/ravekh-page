@@ -21,7 +21,7 @@ export const Contacto = () => {
     };
 
     return (
-        <div className='bg-bg-contacto mt-64  md:flex md:justify-around md:flex-wrap'>
+        <div className='bg-bg-contacto mt-64  md:flex md:justify-around md:flex-wrap scroll-content fadeRight'>
             <h3 className='text-3xl text-white text-center block w-full'>Contáctanos</h3>
             <form 
             action='mailto:ravekh.team@gmail.com'

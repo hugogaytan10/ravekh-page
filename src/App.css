@@ -1,24 +1,67 @@
-.banner{
+.banner {
     min-height: 400px;
 }
-.banner > h1 {
+
+.banner>h1 {
     text-shadow: 2px 3px rgb(4, 73, 98);
 }
-.btn-empezar{
+
+.btn-empezar {
     border: 1px solid #00B8F2;
     box-shadow: 0px 0px 1px 0px#00B8F2;
     transition: all 0.8s;
 }
-.btn-empezar:hover{
+
+.btn-empezar:hover {
     box-shadow: 0px 0px 16px 0px#00B8F2;
     cursor: pointer;
 }
 
-.banner-secundario{
+.banner-secundario {
     min-height: 397px;
 }
+
+.animacion-flecha {
+    position: absolute;
+    right: 20px;
+    animation: moverFlecha 2s linear infinite;
+}
+
+@keyframes moverFlecha {
+    0% {
+        right: 20px;
+    }
+
+    100% {
+        right: 0px;
+    }
+}
+
+.fadeTop {
+    visibility: hidden;
+    transform: translate(0, 10vh);
+    transition: all 1s;
+}
+
+.fadeRight {
+    visibility: hidden;
+    transform: translate(10vh, 0vh);
+    transition: all 1.4s;
+}
+
+.fadeLeft {
+    visibility: hidden;
+    transform: translate(-10vh, 0vh);
+    transition: all 1.4s;
+}
+
+.visible {
+    visibility: visible;
+    transform: translate(0, 0);
+}
+
 @media (min-width: 570px) {
-    .banner{
+    .banner {
         background-image: url('src/assets/FotoBanner.png');
         background-repeat: no-repeat;
         background-position: center;

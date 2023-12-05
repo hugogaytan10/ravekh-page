@@ -7,8 +7,8 @@ export const Banner = () => {
             <p className='w-3/4 m-auto text-left text-gray-50 font-thin md:text-center'>Lleva tu negocio al siguiente nivel con nosotros</p>
             <a 
             href='https://api.whatsapp.com/send?phone=524451113370'
-            className='bg-gray-50 mt-10 rounded-md p-1 text-azul-banner font-bold flex w-2/4 justify-around m-auto items-center md:w-2/12 btn-empezar'>Empezar
-                <img src={flecha} alt='flecha' />
+            className='bg-gray-50 mt-10 rounded-md p-1 text-azul-banner font-bold flex w-2/4 justify-around m-auto items-center md:w-2/12 btn-empezar relative'>Empezar
+                <img src={flecha} alt='flecha' className='animacion-flecha'/>
             </a>
         </div>
     )

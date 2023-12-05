@@ -21,7 +21,7 @@ export const Caracteristicas = () => {
                 {
                     caracteristicas.map((item, idx) => {
                         return (
-                            <div className='p-4' key={idx}>
+                            <div className='p-4 scroll-content fadeRight' key={idx}>
                                 <h3 className='font-bold text-lg'>{item.titulo}</h3>
                                 <p className='text-base mt-2'>
                                     {item.descripcion}
@@ -34,7 +34,7 @@ export const Caracteristicas = () => {
             </div>
             <div className='h-80 overflow-hidden md:h-96 md:w-2/4'>
                 <img
-                    className='object-contain w-full h-full'
+                    className='object-contain w-full h-full scroll-content fadeTop'
                     alt='desarrollo'
                     src={laptop} />
             </div>
