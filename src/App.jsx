@@ -5,6 +5,7 @@ import { Contacto } from './Components/Contacto'
 import { Productos } from './Components/Productos'
 import { Caracteristicas } from './Components/Caracteristicas'
 import { Footer } from './Components/Footer'
+import { Muestra } from './Components/Muestra/Muestra'
 window.addEventListener('scroll', function () {
   let elements = document.getElementsByClassName('scroll-content');
   let screenSize = window.innerHeight;
@@ -28,6 +29,7 @@ function App() {
       <BannerSecundario />
       <Caracteristicas />
       <Productos />
+      <Muestra/>
       <Contacto />
       <Footer />
     </div>

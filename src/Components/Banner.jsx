@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import flecha from '../assets/arrow-forward.svg';
+import './Banner.css'
 export const Banner = () => {
     const [text, setTex] = useState('Lleva tu negocio al siguiente nivel con nosotros');
     useEffect(() => {
