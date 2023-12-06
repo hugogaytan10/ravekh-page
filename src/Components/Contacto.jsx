@@ -52,7 +52,7 @@ export const Contacto = () => {
                     onChange={handleEmailChange}
                 />
     */}
-                <h5 className='p-4 text-gray-100 font-medium text-left'>Envianos un correo personal con tus necesidades y nos pondremos en contácto</h5>
+                <h5 className='p-4 text-gray-100 font-medium text-left'>Envíanos un correo personal con tus necesidades y nos pondremos en contácto</h5>
                 <button className="btn">Enviar</button>
             </form>
             <img
