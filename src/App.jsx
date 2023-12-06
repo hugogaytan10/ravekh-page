@@ -8,7 +8,7 @@ import { Footer } from './Components/Footer'
 window.addEventListener('scroll', function () {
   let elements = document.getElementsByClassName('scroll-content');
   let screenSize = window.innerHeight;
-  
+
   for (const item of elements) {
     let element = item;
 
@@ -23,14 +23,14 @@ window.addEventListener('scroll', function () {
 function App() {
 
   return (
-    <>
+    <div className='flex overflow-hidden flex-wrap'>
       <Banner />
-      <BannerSecundario/>
-      <Caracteristicas/>
-      <Productos/>
-      <Contacto/>
-      <Footer/>
-    </>
+      <BannerSecundario />
+      <Caracteristicas />
+      <Productos />
+      <Contacto />
+      <Footer />
+    </div>
   )
 }
 

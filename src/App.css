@@ -1,20 +1,33 @@
 .banner {
-    min-height: 400px;
+    min-height: 100vh;
+    min-width: 100%;
+    overflow: hidden;
+    background: rgb(56,37,0);
+    background: linear-gradient(0deg, rgba(56,37,0,1) 0%, rgba(255,132,0,1) 100%);
 }
+
+
 
 .banner>h1 {
     text-shadow: 2px 3px rgb(4, 73, 98);
 }
 
-.btn-empezar {
-    border: 1px solid #00B8F2;
-    box-shadow: 0px 0px 1px 0px#00B8F2;
-    transition: all 0.8s;
+.btn-banner {
+    display: inline-block;
+    padding: 10px 20px;
+    margin: 10px;
+    color: #fff; 
+    background-color: #ff7f00; 
+    border: 2px solid #ffc994;
+    border-radius: 5px; 
+    text-decoration: none;
+    transition: background-color 0.5s, color 0.3s;
 }
 
-.btn-empezar:hover {
-    box-shadow: 0px 0px 16px 0px#00B8F2;
-    cursor: pointer;
+.btn-banner:hover {
+    background-color: #fff; 
+    color: #ff7f00;
+    box-shadow: 0px 0px 10px 0px #ffc994;
 }
 
 .banner-secundario {
@@ -26,7 +39,32 @@
     right: 20px;
     animation: moverFlecha 2s linear infinite;
 }
+.leyenda {
+    width: 0;
+    display: block;
+    padding: 10px;
+    text-align: center;
+    overflow: hidden;
+    white-space: nowrap;
+    font-size: 1rem;
+    font-family: "Courier New";
+    border-right: 0.15em solid #18bdec;
+    animation: typing 3s steps(42) 1s both infinite, blink 1s steps(32) infinite;
+}
+@keyframes typing {
+    from {
+        width: 0;
+    }
 
+    to {
+        width: 100%;
+    }
+}
+@keyframes blink {
+    50% {
+        border-color: transparent;
+    }
+}
 @keyframes moverFlecha {
     0% {
         right: 20px;
@@ -41,7 +79,7 @@
     visibility: hidden;
     transform: translate(0, 10vh);
     transition: all 1s;
-   
+
 }
 
 .fadeRight {
@@ -66,5 +104,15 @@
         background-image: url('src/assets/FotoBanner.png');
         background-repeat: no-repeat;
         background-position: center;
+    }
+    .btn-banner{
+        border: 0.5px solid #18bdec;
+        background-color: rgb(36, 121, 118);   
+        text-align: center;
+    }
+    .btn-banner:hover{
+        background-color: #1789a9;
+        color: #e8e8e8;
+        box-shadow: 0px 0px 10px 0px #18bdec;
     }
 }

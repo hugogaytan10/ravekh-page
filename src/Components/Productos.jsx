@@ -1,34 +1,46 @@
 import React from 'react'
-import ecommer from '../assets/ecommer.png';
-import app from '../assets/PR1.png';
+import code from '../assets/code-slash-outline.svg';
+import analisis from '../assets/analytics-outline.svg';
+import chat from '../assets/chatbubbles-outline.svg';
+import rocket from '../assets/rocket-outline.svg';
 export const Productos = () => {
     const productos = [
         {
-            titulo: 'Tienda Online',
-            descripcion: 'Vende y administra tu negocio de forma totalmente digital',
-            img: ecommer
+            titulo: 'DESARROLLAMOS',
+            descripcion: 'Diseñamos y desarrollamos apliaciones web, móviles, e-commers y más.',
+            img: code
         },
         {
-            titulo: 'Aplicaciones Moviles',
-            descripcion: 'Aplicaciones a la medida de tus necesidades para android & IOS',
-            img: app
+            titulo: 'ANALIZAMOS',
+            descripcion: 'Siempre con un trato muy cercano con el cliente para lograr la mejor solución posible.',
+            img: analisis
+        },
+        {
+            titulo: 'CONVERTIMOS',
+            descripcion: 'Generamos tráfico a tu web para un mayor alcance.',
+            img: rocket
+        },
+        {
+            titulo: 'ASESOREMOS',
+            descripcion: 'Te asesoramos en los temas de marketing, programación y uso de los productos.',
+            img: chat
         }
     ]
     return (
-        <div className='mt-10'>
-            <h3 className='text-center text-2xl font-bold md:text-3xl'>Lo más solicitado</h3>
+        <div className='mt-32 w-full'>
+            <h3 className='text-center text-2xl font-bold md:text-3xl'>Nuestros servicios</h3>
             <div className='flex justify-around flex-wrap'>
                 {
                     productos.map((item, idx) => {
                         return (
-                            <div className='mt-4 h-96 w-72  border-4 rounded-md border-gray-50 bg-white scroll-content fadeLeft' key={idx}>
+                            <div className='mt-4 h-60 w-72 border-2 shadow-md rounded-md border-gray-100 bg-white scroll-content fadeLeft' key={idx}>
                                 <img
                                     src={item.img}
                                     alt='producto'
-                                    className='m-auto object-contain w-full h-1/2 md:h-full hover:scale-105 transition-all'
+                                    className='inline-block left-0 object-contain w-10 h-10 md:h-14 md:w-14 hover:scale-105 transition-all'
                                 />
-                                <div className='border-1 border-gray-50 shadow-lg bg-white'>
-                                    <h4 className='font-bold underline p-2'>{item.titulo}</h4>
+                                <div className='border-1 border-gray-50 bg-white'>
+                                    <h4 className='font-bold underline p-2 text-xl'>{item.titulo}</h4>
                                     <p className='p-2'>{item.descripcion}</p>
 
                                     <div className='flex relative p-2 '>
