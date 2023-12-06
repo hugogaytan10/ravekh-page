@@ -21,7 +21,7 @@ export const Productos = () => {
             img: rocket
         },
         {
-            titulo: 'ASESOREMOS',
+            titulo: 'ASESORAMOS',
             descripcion: 'Te asesoramos en los temas de marketing, programación y uso de los productos.',
             img: chat
         }
