@@ -4,6 +4,7 @@
     overflow: hidden;
     background: rgb(56,37,0);
     background: linear-gradient(190deg, #8B4780 0%, #3C0433 100%);
+    display: table;
 }
 
 
@@ -42,7 +43,7 @@
 }
 .leyenda {
     width: 0;
-    display: block;
+    display: inline-block;
     padding: 10px;
     text-align: center;
     overflow: hidden;
@@ -51,22 +52,18 @@
     font-size: 1rem;
     font-family: "Courier New";
     border-right: 0.15em solid #18bdec;
-    animation: typing 3s steps(42) 1s both infinite, blink 1s steps(1) infinite;
+    animation: typing 5s steps(48) infinite alternate;
 }
 @keyframes typing {
     from {
-        width: 0;
+        width: 100%;
     }
 
     to {
-        width: 100%;
+        width: 0%;
     }
 }
-@keyframes blink {
-    50% {
-        border-color: transparent;
-    }
-}
+
 @keyframes moverFlecha {
     0% {
         right: 20px;
@@ -91,18 +88,17 @@
         text-align: left;
     }
     .banner > p{
-        text-align: center;
+        text-align: left;
         margin-right: auto;
         margin-left: 5em;
-        animation: typing 3s steps(46) 1s both infinite, blink 1s steps(1) infinite;
     }
     @keyframes typing {
         from {
-            width: 0;
+            width: 50%;
         }
     
         to {
-            width: 70%;
+            width: 0%;
         }
     }
 
