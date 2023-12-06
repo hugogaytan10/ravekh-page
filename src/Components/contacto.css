@@ -16,8 +16,11 @@
     font-size: 14px;
     padding: 4px 28px;
     height: 35px;
-    margin: auto;
+    /*margin: auto;*/
     display: block;
+    align-self: self-start;
+    margin-left: 0.9em;
+    left: 0;
     border-radius: 0;
     overflow: hidden;
     background: 0 0;

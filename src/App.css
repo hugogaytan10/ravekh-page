@@ -49,7 +49,7 @@
     font-size: 1rem;
     font-family: "Courier New";
     border-right: 0.15em solid #18bdec;
-    animation: typing 3s steps(42) 1s both infinite, blink 1s steps(32) infinite;
+    animation: typing 3s steps(42) 1s both infinite, blink 1s steps(1) infinite;
 }
 @keyframes typing {
     from {
