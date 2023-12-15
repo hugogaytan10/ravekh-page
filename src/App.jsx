@@ -33,7 +33,7 @@ function App() {
       <Muestra />
       <Contacto />
       <Footer />
-      <div className='bg-color-whats rounded-full p-1 fixed right-0 bottom-2'>
+      <div className='bg-color-whats rounded-full p-1 fixed right-2 bottom-4'>
         <a
           href='https://api.whatsapp.com/send?phone=524451113370'
         >

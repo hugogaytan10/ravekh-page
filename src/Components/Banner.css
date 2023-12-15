@@ -2,7 +2,7 @@
     min-height: 100vh;
     min-width: 100%;
     overflow: hidden;
-    background: rgb(56,37,0);
+    background: rgb(56, 37, 0);
     background: linear-gradient(190deg, #8B4780 0%, #3C0433 100%);
     display: table;
 }
@@ -17,17 +17,17 @@
     display: inline-block;
     padding: 10px 20px;
     margin: 10px;
-    color: #fff; 
+    color: #fff;
     text-align: center;
-    background-color: #3C0433; 
+    background-color: #3C0433;
     border: 2px solid #611453;
-    border-radius: 5px; 
+    border-radius: 5px;
     text-decoration: none;
     transition: background-color 0.5s, color 0.3s;
 }
 
 .btn-banner:hover {
-    background-color: #93107f; 
+    background-color: #93107f;
     color: #e8e8e8;
     box-shadow: 0px 0px 10px 0px #8B4780;
 }
@@ -41,6 +41,7 @@
     right: 20px;
     animation: moverFlecha 2s linear infinite;
 }
+
 .leyenda {
     width: 0;
     display: inline-block;
@@ -54,13 +55,14 @@
     border-right: 0.15em solid #18bdec;
     animation: typing 5s steps(48) infinite alternate;
 }
+
 @keyframes typing {
     from {
-        width: 100%;
+        width: 0%;
     }
 
     to {
-        width: 0%;
+        width: 100%;
     }
 }
 
@@ -74,6 +76,33 @@
     }
 }
 
+
+/* Agrega estos estilos en tu archivo Banner.css o donde tengas tus estilos */
+
+.figuras {
+    display: block;
+    width: 0;
+    height: 0;
+    border-left: 5px solid transparent;
+    border-right: 5px solid transparent;
+    border-bottom: 10px solid #fff; /* Puedes cambiar el color según tu diseño */
+    position: absolute;
+    top: 10%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    animation: rotateStar 1.5s linear infinite;
+    padding: 15px; 
+  }
+  
+  @keyframes rotateStar {
+    0% {
+      transform: translate(-50%, -50%) rotate(0deg);
+    }
+    100% {
+      transform: translate(-50%, -50%) rotate(360deg);
+    }
+  }
+  
 @media (min-width: 570px) {
     .banner {
         background-color: #712B66;
@@ -84,19 +113,22 @@
         display: flex;
         align-items: center;
     }
-    .banner > h1{
+
+    .banner>h1 {
         text-align: left;
     }
-    .banner > p{
+
+    .banner>p {
         text-align: left;
         margin-right: auto;
         margin-left: 5em;
     }
+
     @keyframes typing {
         from {
             width: 50%;
         }
-    
+
         to {
             width: 0%;
         }
