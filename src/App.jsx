@@ -6,6 +6,7 @@ import { Productos } from './Components/Productos'
 import { Caracteristicas } from './Components/Caracteristicas'
 import { Footer } from './Components/Footer'
 import { Muestra } from './Components/Muestra/Muestra'
+import logoWhasa from './assets/logo-whatsapp.svg'
 window.addEventListener('scroll', function () {
   let elements = document.getElementsByClassName('scroll-content');
   let screenSize = window.innerHeight;
@@ -29,9 +30,16 @@ function App() {
       <BannerSecundario />
       <Caracteristicas />
       <Productos />
-      <Muestra/>
+      <Muestra />
       <Contacto />
       <Footer />
+      <div className='bg-color-whats rounded-full p-1 fixed right-0 bottom-2'>
+        <a
+          href='https://api.whatsapp.com/send?phone=524451113370'
+        >
+          <img src={logoWhasa} alt="WS" />
+        </a>
+      </div>
     </div>
   )
 }

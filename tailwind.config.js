@@ -14,7 +14,8 @@ export default {
         'bordes': '#00B8F2',
         'contenedor-info': 'rgb(21,26,30)',
         'bg-contacto': '#162436',
-        'fondo-oscuro': '#252424'
+        'fondo-oscuro': '#252424',
+        'color-whats': '#25D366'
       },
     },
   },
