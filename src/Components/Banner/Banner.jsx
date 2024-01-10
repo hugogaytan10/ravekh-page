@@ -21,10 +21,10 @@ export const Banner = () => {
             }
         };
 
-        createAnimatedStars(); 
-    }, []); 
+        createAnimatedStars();
+    }, []);
     return (
-        <div className='banner flex flex-wrap flex-col items-center justify-center gap-4 relative'>
+        <div className='banner flex flex-wrap flex-col items-center justify-center gap-4 relative '>
             <h1 className='w-3/4 text-gray-50 font-bold  text-4xl text-left md:text-center'>Aumenta tus ganancias</h1>
             <p className='inline-block text-left text-gray-50 font-thin md:text-center leyenda'>{text}</p>
             <a
@@ -32,7 +32,18 @@ export const Banner = () => {
                 className=' rounded-md   font-bold  w-3/4 p-6  md:w-4/12 btn-banner'>
                 Incrementar mis ganancias
             </a>
-            
+
         </div>
+        // <div className="hero min-h-screen" style={{ backgroundImage: 'url(src/assets/banner.jpg)' }}>
+        //     <div className="hero-overlay bg-opacity-60"></div>
+        //     <div className="hero-content text-center text-neutral-content">
+        //         <div className="max-w-md">
+        //             <h1 className="mb-5 text-5xl font-bold">Hello there</h1>
+        //             <p className="mb-5">Provident cupiditate voluptatem et in. Quaerat fugiat ut assumenda excepturi exercitationem quasi. In deleniti eaque aut repudiandae et a id nisi.</p>
+        //             <button className="btn btn-primary">Get Started</button>
+        //         </div>
+        //     </div>
+        // </div>
+
     )
 }

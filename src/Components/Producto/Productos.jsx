@@ -1,8 +1,8 @@
 import React from 'react'
-import code from '../assets/code-slash-outline.svg';
-import analisis from '../assets/analytics-outline.svg';
-import chat from '../assets/chatbubbles-outline.svg';
-import rocket from '../assets/rocket-outline.svg';
+import code from '../../assets/code-slash-outline.svg';
+import analisis from '../../assets/analytics-outline.svg';
+import chat from '../../assets/chatbubbles-outline.svg';
+import rocket from '../../assets/rocket-outline.svg';
 export const Productos = () => {
     const productos = [
         {
