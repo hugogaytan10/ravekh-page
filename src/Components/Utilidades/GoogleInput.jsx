@@ -25,7 +25,6 @@ const GoogleInput = ({ type, placeholder, name, value, onChange, onBlur }) => {
                 value={value}
                 onChange={onChange}
                 onFocus={handleFocus}
-                onBlur={handleBlur}
                 className="google-input"
             />
         </div>

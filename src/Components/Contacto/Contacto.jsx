@@ -1,10 +1,11 @@
 import React from 'react';
 import { useFormik } from 'formik';
-import axios from 'axios';
 import './contacto.css';
 import GoogleInput from '../Utilidades/GoogleInput';
 import ravekh from '../../assets/ravekh.png';
 import validationSchema from './validationSchema';
+
+const SERVER_BASE_URL = 'http://localhost:3001';
 
 export const Contacto = () => {
     const formik = useFormik({
@@ -17,23 +18,36 @@ export const Contacto = () => {
         validationSchema: validationSchema,
         onSubmit: async (values) => {
             try {
-                await axios.post('https://api.resend.io/v1/email/send', {
-                    apiKey: 'TU_API_KEY', 
-                    to: 'destinatario@example.com', 
-                    subject: 'Nuevo mensaje de contacto',
-                    html: `
-            <p><strong>Nombre:</strong> ${values.nombre}</p>
-            <p><strong>Apellido:</strong> ${values.apellido}</p>
-            <p><strong>Correo electrónico:</strong> ${values.email}</p>
-            <p><strong>Mensaje:</strong> ${values.mensaje}</p>
-          `,
+                const res = await fetch(`${SERVER_BASE_URL}/send-email`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        from: 'Acme <onboarding@resend.dev>',
+                        to: ['ravekh.team@gmail.com'],
+                        subject: 'Nuevo mensaje de contacto',
+                        html: `
+                      <p><strong>Nombre:</strong> ${values.nombre}</p>
+                      <p><strong>Apellido:</strong> ${values.apellido}</p>
+                      <p><strong>Correo electrónico:</strong> ${values.email}</p>
+                      <p><strong>Mensaje:</strong> ${values.mensaje}</p>
+                    `,
+                    }),
                 });
-                console.log('Formulario enviado exitosamente');
+
+                if (res.ok) {
+                    const data = await res.json();
+                    console.log('Formulario enviado exitosamente', data);
+                } else {
+                    console.error('Error al enviar el formulario', res.statusText);
+                }
             } catch (error) {
                 console.error('Error al enviar el formulario', error);
             }
         },
     });
+
 
     return (
         <div className='bg-bg-contacto mt-64 md:flex md:justify-around md:flex-wrap scroll-content fadeLeft w-full'>

@@ -9,7 +9,7 @@ export const Banner = () => {
     useEffect(() => {
         // Función para crear dinámicamente las etiquetas span con animación
         const createAnimatedStars = () => {
-            const container = document.querySelector('.banner');
+            const container = document.querySelector('.hero');
             const numStars = 4;
 
             for (let i = 0; i < numStars; i++) {
@@ -24,26 +24,30 @@ export const Banner = () => {
         createAnimatedStars();
     }, []);
     return (
-        <div className='banner flex flex-wrap flex-col items-center justify-center gap-4 relative '>
-            <h1 className='w-3/4 text-gray-50 font-bold  text-4xl text-left md:text-center'>Aumenta tus ganancias</h1>
-            <p className='inline-block text-left text-gray-50 font-thin md:text-center leyenda'>{text}</p>
-            <a
-                href='https://api.whatsapp.com/send?phone=524451113370'
-                className=' rounded-md   font-bold  w-3/4 p-6  md:w-4/12 btn-banner'>
-                Incrementar mis ganancias
-            </a>
+        //     <div className='banner flex flex-wrap flex-col items-center justify-center gap-4 relative '>
+        //         <h1 className='w-3/4 text-gray-50 font-bold  text-4xl text-left md:text-center'>Aumenta tus ganancias</h1>
+        //         <p className='inline-block text-left text-gray-50 font-thin md:text-center leyenda'>{text}</p>
+        //         <a
+        //             href='https://api.whatsapp.com/send?phone=524451113370'
+        //             className=' rounded-md   font-bold  w-3/4 p-6  md:w-4/12 btn-banner'>
+        //             Incrementar mis ganancias
+        //         </a>
 
-        </div>
-        // <div className="hero min-h-screen" style={{ backgroundImage: 'url(src/assets/banner.jpg)' }}>
-        //     <div className="hero-overlay bg-opacity-60"></div>
-        //     <div className="hero-content text-center text-neutral-content">
-        //         <div className="max-w-md">
-        //             <h1 className="mb-5 text-5xl font-bold">Hello there</h1>
-        //             <p className="mb-5">Provident cupiditate voluptatem et in. Quaerat fugiat ut assumenda excepturi exercitationem quasi. In deleniti eaque aut repudiandae et a id nisi.</p>
-        //             <button className="btn btn-primary">Get Started</button>
-        //         </div>
         //     </div>
-        // </div>
+        <div className="hero min-h-screen" style={{ backgroundImage: 'url(src/assets/BannerClaro.jpg)' }}>
+            <div className="hero-overlay bg-opacity-60"></div>
+            <div className="hero-content text-center text-neutral-content">
+                <div className="max-w-md">
+                    <h1 className="mb-5 text-5xl font-bold">AUMENTA TUS GANANCIAS</h1>
+                    <p className="mb-5 leyenda">{text}</p>
+                    <button className="btn btn-primary">
+                        <a href='https://api.whatsapp.com/send?phone=524451113370'>
+                            Incrementar mis ganancias
+                        </a>
+                        </button>
+                </div>
+            </div>
+        </div>
 
     )
 }

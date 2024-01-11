@@ -32,7 +32,7 @@ export const Muestra = () => {
       link: 'https://teal-jalebi-6ba797.netlify.app/',
     },
     {
-      title: 'Página escolar',
+      title: 'Página universitaria',
       description: 'Demo de página',
       imageUrl: itsur,
       link: 'https://main--melodic-sundae-a09a6c.netlify.app/',
