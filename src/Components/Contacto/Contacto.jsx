@@ -18,7 +18,7 @@ export const Contacto = () => {
         validationSchema: validationSchema,
         onSubmit: async (values) => {
             try {
-                const res = await fetch(`${SERVER_BASE_URL}/send-email`, {
+                const res = await fetch(`${SERVER_BASE_URL}send-email`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
