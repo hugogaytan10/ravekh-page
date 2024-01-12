@@ -18,10 +18,12 @@ export const Contacto = () => {
         validationSchema: validationSchema,
         onSubmit: async (values) => {
             try {
-                const res = await fetch(`${SERVER_BASE_URL}send-email`, {
+                const RESEND_API_KEY = 're_RyLYLXHN_L43ptRJBzPog9fFDhCqFqGHF';
+                const res = await fetch(`https://api.resend.com/send`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${RESEND_API_KEY}`
                     },
                     body: JSON.stringify({
                         from: 'Acme <onboarding@resend.dev>',
@@ -35,7 +37,7 @@ export const Contacto = () => {
                         `,
                     }),
                 });
-
+                console.log(res)
                 if (res.ok) {
                     const data = await res.json();
                     console.log('Formulario enviado exitosamente', data);
