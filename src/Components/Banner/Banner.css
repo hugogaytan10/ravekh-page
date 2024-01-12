@@ -2,8 +2,10 @@
     min-height: 100vh;
     min-width: 100%;
     overflow: hidden;
+    /*
     background: rgb(56, 37, 0);
     background: linear-gradient(190deg, #8B4780 0%, #3C0433 100%);
+    */
     display: table;
 }
 

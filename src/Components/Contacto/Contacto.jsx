@@ -19,6 +19,7 @@ export const Contacto = () => {
         onSubmit: async (values) => {
             try {
                 const RESEND_API_KEY = 're_RyLYLXHN_L43ptRJBzPog9fFDhCqFqGHF';
+                
                 const res = await fetch(`https://api.resend.com/send`, {
                     method: 'POST',
                     headers: {
@@ -37,7 +38,7 @@ export const Contacto = () => {
                         `,
                     }),
                 });
-                console.log(res)
+                
                 if (res.ok) {
                     const data = await res.json();
                     console.log('Formulario enviado exitosamente', data);

@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import './Banner.css'
+import banner from '../../assets/BannerClaro.jpg'
 export const Banner = () => {
     const [text, setTex] = useState('Lleva tu negocio al siguiente nivel con nosotros');
     useEffect(() => {
@@ -34,12 +35,12 @@ export const Banner = () => {
         //         </a>
 
         //     </div>
-        <div className="hero min-h-screen" style={{ backgroundImage: 'url(src/assets/BannerClaro.jpg)' }}>
+        <div className="hero min-h-screen" style={{ backgroundImage: `url(${banner})` }}>
             <div className="hero-overlay bg-opacity-60"></div>
             <div className="hero-content text-center text-neutral-content">
                 <div className="max-w-md">
                     <h1 className="mb-5 text-5xl font-bold claro">AUMENTA TUS GANANCIAS</h1>
-                    <button className="btn btn-primary">
+                    <button className="bg-indigo-950 p-3 rounded-lg shadow-sky-500 text-gray-100">
                         <a href='https://api.whatsapp.com/send?phone=524451113370'>
                             Incrementar mis ganancias
                         </a>
