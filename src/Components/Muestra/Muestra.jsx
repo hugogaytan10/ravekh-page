@@ -89,6 +89,8 @@ export const Muestra = () => {
     const div = carruRef.current;
     const follower = followerRef.current;
 
+    follower.style.display = "none";
+    
     const handleMouseMove = (e) => {
       // Asegúrate de que el cálculo se basa en la posición relativa al div
       const rect = div.getBoundingClientRect();

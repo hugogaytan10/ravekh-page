@@ -2,6 +2,6 @@ import React from 'react'
 
 export const ArticuloWhisper = () => {
   return (
-    <div>ArticuloWhisper</div>
+    <div className='min-h-svh'>ArticuloWhisper</div>
   )
 }
