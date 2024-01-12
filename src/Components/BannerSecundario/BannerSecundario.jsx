@@ -1,5 +1,5 @@
 import React from 'react';
-import flecha from '../assets/arrow-forward-white.svg';
+import flecha from '../../assets/arrow-forward-white.svg';
 export const BannerSecundario = () => {
     return (
         <div className='bg-negro banner-secundario w-full'>

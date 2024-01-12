@@ -1,0 +1,6 @@
+.slick-prev:before,
+.slick-next:before {
+    border: gray solid 2px !important;
+    background: black !important;
+    color: blanchedalmond !important;
+}

@@ -1,5 +1,5 @@
 import React from 'react'
-import laptop from '../assets/latop.png';
+import laptop from '../../assets/latop.png';
 export const Caracteristicas = () => {
     const caracteristicas = [
         {

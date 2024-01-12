@@ -1,7 +1,7 @@
 import React from 'react'
-import fb from '../assets/logo-facebook.svg';
-import tw from '../assets/logo-twitter.svg';
-import ig from '../assets/logo-instagram.svg';
+import fb from '../../assets/logo-facebook.svg';
+import tw from '../../assets/logo-twitter.svg';
+import ig from '../../assets/logo-instagram.svg';
 export const Footer = () => {
     return (
         <div className='bg-fondo-oscuro h-52 w-full'>
