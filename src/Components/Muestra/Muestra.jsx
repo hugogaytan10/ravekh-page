@@ -69,13 +69,23 @@ export const Muestra = () => {
   };
 
   const carouselStyle = {
-    background: 'linear-gradient(190deg, #8B4780 0%, #3C0433 100%)',
+    cursor: 'grab',
+  };
+
+  const handleMouseDown = () => {
+    const carru = document.getElementById('carru');
+    carru.style.cursor = 'grabbing';
+  };
+
+  const handleMouseUp = () => {
+    const carru = document.getElementById('carru');
+    carru.style.cursor = 'grab';
   };
 
   return (
     <div className="w-3/4 block mt-16 m-auto scroll-content fadeTop">
       <h3 className='text-center text-2xl font-bold md:text-3xl block w-full'>Algunos Demos</h3>
-      <div style={carouselStyle}>
+      <div id="carru" style={carouselStyle} onMouseDown={handleMouseDown} onMouseUp={handleMouseUp}>
         <Slider {...settings}>
           {projects.map((project, index) => (
             <div key={index} className="carousel-item">

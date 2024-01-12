@@ -38,8 +38,7 @@ export const Banner = () => {
             <div className="hero-overlay bg-opacity-60"></div>
             <div className="hero-content text-center text-neutral-content">
                 <div className="max-w-md">
-                    <h1 className="mb-5 text-5xl font-bold">AUMENTA TUS GANANCIAS</h1>
-                    <p className="mb-5 leyenda">{text}</p>
+                    <h1 className="mb-5 text-5xl font-bold claro">AUMENTA TUS GANANCIAS</h1>
                     <button className="btn btn-primary">
                         <a href='https://api.whatsapp.com/send?phone=524451113370'>
                             Incrementar mis ganancias

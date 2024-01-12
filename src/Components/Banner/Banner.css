@@ -7,7 +7,9 @@
     display: table;
 }
 
-
+.claro {
+    color: #ffffff !important;
+}
 
 .banner>h1 {
     text-shadow: 2px 3px rgb(4, 73, 98);

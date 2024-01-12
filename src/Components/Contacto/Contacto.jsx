@@ -28,17 +28,19 @@ export const Contacto = () => {
                         to: ['ravekh.team@gmail.com'],
                         subject: 'Nuevo mensaje de contacto',
                         html: `
-                      <p><strong>Nombre:</strong> ${values.nombre}</p>
-                      <p><strong>Apellido:</strong> ${values.apellido}</p>
-                      <p><strong>Correo electrónico:</strong> ${values.email}</p>
-                      <p><strong>Mensaje:</strong> ${values.mensaje}</p>
-                    `,
+                          <p><strong>Nombre:</strong> ${values.nombre}</p>
+                          <p><strong>Apellido:</strong> ${values.apellido}</p>
+                          <p><strong>Correo electrónico:</strong> ${values.email}</p>
+                          <p><strong>Mensaje:</strong> ${values.mensaje}</p>
+                        `,
                     }),
                 });
 
                 if (res.ok) {
                     const data = await res.json();
                     console.log('Formulario enviado exitosamente', data);
+                    document.getElementById('my_modal_5').showModal();
+                    formik.resetForm();  // <-- Utiliza formik para resetear el formulario
                 } else {
                     console.error('Error al enviar el formulario', res.statusText);
                 }
@@ -47,7 +49,6 @@ export const Contacto = () => {
             }
         },
     });
-
 
     return (
         <div className='bg-bg-contacto mt-64 md:flex md:justify-around md:flex-wrap scroll-content fadeLeft w-full'>
@@ -114,6 +115,18 @@ export const Contacto = () => {
                     Enviar
                 </button>
             </form>
+            <dialog id="my_modal_5" className="modal modal-bottom sm:modal-middle">
+                <div className="modal-box">
+                    <h3 className="font-bold text-lg blanco">Muchas gracias por contactarnos</h3>
+                    <p className="py-4 blanco">Nuestro equipo se comunicará con usted a la brevedad</p>
+                    <div className="modal-action">
+                        <form method="dialog">
+                            {/* if there is a button in form, it will close the modal */}
+                            <button className="btn blanco">Cerrar</button>
+                        </form>
+                    </div>
+                </div>
+            </dialog>
             <img alt='foto' src={ravekh} className='md:w-1/4 object-contain md:h-72' />
         </div>
     );
