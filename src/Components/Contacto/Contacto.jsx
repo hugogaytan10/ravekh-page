@@ -5,7 +5,7 @@ import GoogleInput from '../Utilidades/GoogleInput';
 import ravekh from '../../assets/ravekh.png';
 import validationSchema from './validationSchema';
 
-const SERVER_BASE_URL = 'http://localhost:3001';
+const SERVER_BASE_URL = '/.netlify/functions/';
 
 export const Contacto = () => {
     const formik = useFormik({
