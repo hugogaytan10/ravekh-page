@@ -1,5 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
+import whisperBanner from '../../assets/whisperBanner.jpg';
 
 export const CategoriasBlog = () => {
   return (
@@ -8,7 +9,7 @@ export const CategoriasBlog = () => {
       <div className="card w-full md:w-1/4 bg-white border-2 shadow-xl">
         <figure>
           <img
-            src="https://daisyui.com/images/stock/photo-1606107557195-0e29a4b5b4aa.jpg"
+            src={whisperBanner}
             alt="Shoes"
           />
         </figure>
