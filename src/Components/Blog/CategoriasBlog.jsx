@@ -1,6 +1,6 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
-import whisperBanner from '../../assets/whisperBanner.jpg';
+import whisperBanner from './imgs/whisperBanner.jpg';
 
 export const CategoriasBlog = () => {
   return (
@@ -18,7 +18,7 @@ export const CategoriasBlog = () => {
           <p>Encuentra grandes artículos en esta categoría</p>
           <div className="card-actions justify-end">
             <NavLink 
-            to={'/articulosIA'}
+            to={'/blog/articulosIA'}
             className="border-2 w-full bg-white rounded-md p-1 border-indigo-200 text-center">Ver más</NavLink>
           </div>
         </div>

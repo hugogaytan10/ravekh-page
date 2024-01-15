@@ -1,8 +1,8 @@
 import React from 'react';
 import { Link } from 'react-scroll';
 import './ArticuloWhisper.css';
-import whisper from '../../../../assets/whisper.jpg';
-import whisperBanner from '../../../../assets/whisperBanner.jpg';
+import whisper from './imgs/whisper.jpg';
+import whisperBanner from './imgs/whisperBanner.jpg';
 
 export const ArticuloWhisper = () => {
   // Contenido de cada sección
@@ -421,7 +421,7 @@ export const ArticuloWhisper = () => {
   return (
     <div>
       <div className="hero min-h-screen blanco" style={{ backgroundImage: `url(${whisperBanner})` }}>
-        <div className="hero-overlay bg-opacity-60"></div>
+        <div className="hero-overlay bg-opacity-90"></div>
         <div className="hero-content flex-col lg:flex-row-reverse">
           <img src={whisper} className="max-w-sm rounded-lg shadow-2xl" alt="Whisper Library" />
           <div>

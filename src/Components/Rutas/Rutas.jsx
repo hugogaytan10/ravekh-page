@@ -13,8 +13,8 @@ export const Rutas = () => {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/blog" element={<BlogMain />} />
-            <Route path="/articulosIA" element={<MainArticulosIA/>} />
-            <Route path="//articulosIA/whisper" element={<ArticuloWhisper/>} />
+            <Route path="/blog/articulosIA" element={<MainArticulosIA/>} />
+            <Route path="/blog/articulosIA/whisper" element={<ArticuloWhisper/>} />
           </Routes>
         </section>
       </main>

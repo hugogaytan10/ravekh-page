@@ -12,6 +12,8 @@ import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 
 export const Muestra = () => {
+  const dimensions = screen.width;
+
   const projects = [
     {
       title: "Portal de comida",
@@ -84,41 +86,41 @@ export const Muestra = () => {
 
   const carruRef = useRef(null); // Referencia al div
   const followerRef = useRef(null); // Referencia al seguidor del cursor
-  
+
   useEffect(() => {
     const div = carruRef.current;
     const follower = followerRef.current;
 
-    follower.style.display = "none";
-    
-    const handleMouseMove = (e) => {
-      // Asegúrate de que el cálculo se basa en la posición relativa al div
-      const rect = div.getBoundingClientRect();
-      follower.style.left = e.clientX - rect.left + "px";
-      follower.style.top = e.clientY - rect.top + "px";
-
-
-    };
-
-    const handleMouseEnter = () => {
-      follower.style.display = "block";
-    };
-
-    const handleMouseLeave = () => {
+    if (div && follower) {
       follower.style.display = "none";
-    };
 
-    if (div) {
-      div.addEventListener("mousemove", handleMouseMove);
-      div.addEventListener("mouseenter", handleMouseEnter);
-      div.addEventListener("mouseleave", handleMouseLeave);
-
-      // Limpieza de eventos
-      return () => {
-        div.removeEventListener("mousemove", handleMouseMove);
-        div.removeEventListener("mouseenter", handleMouseEnter);
-        div.removeEventListener("mouseleave", handleMouseLeave);
+      const handleMouseMove = (e) => {
+        // Asegúrate de que el cálculo se basa en la posición relativa al div
+        const rect = div.getBoundingClientRect();
+        follower.style.left = e.clientX - rect.left + "px";
+        follower.style.top = e.clientY - rect.top + "px";
       };
+
+      const handleMouseEnter = () => {
+        follower.style.display = "block";
+      };
+
+      const handleMouseLeave = () => {
+        follower.style.display = "none";
+      };
+
+      if (div) {
+        div.addEventListener("mousemove", handleMouseMove);
+        div.addEventListener("mouseenter", handleMouseEnter);
+        div.addEventListener("mouseleave", handleMouseLeave);
+
+        // Limpieza de eventos
+        return () => {
+          div.removeEventListener("mousemove", handleMouseMove);
+          div.removeEventListener("mouseenter", handleMouseEnter);
+          div.removeEventListener("mouseleave", handleMouseLeave);
+        };
+      }
     }
   }, []);
 
@@ -129,26 +131,25 @@ export const Muestra = () => {
       </h3>
       <div
         id="carru"
-        className="contenedor-carrusel overflow-hidden"
+        className=""
         style={carouselStyle}
         onMouseDown={handleMouseDown}
         onMouseUp={handleMouseUp}
         ref={carruRef}
       >
-        <Slider {...settings} >
-          
+        <Slider {...settings}>
           {projects.map((project, index) => (
-            <div key={index} className="carousel-item" >
-              <div className="max-w-sm m-auto" >
+            <div key={index} className="carousel-item">
+              <div className="max-w-sm m-auto">
                 <CardsProjects {...project} />
               </div>
             </div>
           ))}
         </Slider>
       </div>
-      <div ref={followerRef} className="cursor-follower">
-       
-      </div>
+      {dimensions > 1000 && (
+        <div ref={followerRef} className="cursor-follower"></div>
+      )}
     </div>
   );
 };

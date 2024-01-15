@@ -1,6 +1,6 @@
 import React from 'react'
 import { NavLink } from 'react-router-dom'
-import whisper from '../../../assets/whisper.jpg';
+import whisper from '../imgs/whisper.jpg';
 
 export const MainArticulosIA = () => {
   return (
@@ -17,7 +17,7 @@ export const MainArticulosIA = () => {
           <p>Integra Whisper a tu aplicación móvil</p>
           <div className="card-actions justify-end">
             <NavLink
-            to='/articulosIA/whisper'
+            to='/blog/articulosIA/whisper'
             className="text-center border-2 w-full bg-white rounded-md p-1 border-indigo-200">Ver más</NavLink>
           </div>
         </div>
