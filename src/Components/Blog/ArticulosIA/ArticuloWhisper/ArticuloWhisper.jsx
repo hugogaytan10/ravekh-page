@@ -131,7 +131,7 @@ export const ArticuloWhisper = () => {
         'En este caso, no crearemos un modelo, ya que solo usaremos la API de Whisper.',
         'Lo mismo con las serializaciones, dependiendo de la API que quieras hacer, puedes crear una serialización o no.',
         'Un modelo es una clase que define la estructura de los datos, mientras que una serialización es una clase que convierte los datos en un formato que se puede almacenar o transmitir.',
-        'En vistas.py, importamos las librerías que vamos a usar:',
+        'En views.py, importamos las librerías que vamos a usar:',
         <div key="codigo-importaciones" className="rounded-lg p-4 bg-gray-800 text-white my-4">
           <p className="text-gray-300 mb-2"># Importa las librerías</p>
           <code className="text-green-300">
