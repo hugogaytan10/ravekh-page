@@ -79,12 +79,12 @@ export const ArticuloWhisper = () => {
         </div>,
         'Las librerías que acabamos de instalar son las siguientes:',
         <ul key="librerias" className="menu w-full rounded-box">
-          <li><a>django-cors-headers: para permitir solicitudes de origen cruzado</a></li>
-          <li><a>coreapi: para generar documentación de API</a></li>
-          <li><a>moviepy: para procesar videos</a></li>
-          <li><a>openai: para usar Whisper</a></li>
-          <li><a>tiktoken: para obtener el token de TikTok</a></li>
-          <li><a>pytube: para descargar videos de YouTube</a></li>
+          <li><a href='https://pypi.org/project/django-cors-headers/' target='_blank'>django-cors-headers: para permitir solicitudes de origen cruzado</a></li>
+          <li><a href='https://www.coreapi.org/' target='_blank'>coreapi: para generar documentación de API</a></li>
+          <li><a href='https://pypi.org/project/moviepy/' target='_blank'>moviepy: para procesar videos</a></li>
+          <li><a href='https://pypi.org/project/openai/' target='_blank'>openai: para usar Whisper</a></li>
+          <li><a href='https://pypi.org/project/tiktoken/' target='_blank'>tiktoken: para obtener los tokens de la solicitud</a></li>
+          <li><a href='https://pytube.io/en/latest/' target='_blank'>pytube: para descargar videos de YouTube</a></li>
         </ul>,
         'Luego, creamos un proyecto de Django:',
         <div key="codigo-proyecto" className="rounded-lg p-4 bg-gray-800 text-white my-4">
