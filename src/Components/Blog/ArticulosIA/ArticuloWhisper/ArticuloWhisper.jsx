@@ -297,6 +297,12 @@ export const ArticuloWhisper = () => {
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;os.remove(audio_path)<br />
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;os.remove(video_path)<br />
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return Response(datos_transcripcion)<br />
+          </code>
+        </div>,
+        'Si ocurre un error, se remueven los archivos de audio y video, y se retorna un mensaje de error:',
+        <div key="codigo-error" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Si ocurre un error, remueve los archivos de audio y video</p>
+          <code className="text-green-300">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;except Exception as e:<br />
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if os.path.exists(video_path):<br />
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;os.remove(video_path)<br />
