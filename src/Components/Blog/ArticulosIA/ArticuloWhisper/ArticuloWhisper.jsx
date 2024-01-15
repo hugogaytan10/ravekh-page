@@ -317,8 +317,8 @@ export const ArticuloWhisper = () => {
         </div>,
         'El código completo se vería así de momento:',
         <br />,
-        <div className="collapse bg-base-200">
-          <input type="radio" name="my-accordion-1" />
+        <div className="collapse collapse-plus bg-base-200">
+          <input type="checkbox" name="my-accordion-1" />
           <div className="collapse-title text-xl font-medium blanco">
             Presiona aqui para ver el código
           </div>
