@@ -52,6 +52,363 @@ export const ArticuloWhisper = () => {
         'Además, DRF ofrece navegación interactiva, facilitando la exploración y prueba de tu API.',
         'Ya sea que estés construyendo una API para tu aplicación web o creando un backend independiente, Django Rest Framework se destaca como una herramienta esencial para facilitar el desarrollo de servicios web potentes y escalables.'
       ]
+    },
+    {
+      id: 'seccion-imp',
+      titulo: 'Implementación de Whisper en Django',
+      contenido: [
+        'Primeramente, necesitamos trabajar en un entorno virtual. Para ello, ejecutamos el siguiente comando en la terminal:',
+        <div key="codigo-venv" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Crea un entorno virtual (el nombre puede ser cualquiera, en este caso sera venv)</p>
+          <code className="text-green-300">$ python -m venv venv</code>
+        </div>,
+        'Luego, activamos el entorno virtual:',
+        <div key="codigo-venv-act" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Activa el entorno virtual</p>
+          <code className="text-green-300">$ source venv/scripts/activate</code>
+        </div>,
+        'Ahora, instalamos Django y DRF:',
+        <div key="codigo-drf" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Instala Django y DRF</p>
+          <code className="text-green-300">$ pip install Django djangorestframework</code>
+        </div>,
+        'Ocupamos instalar las siguientes librerías:',
+        <div key="codigo-librerias" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Instala las librerías</p>
+          <code className="text-green-300">$ pip install django-cors-headers coreapi moviepy openai tiktoken pytube</code>
+        </div>,
+        'Las librerías que acabamos de instalar son las siguientes:',
+        <ul key="librerias" className="menu w-full rounded-box">
+          <li><a>django-cors-headers: para permitir solicitudes de origen cruzado</a></li>
+          <li><a>coreapi: para generar documentación de API</a></li>
+          <li><a>moviepy: para procesar videos</a></li>
+          <li><a>openai: para usar Whisper</a></li>
+          <li><a>tiktoken: para obtener el token de TikTok</a></li>
+          <li><a>pytube: para descargar videos de YouTube</a></li>
+        </ul>,
+        'Luego, creamos un proyecto de Django:',
+        <div key="codigo-proyecto" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Crea un proyecto de Django</p>
+          <code className="text-green-300">$ django-admin startproject whisper .</code>
+        </div>,
+        'El punto al final del comando anterior indica que el proyecto se creará en el directorio actual.',
+        'Ahora, creamos una aplicación llamada api:',
+        <div key="codigo-app" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Crea una aplicación llamada api</p>
+          <code className="text-green-300">$ django-admin startap api</code>
+        </div>,
+        'Luego, agregamos api a INSTALLED_APPS en settings.py:',
+        <div key="codigo-installed-apps" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Agrega api a INSTALLED_APPS</p>
+          <code className="text-green-300">INSTALLED_APPS = [<br />...<br />'api',<br />]</code>
+        </div>,
+        'Agrgamos las demas apps a INSTALLED_APPS:',
+        <div key="codigo-installed-apps2" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Agrega las demas apps a INSTALLED_APPS</p>
+          <code className="text-green-300">INSTALLED_APPS = [<br />...<br />'rest_framework',<br />'corsheaders',<br />'coreapi',<br />'openai',<br />'tiktoken',<br />'pytube',<br />'moviepy',<br /> ]</code>
+        </div>,
+        'Agregamos corsheaders.middleware.CorsMiddleware a MIDDLEWARE:',
+        <div key="codigo-middleware" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Agrega corsheaders.middleware.CorsMiddleware a MIDDLEWARE</p>
+          <code className="text-green-300">MIDDLEWARE = [<br />...<br />'corsheaders.middleware.CorsMiddleware',<br />]</code>
+        </div>,
+        'Agregamos CORS_ORIGIN_ALLOW_ALL = True a settings.py:',
+        <div key="codigo-cors" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Agrega CORS_ORIGIN_ALLOW_ALL = True</p>
+          <code className="text-green-300">CORS_ORIGIN_ALLOW_ALL = True</code>
+        </div>,
+        'Agregamos REST_FRAMEWORK = { "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema" } a settings.py:',
+        <div key="codigo-rest" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <code className="text-green-300">REST_FRAMEWORK = &#123;<br />&nbsp;&nbsp;"DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema"<br />&#125;</code>
+        </div>,
+        'Whitelist de CORS:',
+        <div key="codigo-whitelist" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <code className="text-green-300">CORS_ORIGIN_WHITELIST = [<br />&nbsp;&nbsp;"http://localhost:3000",<br />]</code>
+        </div>,
+        'Aqui agrega la dirección IP de tu frontend',
+        <br />,
+        'Como no tenemos un modelo como tal, dependiendo de la API que quieras hacer, puedes crear un modelo o no.',
+        'En este caso, no crearemos un modelo, ya que solo usaremos la API de Whisper.',
+        'Lo mismo con las serializaciones, dependiendo de la API que quieras hacer, puedes crear una serialización o no.',
+        'Un modelo es una clase que define la estructura de los datos, mientras que una serialización es una clase que convierte los datos en un formato que se puede almacenar o transmitir.',
+        'En vistas.py, importamos las librerías que vamos a usar:',
+        <div key="codigo-importaciones" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Importa las librerías</p>
+          <code className="text-green-300">
+            from rest_framework import viewsets<br />
+            from rest_framework.response import Response<br />
+            from rest_framework.decorators import action<br />
+            from openai import OpenAI<br />
+            import tiktoken<br />
+            from moviepy.editor import VideoFileClip<br />
+            from pytube import YouTube<br />
+            import os
+          </code>
+        </div>,
+        'Agrega tu token de OpenAI:',
+        <div key="codigo-token" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Agrega tu token de OpenAI</p>
+          <code className="text-green-300">client = OpenAI( <br />
+            &nbsp;&nbsp;api_key="YOUR_API_KEY",<br />
+            )<br />
+          </code>
+        </div>,
+        'Agrega los path para el video y audio:',
+        <div key="codigo-path" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Agrega los path para el video y audio</p>
+          <code className="text-green-300">video_path = os.path.abspath("video.mp4")<br />
+            audio_path = os.path.abspath("audio.mp3")<br />
+          </code>
+        </div>,
+        'Crea una funcion para extraer el audio del video:',
+        <div key="codigo-audio" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Crea una funcion para extraer el audio del video</p>
+          <code className="text-green-300">def extraer_audio(video_path, audio_path):<br />
+            &nbsp;&nbsp;video_clip = VideoFileClip(video_path)<br />
+            &nbsp;&nbsp;audio_clip = video_clip.audio<br />
+            &nbsp;&nbsp;audio_clip.write_audiofile(audio_path, codec='mp3', bitrate='16k')<br />
+            &nbsp;&nbsp;audio_clip.close()<br />
+            &nbsp;&nbsp;video_clip.close()<br />
+          </code>
+        </div>,
+        'Ahora es momento de crear las vistas, una vista es una función que recibe una solicitud y devuelve una respuesta.',
+        'Primero, creamos una clase llamada TranscriptionViewSet, que hereda de viewsets.ViewSet:',
+        <div key="codigo-viewset" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Crea una clase llamada TranscriptionViewSet</p>
+          <code className="text-green-300">class TranscriptionViewSet(viewsets.ViewSet):<br />
+          </code>
+        </div>,
+        'Luego creamos una accion de tipo POST:',
+        <div key="codigo-post" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Crea una accion de tipo POST</p>
+          <code className="text-green-300">&nbsp;&nbsp;@action(detail=False, methods=["post"])<br />
+          </code>
+        </div>,
+        'Agregamos la funcion de la accion:',
+        <div key="codigo-funcion" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Agrega la funcion de la accion</p>
+          <code className="text-green-300">&nbsp;&nbsp;def transcription(self, request):<br />
+          </code>
+        </div>,
+        'Obtenemos el id del video y un lenguaje de la solicitud, es recomendable hacer esto dentro de un try, por si no se encuentran los parametros en el cuerpo de la solicitud:',
+        <div key="codigo-try" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Obten el id del video y un lenguaje de la solicitud</p>
+          <code className="text-green-300">&nbsp;&nbsp;&nbsp;&nbsp;try:<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;id_video = request.data.get('id_video')<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;language = request.data.get('language')<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;except KeyError:<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return Response(<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#123;<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'mensaje': 'Parámetros incorrectos'<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#125;, status=400<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;)<br />
+          </code>
+        </div>,
+        'Despues de obtener el id del video, descargamos el video de YouTube, dentro de un try, por si no se encuentra el video o surge otro error:',
+        <div key="codigo-youtube" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Crea el objeto YouTube con el id del video</p>
+          <code className="text-green-300">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;try:<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;url = 'https://www.youtube.com/watch?v='+id_video<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;youtube = YouTube(url)<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;video = youtube.streams.get_lowest_resolution()<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;video.download(filename="video.mp4")<br />
+          </code>
+        </div>,
+        'Extraemos el audio del video:',
+        <div key="codigo-extract" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Extrae el audio del video</p>
+          <code className="text-green-300">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;extraer_audio(video_path, audio_path)<br />
+          </code>
+        </div>,
+        'Ahora, creamos una variable llamada result, que es igual a la respuesta de la API de Whisper:',
+        <div key="codigo-whisper" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Crea una variable llamada result</p>
+          <code className="text-green-300">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result = client.audio.transcriptions.create(<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model="whisper-1",<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;file=open("audio.mp3", "rb")<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)<br />
+          </code>
+        </div>,
+        'Obtenemos el texto de la variable result:',
+        <div key="codigo-texto" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Obten el texto de la variable result</p>
+          <code className="text-green-300">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;texto_transcrito = result.text<br />
+          </code>
+        </div>,
+        'Generamos un prompt, que es el texto que le pasaremos a OpenAI para que genere el texto y lo traduzca:',
+        <div key="codigo-prompt" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Genera un prompt</p>
+          <code className="text-green-300">
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prompt = f""" Translate the following text to {'{language}'}, ensuring<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;that the translation accurately conveys the original meaning.<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Pay attention to nuances and context, and provide a clear and<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;coherent {'{language}'} rendition of the content. """<br />
+          </code>
+        </div>,
+        'El prompt es escrito en inglés para que sea más fácil para OpenAI traducirlo.',
+        <br />,
+        'Generamos una variable llamada request, que incluye el prompt y el texto transcrito:',
+        <div key="codigo-request" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Genera una variable llamada request</p>
+          <code className="text-green-300">
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;request = prompt + texto_transcrito<br />
+          </code>
+        </div>,
+        'Ya que los modelos de chatGpt no miden por palabras o longitud, sino por tokens, usaremos la biblioteca de TikToken para obtener el número de tokens del texto transcrito y así poder saber que modelo usar:',
+        <div key="codigo-tokens" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Usa la biblioteca de TikToken para obtener el número de tokens del texto transcrito</p>
+          <code className="text-green-300">
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelTokens = ''<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;enc = tiktoken.encoding_for_model('gpt-3.5-turbo')<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if len(enc.encode(request)) {'<'} 4097:<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelTokens = 'gpt-3.5-turbo'<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;else:<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelTokens = 'gpt-3.5-turbo-16k'<br />
+          </code>
+        </div>,
+        'Llamamos a chat_completition de OpenAI, para que genere la respuesta:',
+        <div key="codigo-chat" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Llama a chat_completition de OpenAI</p>
+          <code className="text-green-300">
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;chat_completion = client.chat_completions.create(<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;messages=[<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#123;<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"role": 'user',<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"content": request<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#125;<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;],<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model=modelTokens,<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;stream=true,<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)<br />
+          </code>
+        </div>,
+        'El stream es para recuperar la respuesta más fácilmente.',
+        <br />,
+        'Se genera una variable response vacia para rescatar la respuesta de los streams, un objeto JSON llamado datos_transcripcion, removemos el archivo de audio y video, y retornamos la respuesta de la API de Whisper:',
+        <div key="codigo-response" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <p className="text-gray-300 mb-2"># Genera una variable response vacia</p>
+          <code className="text-green-300">
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;response = ''<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for chunk in chat_completion:<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;response += chunk.choices[0].delta.content<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;datos_transcripcion = {'{'}<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"transcripcion": response<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#125;<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;os.remove(audio_path)<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;os.remove(video_path)<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return Response(datos_transcripcion)<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;except Exception as e:<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if os.path.exists(video_path):<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;os.remove(video_path)<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if os.path.exists(audio_path):<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;os.remove(audio_path)<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return Response(<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#123;<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'mensaje': f'Problemas al generar transcripción - {'{str(e)}'}'<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#125;, status=400<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)<br />
+          </code>
+        </div>,
+        'El código completo se vería así de momento:',
+        <br />,
+        <div className="collapse bg-base-200">
+          <input type="radio" name="my-accordion-1" />
+          <div className="collapse-title text-xl font-medium blanco">
+            Presiona aqui para ver el código
+          </div>
+          <div className="collapse-content">
+            <div key="codigo-viewset-completo" className="rounded-lg w-full bg-gray-800 text-white">
+              <code className="text-green-300">
+                from rest_framework import viewsets<br />
+                from rest_framework.response import Response<br />
+                from rest_framework.decorators import action<br />
+                from openai import OpenAI<br />
+                import tiktoken<br />
+                from moviepy.editor import VideoFileClip<br />
+                from pytube import YouTube<br />
+                import os<br />
+                client = OpenAI( <br />
+                &nbsp;&nbsp;api_key="YOUR_API_KEY",<br />
+                )<br />
+                video_path = os.path.abspath("video.mp4")<br />
+                audio_path = os.path.abspath("audio.mp3")<br />
+                def extraer_audio(video_path, audio_path):<br />
+                &nbsp;&nbsp;video_clip = VideoFileClip(video_path)<br />
+                &nbsp;&nbsp;audio_clip = video_clip.audio<br />
+                &nbsp;&nbsp;audio_clip.write_audiofile(audio_path, codec='mp3', bitrate='16k')<br />
+                &nbsp;&nbsp;audio_clip.close()<br />
+                &nbsp;&nbsp;video_clip.close()<br />
+                class TranscriptionViewSet(viewsets.ViewSet):<br />
+                &nbsp;&nbsp;@action(detail=False, methods=["post"])<br />
+                &nbsp;&nbsp;def transcription(self, request):<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;try:<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;id_video = request.data.get('id_video')<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;language = request.data.get('language')<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;try:<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;url = 'https://www.youtube.com/watch?v='+id_video<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;youtube = YouTube(url)<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;video = youtube.streams.get_lowest_resolution()<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;video.download(filename="video.mp4")<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;extraer_audio(video_path, audio_path)<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result = client.audio.transcriptions.create(<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model="whisper-1",<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;file=open("audio.mp3", "rb")<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;texto_transcrito = result.text<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prompt = f""" Translate the following text to {'{language}'}, ensuring<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;that the translation accurately conveys the original meaning.<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Pay attention to nuances and context, and provide a clear and<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;coherent {'{language}'} rendition of the content. """<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;request = prompt + texto_transcrito<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelTokens = ''<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;enc = tiktoken.encoding_for_model('gpt-3.5-turbo')<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;if len(enc.encode(request)) {'<'} 4097:<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelTokens = 'gpt-3.5-turbo'<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;else:<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelTokens = 'gpt-3.5-turbo-16k'<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;chat_completion = client.chat_completions.create(<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;messages=[<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#123;<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"role": 'user',<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"content": request<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#125;<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;],<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model=modelTokens,<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;stream=true,<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;response = ''<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;for chunk in chat_completion:<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;response += chunk.choices[0].delta.content<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;datos_transcripcion = {'{'}<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"transcripcion": response<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#125;<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;os.remove(audio_path)<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;os.remove(video_path)<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return Response(datos_transcripcion)<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;except Exception as e:<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if os.path.exists(video_path):<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;os.remove(video_path)<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; if os.path.exists(audio_path):<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;os.remove(audio_path)<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return Response(<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#123;<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'mensaje': f'Problemas al generar transcripción - {'{str(e)}'}'<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#125;, status=400<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;)<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;except KeyError:<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return Response(<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#123;<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;'mensaje': 'Parámetros incorrectos'<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&#125;, status=400<br />
+                &nbsp;&nbsp;&nbsp;&nbsp;)<br />
+              </code>
+            </div>
+          </div>
+        </div>,
+        <br />,
+        'Te recomendamos revises la identación del código, ya que en el artículo no se muestra correctamente.',
+        <br />,
+      ]
     }
   ];
 
@@ -73,12 +430,17 @@ export const ArticuloWhisper = () => {
         </div>
       </div>
       <div className="bg-gray-100 p-6 max-w-3xl mx-auto">
-        <ul className="space-y-4">
-          {secciones.map((seccion) => (
-            <li key={seccion.id}>
-              <Link to={seccion.id} smooth={true} duration={500} className="text-blue-500 hover:underline cursor-pointer">{seccion.titulo}</Link>
-            </li>
-          ))}
+        <ul className="menu bg-neutral w-56 rounded-box space-y-4 my-6">
+          <li>
+            <h2 className="menu-title blanco">Contenido</h2>
+            <ul>
+              {secciones.map((seccion) => (
+                <li key={seccion.id}>
+                  <Link to={seccion.id} smooth={true} duration={500} className="link link-hover blanco">{seccion.titulo}</Link>
+                </li>
+              ))}
+            </ul>
+          </li>
         </ul>
 
         {secciones.map((seccion) => (
@@ -93,3 +455,4 @@ export const ArticuloWhisper = () => {
     </div>
   );
 };
+
