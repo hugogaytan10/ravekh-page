@@ -5,8 +5,6 @@ import GoogleInput from '../Utilidades/GoogleInput';
 import ravekh from '../../assets/ravekh.png';
 import validationSchema from './validationSchema';
 
-const SERVER_BASE_URL = '/.netlify/functions/';
-
 export const Contacto = () => {
     const formik = useFormik({
         initialValues: {
@@ -18,27 +16,20 @@ export const Contacto = () => {
         validationSchema: validationSchema,
         onSubmit: async (values) => {
             try {
-                const RESEND_API_KEY = 're_RyLYLXHN_L43ptRJBzPog9fFDhCqFqGHF';
-                
-                const res = await fetch(`https://api.resend.com/send`, {
+                const res = await fetch(`https://bervk-production.up.railway.app/api/contacto/sendinfo`, {
                     method: 'POST',
+                    mode: 'cors',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${RESEND_API_KEY}`
                     },
                     body: JSON.stringify({
-                        from: 'Acme <onboarding@resend.dev>',
-                        to: ['ravekh.team@gmail.com'],
-                        subject: 'Nuevo mensaje de contacto',
-                        html: `
-                          <p><strong>Nombre:</strong> ${values.nombre}</p>
-                          <p><strong>Apellido:</strong> ${values.apellido}</p>
-                          <p><strong>Correo electrónico:</strong> ${values.email}</p>
-                          <p><strong>Mensaje:</strong> ${values.mensaje}</p>
-                        `,
+                        nombre: values.nombre,
+                        apellido: values.apellido,
+                        email: values.email,
+                        mensaje: values.mensaje,
                     }),
                 });
-                
+
                 if (res.ok) {
                     const data = await res.json();
                     console.log('Formulario enviado exitosamente', data);

@@ -58,22 +58,22 @@ export const ArticuloWhisper = () => {
       titulo: 'Implementación de Whisper en Django',
       contenido: [
         'Primeramente, necesitamos trabajar en un entorno virtual. Para ello, ejecutamos el siguiente comando en la terminal:',
-        <div key="codigo-venv" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-venv" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Crea un entorno virtual (el nombre puede ser cualquiera, en este caso sera venv)</p>
           <code className="text-green-300">$ python -m venv venv</code>
         </div>,
         'Luego, activamos el entorno virtual:',
-        <div key="codigo-venv-act" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-venv-act" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Activa el entorno virtual</p>
           <code className="text-green-300">$ source venv/scripts/activate</code>
         </div>,
         'Ahora, instalamos Django y DRF:',
-        <div key="codigo-drf" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-drf" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Instala Django y DRF</p>
           <code className="text-green-300">$ pip install Django djangorestframework</code>
         </div>,
         'Ocupamos instalar las siguientes librerías:',
-        <div key="codigo-librerias" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-librerias" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Instala las librerías</p>
           <code className="text-green-300">$ pip install django-cors-headers coreapi moviepy openai tiktoken pytube</code>
         </div>,
@@ -87,42 +87,42 @@ export const ArticuloWhisper = () => {
           <li><a href='https://pytube.io/en/latest/' target='_blank'>pytube: para descargar videos de YouTube</a></li>
         </ul>,
         'Luego, creamos un proyecto de Django:',
-        <div key="codigo-proyecto" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-proyecto" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Crea un proyecto de Django</p>
           <code className="text-green-300">$ django-admin startproject whisper .</code>
         </div>,
         'El punto al final del comando anterior indica que el proyecto se creará en el directorio actual.',
         'Ahora, creamos una aplicación llamada api:',
-        <div key="codigo-app" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-app" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Crea una aplicación llamada api</p>
           <code className="text-green-300">$ django-admin startap api</code>
         </div>,
         'Luego, agregamos api a INSTALLED_APPS en settings.py:',
-        <div key="codigo-installed-apps" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-installed-apps" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Agrega api a INSTALLED_APPS</p>
           <code className="text-green-300">INSTALLED_APPS = [<br />...<br />'api',<br />]</code>
         </div>,
         'Agrgamos las demas apps a INSTALLED_APPS:',
-        <div key="codigo-installed-apps2" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-installed-apps2" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Agrega las demas apps a INSTALLED_APPS</p>
           <code className="text-green-300">INSTALLED_APPS = [<br />...<br />'rest_framework',<br />'corsheaders',<br />'coreapi',<br />'openai',<br />'tiktoken',<br />'pytube',<br />'moviepy',<br /> ]</code>
         </div>,
         'Agregamos corsheaders.middleware.CorsMiddleware a MIDDLEWARE:',
-        <div key="codigo-middleware" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-middleware" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Agrega corsheaders.middleware.CorsMiddleware a MIDDLEWARE</p>
           <code className="text-green-300">MIDDLEWARE = [<br />...<br />'corsheaders.middleware.CorsMiddleware',<br />]</code>
         </div>,
         'Agregamos CORS_ORIGIN_ALLOW_ALL = True a settings.py:',
-        <div key="codigo-cors" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-cors" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Agrega CORS_ORIGIN_ALLOW_ALL = True</p>
           <code className="text-green-300">CORS_ORIGIN_ALLOW_ALL = True</code>
         </div>,
-        'Agregamos REST_FRAMEWORK = { "DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema" } a settings.py:',
-        <div key="codigo-rest" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        'Agregamos lo siguiente a settings.py para que funcione la documentación del api:',
+        <div key="codigo-rest" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <code className="text-green-300">REST_FRAMEWORK = &#123;<br />&nbsp;&nbsp;"DEFAULT_SCHEMA_CLASS": "rest_framework.schemas.coreapi.AutoSchema"<br />&#125;</code>
         </div>,
         'Whitelist de CORS:',
-        <div key="codigo-whitelist" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-whitelist" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <code className="text-green-300">CORS_ORIGIN_WHITELIST = [<br />&nbsp;&nbsp;"http://localhost:3000",<br />]</code>
         </div>,
         'Aqui agrega la dirección IP de tu frontend',
@@ -132,7 +132,7 @@ export const ArticuloWhisper = () => {
         'Lo mismo con las serializaciones, dependiendo de la API que quieras hacer, puedes crear una serialización o no.',
         'Un modelo es una clase que define la estructura de los datos, mientras que una serialización es una clase que convierte los datos en un formato que se puede almacenar o transmitir.',
         'En views.py, importamos las librerías que vamos a usar:',
-        <div key="codigo-importaciones" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-importaciones" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Importa las librerías</p>
           <code className="text-green-300">
             from rest_framework import viewsets<br />
@@ -146,7 +146,7 @@ export const ArticuloWhisper = () => {
           </code>
         </div>,
         'Agrega tu token de OpenAI:',
-        <div key="codigo-token" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-token" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Agrega tu token de OpenAI</p>
           <code className="text-green-300">client = OpenAI( <br />
             &nbsp;&nbsp;api_key="YOUR_API_KEY",<br />
@@ -154,14 +154,14 @@ export const ArticuloWhisper = () => {
           </code>
         </div>,
         'Agrega los path para el video y audio:',
-        <div key="codigo-path" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-path" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Agrega los path para el video y audio</p>
           <code className="text-green-300">video_path = os.path.abspath("video.mp4")<br />
             audio_path = os.path.abspath("audio.mp3")<br />
           </code>
         </div>,
         'Crea una funcion para extraer el audio del video:',
-        <div key="codigo-audio" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-audio" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Crea una funcion para extraer el audio del video</p>
           <code className="text-green-300">def extraer_audio(video_path, audio_path):<br />
             &nbsp;&nbsp;video_clip = VideoFileClip(video_path)<br />
@@ -173,25 +173,25 @@ export const ArticuloWhisper = () => {
         </div>,
         'Ahora es momento de crear las vistas, una vista es una función que recibe una solicitud y devuelve una respuesta.',
         'Primero, creamos una clase llamada TranscriptionViewSet, que hereda de viewsets.ViewSet:',
-        <div key="codigo-viewset" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-viewset" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Crea una clase llamada TranscriptionViewSet</p>
           <code className="text-green-300">class TranscriptionViewSet(viewsets.ViewSet):<br />
           </code>
         </div>,
         'Luego creamos una accion de tipo POST:',
-        <div key="codigo-post" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-post" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Crea una accion de tipo POST</p>
           <code className="text-green-300">&nbsp;&nbsp;@action(detail=False, methods=["post"])<br />
           </code>
         </div>,
         'Agregamos la funcion de la accion:',
-        <div key="codigo-funcion" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-funcion" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Agrega la funcion de la accion</p>
           <code className="text-green-300">&nbsp;&nbsp;def transcription(self, request):<br />
           </code>
         </div>,
         'Obtenemos el id del video y un lenguaje de la solicitud, es recomendable hacer esto dentro de un try, por si no se encuentran los parametros en el cuerpo de la solicitud:',
-        <div key="codigo-try" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-try" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Obten el id del video y un lenguaje de la solicitud</p>
           <code className="text-green-300">&nbsp;&nbsp;&nbsp;&nbsp;try:<br />
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;id_video = request.data.get('id_video')<br />
@@ -205,7 +205,7 @@ export const ArticuloWhisper = () => {
           </code>
         </div>,
         'Despues de obtener el id del video, descargamos el video de YouTube, dentro de un try, por si no se encuentra el video o surge otro error:',
-        <div key="codigo-youtube" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-youtube" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Crea el objeto YouTube con el id del video</p>
           <code className="text-green-300">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;try:<br />
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;url = 'https://www.youtube.com/watch?v='+id_video<br />
@@ -215,13 +215,13 @@ export const ArticuloWhisper = () => {
           </code>
         </div>,
         'Extraemos el audio del video:',
-        <div key="codigo-extract" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-extract" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Extrae el audio del video</p>
           <code className="text-green-300">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;extraer_audio(video_path, audio_path)<br />
           </code>
         </div>,
         'Ahora, creamos una variable llamada result, que es igual a la respuesta de la API de Whisper:',
-        <div key="codigo-whisper" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-whisper" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Crea una variable llamada result</p>
           <code className="text-green-300">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;result = client.audio.transcriptions.create(<br />
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;model="whisper-1",<br />
@@ -230,13 +230,13 @@ export const ArticuloWhisper = () => {
           </code>
         </div>,
         'Obtenemos el texto de la variable result:',
-        <div key="codigo-texto" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-texto" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Obten el texto de la variable result</p>
           <code className="text-green-300">&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;texto_transcrito = result.text<br />
           </code>
         </div>,
         'Generamos un prompt, que es el texto que le pasaremos a OpenAI para que genere el texto y lo traduzca:',
-        <div key="codigo-prompt" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-prompt" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Genera un prompt</p>
           <code className="text-green-300">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;prompt = f""" Translate the following text to {'{language}'}, ensuring<br />
@@ -248,14 +248,14 @@ export const ArticuloWhisper = () => {
         'El prompt es escrito en inglés para que sea más fácil para OpenAI traducirlo.',
         <br />,
         'Generamos una variable llamada request, que incluye el prompt y el texto transcrito:',
-        <div key="codigo-request" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-request" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Genera una variable llamada request</p>
           <code className="text-green-300">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;request = prompt + texto_transcrito<br />
           </code>
         </div>,
         'Ya que los modelos de chatGpt no miden por palabras o longitud, sino por tokens, usaremos la biblioteca de TikToken para obtener el número de tokens del texto transcrito y así poder saber que modelo usar:',
-        <div key="codigo-tokens" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-tokens" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Usa la biblioteca de TikToken para obtener el número de tokens del texto transcrito</p>
           <code className="text-green-300">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;modelTokens = ''<br />
@@ -267,7 +267,7 @@ export const ArticuloWhisper = () => {
           </code>
         </div>,
         'Llamamos a chat_completition de OpenAI, para que genere la respuesta:',
-        <div key="codigo-chat" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-chat" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Llama a chat_completition de OpenAI</p>
           <code className="text-green-300">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;chat_completion = client.chat_completions.create(<br />
@@ -285,7 +285,7 @@ export const ArticuloWhisper = () => {
         'El stream es para recuperar la respuesta más fácilmente.',
         <br />,
         'Se genera una variable response vacia para rescatar la respuesta de los streams, un objeto JSON llamado datos_transcripcion, removemos el archivo de audio y video, y retornamos la respuesta de la API de Whisper:',
-        <div key="codigo-response" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-response" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Genera una variable response vacia</p>
           <code className="text-green-300">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;response = ''<br />
@@ -300,7 +300,7 @@ export const ArticuloWhisper = () => {
           </code>
         </div>,
         'Si ocurre un error, se remueven los archivos de audio y video, y se retorna un mensaje de error:',
-        <div key="codigo-error" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-error" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <p className="text-gray-300 mb-2"># Si ocurre un error, remueve los archivos de audio y video</p>
           <code className="text-green-300">
             &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;except Exception as e:<br />
@@ -415,7 +415,7 @@ export const ArticuloWhisper = () => {
         'Te recomendamos revises la identación del código, ya que en el artículo no se muestra correctamente.',
         <br />,
         'Ahora, dentro de api, creamos un archivo llamado urls.py, y agregamos las siguientes rutas e importaciones:',
-        <div key="codigo-urls" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-urls" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <code className="text-green-300">
             from django.urls import path, include<br />
             from rest_framework import routers<br />
@@ -436,7 +436,7 @@ export const ArticuloWhisper = () => {
         'Este codigo es para que podamos acceder a la API de Whisper desde el frontend, el name es para poder acceder a la ruta desde el frontend mientras que el as_view es para que podamos acceder a la vista.',
         <br />,
         'Ahora pasamos a urls.py, pero en la carpeta whisper, y agregamos la ruta de la API de Whisper:',
-        <div key="codigo-urls2" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-urls2" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <code className="text-green-300">
             from django.contrib import admin<br />
             from django.urls import path, include<br />
@@ -454,7 +454,7 @@ export const ArticuloWhisper = () => {
         'Si se tienen modelos, se registrarian las migraciones, creando una base de datos, pero como no tenemos modelos, no es necesario.',
         <br />,
         'Si queremos versionar nuestra API, podemos hacerlo con Git, para ello, creamos un archivo llamado .gitignore, y agregamos las siguientes lineas:',
-        <div key="codigo-gitignore" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-gitignore" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <code className="text-green-300">
             # Virtual environment<br />
             venv/<br />
@@ -481,7 +481,7 @@ export const ArticuloWhisper = () => {
         'Esto es para que no se suban archivos innecesarios a nuestro repositorio.',
         <br />,
         'Para recuperar las dependencias de nuestro proyecto, ejecutamos el siguiente comando:',
-        <div key="codigo-dependencias" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-dependencias" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <code className="text-green-300">
             $ pip freeze {">"} requirements.txt<br />
           </code>
@@ -489,7 +489,7 @@ export const ArticuloWhisper = () => {
         'Esto creara un archivo llamado requirements.txt, que contiene las dependencias de nuestro proyecto.',
         <br />,
         'Ahora para iniciar el servidor, ejecutamos el siguiente comando:',
-        <div key="codigo-servidor" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+        <div key="codigo-servidor" className="rounded-lg p-4 bg-gray-800 text-white my-4 overflow-x-auto">
           <code className="text-green-300">
             $ python manage.py runserver<br />
           </code>
@@ -499,17 +499,17 @@ export const ArticuloWhisper = () => {
   ];
 
   return (
-    <div>
-      <div className="hero min-h-screen blanco" style={{ backgroundImage: `url(${whisperBanner})` }}>
+    <div style={{ maxWidth: '100%', overflowX: 'hidden' }}>
+      <div className="hero min-h-screen blanco" style={{ backgroundImage: `url(${whisperBanner})`, maxWidth: '100%', overflowX: 'hidden' }}>
         <div className="hero-overlay bg-opacity-90"></div>
-        <div className="hero-content flex-col lg:flex-row-reverse">
+        <div className="hero-content flex-col lg:flex-row-reverse max-w-3xl mx-auto">
           <img src={whisper} className="max-w-sm rounded-lg shadow-2xl" alt="Whisper Library" />
-          <div>
-            <h1 className="text-5xl font-bold py-6">Descubriendo Whisper: La Revolucionaria Librería de OpenAI</h1>
-            <p className="py-6 justo">
+          <div className="max-w-full">
+            <h1 className="text-5xl font-bold p-6 ">Descubriendo Whisper: La Revolucionaria Librería de OpenAI</h1>
+            <p className="p-6 justo">
               En este artículo, nos sumergiremos en el fascinante mundo de Whisper de OpenAI. Descubrirás de cerca cómo esta innovadora biblioteca funciona y, lo que es aún más emocionante, aprenderás a integrarla fácilmente en tus proyectos de programación, sin importar su naturaleza o complejidad.
             </p>
-            <p className='py-6 justo'>
+            <p className='p-6 justo'>
               Whisper va más allá de ser simplemente una librería; es una herramienta que puede potenciar de manera significativa tus desarrollos. Únete a nosotros en este fascinante recorrido mientras desvelamos los secretos de Whisper y exploramos cómo puede elevar la calidad y eficiencia de tus proyectos hacia nuevos horizontes. Prepárate para descubrir y aprovechar todo el potencial de esta notable incorporación a la familia de OpenAI. ¡El futuro de tus proyectos está a punto de dar un salto cuántico!
             </p>
           </div>
