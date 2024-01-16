@@ -414,6 +414,86 @@ export const ArticuloWhisper = () => {
         <br />,
         'Te recomendamos revises la identación del código, ya que en el artículo no se muestra correctamente.',
         <br />,
+        'Ahora, dentro de api, creamos un archivo llamado urls.py, y agregamos las siguientes rutas e importaciones:',
+        <div key="codigo-urls" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <code className="text-green-300">
+            from django.urls import path, include<br />
+            from rest_framework import routers<br />
+            from api import views<br />
+            <br />
+            router = routers.DefaultRouter()<br />
+            <br />
+            urlpatterns = [<br />
+            &nbsp;&nbsp;path('', include(router.urls)),<br />
+            &nbsp;&nbsp;path(<br />
+            &nbsp;&nbsp;&nbsp;&nbsp;'whisper/transcripcion/', <br />
+            &nbsp;&nbsp;&nbsp;&nbsp;views.TranscriptionViewSet.as_view{"({'post': 'transcription'})"}, <br />
+            &nbsp;&nbsp;&nbsp;&nbsp;name='transcription'<br />
+            &nbsp;&nbsp;),<br />
+            ]<br />
+          </code>
+        </div>,
+        'Este codigo es para que podamos acceder a la API de Whisper desde el frontend, el name es para poder acceder a la ruta desde el frontend mientras que el as_view es para que podamos acceder a la vista.',
+        <br />,
+        'Ahora pasamos a urls.py, pero en la carpeta whisper, y agregamos la ruta de la API de Whisper:',
+        <div key="codigo-urls2" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <code className="text-green-300">
+            from django.contrib import admin<br />
+            from django.urls import path, include<br />
+            from rest_framework.documentation import include_docs_urls<br />
+            <br />
+            urlpatterns = [<br />
+            &nbsp;&nbsp;path('admin/', admin.site.urls),<br />
+            &nbsp;&nbsp;path('api/', include('api.urls'))<br />
+            &nbsp;&nbsp;path('docs/', include_docs_urls(title='DOCUMENTACION API')),<br />
+            ]<br />
+          </code>
+        </div>,
+        'Cada ruta tiene una función, la ruta de admin es para acceder al administrador de Django, la ruta de api es para acceder a la API de Whisper, y la ruta de docs es para acceder a la documentación de la API.',
+        <br />,
+        'Si se tienen modelos, se registrarian las migraciones, creando una base de datos, pero como no tenemos modelos, no es necesario.',
+        <br />,
+        'Si queremos versionar nuestra API, podemos hacerlo con Git, para ello, creamos un archivo llamado .gitignore, y agregamos las siguientes lineas:',
+        <div key="codigo-gitignore" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <code className="text-green-300">
+            # Virtual environment<br />
+            venv/<br />
+            <br />
+            # Byte-compiled / optimized / DLL files<br />
+            __pycache__/<br />
+            *.pyc<br />
+            *.pyo<br />
+            *.pyd<br />
+            <br />
+            # Django<br />
+            *.log<br />
+            db.sqlite3<br />
+            <br />
+            # API<br />
+            api/__pycache__/<br />
+            api/migrations/<br />
+            <br />
+            # DRF<br />
+            drf/__pycache__/<br />
+            drf/migrations/<br />
+          </code>
+        </div>,
+        'Esto es para que no se suban archivos innecesarios a nuestro repositorio.',
+        <br />,
+        'Para recuperar las dependencias de nuestro proyecto, ejecutamos el siguiente comando:',
+        <div key="codigo-dependencias" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <code className="text-green-300">
+            $ pip freeze {">"} requirements.txt<br />
+          </code>
+        </div>,
+        'Esto creara un archivo llamado requirements.txt, que contiene las dependencias de nuestro proyecto.',
+        <br />,
+        'Ahora para iniciar el servidor, ejecutamos el siguiente comando:',
+        <div key="codigo-servidor" className="rounded-lg p-4 bg-gray-800 text-white my-4">
+          <code className="text-green-300">
+            $ python manage.py runserver<br />
+          </code>
+        </div>,
       ]
     }
   ];
