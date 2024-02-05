@@ -5,6 +5,8 @@ import { LandingPage } from "../LandingPage/LandingPage";
 import { BlogMain } from "../Blog/BlogMain";
 import { MainArticulosIA } from "../Blog/ArticulosIA/MainArticulosIA";
 import { ArticuloWhisper } from "../Blog/ArticulosIA/ArticuloWhisper/ArticuloWhisper";
+import { MainArticulosReactNative } from "../Blog/ArticulosReactNative/MainArticulosReactNative";
+import { ArticuloValeLaPenaReact } from "../Blog/ArticulosReactNative/ArticuloValeLaPenaReact/ArticuloValeLaPenaReact";
 export const Rutas = () => {
   return (
     <BrowserRouter>
@@ -25,6 +27,8 @@ export const Rutas = () => {
             <Route path="/blog" element={<BlogMain />} />
             <Route path="/blog/articulosIA" element={<MainArticulosIA />} />
             <Route path="/blog/articulosIA/whisper" element={<ArticuloWhisper />} />
+            <Route path="/blog/articulosReactNative" element={<MainArticulosReactNative />} />
+            <Route path="/blog/articulosReactNative/valeLaPena" element={<ArticuloValeLaPenaReact />} />
           </Routes>
         </section>
       </main>
