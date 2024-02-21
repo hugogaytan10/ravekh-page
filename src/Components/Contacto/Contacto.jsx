@@ -16,6 +16,7 @@ export const Contacto = () => {
         validationSchema: validationSchema,
         onSubmit: async (values) => {
             try {
+
                 const res = await fetch(`https://bervk-production.up.railway.app/api/contacto/sendinfo`, {
                     method: 'POST',
                     mode: 'cors',
@@ -50,7 +51,7 @@ export const Contacto = () => {
             <form
                 onSubmit={formik.handleSubmit}
                 className='mt-10 mb-10 md:w-2/4 flex flex-wrap justify-center items-center '>
-                <div className='mb-4 w-full md:w-1/2 md:pr-2'>
+                <div className='mb-4 w-full md:w-1/2 md:pl-2'>
                     <GoogleInput
                         type='text'
                         placeholder='Nombre'
@@ -102,10 +103,10 @@ export const Contacto = () => {
                         <div className='text-red-500'>{formik.errors.email}</div>
                     )}
                 </div>
-                <h5 className='w-full text-gray-100 font-medium text-left px-4'>
+                <h5 className='w-full text-gray-100 font-medium text-left px-4 mb-4'>
                     Envíanos un correo personal con tus necesidades y nos pondremos en contacto
                 </h5>
-                <button type='submit' className='btn'>
+                <button type='submit' className=' btn'>
                     Enviar
                 </button>
             </form>

@@ -1,4 +1,5 @@
 .btn {
+   
     font-family: 'Raleway', sans-serif;
     text-decoration: none;
     position: relative;
@@ -22,7 +23,7 @@
     margin-left: 0.9em;
     left: 0;
     border-radius: 0;
-    overflow: hidden;
+
     background: 0 0;
     text-transform: uppercase;
     color: #ffffff !important;

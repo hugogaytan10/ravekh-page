@@ -40,7 +40,7 @@ export const Banner = () => {
             <div className="hero-content text-center text-neutral-content">
                 <div className="max-w-md">
                     <h1 className="mb-5 text-5xl font-bold claro">LLEVA TU NEGOCIO AL SIGUIENTE NIVEL</h1>
-                    <button className="bg-indigo-950 p-3 rounded-lg shadow-sky-500 text-gray-100">
+                    <button className="bg-white p-3 rounded-lg shadow-sky-500 text-gray-900 font-semibold">
                         <a href='https://api.whatsapp.com/send?phone=524451113370'>
                             Incrementar mis ganancias
                         </a>

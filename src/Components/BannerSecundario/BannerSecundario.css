@@ -1,0 +1,15 @@
+.cursor-follower-secundario {
+    position: absolute;
+    width: 50px;  /* Tamaño del círculo */
+    height: 50px;
+    border-radius: 50%;
+    background-color: rgb(211, 12, 102);  /* Color del círculo */
+    pointer-events: none;
+    transform: translate(-45%, -50%);  /* Centra el círculo en las coordenadas del cursor */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;  /* Color del texto */
+    font-size: 20px;  /* Tamaño del texto */
+    font-family: Arial, sans-serif;  /* Tipo de fuente para asegurar consistencia */
+}
