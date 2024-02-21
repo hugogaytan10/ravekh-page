@@ -6,6 +6,8 @@ import itsur from "../../assets/ITSUR.png";
 import short from "../../assets/short-link.png";
 import webComida from "../../assets/webComida.png";
 import ecomers from "../../assets/ecomers.png";
+import digital from "../../assets/digital.png";
+import constructora from "../../assets/constructora.png";
 import Slider from "react-slick";
 import "./Muestra.css";
 import "slick-carousel/slick/slick.css";
@@ -50,6 +52,18 @@ export const Muestra = () => {
       description: "Demo de una tienda en linea",
       imageUrl: ecomers,
       link: "https://lrwresearch.com/index.php",
+    },
+    {
+      title: "Invitaciones digitales",
+      description: "Demo de una invitación digital",
+      imageUrl: digital,
+      link: "https://65a01fdcf3c4030dc5f1d57d--startling-lolly-70cc76.netlify.app/"
+    },
+    {
+      title: "Constructora",
+      description: "Demo de una página constructora",
+      imageUrl: constructora,
+      link: "https://6598412429d2ab309bca0d2d--aesthetic-cucurucho-786504.netlify.app/",
     },
   ];
 
