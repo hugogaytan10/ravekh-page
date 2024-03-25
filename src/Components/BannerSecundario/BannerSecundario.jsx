@@ -60,7 +60,7 @@ export const BannerSecundario = () => {
         La tecnología que respalda su éxito
       </h2>
       <div className="flex flex-wrap w-full">
-        <div className="w-1/2 h-96">
+        <div className="w-full md:w-1/2 h-96">
           <p className="font-thin text-gray-50 mt-5 w-9/12 p-1 ml-8">
             Nuestros clientes y sus colaboradores logran sus objetivos
             estratégicos y profesionales

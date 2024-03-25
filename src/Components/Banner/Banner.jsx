@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import './Banner.css'
-import banner from '../../assets/BannerClaro.jpg'
+import banner from '../../assets/BannerClaro.png'
 export const Banner = () => {
     const [text, setTex] = useState('Lleva tu negocio al siguiente nivel con nosotros');
     useEffect(() => {

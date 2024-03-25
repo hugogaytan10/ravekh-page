@@ -12,7 +12,6 @@ export const LandingPage = () => {
   return (
     <div className="flex overflow-hidden flex-wrap">
       <Banner />
-      <BannerSecundario />
       <Caracteristicas />
       <Productos />
       <Muestra />

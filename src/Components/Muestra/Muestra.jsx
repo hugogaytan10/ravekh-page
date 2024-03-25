@@ -8,6 +8,9 @@ import webComida from "../../assets/webComida.png";
 import ecomers from "../../assets/ecomers.png";
 import digital from "../../assets/digital.png";
 import constructora from "../../assets/constructora.png";
+import zapatos from "../../assets/zapatos.jpg";
+import TipTip from "../../assets/TipTip.jpg";
+import pantalones from "../../assets/Pantalones.jpg";
 import Slider from "react-slick";
 import "./Muestra.css";
 import "slick-carousel/slick/slick.css";
@@ -64,6 +67,24 @@ export const Muestra = () => {
       description: "Demo de una página constructora",
       imageUrl: constructora,
       link: "https://6598412429d2ab309bca0d2d--aesthetic-cucurucho-786504.netlify.app/",
+    },
+    {
+      title: "Tienda de Zapatos",
+      description: "Ecomerce para venta de Zapatos",
+      imageUrl:zapatos,
+      link:"https://www.calzadodiaz.com",
+    },
+    {
+      title: "Landing Page Altertions For The Future",
+      description: "Landing Page para una tienda de reparacion de ropa",
+      imageUrl:pantalones,
+      link:"https://www.alteracioneselfuturo.com",
+    },
+    {
+      title: "TipTip",
+      description: "Pagina de informacion para la aplicacion TipTip",
+      imageUrl:TipTip,
+      link:"https://play.google.com/store/apps/details?id=com.tiptiptip",
     },
   ];
 
