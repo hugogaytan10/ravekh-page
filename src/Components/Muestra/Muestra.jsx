@@ -60,7 +60,7 @@ export const Muestra = () => {
       title: "Invitaciones digitales",
       description: "Demo de una invitación digital",
       imageUrl: digital,
-      link: "https://65a01fdcf3c4030dc5f1d57d--startling-lolly-70cc76.netlify.app/"
+      link: "https://startling-lolly-70cc76.netlify.app/"
     },
     {
       title: "Constructora",
