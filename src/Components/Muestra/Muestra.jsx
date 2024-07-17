@@ -66,7 +66,7 @@ export const Muestra = () => {
       title: "Constructora",
       description: "Demo de una página constructora",
       imageUrl: constructora,
-      link: "https://6598412429d2ab309bca0d2d--aesthetic-cucurucho-786504.netlify.app/",
+      link: "https://aesthetic-cucurucho-786504.netlify.app/",
     },
     {
       title: "Tienda de Zapatos",
