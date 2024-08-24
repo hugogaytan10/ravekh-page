@@ -8,10 +8,10 @@ interface ICards {
 export const CardsProjects: React.FC<ICards> = ({ title, description, imageUrl, link }) => {
 
     return (
-        <div className="w-full  md:w-full lg:w-full bg-fondo rounded-lg mt-4 mb-4 bg-white border-2 border-gray-100 hover:shadow-md overflow-hidden"
+        <div className="w-full flex flex-wrap justify-center items-center   md:w-full lg:w-full rounded-lg  bg-white border-2 border-gray-100 hover:shadow-md"
         >
             <div className="">
-                <img src={imageUrl} alt={title} className='w-100% h-full object-contain rounded-lg transition-all hover:scale-110' />
+                <img src={imageUrl} alt={title} className='w-100%  object-contain rounded-lg transition-all hover:scale-110' />
             </div>
             <div className="h-fit flex flex-wrap justify-center  mt-2 overflow-auto">
                 <h2 className="text-xl font-bold text-gray-800 text-center md:text-2xl ">
