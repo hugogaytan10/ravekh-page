@@ -8,9 +8,9 @@ interface ICards {
 export const CardsProjects: React.FC<ICards> = ({ title, description, imageUrl, link }) => {
 
     return (
-        <div className="w-full min-h-fit  md:w-full lg:w-full bg-fondo rounded-lg mt-4 mb-4 bg-white border-2 border-gray-100 hover:shadow-md overflow-hidden"
+        <div className="w-full  md:w-full lg:w-full bg-fondo rounded-lg mt-4 mb-4 bg-white border-2 border-gray-100 hover:shadow-md overflow-hidden"
         >
-            <div className="min-h-fit max-h-64 overflow-hidden">
+            <div className="">
                 <img src={imageUrl} alt={title} className='w-100% h-full object-contain rounded-lg transition-all hover:scale-110' />
             </div>
             <div className="h-fit flex flex-wrap justify-center  mt-2 overflow-auto">

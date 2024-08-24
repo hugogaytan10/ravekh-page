@@ -23,14 +23,14 @@
     border-bottom: 6px solid #fff;
     border-top: 6px solid #fff;
     top: 50%;
-    left: 60%;
+    left: 62%;
     rotate: 45deg;
     transform: translate(-50%, -50%);
 }
 .mouse {
     display: block;
     position: absolute;
-    bottom: 10%;
+    bottom: 15%;
     left: 50%;
     width: 30px;
     height: 48px;

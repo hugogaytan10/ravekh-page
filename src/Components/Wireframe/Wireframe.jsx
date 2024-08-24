@@ -36,9 +36,9 @@ export const Wireframe = () => {
     <div
       id="secundario"
       ref={secundario}
-      className="w-full relative flex flex-wrap items-center justify-between min-h-screen "
+      className="w-full relative flex flex-wrap justify-between min-h-screen md:items-center"
     >
-      <span className=" block w-full text-white text-sm text-center absolute top-4 rombo">
+      <span className="  w-full text-white text-sm text-center top-4 absolute  rombo">
         Wireframe 3
       </span>
       <h2 className=" text-gray-50 font-bold text-4xl p-1 ml-8 w-full md:w-1/4 text-center ">
@@ -49,7 +49,7 @@ export const Wireframe = () => {
         <div className="circle-of-dots"></div>
       </div>
       <p className="font-thin text-gray-50 mt-5 w-full md:w-1/4  p-1 ml-8 text-left text-base md:text-xl">
-      El boceto de wireframes es fundamental para comenzar a realizar conceptos e ideas en un diseño legible y administrado.
+      El boceto de wireframes es fundamental para comenzar a realizar conceptos e ideas en un diseño legible.
       </p>
     </div>
   );

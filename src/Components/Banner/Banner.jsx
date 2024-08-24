@@ -39,7 +39,7 @@ export const Banner = () => {
       className="contenedor-banner"
       style={{ backgroundColor: "#6D01D1" }}
     >
-      <span className=" block w-full text-white text-sm text-center absolute top-1/4 rombo">Objetivo</span>
+      <span className=" w-full text-white text-sm text-center absolute top-1/4 rombo">Objetivo</span>
       <h1 className="titulo-pagina">
         {shouldAnimate && <TextoAnimado text="Creativo" />}
         {shouldAnimate && <TextoAnimado text="Directo" />}

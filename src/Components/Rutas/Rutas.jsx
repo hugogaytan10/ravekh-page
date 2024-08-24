@@ -10,6 +10,8 @@ import menu from "../../assets/menu.svg";
 import "./Rutas.css";
 import { gsap, TimelineMax } from "gsap";
 import { ArticuloValeLaPenaReact } from "../Blog/ArticulosReactNative/ArticuloValeLaPenaReact/ArticuloValeLaPenaReact";
+import { Productos } from "../Producto/Productos";
+import { Muestra } from "../Muestra/Muestra";
 
 export const Rutas = () => {
   const menuIconRef = useRef(null);
@@ -46,6 +48,7 @@ export const Rutas = () => {
           <nav ref={slideDownRef} className=" menu-container fixed top-0 left-0 w-full h-full bg-morado-oscuro z-30" style={{display: 'none'}}>
             <ul ref={listItemsRef} className="list-items flex flex-col items-center justify-center h-full">
               <li><NavLink to="/" onClick={handleMenuClick}>Inicio</NavLink></li>
+              <li><NavLink to="/proyectos" onClick={handleMenuClick}>Proyectos</NavLink></li>
               <li><NavLink to="/blog" onClick={handleMenuClick}>Blog</NavLink></li>
               <li><p className="text-white text-base">ravekh.team@gmail.com</p></li>
 
@@ -54,6 +57,7 @@ export const Rutas = () => {
 
           <Routes>
             <Route path="/" element={<LandingPage />} />
+            <Route path="/proyectos" element={<Muestra />} />
             <Route path="/blog" element={<BlogMain />} />
             <Route path="/blog/articulosIA" element={<MainArticulosIA />} />
             <Route path="/blog/articulosIA/whisper" element={<ArticuloWhisper />} />

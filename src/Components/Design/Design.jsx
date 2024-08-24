@@ -36,12 +36,12 @@ export const Design = () => {
     <div
       id="secundario"
       ref={secundario}
-      className="w-full relative flex flex-wrap items-center justify-between min-h-screen "
+      className="w-full relative flex flex-wrap  justify-between min-h-screen md:items-center"
     >
       <span className=" block w-full text-white text-sm text-center absolute top-4 rombo">
       Diseño 4
       </span>
-      <h2 className=" text-gray-50 font-bold text-4xl p-1 ml-8 w-full md:w-1/4 text-center ">
+      <h2 className=" text-gray-50 font-bold text-4xl  w-full md:w-1/4 text-center ">
         {shouldAnimate && <TextoAnimado text="Diseño" />}
       </h2>
       <div className="relative w-full md:w-1/4 flex items-center justify-center">

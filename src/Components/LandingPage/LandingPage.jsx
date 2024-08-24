@@ -49,7 +49,7 @@ export const LandingPage = () => {
       ref={containerRef}
       className="h-screen flex flex-col overflow-y-scroll snap-y snap-mandatory"
     >
-      <section className="h-screen snap-start w-full" data-endcolor="73,5,146">
+      <section className="h-screen snap-start w-full " data-endcolor="73,5,146">
         <Banner />
       </section>
       <section className="h-screen snap-start w-full" data-endcolor="78,10,148">

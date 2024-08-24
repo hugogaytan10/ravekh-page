@@ -46,11 +46,11 @@ export const Contacto = () => {
     });
 
     return (
-        <div className='md:flex md:justify-around md:flex-wrap min-h-screen w-full'>
-            <h3 className='text-3xl text-white text-center block w-full'>Contáctanos</h3>
+        <div className='flex justify-around flex-wrap min-h-screen w-full items-center'>
             <form
                 onSubmit={formik.handleSubmit}
                 className='mt-10 mb-10 md:w-2/4 flex flex-wrap justify-center items-center '>
+                <h3 className='text-3xl text-white text-center block w-full mb-5'>Contáctanos</h3>
                 <div className='mb-4 w-full md:w-1/2 md:pl-2'>
                     <GoogleInput
                         type='text'
@@ -122,7 +122,7 @@ export const Contacto = () => {
                     </div>
                 </div>
             </dialog>
-            <img alt='foto' src={ravekh} className='md:w-1/4 object-contain md:h-72' />
+           {/* <img alt='foto' src={ravekh} className='md:w-1/4 object-contain md:h-72' />*/}
         </div>
     );
 };

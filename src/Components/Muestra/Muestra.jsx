@@ -160,11 +160,11 @@ export const Muestra = () => {
   }, []);
 
   return (
-    <div className="w-3/4 block mt-16 m-auto scroll-content fadeTop">
+    <div className="w-3/4 m-auto min-h-screen ">
       <h3 className="text-center text-2xl font-bold md:text-3xl block w-full">
         Algunos Demos
       </h3>
-      <div
+     <div
         id="carru"
         className=""
         style={carouselStyle}
@@ -182,6 +182,7 @@ export const Muestra = () => {
           ))}
         </Slider>
       </div>
+
       {dimensions > 1000 && (
         <div ref={followerRef} className="cursor-follower"></div>
       )}
