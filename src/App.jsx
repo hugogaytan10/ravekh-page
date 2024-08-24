@@ -1,3 +1,4 @@
+import React, { useEffect, useState } from "react";
 import "./App.css";
 import { Banner } from "./Components/Banner/Banner";
 import { BannerSecundario } from "./Components/BannerSecundario/BannerSecundario";
@@ -8,7 +9,10 @@ import { Footer } from "./Components/Footer/Footer";
 import { Muestra } from "./Components/Muestra/Muestra";
 import logoWhasa from "./assets/logo-whatsapp.svg";
 import { Rutas } from "./Components/Rutas/Rutas";
+import { Carga } from "./Components/PantallaCarga/Carga";
+/*
 window.addEventListener("scroll", function () {
+  
   let elements = document.getElementsByClassName("scroll-content");
   let screenSize = window.innerHeight;
 
@@ -21,11 +25,22 @@ window.addEventListener("scroll", function () {
       element.classList.remove("visible");
     }
   }
+
 });
+*/
 function App() {
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // El tiempo total de la animación es de 2.4 segundos
+    const timer = setTimeout(() => {
+      setLoading(false);
+    }, 2800);
+    return () => clearTimeout(timer);
+  }, []);
   return (
     <div>
-      <Rutas />
+      {loading ? <Carga /> : <Rutas />}
     </div>
   );
 }

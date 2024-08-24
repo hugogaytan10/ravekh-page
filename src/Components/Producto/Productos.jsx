@@ -33,7 +33,7 @@ export const Productos = () => {
                 {
                     productos.map((item, idx) => {
                         return (
-                            <div className='mt-4 h-60 w-72 border-2 shadow-md rounded-md border-gray-100 bg-white scroll-content fadeLeft' key={idx}>
+                            <div className='mt-4 h-60 w-72 border-2 shadow-md rounded-md border-gray-100 bg-white ' key={idx}>
                                 <img
                                     src={item.img}
                                     alt='producto'

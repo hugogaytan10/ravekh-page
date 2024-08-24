@@ -1,53 +1,51 @@
-import React, { useEffect, useState } from 'react'
-import './Banner.css'
-import banner from '../../assets/BannerClaro.jpg'
+import React, { useEffect, useState, useRef } from "react";
+import "./Banner.css";
+import { TextoAnimado } from "../Utilidades/TextoAnimado";
 export const Banner = () => {
-    const [text, setTex] = useState('Lleva tu negocio al siguiente nivel con nosotros');
-    useEffect(() => {
-        let widthScreen = window.innerWidth;
-        widthScreen < 540 ? setTex("Lleva tu negocio al siguiente nivel") : setTex("Lleva tu negocio al siguiente nivel con nosotros");
-    }, []);
-    useEffect(() => {
-        // Función para crear dinámicamente las etiquetas span con animación
-        const createAnimatedStars = () => {
-            const container = document.querySelector('.hero');
-            const numStars = 4;
+  const sectionRef = useRef(null);
+  const [isInView, setIsInView] = useState(false);
+  const [shouldAnimate, setShouldAnimate] = useState(true);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setShouldAnimate(false); // Reset animation
+          setTimeout(() => {
+            setShouldAnimate(true); // Trigger animation
+          }, 50); // Delay slightly to allow DOM update
+          setIsInView(true);
+        } else {
+          setIsInView(false);
+        }
+      },
+      { threshold: 1 } // Ajusta el threshold según necesites
+    );
 
-            for (let i = 0; i < numStars; i++) {
-                const star = document.createElement('span');
-                star.className = 'figuras';
-                star.style.animationDelay = `${i * 0.5}s`; // Ajusta el retraso de animación
+    if (sectionRef.current) {
+      observer.observe(sectionRef.current);
+    }
 
-                container.appendChild(star);
-            }
-        };
-
-        // createAnimatedStars();
-    }, []);
-    return (
-        //     <div className='banner flex flex-wrap flex-col items-center justify-center gap-4 relative '>
-        //         <h1 className='w-3/4 text-gray-50 font-bold  text-4xl text-left md:text-center'>Aumenta tus ganancias</h1>
-        //         <p className='inline-block text-left text-gray-50 font-thin md:text-center leyenda'>{text}</p>
-        //         <a
-        //             href='https://api.whatsapp.com/send?phone=524451113370'
-        //             className=' rounded-md   font-bold  w-3/4 p-6  md:w-4/12 btn-banner'>
-        //             Incrementar mis ganancias
-        //         </a>
-
-        //     </div>
-        <div className="hero min-h-screen" style={{ backgroundImage: `url(${banner})` }}>
-            <div className="hero-overlay bg-opacity-60"></div>
-            <div className="hero-content text-center text-neutral-content">
-                <div className="max-w-md">
-                    <h1 className="mb-5 text-5xl font-bold claro">LLEVA TU NEGOCIO AL SIGUIENTE NIVEL</h1>
-                    <button className="bg-white p-3 rounded-lg shadow-sky-500 text-gray-900 font-semibold">
-                        <a href='https://api.whatsapp.com/send?phone=524451113370'>
-                            Incrementar mis ganancias
-                        </a>
-                        </button>
-                </div>
-            </div>
-        </div>
-
-    )
-}
+    return () => {
+      if (sectionRef.current) {
+        observer.unobserve(sectionRef.current);
+      }
+    };
+  }, []);
+  return (
+    <div
+      ref={sectionRef}
+      className="contenedor-banner"
+      style={{ backgroundColor: "#6D01D1" }}
+    >
+      <span className=" block w-full text-white text-sm text-center absolute top-1/4 rombo">Objetivo</span>
+      <h1 className="titulo-pagina">
+        {shouldAnimate && <TextoAnimado text="Creativo" />}
+        {shouldAnimate && <TextoAnimado text="Directo" />}
+        {shouldAnimate && <TextoAnimado text="y personal" />}
+      </h1>
+      <div className="mouse">
+        <div className="wheel"></div>
+      </div>
+    </div>
+  );
+};

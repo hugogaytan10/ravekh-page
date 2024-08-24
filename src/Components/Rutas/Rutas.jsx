@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useRef, useEffect } from "react";
 import { NavLink } from "react-router-dom";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { LandingPage } from "../LandingPage/LandingPage";
@@ -6,120 +6,60 @@ import { BlogMain } from "../Blog/BlogMain";
 import { MainArticulosIA } from "../Blog/ArticulosIA/MainArticulosIA";
 import { ArticuloWhisper } from "../Blog/ArticulosIA/ArticuloWhisper/ArticuloWhisper";
 import { MainArticulosReactNative } from "../Blog/ArticulosReactNative/MainArticulosReactNative";
-import { ArticuloValeLaPenaReact } from "../Blog/ArticulosReactNative/ArticuloValeLaPenaReact/ArticuloValeLaPenaReact";
 import menu from "../../assets/menu.svg";
+import "./Rutas.css";
+import { gsap, TimelineMax } from "gsap";
+import { ArticuloValeLaPenaReact } from "../Blog/ArticulosReactNative/ArticuloValeLaPenaReact/ArticuloValeLaPenaReact";
+
 export const Rutas = () => {
+  const menuIconRef = useRef(null);
+  const slideDownRef = useRef(null);
+  const listItemsRef = useRef(null);
+  const menuToggle = useRef(null);
+
+  useEffect(() => {
+    gsap.set(slideDownRef.current, { y: '-100%', display: 'block' });
+
+    menuToggle.current = new TimelineMax({ paused: true, reversed: true })
+      .to(menuIconRef.current, 0.5, { x: '-30', ease: "back.out(1.7)" })
+      .to(slideDownRef.current, 1, { y: '0%', ease: "back.out(1.7)" })
+      .staggerFrom(listItemsRef.current.children, 0.25, {
+        y: '-30',
+        ease: "power1.out"
+      }, 0.1);
+  }, []);
+
+  const handleMenuClick = () => {
+    menuToggle.current.reversed() ? menuToggle.current.restart() : menuToggle.current.reverse();
+  };
+
   return (
     <BrowserRouter>
-      <div className="drawer ">
+      <div className="drawer " >
         <input id="my-drawer-3" type="checkbox" className="drawer-toggle" />
 
-        <div className="drawer-content flex flex-col h-full min-w-full">
-          <div className="w-full navbar bg-black">
-            <div className="flex-none lg:hidden">
-              <label
-                htmlFor="my-drawer-3"
-                aria-label="open sidebar"
-              >
-                <img
-                  src={menu}
-                  alt="menu"
-                  className="h-10 w-10"
-                  htmlFor="my-drawer"
-                />
-              </label>
-            </div>
-            <div className=" flex-1 px-2 mx-2 text-gray-50 font-bold justify-center md:justify-start">
-              <NavLink to={"/"}>RAVEKH</NavLink>
-            </div>
-           
-            <div className="flex-none hidden lg:block ">
-              <ul className="menu menu-horizontal">
-                {/* Navbar menu content here */}
-                <li>
-                  <NavLink
-                    className={({ isActive }) =>
-                      isActive
-                        ? "active-link text-lg bg-white text-black"
-                        : "text-white text-lg "
-                    }
-                    to="/"
-                  >
-                    Inicio
-                  </NavLink>
-                </li>
-                <li>
-                  <NavLink
-                    className={({ isActive }) =>
-                      isActive
-                      ? "active-link text-lg bg-white text-black"
-                        : "text-white text-lg "
-                    }
-                    to="/blog"
-                  >
-                    Blog
-                  </NavLink>
-                </li>
-              </ul>
-            </div>
+        <div className="  drawer-content flex flex-col h-full min-w-full relative">
+          <div ref={menuIconRef} className="z-40 nav-menu bg-white w-10 h-10 rounded-full flex items-center justify-center fixed top-2 right-1 z-10" onClick={handleMenuClick}>
+            <img src={menu} alt="menu" className="h-10 w-10" />
           </div>
 
-          {/* Page content here */}
+          <nav ref={slideDownRef} className=" menu-container fixed top-0 left-0 w-full h-full bg-morado-oscuro z-30" style={{display: 'none'}}>
+            <ul ref={listItemsRef} className="list-items flex flex-col items-center justify-center h-full">
+              <li><NavLink to="/" onClick={handleMenuClick}>Inicio</NavLink></li>
+              <li><NavLink to="/blog" onClick={handleMenuClick}>Blog</NavLink></li>
+              <li><p className="text-white text-base">ravekh.team@gmail.com</p></li>
+
+            </ul>
+          </nav>
+
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/blog" element={<BlogMain />} />
             <Route path="/blog/articulosIA" element={<MainArticulosIA />} />
-            <Route
-              path="/blog/articulosIA/whisper"
-              element={<ArticuloWhisper />}
-            />
-            <Route
-              path="/blog/articulosReactNative"
-              element={<MainArticulosReactNative />}
-            />
-            <Route
-              path="/blog/articulosReactNative/valeLaPena"
-              element={<ArticuloValeLaPenaReact />}
-            />
+            <Route path="/blog/articulosIA/whisper" element={<ArticuloWhisper />} />
+            <Route path="/blog/articulosReactNative" element={<MainArticulosReactNative />} />
+            <Route path="/blog/articulosReactNative/valeLaPena" element={<ArticuloValeLaPenaReact />} />
           </Routes>
-        </div>
-
-        <div className="drawer-side z-30">
-          <label
-            htmlFor="my-drawer-3"
-            aria-label="close sidebar"
-            className="drawer-overlay "
-          ></label>
-          <ul className="menu p-4 w-80 min-h-full bg-black">
-            {/* Sidebar content here */}
-            <li>
-              <NavLink
-                to="/"
-                className={({ isActive }) =>
-                  isActive ? "active-link text-lg bg-white" : "text-white text-lg"
-                }
-                onClick={() => {
-                  document.getElementById("my-drawer-3").checked = false;
-                }}
-              >
-                Inicio
-              </NavLink>
-            </li>
-            
-            <li>
-              <NavLink
-                className={({ isActive }) =>
-                  isActive ? "active-link text-lg" : "text-white text-lg"
-                }
-                to="/blog"
-                onClick={() => {
-                  document.getElementById("my-drawer-3").checked = false;
-                }}
-              >
-                Blog
-              </NavLink>
-            </li>
-          </ul>
         </div>
       </div>
     </BrowserRouter>

@@ -15,7 +15,9 @@ export default {
         'contenedor-info': 'rgb(21,26,30)',
         'bg-contacto': '#162436',
         'fondo-oscuro': '#252424',
-        'color-whats': '#25D366'
+        'color-whats': '#25D366',
+        'morado-claro': '#6D01D1',
+        'morado-oscuro': '#1F023F',
       },
     },
   },

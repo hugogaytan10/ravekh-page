@@ -1,4 +1,14 @@
-
+html {
+    scroll-behavior: smooth;
+  }
+  
+.snap-mandatory {
+    scroll-snap-type: y mandatory;
+  }
+  
+.snap-start {
+    scroll-snap-align: start;
+  }
 
 .fadeTop {
     visibility: hidden;
@@ -9,7 +19,7 @@
 
 .fadeRight {
     visibility: hidden;
-    transform: translate(10vh, 0vh);
+    transform: translate(100vh, 0vh);
     transition: all 1.4s;
 }
 

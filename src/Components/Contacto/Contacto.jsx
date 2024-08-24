@@ -46,7 +46,7 @@ export const Contacto = () => {
     });
 
     return (
-        <div className='bg-bg-contacto mt-64 md:flex md:justify-around md:flex-wrap scroll-content fadeLeft w-full'>
+        <div className='md:flex md:justify-around md:flex-wrap min-h-screen w-full'>
             <h3 className='text-3xl text-white text-center block w-full'>Contáctanos</h3>
             <form
                 onSubmit={formik.handleSubmit}

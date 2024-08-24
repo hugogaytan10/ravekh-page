@@ -1,144 +1,89 @@
-.banner {
-    min-height: 100vh;
-    min-width: 100%;
-    overflow: hidden;
-    /*
-    background: rgb(56, 37, 0);
-    background: linear-gradient(190deg, #8B4780 0%, #3C0433 100%);
-    */
-    display: table;
+.contenedor-banner{
+    background-color: #490592;
+    height: 100vh;
+    width: 100%;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    align-items: center;
+    position: relative;
 }
-
-.claro {
-    color: #ffffff !important;
-}
-
-.banner>h1 {
-    text-shadow: 2px 3px rgb(4, 73, 98);
-}
-
-.btn-banner {
-    display: inline-block;
-    padding: 10px 20px;
-    margin: 10px;
+.titulo-pagina{
+    font-size: 30px;
+    font-weight: bold;
     color: #fff;
-    text-align: center;
-    background-color: #3C0433;
-    border: 2px solid #611453;
-    border-radius: 5px;
-    text-decoration: none;
-    transition: background-color 0.5s, color 0.3s;
 }
-
-.btn-banner:hover {
-    background-color: #93107f;
-    color: #e8e8e8;
-    box-shadow: 0px 0px 10px 0px #8B4780;
-}
-
-.banner-secundario {
-    min-height: 397px;
-}
-
-.animacion-flecha {
+.rombo::after{
+    content: "";
     position: absolute;
-    right: 20px;
-    animation: moverFlecha 2s linear infinite;
-}
-
-.leyenda {
-    /* width: 0; */
-    /* display: inline-block; */
-    padding: 10px;
-    text-align: center;
-    overflow: hidden;
-    /* white-space: nowrap; */
-    background-color: #3C0433;
-    font-size: 1rem;
-    font-family: "Courier New";
-    border-right: 0.15em solid #18bdec;
-    /* animation: typing 5s steps(48) infinite alternate; */
-}
-
-@keyframes typing {
-    from {
-        width: 0%;
-    }
-
-    to {
-        width: -moz-fit-content;
-        width: fit-content;
-    }
-}
-
-@keyframes moverFlecha {
-    0% {
-        right: 20px;
-    }
-
-    100% {
-        right: 0px;
-    }
-}
-
-
-/* Agrega estos estilos en tu archivo Banner.css o donde tengas tus estilos */
-
-.figuras {
-    display: block;
     width: 0;
     height: 0;
-    border-left: 5px solid transparent;
-    border-right: 5px solid transparent;
-    border-bottom: 10px solid #fff;
-    /* Puedes cambiar el color según tu diseño */
-    position: absolute;
-    top: 10%;
-    left: 50%;
+    border-left: 6px solid #fff;
+    border-right: 6px solid #fff;
+    border-bottom: 6px solid #fff;
+    border-top: 6px solid #fff;
+    top: 50%;
+    left: 60%;
+    rotate: 45deg;
     transform: translate(-50%, -50%);
-    animation: rotateStar 1.5s linear infinite;
-    padding: 15px;
 }
-
-@keyframes rotateStar {
+.mouse {
+    display: block;
+    position: absolute;
+    bottom: 10%;
+    left: 50%;
+    width: 30px;
+    height: 48px;
+    border: 2px solid #fff;
+    -moz-border-radius: 15px;
+    -webkit-border-radius: 15px;
+    border-radius: 15px;
+}
+.wheel {
+    display: block;
+    margin: 0 0 0 -2px;
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    width: 4px;
+    height: 4px;
+    background: #fff;
+    -moz-border-radius: 50%;
+    -webkit-border-radius: 50%;
+    border-radius: 50%;
+    -moz-animation: scroll-wheel 1.8s linear 0s infinite normal none;
+    -webkit-animation: scroll-wheel 1.8s linear 0s infinite normal none;
+    animation: scroll-wheel 1.8s linear 0s infinite normal none;
+}
+@keyframes scroll-wheel {
     0% {
-        transform: translate(-50%, -50%) rotate(0deg);
+        -moz-transform: translate3d(0, 0, 0);
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+        opacity: 1;
     }
-
-    100% {
-        transform: translate(-50%, -50%) rotate(360deg);
+    35% {
+        -moz-transform: translate3d(0, 7px, 0);
+        -webkit-transform: translate3d(0, 7px, 0);
+        transform: translate3d(0, 7px, 0);
+        opacity: 1;
     }
-}
-
-@media (min-width: 570px) {
-    .banner {
-        background-color: #712B66;
-        background-image: url('src/assets/banner.jpg');
-        background-size: contain;
-        background-repeat: no-repeat;
-        background-position: right;
-        display: flex;
-        align-items: center;
+    50% {
+        -moz-transform: translate3d(0, 10px, 0);
+        -webkit-transform: translate3d(0, 10px, 0);
+        transform: translate3d(0, 10px, 0);
+        opacity: 0;
     }
-
-    .banner>h1 {
-        text-align: left;
+    50.001% {
+        -moz-transform: translate3d(0, 0, 0);
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+        opacity: 0;
     }
-
-    .banner>p {
-        text-align: left;
-        margin-right: auto;
-        margin-left: 5em;
+    80% {
+        -moz-transform: translate3d(0, 0, 0);
+        -webkit-transform: translate3d(0, 0, 0);
+        transform: translate3d(0, 0, 0);
+        opacity: 0;
     }
-
-    @keyframes typing {
-        from {
-            width: 50%;
-        }
-
-        to {
-            width: 0%;
-        }
-    }
-
 }
