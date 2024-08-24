@@ -87,11 +87,9 @@ export const BannerSecundario = () => {
       <div className="relative w-full md:w-1/4 flex items-center justify-center">
         <img src={lupa} alt="" className="img-circle relative z-10 h-52 md:h-96 md:w-96 object-contain" />
         <div className="circle-of-dots"></div>
+
       </div>
-      <p className="font-thin text-gray-50 mt-5 w-full md:w-1/4  p-1 ml-8 text-left text-base md:text-xl">
-        Comenzamos con la determinación de comprender su marca y los intrincados
-        detalles de cada proyecto único.
-      </p>
+    
     </div>
   );
 };

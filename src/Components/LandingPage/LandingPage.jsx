@@ -44,6 +44,7 @@ export const LandingPage = () => {
     };
   }, []);
   return (
+
     <div
       ref={containerRef}
       className="h-screen flex flex-col overflow-y-scroll snap-y snap-mandatory"
@@ -77,6 +78,7 @@ export const LandingPage = () => {
       <section className="h-screen snap-start w-full">
         <Footer />
       </section>
+
       <div className="bg-color-whats rounded-full p-1 fixed right-2 bottom-4">
         <a href="https://api.whatsapp.com/send?phone=524451113370">
           <img src={logoWhasa} alt="WS" />
