@@ -12,6 +12,7 @@ import zapatos from "../../assets/zapatos.jpg";
 import TipTip from "../../assets/TipTip.jpg";
 import pantalones from "../../assets/Pantalones.jpg";
 import Slider from "react-slick";
+import justicia from "../../assets/justicia.png";
 import "./Muestra.css";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
@@ -27,10 +28,10 @@ export const Muestra = () => {
       link: "https://main--stalwart-narwhal-93eefb.netlify.app/",
     },
     {
-      title: "Mascotitas",
-      description: "Demo de una tienda para mascotas",
-      imageUrl: mascotitas,
-      link: "https://hugogaytan10.github.io/Mascotitas",
+      title: "Página de Abogados",
+      description: "Plantilla adecuada para los abogados",
+      imageUrl: justicia,
+      link: "https://main--bespoke-baklava-423557.netlify.app/",
     },
     {
       title: "Filtro de tarjetas",
