@@ -1,0 +1,47 @@
+.masonry {
+    display: flex;
+    margin-left: -10px; /* compensar el padding de las columnas */
+    width: auto;
+  }
+  
+  .masonry-column {
+    padding-left: 10px; /* Espacio entre columnas */
+    background-clip: padding-box;
+  }
+  
+  .masonry-image {
+    width: 100%;
+    margin-bottom: 10px; /* Espacio entre imágenes */
+    position: relative;
+    overflow: hidden;
+    border-radius: 10px; /* Bordes redondeados */
+  }
+  
+  .masonry-image img {
+    display: block;
+    width: 100%;
+    height: auto;
+    object-fit: cover;
+  }
+  
+  .masonry-image .overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    color: white;
+    font-size: 1.2rem;
+    text-align: center;
+  }
+  
+  .masonry-image:hover .overlay {
+    opacity: 1;
+  }
+  

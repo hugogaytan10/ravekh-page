@@ -9,13 +9,14 @@ import ecomers from "../../assets/ecomers.png";
 import digital from "../../assets/digital.png";
 import constructora from "../../assets/constructora.png";
 import zapatos from "../../assets/zapatos.jpg";
-import TipTip from "../../assets/TipTip.jpg";
-import pantalones from "../../assets/Pantalones.jpg";
+import TipTip from "../../assets/tiptip.png";
 import Slider from "react-slick";
+import pantalones from "../../assets/Pantalones.jpg";
 import justicia from "../../assets/justicia.png";
 import "./Muestra.css";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
+import { MasonryComponent } from "./Masonry";
 
 export const Muestra = () => {
   const dimensions = screen.width;
@@ -161,10 +162,12 @@ export const Muestra = () => {
   }, []);
 
   return (
-    <div className="w-3/4 m-auto min-h-screen ">
-      <h3 className="text-center text-2xl font-bold md:text-3xl block w-full">
+    <div className="w-full  min-h-screen ">
+      <h3 className="text-center text-2xl font-bold md:text-3xl block w-full mt-10 mb-10">
         Algunos Demos
       </h3>
+      <MasonryComponent />
+      {/*
      <div
         id="carru"
         className=""
@@ -187,6 +190,7 @@ export const Muestra = () => {
       {dimensions > 1000 && (
         <div ref={followerRef} className="cursor-follower"></div>
       )}
+        */}
     </div>
   );
 };
