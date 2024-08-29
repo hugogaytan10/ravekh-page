@@ -18,7 +18,7 @@ const images = [
     src: TipTip,
     alt: "TipTip",
     description: "TipTip proyecto de propinas",
-    height: 150,
+    height: 350,
     link: "https://plazasleongroupllc.com/",
   },
   {
@@ -129,7 +129,7 @@ export const MasonryComponent = () => {
               src={image.src}
               alt={image.alt}
               style={{ height: `${image.height}px` }}
-              className="w-full h-auto object-cover shadow-md transition-transform transform hover:scale-105"
+              className="rounded-lg w-full h-auto object-cover shadow-md transition-transform transform hover:scale-105"
             />
             <div className="absolute inset-0 bg-black bg-opacity-50 opacity-0 hover:opacity-100 flex  items-center justify-center text-white text-lg transition-opacity duration-300">
               <a href={image.link} className="" target="_blank">
