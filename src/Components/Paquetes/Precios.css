@@ -1,0 +1,138 @@
+.container {
+  margin-inline: 3rem;
+  display: flex !important;
+  justify-content: center;
+  padding: 1rem;
+  background-color: #ffffff;
+}
+
+.grid {
+  display: flex !important;
+  gap: 1rem;
+}
+
+.card {
+  background-color: white;
+  border-radius: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  max-width: 30%;
+  position: relative;
+  text-align: left;
+}
+
+.card-header {
+  background-color: #6D01D1;
+  color: white;
+  height: 5em;
+  font-size: 24px;
+  font-weight: bold;
+  padding: 10px 20px;
+  border-radius: 10px 10px 0 0;
+}
+
+.card-price {
+  font-size: 40px;
+  font-weight: bold;
+  margin: 20px;
+  color: #6D01D1;
+}
+
+.card-price span {
+  font-size: 14px;
+  color: #999;
+}
+
+.card-description {
+  margin:0 2em 4em 2em;
+  font-size: 14px;
+  line-height: 2.6;
+}
+
+.card-link {
+  position: absolute;
+  bottom: 20px;
+  right: 20px;
+  color: #1f023f;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.card-link svg {
+  width: 20px;
+  height: 20px;
+  margin-left: 5px;
+}
+
+@media (max-width: 1024px) {
+  .container {
+    margin-left: auto;
+    margin-right: auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 1rem;
+    background-color: #ffffff;
+  }
+  
+  .grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .card {
+    background-color: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    max-width: 100%; /* Adaptación móvil */
+    position: relative;
+    text-align: left;
+  }
+  
+  .card-header {
+    background-color: #6D01D1;
+    color: white;
+    height: auto; /* Ajuste para mobile */
+    font-size: 20px; /* Tamaño más pequeño para mobile */
+    font-weight: bold;
+    padding: 10px;
+    border-radius: 10px 10px 0 0;
+  }
+  
+  .card-price {
+    font-size: 28px; /* Tamaño más pequeño para mobile */
+    font-weight: bold;
+    margin: 10px;
+    color: #6D01D1;
+  }
+  
+  .card-price span {
+    font-size: 12px; /* Ajuste para mobile */
+    color: #999;
+  }
+  
+  .card-description {
+    margin: 0 1em 2em 1em; /* Ajuste para mobile */
+    font-size: 12px; /* Tamaño más pequeño para mobile */
+    line-height: 1.8; /* Ajuste para mobile */
+  }
+  
+  .card-link {
+    position: absolute;
+    bottom: 10px;
+    right: 10px;
+    color: #1f023f;
+    font-weight: bold;
+    display: flex;
+    align-items: center;
+    text-decoration: none;
+  }
+  
+  .card-link svg {
+    width: 16px; /* Tamaño más pequeño para mobile */
+    height: 16px;
+    margin-left: 5px;
+  }
+}

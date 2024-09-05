@@ -1,25 +1,81 @@
 import React, { useRef, useEffect } from "react";
-import { CardsProjects } from "./CardsProjects";
-import mascotitas from "../../assets/MASCOTITAS.png";
-import filter from "../../assets/filter-cards.png";
-import itsur from "../../assets/ITSUR.png";
-import short from "../../assets/short-link.png";
 import webComida from "../../assets/webComida.png";
-import ecomers from "../../assets/ecomers.png";
-import digital from "../../assets/digital.png";
-import constructora from "../../assets/constructora.png";
-import zapatos from "../../assets/zapatos.jpg";
-import TipTip from "../../assets/tiptip.png";
-import Slider from "react-slick";
-import pantalones from "../../assets/Pantalones.jpg";
-import justicia from "../../assets/justicia.png";
 import "./Muestra.css";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
-import { MasonryComponent } from "./Masonry";
+import { PaquetesCards } from "./Masonry";
 
-export const Muestra = () => {
+export const Paquetes = () => {
   const dimensions = screen.width;
+
+  const projects = [
+    {
+      title: "Portal de comida",
+      description: "Portal de comida (responsive)",
+      //imageUrl: webComida,
+      link: "https://main--stalwart-narwhal-93eefb.netlify.app/",
+    },
+    /*{
+      title: "Página de Abogados",
+      description: "Plantilla adecuada para los abogados",
+      imageUrl: justicia,
+      link: "https://main--bespoke-baklava-423557.netlify.app/",
+    },
+    {
+      title: "Filtro de tarjetas",
+      description: "Demo de un filtro de tarjetas",
+      imageUrl: filter,
+      link: "https://teal-jalebi-6ba797.netlify.app/",
+    },
+    {
+      title: "Página universitaria",
+      description: "Demo de página",
+      imageUrl: itsur,
+      link: "https://main--melodic-sundae-a09a6c.netlify.app/",
+    },
+    {
+      title: "Acortador de URL",
+      description: "Demo de consumo de APIs",
+      imageUrl: short,
+      link: "https://cute-boba-d3d365.netlify.app/",
+    },
+    {
+      title: "Ecommerce",
+      description: "Demo de una tienda en linea",
+      imageUrl: ecomers,
+      link: "https://lrwresearch.com/index.php",
+    },
+    {
+      title: "Invitaciones digitales",
+      description: "Demo de una invitación digital",
+      imageUrl: digital,
+      link: "https://startling-lolly-70cc76.netlify.app/"
+    },
+    {
+      title: "Constructora",
+      description: "Demo de una página constructora",
+      imageUrl: constructora,
+      link: "https://aesthetic-cucurucho-786504.netlify.app/",
+    },
+    {
+      title: "Tienda de Zapatos",
+      description: "Ecomerce para venta de Zapatos",
+      imageUrl:zapatos,
+      link:"https://www.calzadodiaz.com",
+    },
+    {
+      title: "Landing Page Altertions For The Future",
+      description: "Landing Page para una tienda de reparacion de ropa",
+      imageUrl:pantalones,
+      link:"https://www.alteracioneselfuturo.com",
+    },
+    {
+      title: "TipTip",
+      description: "Pagina de informacion para la aplicacion TipTip",
+      imageUrl:TipTip,
+      link:"https://play.google.com/store/apps/details?id=com.tiptiptip",
+    },*/
+  ];
 
   const settings = {
     dots: true,
@@ -97,7 +153,7 @@ export const Muestra = () => {
       <h3 className="text-center text-2xl font-bold md:text-3xl block w-full mt-10 mb-10">
         Desarrollo WEB
       </h3>
-      <MasonryComponent />
+      <PaquetesCards/>
       {/*
      <div
         id="carru"
