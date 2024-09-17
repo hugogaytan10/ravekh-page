@@ -1,6 +1,7 @@
 import React from "react";
 import filter from "../../assets/filter-cards.png";
 import itsur from "../../assets/ITSUR.png";
+import interior from "../../assets/Interior.png"
 import short from "../../assets/short-link.png";
 import medicos from "../../assets/Medicos.png";
 import digital from "../../assets/digital.png";
@@ -12,6 +13,7 @@ import abogados from "../../assets/abogados.png";
 import cafe from "../../assets/cafe.png";
 import mascotas from "../../assets/mascotas.png";
 import joyeria from "../../assets/joyeria.png";
+import Viajes from "../../assets/Viajes.png";
 import restaurante from "../../assets/restaurante.png";
 const images = [
   {
@@ -42,7 +44,13 @@ const images = [
     height: 250,
     link: "https://cute-boba-d3d365.netlify.app/",
   },
-
+  {
+    src: interior,
+    alt: "Página de diseño de interiores",
+    description: "Página de diseño de interiores",
+    height: 300,
+    link: "https://hilarious-pithivier-63fa02.netlify.app/",
+  },
   {
     src: zapatos,
     alt: "Tienda de zapatos",
@@ -52,8 +60,8 @@ const images = [
   },
   {
     src: digital,
-    alt: "Descripción 6",
-    description: "Texto de la imagen 6",
+    alt: "Invitaciones digitales",
+    description: "Invitacion digital para boda",
     height: 300,
     link: "https://startling-lolly-70cc76.netlify.app/",
   },
@@ -84,6 +92,13 @@ const images = [
     description: "Página de abogados",
     height: 250,
     link: "https://bespoke-baklava-423557.netlify.app/",
+  },
+  {
+    src: Viajes,
+    alt: "Agencia de viajes",
+    description: "Agencia de viajes",
+    height: 300,
+    link: "https://spectacular-raindrop-cdfdda.netlify.app/",
   },
   {
     src: cafe,

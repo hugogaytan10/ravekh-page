@@ -12,6 +12,7 @@ import { gsap, TimelineMax } from "gsap";
 import { ArticuloValeLaPenaReact } from "../Blog/ArticulosReactNative/ArticuloValeLaPenaReact/ArticuloValeLaPenaReact";
 import { Productos } from "../Producto/Productos";
 import { Muestra } from "../Muestra/Muestra";
+import { Paquetes } from "../Paquetes/Muestra"
 import { MainCatalogo } from "../CatalogoWeb/MainCatalogo";
 import { DetalleProducto } from "../CatalogoWeb/DetalleProducto";
 import { Pedido } from "../CatalogoWeb/Pedido";
@@ -52,6 +53,7 @@ export const Rutas = () => {
             <ul ref={listItemsRef} className="list-items flex flex-col items-center justify-center h-full">
               <li><NavLink to="/" onClick={handleMenuClick}>Inicio</NavLink></li>
               <li><NavLink to="/proyectos" onClick={handleMenuClick}>Proyectos</NavLink></li>
+              <li><NavLink to="/paquetes" onClick={handleMenuClick}>Paquetes</NavLink></li>
               <li><NavLink to="/blog" onClick={handleMenuClick}>Blog</NavLink></li>
               <li><p className="text-white text-base">ravekh.team@gmail.com</p></li>
 
@@ -61,6 +63,7 @@ export const Rutas = () => {
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/proyectos" element={<Muestra />} />
+            <Route path="/paquetes" element={<Paquetes />} />
             <Route path="/blog" element={<BlogMain />} />
             <Route path="/blog/articulosIA" element={<MainArticulosIA />} />
             <Route path="/blog/articulosIA/whisper" element={<ArticuloWhisper />} />
