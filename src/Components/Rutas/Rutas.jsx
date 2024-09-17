@@ -12,6 +12,9 @@ import { gsap, TimelineMax } from "gsap";
 import { ArticuloValeLaPenaReact } from "../Blog/ArticulosReactNative/ArticuloValeLaPenaReact/ArticuloValeLaPenaReact";
 import { Productos } from "../Producto/Productos";
 import { Muestra } from "../Muestra/Muestra";
+import { MainCatalogo } from "../CatalogoWeb/MainCatalogo";
+import { DetalleProducto } from "../CatalogoWeb/DetalleProducto";
+import { Pedido } from "../CatalogoWeb/Pedido";
 
 export const Rutas = () => {
   const menuIconRef = useRef(null);
@@ -63,6 +66,10 @@ export const Rutas = () => {
             <Route path="/blog/articulosIA/whisper" element={<ArticuloWhisper />} />
             <Route path="/blog/articulosReactNative" element={<MainArticulosReactNative />} />
             <Route path="/blog/articulosReactNative/valeLaPena" element={<ArticuloValeLaPenaReact />} />
+            {/*RUTAS PARA EL CATALOGO WEB */}
+            <Route path="/catalogo/:idBusiness" element={<MainCatalogo />} />
+            <Route path="/catalogo/producto/:idProducto/:telefono" element={<DetalleProducto />} />
+            <Route path="/catalogo/pedido" element={<Pedido />} />
           </Routes>
         </div>
       </div>

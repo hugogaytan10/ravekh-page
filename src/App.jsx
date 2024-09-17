@@ -10,6 +10,7 @@ import { Muestra } from "./Components/Muestra/Muestra";
 import logoWhasa from "./assets/logo-whatsapp.svg";
 import { Rutas } from "./Components/Rutas/Rutas";
 import { Carga } from "./Components/PantallaCarga/Carga";
+import AppProvider from "./Components/CatalogoWeb/Context/AppContext";
 /*
 window.addEventListener("scroll", function () {
   
@@ -40,7 +41,13 @@ function App() {
   }, []);
   return (
     <div>
-      {loading ? <Carga /> : <Rutas />}
+      {loading ? (
+        <Carga />
+      ) : (
+        <AppProvider>
+          <Rutas />
+        </AppProvider>
+      )}
     </div>
   );
 }
