@@ -6,6 +6,7 @@ import "slick-carousel/slick/slick-theme.css";
 import { PaquetesCards } from "./Masonry";
 
 export const Paquetes = () => {
+  
   const dimensions = screen.width;
 
   const projects = [

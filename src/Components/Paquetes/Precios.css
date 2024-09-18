@@ -6,10 +6,7 @@
   background-color: #ffffff;
 }
 
-.grid {
-  display: flex !important;
-  gap: 1rem;
-}
+
 
 .card {
   background-color: white;
