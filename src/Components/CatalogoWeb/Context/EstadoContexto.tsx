@@ -8,4 +8,6 @@ export type AppContextState = {
     addProductToCart: (product: Producto) => void;
     removeProductFromCart: (id: string) => void;
     clearCart: () => void;
+    idBussiness: string;
+    setIdBussiness: Dispatch<string>;
 }

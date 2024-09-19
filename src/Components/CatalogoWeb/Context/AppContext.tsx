@@ -10,6 +10,7 @@ export const AppContext = createContext({} as AppContextState);
 const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   const [cart, setCart] = useState<Producto[]>([]);
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
+  const [idBussiness, setIdBussiness] = useState<string>("1");
 
   //funcion para agregar un producto al carrito
   const addProductToCart = (product: Producto) => {
@@ -19,12 +20,12 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
       setCart(
         cart.map((item) =>
           item.Id === product.Id
-            ? { ...exist, Quantity: exist.Quantity! + 1 }
+            ? { ...exist, Quantity: exist.Quantity! + product.Quantity! }
             : item
         )
       );
     } else {
-      setCart([...cart, { ...product, Quantity: 1 }]);
+      setCart([...cart, { ...product}]);
     }
   };
   //funcion para eliminar un producto del carrito
@@ -38,8 +39,8 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   };
 
   const value = useMemo(() => {
-    return { cart, setCart, phoneNumber, setPhoneNumber, addProductToCart, removeProductFromCart, clearCart };
-  }, [cart, phoneNumber, setCart, setPhoneNumber, addProductToCart, removeProductFromCart, clearCart]);
+    return { cart, setCart, phoneNumber, setPhoneNumber, addProductToCart, removeProductFromCart, clearCart,  idBussiness, setIdBussiness };
+  }, [cart, phoneNumber, setCart, setPhoneNumber, addProductToCart, removeProductFromCart, clearCart, idBussiness, setIdBussiness]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };
