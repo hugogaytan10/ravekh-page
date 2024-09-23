@@ -5,10 +5,10 @@ export const getProductsByBusiness = async (idBusiness: string) => {
     try{
         const response = await fetch(`${URL}products/showstore/${idBusiness}/1`)
         const data = await response.json();
-        if(data.length === 0){
-            return [];
+        if(data){
+            return data;
         }
-        return data;
+        return [];
     }catch(error){
         console.log(error);
         return [];

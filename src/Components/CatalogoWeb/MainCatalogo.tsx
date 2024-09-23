@@ -20,6 +20,9 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
 
   useEffect(() => {
     getProductsByBusiness(idBusiness || "1").then((data) => {
+      if(data.length === 0){
+        return;
+      }
       setProductos(data || []);
       setTelefono(data[0].PhoneNumber || null);
       context.setPhoneNumber(data[0].PhoneNumber || null);
