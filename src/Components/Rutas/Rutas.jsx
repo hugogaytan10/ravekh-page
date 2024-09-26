@@ -19,6 +19,7 @@ import { Pedido } from "../CatalogoWeb/Pedido";
 import { AppContext } from "../CatalogoWeb/Context/AppContext";
 import cart from "../../assets/cart-outline.svg";
 import arrow from "../../assets/arrow-forward-white.svg";
+import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
 export const Rutas = () => {
   //contexto
   const context = useContext(AppContext);
@@ -126,8 +127,14 @@ export const Rutas = () => {
                 </NavLink>
               </li>
               <li>
+                 <NavLink to="/politica" onClick={handleMenuClick}>
+                    Politica de Privacidad
+                  </NavLink>
+              </li>
+              <li>
                 <p className="text-white text-base">ravekh.team@gmail.com</p>
               </li>
+             
             </ul>
           </nav>
 
@@ -193,6 +200,7 @@ export const Rutas = () => {
             <Route path="/" element={<LandingPage />} />
             <Route path="/proyectos" element={<Muestra />} />
             <Route path="/paquetes" element={<Paquetes />} />
+            <Route path="/politica" element={<PoliticaPrivacidad />} />
             <Route path="/blog" element={<BlogMain />} />
             <Route path="/blog/articulosIA" element={<MainArticulosIA />} />
             <Route
