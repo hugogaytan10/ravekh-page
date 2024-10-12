@@ -8,6 +8,8 @@
 
 .grid {
   display: flex !important;
+  justify-content: center; /* Centrar las tarjetas en el contenedor */
+  flex-wrap: wrap;
   gap: 1rem;
 }
 
