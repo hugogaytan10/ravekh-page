@@ -90,10 +90,10 @@ const paquetes = [
 
 export const PaquetesCards = () => {
   return (
-    <div className="container">
-      <div className="grid">
+    <div className="container ">
+      <div className="flex gap-6 flex flex-wrap">
         {paquetes.map((image, index) => (
-          <div key={index} className="card">
+          <div key={index} className="card w-full md:w-4/12">
             <div className="card-header">{image.paquete}</div>
             <div className="card-price">
               {image.price}

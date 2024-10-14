@@ -1,15 +1,8 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
-import { Banner } from "./Components/Banner/Banner";
-import { BannerSecundario } from "./Components/BannerSecundario/BannerSecundario";
-import { Contacto } from "./Components/Contacto/Contacto";
-import { Productos } from "./Components/Producto/Productos";
-import { Caracteristicas } from "./Components/Caracteristicas/Caracteristicas";
-import { Footer } from "./Components/Footer/Footer";
-import { Muestra } from "./Components/Muestra/Muestra";
-import logoWhasa from "./assets/logo-whatsapp.svg";
 import { Rutas } from "./Components/Rutas/Rutas";
 import { Carga } from "./Components/PantallaCarga/Carga";
+import AppProvider from "./Components/CatalogoWeb/Context/AppContext";
 /*
 window.addEventListener("scroll", function () {
   
@@ -40,7 +33,13 @@ function App() {
   }, []);
   return (
     <div>
-      {loading ? <Carga /> : <Rutas />}
+      {loading ? (
+        <Carga />
+      ) : (
+        <AppProvider>
+          <Rutas />
+        </AppProvider>
+      )}
     </div>
   );
 }
