@@ -16,39 +16,47 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [telefono, setTelefono] = useState<string | null>(null);
   const context = useContext(AppContext);
-  context.setIdBussiness(idBusiness || "1");  
+  context.setIdBussiness(idBusiness || "1");
 
   useEffect(() => {
     getProductsByBusiness(idBusiness || "1").then((data) => {
-      if(data.length === 0){
+      if (data.length === 0) {
         return;
       }
       setProductos(data || []);
       setTelefono(data[0].PhoneNumber || null);
       context.setPhoneNumber(data[0].PhoneNumber || null);
+      localStorage.setItem("telefono", data[0].PhoneNumber || "");
     });
   }, [idBusiness]);
-useEffect(() => {
-  const menuIcono = document.getElementById("menuIcono");
-  //ocultamos ese menu
-  menuIcono?.classList.add("hidden");
-  //mostramos el menu de navegacion
-  const menuNavegacion = document.getElementById("menuIconoCatalogo");
-  menuNavegacion?.classList.remove("hidden");
+  useEffect(() => {
+    if (!context.phoneNumber) {
+      const storedPhoneNumber = localStorage.getItem("telefono");
+      if (storedPhoneNumber) {
+        context.setPhoneNumber(storedPhoneNumber);
+        setTelefono(storedPhoneNumber);
+      }
+    }
+    const menuIcono = document.getElementById("menuIcono");
+    //ocultamos ese menu
+    menuIcono?.classList.add("hidden");
+    //mostramos el menu de navegacion
+    const menuNavegacion = document.getElementById("menuIconoCatalogo");
+    menuNavegacion?.classList.remove("hidden");
 
-  //mostramos la imagen del catalogo
-  const menuImagen = document.getElementById("imgCatalogo");
-  menuImagen?.classList.remove("hidden");
+    //mostramos la imagen del catalogo
+    const menuImagen = document.getElementById("imgCatalogo");
+    menuImagen?.classList.remove("hidden");
 
-  //ocultamos la flecha de regreso
-  const arrowIcon = document.getElementById("backCatalogo");
-  arrowIcon?.classList.add("hidden"); 
-},[]);
+    //ocultamos la flecha de regreso
+    const arrowIcon = document.getElementById("backCatalogo");
+    arrowIcon?.classList.add("hidden");
+  }, []);
   return (
     <HelmetProvider>
       <>
         <Helmet>
-        <meta name="theme-color" content="#6D01D1" />
+          <meta name="theme-color" content="#6D01D1" />
         </Helmet>
         <div className="p-4 min-h-screen w-full max-w-screen-xl mx-auto py-20">
           {/* Mostrar mensaje si no hay productos */}
@@ -101,9 +109,9 @@ useEffect(() => {
 
                     {/* Botón centrado */}
                     <div className="flex justify-center mt-4 p-2">
-                      <button 
-                      onClick={() => context.addProductToCart(producto)}
-                      className="bg-[#6D01D1] text-white w-full md:w-3/4 py-2 px-6 rounded-full shadow-md hover:bg-[#5A01A8] transition-colors duration-300 ease-in-out transform hover:scale-105">
+                      <button
+                        onClick={() => context.addProductToCart(producto)}
+                        className="bg-[#6D01D1] text-white w-full md:w-3/4 py-2 px-6 rounded-full shadow-md hover:bg-[#5A01A8] transition-colors duration-300 ease-in-out transform hover:scale-105">
                         Añadir al carrito
                       </button>
                     </div>

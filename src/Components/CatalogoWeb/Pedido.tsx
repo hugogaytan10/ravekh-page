@@ -190,7 +190,7 @@ export const Pedido: React.FC = () => {
   };
 
   return (
-    <div className="py-20 px-4 lg:px-0 max-w-lg md:max-w-2xl lg:max-w-3xl xl:max-w-4xl mx-auto">
+    <div className="py-20 px-4 lg:px-0 max-w-lg md:max-w-2xl lg:w-3/4 mx-auto">
       {/* Resumen del pedido */}
       <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">
         Preparemos su pedido
@@ -213,26 +213,35 @@ export const Pedido: React.FC = () => {
                 <span className="text-gray-500">${producto.Price} x {producto.Quantity || 1}</span>
               </div>
 
-              <div className="flex items-center space-x-4">
-                {/* Aquí el botón menos se convierte en icono de basura si la cantidad es 1 */}
-                {producto.Quantity! > 1 ? (
-                  <button onClick={() => decrementQuantity(producto.Id)}>
-                    <span className="text-gray-600 text-lg">-</span>
-                  </button>
-                ) : (
-                  <button onClick={() => decrementQuantity(producto.Id)}>
-                    <img src={trash} alt="Eliminar" />
-                  </button>
-                )}
-                <span className="text-gray-800">{producto.Quantity}</span>
-                <button onClick={() => incrementQuantity(producto.Id)}>
-                  <span className="text-gray-600 text-lg">+</span>
-                </button>
+              <div className="flex flex-col items-end">
+                <span className="text-gray-800 font-semibold">
+                  ${(producto.Price * (producto.Quantity || 1)).toFixed(2)}
+                </span>
+                <div className="flex items-center space-x-4 mt-2">
+                    {producto.Quantity! > 1 ? (
+                    <button
+                      onClick={() => decrementQuantity(producto.Id)}
+                      className="text-red-600 text-lg"
+                    >
+                      -
+                    </button>
+                    ) : (
+                    <button onClick={() => decrementQuantity(producto.Id)}>
+                      <img src={trash} alt="Eliminar" className="text-red-600" />
+                    </button>
+                    )}
+                  <span className="text-gray-800">{producto.Quantity}</span>
+                    <button
+                    onClick={() => incrementQuantity(producto.Id)}
+                    className="text-green-600 text-lg"
+                    >
+                    +
+                    </button>
+                </div>
               </div>
 
-              <span className="text-gray-800 font-semibold">
-                ${(producto.Price * (producto.Quantity || 1)).toFixed(2)}
-              </span>
+
+
             </div>
           ))}
         </div>
@@ -244,6 +253,21 @@ export const Pedido: React.FC = () => {
           </span>
           <span>${totalPrecio.toFixed(2)}</span>
         </div>
+        {cart.length > 0 && (
+          <div className="flex justify-center mt-6">
+            <span
+              onClick={() => {
+              const confirmed = window.confirm("¿Estás seguro de que quieres limpiar el carrito?");
+              if (confirmed) {
+                context.clearCart();
+              }
+              }}
+              className="text-red-500 cursor-pointer hover:underline"
+            >
+              Limpiar Carrito
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Formulario para el nombre y contacto */}
