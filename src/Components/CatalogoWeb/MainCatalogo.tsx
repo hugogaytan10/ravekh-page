@@ -77,7 +77,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
               {Array.isArray(productos) &&
                 productos.map((producto, index) => (
-                  (producto.Image != '' && producto.Image != null) && (
+                  producto.Image != '' && producto.Image != null) && (
                     <motion.div
                       key={producto.Id}
                       className="border rounded-lg shadow-md  bg-white transform transition-transform hover:scale-105 hover:shadow-lg"
@@ -118,7 +118,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
                       </div>
                     </motion.div>
                   )
-                ))}
+                )}
             </div>
           )}
 
