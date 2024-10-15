@@ -5,9 +5,10 @@ import { FiTruck, FiCreditCard, FiPhone } from "react-icons/fi"; // Importando i
 import { Order } from "./Modelo/Order";
 import { OrderDetails } from "./Modelo/OrderDetails";
 import { insertOrder } from "./Petitions";
+import trash from '../../assets/trash.svg';
 
 export const Pedido: React.FC = () => {
-  const { cart, phoneNumber: storePhoneNumber, idBussiness } = useContext(AppContext); // Número de la tienda
+  const { cart, phoneNumber: storePhoneNumber, idBussiness, setCart } = useContext(AppContext); // Número de la tienda
   const [nombre, setNombre] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [clientPhoneNumber, setClientPhoneNumber] = useState<string>(""); // Número del cliente
@@ -15,12 +16,13 @@ export const Pedido: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<string>("transferencia");
 
 
-    // Campos de dirección
-    const [calle, setCalle] = useState<string>("");
-    const [codigoPostal, setCodigoPostal] = useState<string>("");
-    const [municipio, setMunicipio] = useState<string>("");
-    const [estado, setEstado] = useState<string>("");
-    const [referencia, setReferencia] = useState<string>("");
+  // Campos de dirección
+  const [calle, setCalle] = useState<string>("");
+  const [codigoPostal, setCodigoPostal] = useState<string>("");
+  const [municipio, setMunicipio] = useState<string>("");
+  const [estado, setEstado] = useState<string>("");
+  const [referencia, setReferencia] = useState<string>("");
+  const context = useContext(AppContext);
 
   // Estados para los errores
   const [errors, setErrors] = useState<{
@@ -38,8 +40,8 @@ export const Pedido: React.FC = () => {
     0
   );
   const saveOrder = async () => {
-      // Concatenar la dirección si es entrega a domicilio
-      const fullAddress =
+    // Concatenar la dirección si es entrega a domicilio
+    const fullAddress =
       deliveryMethod === "domicilio"
         ? `Calle: ${calle}, Código Postal: ${codigoPostal}, Municipio: ${municipio}, Estado: ${estado}, Referencia: ${referencia}`
         : "Recoger en tienda";
@@ -61,8 +63,20 @@ export const Pedido: React.FC = () => {
     insertOrder(order, orderDetails).then((data) => {
       console.log(data);
     });
-    
+
   }
+
+  useEffect(() => {
+    if (cart.length === 0) {
+      const storedCart = localStorage.getItem("cart");
+      if (storedCart) {
+        const parsedCart = JSON.parse(storedCart);
+        if (Array.isArray(parsedCart)) {
+          setCart(parsedCart);
+        }
+      }
+    }
+  }, [cart, setCart]);
 
   useEffect(() => {
     const menuIcono = document.getElementById("menuIcono");
@@ -119,17 +133,16 @@ export const Pedido: React.FC = () => {
       saveOrder();
       const mensaje = `Hola, he hecho un pedido con los siguientes productos:
                         ${cart
-                          .map(
-                            (producto) =>
-                              `${producto.Name} x ${producto.Quantity || 1}`
-                          )
-                          .join("\n")}
+          .map(
+            (producto) =>
+              `${producto.Name} x ${producto.Quantity || 1}`
+          )
+          .join("\n")}
                         Total: $${totalPrecio.toFixed(2)}
-                        Método de entrega: ${
-                          deliveryMethod === "domicilio"
-                            ? "Entrega a domicilio"
-                            : "Recoger en tienda"
-                        }
+                        Método de entrega: ${deliveryMethod === "domicilio"
+          ? "Entrega a domicilio"
+          : "Recoger en tienda"
+        }
                         Método de pago: ${paymentMethod}
                         Nombre: ${nombre}
                         Email: ${email || "No proporcionado"}
@@ -143,6 +156,37 @@ export const Pedido: React.FC = () => {
     } else {
       console.log("Formulario inválido, mostrando errores.");
     }
+  };
+
+  const incrementQuantity = (productId: number) => {
+    const updatedCart = cart.map(item => {
+      if (item.Id === productId) {
+        return { ...item, Quantity: item.Quantity! + 1 };
+      }
+      return item;
+    });
+    setCart(updatedCart);
+    localStorage.setItem('cart', JSON.stringify(updatedCart));
+  };
+
+  const decrementQuantity = (productId: number) => {
+    const updatedCart = cart.map(item => {
+      if (item.Id === productId) {
+        if (item.Quantity! > 1) {
+          return { ...item, Quantity: item.Quantity! - 1 }; // Reduce la cantidad
+        } else {
+          const confirmed = window.confirm("¿Estás seguro de eliminar este producto?");
+          if (confirmed) {
+            context.removeProductFromCart(productId.toString()); // Elimina el producto si se confirma
+            return null; // Retorna null para que sea eliminado del array
+          }
+        }
+      }
+      return item;
+    }).filter(item => item !== null); // Filtra los productos eliminados
+
+    setCart(updatedCart);
+    localStorage.setItem("cart", JSON.stringify(updatedCart));
   };
 
   return (
@@ -159,26 +203,40 @@ export const Pedido: React.FC = () => {
               key={producto.Id}
               className="py-4 flex items-center justify-between"
             >
-              {/* Imagen del producto */}
               <img
                 src={producto.Image}
                 alt={producto.Name}
                 className="w-16 h-16 object-cover rounded-lg mr-4"
               />
               <div className="flex flex-col flex-grow">
-                <span className="font-medium text-gray-800">
-                  {producto.Name}
-                </span>
-                <span className="text-gray-500">
-                  ${producto.Price} x {producto.Quantity || 1}
-                </span>
+                <span className="font-medium text-gray-800">{producto.Name}</span>
+                <span className="text-gray-500">${producto.Price} x {producto.Quantity || 1}</span>
               </div>
+
+              <div className="flex items-center space-x-4">
+                {/* Aquí el botón menos se convierte en icono de basura si la cantidad es 1 */}
+                {producto.Quantity! > 1 ? (
+                  <button onClick={() => decrementQuantity(producto.Id)}>
+                    <span className="text-gray-600 text-lg">-</span>
+                  </button>
+                ) : (
+                  <button onClick={() => decrementQuantity(producto.Id)}>
+                    <img src={trash} alt="Eliminar" />
+                  </button>
+                )}
+                <span className="text-gray-800">{producto.Quantity}</span>
+                <button onClick={() => incrementQuantity(producto.Id)}>
+                  <span className="text-gray-600 text-lg">+</span>
+                </button>
+              </div>
+
               <span className="text-gray-800 font-semibold">
                 ${(producto.Price * (producto.Quantity || 1)).toFixed(2)}
               </span>
             </div>
           ))}
         </div>
+
         <div className="flex justify-between items-center mt-6 text-lg font-semibold text-gray-800">
           <span>
             Total artículos ({totalArticulos} artículo
@@ -201,9 +259,8 @@ export const Pedido: React.FC = () => {
                 type="text"
                 value={nombre}
                 onChange={(e) => setNombre(e.target.value)}
-                className={`bg-white w-full p-3 border ${
-                  errors.nombre ? "border-red-500" : "border-gray-300"
-                } rounded-lg focus:outline-none focus:border-gray-500`}
+                className={`bg-white w-full p-3 border ${errors.nombre ? "border-red-500" : "border-gray-300"
+                  } rounded-lg focus:outline-none focus:border-gray-500`}
                 placeholder="Introduce tu nombre"
               />
               {errors.nombre && (
@@ -218,9 +275,8 @@ export const Pedido: React.FC = () => {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className={`bg-white w-full p-3 border ${
-                  errors.email ? "border-red-500" : "border-gray-300"
-                } rounded-lg focus:outline-none focus:border-gray-500`}
+                className={`bg-white w-full p-3 border ${errors.email ? "border-red-500" : "border-gray-300"
+                  } rounded-lg focus:outline-none focus:border-gray-500`}
                 placeholder="Introduce tu email"
               />
               {errors.email && (
@@ -235,11 +291,10 @@ export const Pedido: React.FC = () => {
                 type="text"
                 value={clientPhoneNumber}
                 onChange={(e) => setClientPhoneNumber(e.target.value)}
-                className={`bg-white w-full p-3 border ${
-                  errors.clientPhoneNumber
-                    ? "border-red-500"
-                    : "border-gray-300"
-                } rounded-lg focus:outline-none focus:border-gray-500`}
+                className={`bg-white w-full p-3 border ${errors.clientPhoneNumber
+                  ? "border-red-500"
+                  : "border-gray-300"
+                  } rounded-lg focus:outline-none focus:border-gray-500`}
                 placeholder="Introduce tu teléfono"
               />
               {errors.clientPhoneNumber && (
