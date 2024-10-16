@@ -19,6 +19,17 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   context.setIdBussiness(idBusiness || "1");
 
   useEffect(() => {
+    const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
+    const isDifferentBusiness = storedCart.some(
+      (item: Producto) => item.Business_Id.toString() !== idBusiness
+    );
+
+    if (isDifferentBusiness) {
+      localStorage.removeItem("cart");
+      localStorage.removeItem("telefono");
+      context.clearCart();
+    }
+
     getProductsByBusiness(idBusiness || "1").then((data) => {
       if (data.length === 0) {
         return;
