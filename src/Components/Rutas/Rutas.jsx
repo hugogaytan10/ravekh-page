@@ -36,6 +36,12 @@ export const Rutas = () => {
   const menuToggleCatalogo = useRef(null);
 
   useEffect(() => {
+    if (context.cart.length === 0) {
+      const localCart = localStorage.getItem("cart");
+      if (localCart) {
+        context.setCart(JSON.parse(localCart));
+      }
+    }
     gsap.set(slideDownRef.current, { y: "-100%", display: "block" });
 
     menuToggle.current = new TimelineMax({ paused: true, reversed: true })
@@ -128,14 +134,14 @@ export const Rutas = () => {
                 </NavLink>
               </li>
               <li>
-                 <NavLink to="/politica" onClick={handleMenuClick}>
-                    Politica de Privacidad
-                  </NavLink>
+                <NavLink to="/politica" onClick={handleMenuClick}>
+                  Politica de Privacidad
+                </NavLink>
               </li>
               <li>
                 <p className="text-white text-base">ravekh.team@gmail.com</p>
               </li>
-             
+
             </ul>
           </nav>
 
