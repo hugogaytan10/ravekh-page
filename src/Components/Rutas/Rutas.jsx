@@ -125,7 +125,7 @@ export const Rutas = () => {
         <div className="  drawer-content flex flex-col h-full min-w-full relative ">
           <div
             ref={menuIconRef}
-            className="z-40 nav-menu bg-white w-10 h-10 rounded-full flex items-center justify-center fixed top-2 right-1 z-10"
+            className="z-40 nav-menu bg-white w-10 h-10 rounded-full flex items-center justify-center fixed top-2 right-1"
             onClick={handleMenuClick}
             id="menuIcono"
           >
@@ -135,7 +135,7 @@ export const Rutas = () => {
           <nav
             ref={slideDownRef}
             className="menu-container fixed top-0 left-0 w-full h-full z-30"
-            style={{ display: "none", backgroundColor: "var(--morado-oscuro)" }}
+            style={{ display: "none", backgroundColor: "#6D01D1" }}
           >
             <ul
               ref={listItemsRef}

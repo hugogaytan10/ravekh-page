@@ -91,7 +91,7 @@ const paquetes = [
 export const PaquetesCards = () => {
   return (
     <div className="container ">
-      <div className="flex gap-6 flex flex-wrap">
+      <div className="flex gap-6  flex-wrap">
         {paquetes.map((image, index) => (
           <div key={index} className="card w-full md:w-4/12">
             <div className="card-header">{image.paquete}</div>

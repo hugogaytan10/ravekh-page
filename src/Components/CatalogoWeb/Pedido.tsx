@@ -6,6 +6,8 @@ import { Order } from "./Modelo/Order";
 import { OrderDetails } from "./Modelo/OrderDetails";
 import { insertOrder } from "./Petitions";
 import trash from '../../assets/trash.svg';
+import { Helmet, HelmetProvider } from "react-helmet-async";
+
 
 export const Pedido: React.FC = () => {
   const { cart, phoneNumber: storePhoneNumber, idBussiness, setCart, color, setColor } = useContext(AppContext); // Número de la tienda
@@ -220,336 +222,343 @@ export const Pedido: React.FC = () => {
   };
 
   return (
-    <div className="py-20 px-4 lg:px-0 max-w-lg md:max-w-2xl lg:w-3/4 mx-auto">
-      {/* Resumen del pedido */}
-      <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">
-        Preparemos su pedido
-      </h1>
-      <div className="bg-white p-6 rounded-lg shadow-lg">
-        <h2 className="text-2xl font-semibold mb-4 text-gray-800">Su pedido</h2>
-        <div className="divide-y divide-gray-200">
-          {cart.map((producto: Producto) => (
-            <div
-              key={producto.Id}
-              className="py-4 flex items-center justify-between"
-            >
-              <img
-                src={producto.Image}
-                alt={producto.Name}
-                className="w-16 h-16 object-cover rounded-lg mr-4"
-              />
-              <div className="flex flex-col flex-grow">
-                <span className="font-medium text-gray-800">{producto.Name}</span>
-                <span className="text-gray-500">${producto.Price} x {producto.Quantity || 1}</span>
-              </div>
+    <HelmetProvider>
+      <>
+        <Helmet>
+          <meta name="theme-color" content={color || "#6D01D1"} />
+        </Helmet>
+        <div className="py-20 px-4 lg:px-0 max-w-lg md:max-w-2xl lg:w-3/4 mx-auto">
+          {/* Resumen del pedido */}
+          <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">
+            Preparemos su pedido
+          </h1>
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h2 className="text-2xl font-semibold mb-4 text-gray-800">Su pedido</h2>
+            <div className="divide-y divide-gray-200">
+              {cart.map((producto: Producto) => (
+                <div
+                  key={producto.Id}
+                  className="py-4 flex items-center justify-between"
+                >
+                  <img
+                    src={producto.Image}
+                    alt={producto.Name}
+                    className="w-16 h-16 object-cover rounded-lg mr-4"
+                  />
+                  <div className="flex flex-col flex-grow">
+                    <span className="font-medium text-gray-800">{producto.Name}</span>
+                    <span className="text-gray-500">${producto.Price} x {producto.Quantity || 1}</span>
+                  </div>
 
-              <div className="flex flex-col items-end">
-                <span className="text-gray-800 font-semibold">
-                  ${(producto.Price * (producto.Quantity || 1)).toFixed(2)}
+                  <div className="flex flex-col items-end">
+                    <span className="text-gray-800 font-semibold">
+                      ${(producto.Price * (producto.Quantity || 1)).toFixed(2)}
+                    </span>
+                    <div className="flex items-center space-x-4 mt-2">
+                      {producto.Quantity! > 1 ? (
+                        <button
+                          onClick={() => decrementQuantity(producto.Id)}
+                          className="text-red-600 text-lg"
+                        >
+                          -
+                        </button>
+                      ) : (
+                        <button onClick={() => decrementQuantity(producto.Id)}>
+                          <img src={trash} alt="Eliminar" className="text-red-600" />
+                        </button>
+                      )}
+                      <span className="text-gray-800">{producto.Quantity}</span>
+                      <button
+                        onClick={() => incrementQuantity(producto.Id)}
+                        className="text-green-600 text-lg"
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+
+
+
+                </div>
+              ))}
+            </div>
+
+            <div className="flex justify-between items-center mt-6 text-lg font-semibold text-gray-800">
+              <span>
+                Total artículos ({totalArticulos} artículo
+                {totalArticulos > 1 ? "s" : ""})
+              </span>
+              <span>${totalPrecio.toFixed(2)}</span>
+            </div>
+            {cart.length > 0 && (
+              <div className="flex justify-center mt-6">
+                <span
+                  onClick={() => {
+                    setShowModal(true);
+                  }}
+                  className="text-red-500 cursor-pointer hover:underline"
+                >
+                  Limpiar Carrito
                 </span>
-                <div className="flex items-center space-x-4 mt-2">
-                  {producto.Quantity! > 1 ? (
-                    <button
-                      onClick={() => decrementQuantity(producto.Id)}
-                      className="text-red-600 text-lg"
-                    >
-                      -
-                    </button>
-                  ) : (
-                    <button onClick={() => decrementQuantity(producto.Id)}>
-                      <img src={trash} alt="Eliminar" className="text-red-600" />
-                    </button>
+              </div>
+            )}
+          </div>
+
+          {/* Formulario para el nombre y contacto */}
+          <form onSubmit={handleSubmit}>
+            <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
+              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+                Información de contacto
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex flex-col">
+                  <label className="text-gray-700">Nombre completo</label>
+                  <input
+                    type="text"
+                    value={nombre}
+                    onChange={(e) => setNombre(e.target.value)}
+                    className={`bg-white w-full p-3 border ${errors.nombre ? "border-red-500" : "border-gray-300"
+                      } rounded-lg focus:outline-none focus:border-gray-500`}
+                    placeholder="Introduce tu nombre"
+                  />
+                  {errors.nombre && (
+                    <span className="text-red-500 text-sm mt-1">
+                      {errors.nombre}
+                    </span>
                   )}
-                  <span className="text-gray-800">{producto.Quantity}</span>
+                </div>
+                <div className="flex flex-col">
+                  <label className="text-gray-700">Email (opcional)</label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={`bg-white w-full p-3 border ${errors.email ? "border-red-500" : "border-gray-300"
+                      } rounded-lg focus:outline-none focus:border-gray-500`}
+                    placeholder="Introduce tu email"
+                  />
+                  {errors.email && (
+                    <span className="text-red-500 text-sm mt-1">
+                      {errors.email}
+                    </span>
+                  )}
+                </div>
+                <div className="md:col-span-2 flex flex-col">
+                  <label className="text-gray-700">Teléfono móvil</label>
+                  <input
+                    type="text"
+                    value={clientPhoneNumber}
+                    onChange={(e) => setClientPhoneNumber(e.target.value)}
+                    className={`bg-white w-full p-3 border ${errors.clientPhoneNumber
+                      ? "border-red-500"
+                      : "border-gray-300"
+                      } rounded-lg focus:outline-none focus:border-gray-500`}
+                    placeholder="Introduce tu teléfono"
+                  />
+                  {errors.clientPhoneNumber && (
+                    <span className="text-red-500 text-sm mt-1">
+                      {errors.clientPhoneNumber}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Método de entrega */}
+            <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
+              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+                Método de entrega
+              </h2>
+              <div className="flex items-center mb-4">
+                <FiTruck className="text-gray-600 mr-2" size={24} />
+                <label className="text-gray-700">
+                  Seleccione el método de entrega
+                </label>
+              </div>
+              <select
+                value={deliveryMethod}
+                onChange={(e) => setDeliveryMethod(e.target.value)}
+                className="bg-white w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
+              >
+                <option value="domicilio">Entrega a domicilio</option>
+                <option value="recoger">Recoger en tienda</option>
+              </select>
+            </div>
+
+            {deliveryMethod === "domicilio" && (
+              <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
+                <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+                  Dirección de entrega
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="flex flex-col">
+                    <label className="text-gray-700">Calle</label>
+                    <input
+                      type="text"
+                      value={calle}
+                      onChange={(e) => setCalle(e.target.value)}
+                      className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                      placeholder="Introduce tu calle"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-gray-700">Código Postal</label>
+                    <input
+                      type="text"
+                      value={codigoPostal}
+                      onChange={(e) => setCodigoPostal(e.target.value)}
+                      className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                      placeholder="Código Postal"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-gray-700">Municipio</label>
+                    <input
+                      type="text"
+                      value={municipio}
+                      onChange={(e) => setMunicipio(e.target.value)}
+                      className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                      placeholder="Municipio"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label className="text-gray-700">Estado</label>
+                    <input
+                      type="text"
+                      value={estado}
+                      onChange={(e) => setEstado(e.target.value)}
+                      className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                      placeholder="Estado"
+                    />
+                  </div>
+                  <div className="md:col-span-2 flex flex-col">
+                    <label className="text-gray-700">Referencia (opcional)</label>
+                    <input
+                      type="text"
+                      value={referencia}
+                      onChange={(e) => setReferencia(e.target.value)}
+                      className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                      placeholder="Introduce una referencia (opcional)"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Método de pago */}
+            <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
+              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+                Método de pago
+              </h2>
+              <div className="flex items-center mb-4">
+                <FiCreditCard className="text-gray-600 mr-2" size={24} />
+                <label className="text-gray-700">
+                  Seleccione un método de pago
+                </label>
+              </div>
+              <select
+                value={paymentMethod}
+                onChange={(e) => setPaymentMethod(e.target.value)}
+                className="bg-white w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
+              >
+                <option value="transferencia">Transferencia bancaria</option>
+                <option value="dinero">Dinero en efectivo</option>
+                <option value="tarjeta">Tarjeta de crédito o débito</option>
+                <option value="enlace">Enlace de pago</option>
+              </select>
+            </div>
+
+            {/* Botón para continuar */}
+            <div className="flex justify-center mt-8">
+              <button
+                type="submit"
+                style={{
+                  backgroundColor: color || '#6D01D1', // Color de fondo dinámico basado en el estado 'color'
+                  transition: 'background-color 0.3s ease-in-out', // Transición suave para el color
+                }}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.backgroundColor = adjustColor(color || '#6D01D1')) // Oscurece el color en hover
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.backgroundColor = color || '#6D01D1') // Vuelve al color original al quitar el hover
+                }
+                className="text-white py-3 px-8 rounded-full shadow-lg"
+              >
+                PREPARAR EL PEDIDO
+              </button>
+
+            </div>
+          </form>
+
+          {/* Mostrar el número de la tienda */}
+          <div className="mt-6 text-center">
+            <FiPhone className="inline-block text-gray-600 mr-2" size={20} />
+            <p className="text-gray-600 inline-block">
+              Contacto de la tienda: {storePhoneNumber}
+            </p>
+          </div>
+          {/* MODAL QUE VIENE DE ABAJO DE LA PANTALLA PARA PREGUNTAR SI ESTA SEGURO QUE QUIERE ELIMINAR EL CARRITO */}
+          {cart.length > 0 && (
+            <div
+              className={`fixed inset-0 flex items-end justify-center bg-black bg-opacity-50 transition-opacity duration-300 ${showModal ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
+            >
+              <div className="bg-white rounded-t-lg p-6 w-full ">
+                <h2 className="text-xl font-semibold mb-4 text-center">¿Estás seguro?</h2>
+                <p className="mb-6 text-center">¿Quieres eliminar todos los productos del carrito?</p>
+                <div className="flex justify-center space-x-4 ">
                   <button
-                    onClick={() => incrementQuantity(producto.Id)}
-                    className="text-green-600 text-lg"
+                    onClick={() => setShowModal(false)}
+                    className="bg-gray-300 text-gray-800 py-2 px-6 rounded-full shadow-md hover:bg-gray-400 transition-all duration-300 ease-in-out"
                   >
-                    +
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      context.clearCart();
+                      setShowModal(false);
+                    }}
+                    className="bg-red-600 text-white py-2 px-6 rounded-full shadow-md hover:bg-red-700 transition-all duration-300 ease-in-out"
+                  >
+                    Eliminar
                   </button>
                 </div>
               </div>
-
-
-
             </div>
-          ))}
-        </div>
+          )}
 
-        <div className="flex justify-between items-center mt-6 text-lg font-semibold text-gray-800">
-          <span>
-            Total artículos ({totalArticulos} artículo
-            {totalArticulos > 1 ? "s" : ""})
-          </span>
-          <span>${totalPrecio.toFixed(2)}</span>
-        </div>
-        {cart.length > 0 && (
-          <div className="flex justify-center mt-6">
-            <span
-              onClick={() => {
-                setShowModal(true);
-              }}
-              className="text-red-500 cursor-pointer hover:underline"
+
+          {/* MODAL QUE VIENE DE ABAJO DE LA PANTALLA PARA PREGUNTAR SI ESTA SEGURO QUE QUIERE ELIMINAR EL producto */}
+          {showModalProduct && (
+            <div
+              className={`fixed inset-0 flex items-end justify-center bg-black bg-opacity-50 transition-opacity duration-300 ${showModalProduct ? "opacity-100" : "opacity-0 pointer-events-none"
+                }`}
             >
-              Limpiar Carrito
-            </span>
-          </div>
-        )}
-      </div>
-
-      {/* Formulario para el nombre y contacto */}
-      <form onSubmit={handleSubmit}>
-        <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-          <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-            Información de contacto
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex flex-col">
-              <label className="text-gray-700">Nombre completo</label>
-              <input
-                type="text"
-                value={nombre}
-                onChange={(e) => setNombre(e.target.value)}
-                className={`bg-white w-full p-3 border ${errors.nombre ? "border-red-500" : "border-gray-300"
-                  } rounded-lg focus:outline-none focus:border-gray-500`}
-                placeholder="Introduce tu nombre"
-              />
-              {errors.nombre && (
-                <span className="text-red-500 text-sm mt-1">
-                  {errors.nombre}
-                </span>
-              )}
-            </div>
-            <div className="flex flex-col">
-              <label className="text-gray-700">Email (opcional)</label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={`bg-white w-full p-3 border ${errors.email ? "border-red-500" : "border-gray-300"
-                  } rounded-lg focus:outline-none focus:border-gray-500`}
-                placeholder="Introduce tu email"
-              />
-              {errors.email && (
-                <span className="text-red-500 text-sm mt-1">
-                  {errors.email}
-                </span>
-              )}
-            </div>
-            <div className="md:col-span-2 flex flex-col">
-              <label className="text-gray-700">Teléfono móvil</label>
-              <input
-                type="text"
-                value={clientPhoneNumber}
-                onChange={(e) => setClientPhoneNumber(e.target.value)}
-                className={`bg-white w-full p-3 border ${errors.clientPhoneNumber
-                  ? "border-red-500"
-                  : "border-gray-300"
-                  } rounded-lg focus:outline-none focus:border-gray-500`}
-                placeholder="Introduce tu teléfono"
-              />
-              {errors.clientPhoneNumber && (
-                <span className="text-red-500 text-sm mt-1">
-                  {errors.clientPhoneNumber}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Método de entrega */}
-        <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-          <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-            Método de entrega
-          </h2>
-          <div className="flex items-center mb-4">
-            <FiTruck className="text-gray-600 mr-2" size={24} />
-            <label className="text-gray-700">
-              Seleccione el método de entrega
-            </label>
-          </div>
-          <select
-            value={deliveryMethod}
-            onChange={(e) => setDeliveryMethod(e.target.value)}
-            className="bg-white w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
-          >
-            <option value="domicilio">Entrega a domicilio</option>
-            <option value="recoger">Recoger en tienda</option>
-          </select>
-        </div>
-
-        {deliveryMethod === "domicilio" && (
-          <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-            <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-              Dirección de entrega
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="flex flex-col">
-                <label className="text-gray-700">Calle</label>
-                <input
-                  type="text"
-                  value={calle}
-                  onChange={(e) => setCalle(e.target.value)}
-                  className="bg-white w-full p-3 border border-gray-300 rounded-lg"
-                  placeholder="Introduce tu calle"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-gray-700">Código Postal</label>
-                <input
-                  type="text"
-                  value={codigoPostal}
-                  onChange={(e) => setCodigoPostal(e.target.value)}
-                  className="bg-white w-full p-3 border border-gray-300 rounded-lg"
-                  placeholder="Código Postal"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-gray-700">Municipio</label>
-                <input
-                  type="text"
-                  value={municipio}
-                  onChange={(e) => setMunicipio(e.target.value)}
-                  className="bg-white w-full p-3 border border-gray-300 rounded-lg"
-                  placeholder="Municipio"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label className="text-gray-700">Estado</label>
-                <input
-                  type="text"
-                  value={estado}
-                  onChange={(e) => setEstado(e.target.value)}
-                  className="bg-white w-full p-3 border border-gray-300 rounded-lg"
-                  placeholder="Estado"
-                />
-              </div>
-              <div className="md:col-span-2 flex flex-col">
-                <label className="text-gray-700">Referencia (opcional)</label>
-                <input
-                  type="text"
-                  value={referencia}
-                  onChange={(e) => setReferencia(e.target.value)}
-                  className="bg-white w-full p-3 border border-gray-300 rounded-lg"
-                  placeholder="Introduce una referencia (opcional)"
-                />
+              <div className="bg-white rounded-t-lg p-6 w-full ">
+                <h2 className="text-xl font-semibold mb-4 text-center">¿Estás seguro?</h2>
+                <p className="mb-6 text-center">¿Quieres eliminar el producto del carrito?</p>
+                <div className="flex justify-center space-x-4 ">
+                  <button
+                    onClick={() => setShowModalProduct(false)}
+                    className="bg-gray-300 text-gray-800 py-2 px-6 rounded-full shadow-md hover:bg-gray-400 transition-all duration-300 ease-in-out"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowModalProduct(false);
+                      context.removeProductFromCart(deleteProduct.toString());
+                    }}
+                    className="bg-red-600 text-white py-2 px-6 rounded-full shadow-md hover:bg-red-700 transition-all duration-300 ease-in-out"
+                  >
+                    Eliminar
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Método de pago */}
-        <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-          <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-            Método de pago
-          </h2>
-          <div className="flex items-center mb-4">
-            <FiCreditCard className="text-gray-600 mr-2" size={24} />
-            <label className="text-gray-700">
-              Seleccione un método de pago
-            </label>
-          </div>
-          <select
-            value={paymentMethod}
-            onChange={(e) => setPaymentMethod(e.target.value)}
-            className="bg-white w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
-          >
-            <option value="transferencia">Transferencia bancaria</option>
-            <option value="dinero">Dinero en efectivo</option>
-            <option value="tarjeta">Tarjeta de crédito o débito</option>
-            <option value="enlace">Enlace de pago</option>
-          </select>
+          )}
         </div>
-
-        {/* Botón para continuar */}
-        <div className="flex justify-center mt-8">
-          <button
-            type="submit"
-            style={{
-              backgroundColor: color || '#6D01D1', // Color de fondo dinámico basado en el estado 'color'
-              transition: 'background-color 0.3s ease-in-out', // Transición suave para el color
-            }}
-            onMouseEnter={(e) =>
-              (e.currentTarget.style.backgroundColor = adjustColor(color || '#6D01D1')) // Oscurece el color en hover
-            }
-            onMouseLeave={(e) =>
-              (e.currentTarget.style.backgroundColor = color || '#6D01D1') // Vuelve al color original al quitar el hover
-            }
-            className="text-white py-3 px-8 rounded-full shadow-lg"
-          >
-            PREPARAR EL PEDIDO
-          </button>
-
-        </div>
-      </form>
-
-      {/* Mostrar el número de la tienda */}
-      <div className="mt-6 text-center">
-        <FiPhone className="inline-block text-gray-600 mr-2" size={20} />
-        <p className="text-gray-600 inline-block">
-          Contacto de la tienda: {storePhoneNumber}
-        </p>
-      </div>
-      {/* MODAL QUE VIENE DE ABAJO DE LA PANTALLA PARA PREGUNTAR SI ESTA SEGURO QUE QUIERE ELIMINAR EL CARRITO */}
-      {cart.length > 0 && (
-        <div
-          className={`fixed inset-0 flex items-end justify-center bg-black bg-opacity-50 transition-opacity duration-300 ${showModal ? "opacity-100" : "opacity-0 pointer-events-none"
-            }`}
-        >
-          <div className="bg-white rounded-t-lg p-6 w-full ">
-            <h2 className="text-xl font-semibold mb-4 text-center">¿Estás seguro?</h2>
-            <p className="mb-6 text-center">¿Quieres eliminar todos los productos del carrito?</p>
-            <div className="flex justify-center space-x-4 ">
-              <button
-                onClick={() => setShowModal(false)}
-                className="bg-gray-300 text-gray-800 py-2 px-6 rounded-full shadow-md hover:bg-gray-400 transition-all duration-300 ease-in-out"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  context.clearCart();
-                  setShowModal(false);
-                }}
-                className="bg-red-600 text-white py-2 px-6 rounded-full shadow-md hover:bg-red-700 transition-all duration-300 ease-in-out"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-
-      {/* MODAL QUE VIENE DE ABAJO DE LA PANTALLA PARA PREGUNTAR SI ESTA SEGURO QUE QUIERE ELIMINAR EL producto */}
-      {showModalProduct && (
-        <div
-          className={`fixed inset-0 flex items-end justify-center bg-black bg-opacity-50 transition-opacity duration-300 ${showModalProduct ? "opacity-100" : "opacity-0 pointer-events-none"
-            }`}
-        >
-          <div className="bg-white rounded-t-lg p-6 w-full ">
-            <h2 className="text-xl font-semibold mb-4 text-center">¿Estás seguro?</h2>
-            <p className="mb-6 text-center">¿Quieres eliminar el producto del carrito?</p>
-            <div className="flex justify-center space-x-4 ">
-              <button
-                onClick={() => setShowModalProduct(false)}
-                className="bg-gray-300 text-gray-800 py-2 px-6 rounded-full shadow-md hover:bg-gray-400 transition-all duration-300 ease-in-out"
-              >
-                Cancelar
-              </button>
-              <button
-                onClick={() => {
-                  setShowModalProduct(false);
-                  context.removeProductFromCart(deleteProduct.toString());
-                }}
-                className="bg-red-600 text-white py-2 px-6 rounded-full shadow-md hover:bg-red-700 transition-all duration-300 ease-in-out"
-              >
-                Eliminar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+      </>
+    </HelmetProvider>
   );
 };

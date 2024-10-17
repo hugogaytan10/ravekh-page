@@ -130,7 +130,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2  md:grid-cols-4 lg:grid-cols-5 gap-6">
               {Array.isArray(productos) &&
                 productos.map((producto, index) => (
                   producto.Image != '' && producto.Image != null) && (
