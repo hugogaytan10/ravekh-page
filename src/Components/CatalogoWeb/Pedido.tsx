@@ -11,9 +11,12 @@ export const Pedido: React.FC = () => {
   const { cart, phoneNumber: storePhoneNumber, idBussiness, setCart } = useContext(AppContext); // Número de la tienda
   const [nombre, setNombre] = useState<string>("");
   const [email, setEmail] = useState<string>("");
+  const [showModalProduct, setShowModalProduct] = useState<boolean>(false); // Estado para mostrar el modal de confirmación
   const [clientPhoneNumber, setClientPhoneNumber] = useState<string>(""); // Número del cliente
   const [deliveryMethod, setDeliveryMethod] = useState<string>("domicilio");
   const [paymentMethod, setPaymentMethod] = useState<string>("transferencia");
+  const [showModal, setShowModal] = useState<boolean>(false); // Estado para mostrar el modal de confirmación
+  const [deleteProduct, setDeleteProduct] = useState<number>(0); // Estado para guardar el id del producto a eliminar
 
 
   // Campos de dirección
@@ -152,6 +155,7 @@ export const Pedido: React.FC = () => {
         mensaje
       )}`;
       console.log(url);
+      context.clearCart();
       window.open(url, "_blank");
     } else {
       console.log("Formulario inválido, mostrando errores.");
@@ -175,11 +179,8 @@ export const Pedido: React.FC = () => {
         if (item.Quantity! > 1) {
           return { ...item, Quantity: item.Quantity! - 1 }; // Reduce la cantidad
         } else {
-          const confirmed = window.confirm("¿Estás seguro de eliminar este producto?");
-          if (confirmed) {
-            context.removeProductFromCart(productId.toString()); // Elimina el producto si se confirma
-            return null; // Retorna null para que sea eliminado del array
-          }
+          setShowModalProduct(true); // Muestra el modal de confirmación
+          setDeleteProduct(productId); // Guarda el id del producto a eliminar
         }
       }
       return item;
@@ -218,25 +219,25 @@ export const Pedido: React.FC = () => {
                   ${(producto.Price * (producto.Quantity || 1)).toFixed(2)}
                 </span>
                 <div className="flex items-center space-x-4 mt-2">
-                    {producto.Quantity! > 1 ? (
+                  {producto.Quantity! > 1 ? (
                     <button
                       onClick={() => decrementQuantity(producto.Id)}
                       className="text-red-600 text-lg"
                     >
                       -
                     </button>
-                    ) : (
+                  ) : (
                     <button onClick={() => decrementQuantity(producto.Id)}>
                       <img src={trash} alt="Eliminar" className="text-red-600" />
                     </button>
-                    )}
+                  )}
                   <span className="text-gray-800">{producto.Quantity}</span>
-                    <button
+                  <button
                     onClick={() => incrementQuantity(producto.Id)}
                     className="text-green-600 text-lg"
-                    >
+                  >
                     +
-                    </button>
+                  </button>
                 </div>
               </div>
 
@@ -257,10 +258,7 @@ export const Pedido: React.FC = () => {
           <div className="flex justify-center mt-6">
             <span
               onClick={() => {
-              const confirmed = window.confirm("¿Estás seguro de que quieres limpiar el carrito?");
-              if (confirmed) {
-                context.clearCart();
-              }
+                setShowModal(true);
               }}
               className="text-red-500 cursor-pointer hover:underline"
             >
@@ -452,6 +450,66 @@ export const Pedido: React.FC = () => {
           Contacto de la tienda: {storePhoneNumber}
         </p>
       </div>
+      {/* MODAL QUE VIENE DE ABAJO DE LA PANTALLA PARA PREGUNTAR SI ESTA SEGURO QUE QUIERE ELIMINAR EL CARRITO */}
+      {cart.length > 0 && (
+        <div
+          className={`fixed inset-0 flex items-end justify-center bg-black bg-opacity-50 transition-opacity duration-300 ${showModal ? "opacity-100" : "opacity-0 pointer-events-none"
+            }`}
+        >
+          <div className="bg-white rounded-t-lg p-6 w-full ">
+            <h2 className="text-xl font-semibold mb-4 text-center">¿Estás seguro?</h2>
+            <p className="mb-6 text-center">¿Quieres eliminar todos los productos del carrito?</p>
+            <div className="flex justify-center space-x-4 ">
+              <button
+                onClick={() => setShowModal(false)}
+                className="bg-gray-300 text-gray-800 py-2 px-6 rounded-full shadow-md hover:bg-gray-400 transition-all duration-300 ease-in-out"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  context.clearCart();
+                  setShowModal(false);
+                }}
+                className="bg-red-600 text-white py-2 px-6 rounded-full shadow-md hover:bg-red-700 transition-all duration-300 ease-in-out"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+      {/* MODAL QUE VIENE DE ABAJO DE LA PANTALLA PARA PREGUNTAR SI ESTA SEGURO QUE QUIERE ELIMINAR EL producto */}
+      {showModalProduct && (
+        <div
+          className={`fixed inset-0 flex items-end justify-center bg-black bg-opacity-50 transition-opacity duration-300 ${showModalProduct ? "opacity-100" : "opacity-0 pointer-events-none"
+            }`}
+        >
+          <div className="bg-white rounded-t-lg p-6 w-full ">
+            <h2 className="text-xl font-semibold mb-4 text-center">¿Estás seguro?</h2>
+            <p className="mb-6 text-center">¿Quieres eliminar el producto del carrito?</p>
+            <div className="flex justify-center space-x-4 ">
+              <button
+                onClick={() => setShowModalProduct(false)}
+                className="bg-gray-300 text-gray-800 py-2 px-6 rounded-full shadow-md hover:bg-gray-400 transition-all duration-300 ease-in-out"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => {
+                  setShowModalProduct(false);
+                  context.removeProductFromCart(deleteProduct.toString());
+                }}
+                className="bg-red-600 text-white py-2 px-6 rounded-full shadow-md hover:bg-red-700 transition-all duration-300 ease-in-out"
+              >
+                Eliminar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
