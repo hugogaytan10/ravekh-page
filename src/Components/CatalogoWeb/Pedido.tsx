@@ -8,7 +8,7 @@ import { insertOrder } from "./Petitions";
 import trash from '../../assets/trash.svg';
 
 export const Pedido: React.FC = () => {
-  const { cart, phoneNumber: storePhoneNumber, idBussiness, setCart } = useContext(AppContext); // Número de la tienda
+  const { cart, phoneNumber: storePhoneNumber, idBussiness, setCart, color, setColor } = useContext(AppContext); // Número de la tienda
   const [nombre, setNombre] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [showModalProduct, setShowModalProduct] = useState<boolean>(false); // Estado para mostrar el modal de confirmación
@@ -34,6 +34,22 @@ export const Pedido: React.FC = () => {
     clientPhoneNumber?: string;
   }>({});
 
+  function adjustColor(hex) {
+    // Convertimos el color hexadecimal a RGB
+    console.log(hex);
+    const r = parseInt(hex.slice(1, 3), 16); // Rojo
+    const g = parseInt(hex.slice(3, 5), 16); // Verde
+    const b = parseInt(hex.slice(5, 7), 16); // Azul
+
+    // Aplicamos las restas al componente rojo, verde y azul para hacer el color más oscuro
+    const newR = Math.max(0, r - 100).toString(16).padStart(2, '0');
+    const newG = Math.max(0, g - 100).toString(16).padStart(2, '0');
+    const newB = Math.max(0, b - 100).toString(16).padStart(2, '0');
+
+    // Retornamos el color modificado en formato hexadecimal
+    console.log(`#${newR}${newG}${newB}`);
+    return `#${newR}${newG}${newB}`;
+  }
   const totalArticulos = cart.reduce(
     (total, item) => total + (item.Quantity || 1),
     0
@@ -82,6 +98,19 @@ export const Pedido: React.FC = () => {
   }, [cart, setCart]);
 
   useEffect(() => {
+    if (!context.phoneNumber) {
+      const storedPhoneNumber = localStorage.getItem("telefono");
+      if (storedPhoneNumber) {
+        context.setPhoneNumber(storedPhoneNumber);
+      }
+    }
+    if (!context.color) {
+      const storedColor = localStorage.getItem("color");
+      if (storedColor) {
+        context.setColor(storedColor);
+        setColor(storedColor);
+      }
+    }
     const menuIcono = document.getElementById("menuIcono");
     menuIcono?.classList.add("hidden");
 
@@ -436,10 +465,21 @@ export const Pedido: React.FC = () => {
         <div className="flex justify-center mt-8">
           <button
             type="submit"
-            className="bg-[#6D01D1] text-white py-3 px-8 rounded-full shadow-lg hover:bg-[#5A01A8] transition-all duration-300 ease-in-out"
+            style={{
+              backgroundColor: color || '#6D01D1', // Color de fondo dinámico basado en el estado 'color'
+              transition: 'background-color 0.3s ease-in-out', // Transición suave para el color
+            }}
+            onMouseEnter={(e) =>
+              (e.currentTarget.style.backgroundColor = adjustColor(color || '#6D01D1')) // Oscurece el color en hover
+            }
+            onMouseLeave={(e) =>
+              (e.currentTarget.style.backgroundColor = color || '#6D01D1') // Vuelve al color original al quitar el hover
+            }
+            className="text-white py-3 px-8 rounded-full shadow-lg"
           >
             PREPARAR EL PEDIDO
           </button>
+
         </div>
       </form>
 

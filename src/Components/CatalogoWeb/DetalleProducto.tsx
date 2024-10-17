@@ -16,6 +16,7 @@ export const DetalleProducto: React.FC = () => {
   const [producto, setProducto] = useState<Producto | null>(null);
   const context = useContext(AppContext);
   const [count, setCount] = useState(1);
+  const [color, setColor] = useState<string | null>(null);
 
   // Función para generar un descuento aleatorio entre 10% y 30%
   function getRandomInt(min: number, max: number) {
@@ -31,8 +32,30 @@ export const DetalleProducto: React.FC = () => {
     };
     context.addProductToCart(productoCantidad);
   };
+  function adjustColor(hex) {
+    // Convertimos el color hexadecimal a RGB
+    console.log(hex);
+    const r = parseInt(hex.slice(1, 3), 16); // Rojo
+    const g = parseInt(hex.slice(3, 5), 16); // Verde
+    const b = parseInt(hex.slice(5, 7), 16); // Azul
 
+    // Aplicamos las restas al componente rojo, verde y azul para hacer el color más oscuro
+    const newR = Math.max(0, r - 100).toString(16).padStart(2, '0');
+    const newG = Math.max(0, g - 100).toString(16).padStart(2, '0');
+    const newB = Math.max(0, b - 100).toString(16).padStart(2, '0');
+
+    // Retornamos el color modificado en formato hexadecimal
+    console.log(`#${newR}${newG}${newB}`);
+    return `#${newR}${newG}${newB}`;
+  }
   useEffect(() => {
+    if (!context.color) {
+      const storedColor = localStorage.getItem("color");
+      if (storedColor) {
+        context.setColor(storedColor);
+        setColor(storedColor);
+      }
+    }
     const menuIcono = document.getElementById("menuIcono");
     menuIcono?.classList.add("hidden");
 
@@ -61,7 +84,7 @@ export const DetalleProducto: React.FC = () => {
   return (
     <HelmetProvider>
       <Helmet>
-        <meta name="theme-color" content="#6D01D1" />
+        <meta name="theme-color" content={color || '#6D01D1'} />
       </Helmet>
       <div className="px-6 py-20 min-h-screen bg-gray-100">
         {/* Contenedor del producto */}
@@ -131,11 +154,22 @@ export const DetalleProducto: React.FC = () => {
           {/* Botón de añadir al carrito */}
           <div className="flex justify-center mt-10">
             <button
-              className="bg-[#6D01D1] w-full md:w-3/4 text-white py-3 px-6 rounded-full shadow-lg hover:bg-[#5A01A8] transition-all duration-300 ease-in-out transform hover:scale-105"
               onClick={addCart}
+              style={{
+                backgroundColor: color || '#6D01D1', // Color de fondo dinámico basado en el estado 'color'
+                transition: 'background-color 0.3s ease-in-out, transform 0.3s ease-in-out', // Transición de color y transformación
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.backgroundColor = adjustColor(color || '#6D01D1')) // Cambia el color al pasar el ratón
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.backgroundColor = color || '#6D01D1') // Vuelve al color original al quitar el ratón
+              }
+              className="text-white w-full md:w-3/4 py-3 px-6 rounded-full shadow-lg hover:scale-105" // Clases Tailwind para el estilo
             >
               Añadir al carrito
             </button>
+
           </div>
         </div>
 

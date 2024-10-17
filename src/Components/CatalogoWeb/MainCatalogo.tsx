@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { NavLink, useParams } from "react-router-dom";
-import { getProductsByBusiness } from "./Petitions";
+import { getProductsByBusiness, getBusinessById } from "./Petitions";
 import { Producto } from "./Modelo/Producto";
 import { motion } from "framer-motion";
 import { AppContext } from "./Context/AppContext";
@@ -15,6 +15,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const { idBusiness } = useParams<{ idBusiness: string }>();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [telefono, setTelefono] = useState<string | null>(null);
+  const [color, setColor] = useState<string | null>(null);
   const context = useContext(AppContext);
   context.setIdBussiness(idBusiness || "1");
 
@@ -24,11 +25,22 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       (item: Producto) => item.Business_Id.toString() !== idBusiness
     );
 
-    if (isDifferentBusiness) {
+    if (isDifferentBusiness || storedCart.length === 0) {
       localStorage.removeItem("cart");
-      localStorage.removeItem("telefono");
+
       context.clearCart();
     }
+
+    getBusinessById(idBusiness || "1").then((data) => {
+      if (data.length === 0) {
+        return;
+      }
+      setColor(data.Color || null);
+      context.setColor(data.Color || null);
+      localStorage.setItem("color", data.Color || "");
+      context.setNombre(data.Name || null);
+      localStorage.setItem("nombre", data.Name || "");
+    });
 
     getProductsByBusiness(idBusiness || "1").then((data) => {
       if (data.length === 0) {
@@ -40,12 +52,27 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       localStorage.setItem("telefono", data[0].PhoneNumber || "");
     });
   }, [idBusiness]);
+
+
   useEffect(() => {
     if (!context.phoneNumber) {
       const storedPhoneNumber = localStorage.getItem("telefono");
       if (storedPhoneNumber) {
         context.setPhoneNumber(storedPhoneNumber);
         setTelefono(storedPhoneNumber);
+      }
+    }
+    if (!context.color) {
+      const storedColor = localStorage.getItem("color");
+      if (storedColor) {
+        context.setColor(storedColor);
+        setColor(storedColor);
+      }
+    }
+    if (!context.nombre) {
+      const storedNombre = localStorage.getItem("nombre");
+      if (storedNombre) {
+        context.setNombre(storedNombre);
       }
     }
     const menuIcono = document.getElementById("menuIcono");
@@ -63,11 +90,29 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     const arrowIcon = document.getElementById("backCatalogo");
     arrowIcon?.classList.add("hidden");
   }, []);
+
+  function adjustColor(hex) {
+    // Convertimos el color hexadecimal a RGB
+    console.log(hex);
+    const r = parseInt(hex.slice(1, 3), 16); // Rojo
+    const g = parseInt(hex.slice(3, 5), 16); // Verde
+    const b = parseInt(hex.slice(5, 7), 16); // Azul
+
+    // Aplicamos las restas al componente rojo, verde y azul para hacer el color más oscuro
+    const newR = Math.max(0, r - 100).toString(16).padStart(2, '0');
+    const newG = Math.max(0, g - 100).toString(16).padStart(2, '0');
+    const newB = Math.max(0, b - 100).toString(16).padStart(2, '0');
+
+    // Retornamos el color modificado en formato hexadecimal
+    console.log(`#${newR}${newG}${newB}`);
+    return `#${newR}${newG}${newB}`;
+  }
+
   return (
     <HelmetProvider>
       <>
         <Helmet>
-          <meta name="theme-color" content="#6D01D1" />
+          <meta name="theme-color" content={color || "#6D01D1"} />
         </Helmet>
         <div className="p-4 min-h-screen w-full max-w-screen-xl mx-auto py-20">
           {/* Mostrar mensaje si no hay productos */}
@@ -123,9 +168,21 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
                       <div className="flex justify-center mt-4 p-2">
                         <button
                           onClick={() => context.addProductToCart(producto)}
-                          className="bg-[#6D01D1] text-white w-full md:w-3/4 py-2 px-6 rounded-full shadow-md hover:bg-[#5A01A8] transition-colors duration-300 ease-in-out transform hover:scale-105">
+                          style={{
+                            backgroundColor: color || '#6D01D1',
+                            transition: 'background-color 0.3s ease-in-out',
+                          }}
+                          onMouseEnter={(e) =>
+                            (e.currentTarget.style.backgroundColor = adjustColor(color || '#6D01D1'))
+                          }
+                          onMouseLeave={(e) =>
+                            (e.currentTarget.style.backgroundColor = color || '#6D01D1')
+                          }
+                          className="text-white w-full md:w-3/4 py-2 px-6 rounded-full shadow-md hover:transform hover:scale-105"
+                        >
                           Añadir al carrito
                         </button>
+
                       </div>
                     </motion.div>
                   )

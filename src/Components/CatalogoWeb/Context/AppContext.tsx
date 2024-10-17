@@ -11,10 +11,12 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   const [cart, setCart] = useState<Producto[]>([]);
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
   const [idBussiness, setIdBussiness] = useState<string>("1");
+  const [color, setColor] = useState<string>("");
+  const [nombre, setNombre] = useState<string>("");
 
   //funcion para agregar un producto al carrito
   const addProductToCart = (product: Producto) => {
-    if(!product.Quantity) {
+    if (!product.Quantity) {
       product.Quantity = 1;
     }
     //verificar si hay algo en local storage
@@ -58,8 +60,36 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   };
 
   const value = useMemo(() => {
-    return { cart, setCart, phoneNumber, setPhoneNumber, addProductToCart, removeProductFromCart, clearCart,  idBussiness, setIdBussiness };
-  }, [cart, phoneNumber, setCart, setPhoneNumber, addProductToCart, removeProductFromCart, clearCart, idBussiness, setIdBussiness]);
+    return {
+      cart,
+      setCart,
+      phoneNumber,
+      setPhoneNumber,
+      addProductToCart,
+      removeProductFromCart,
+      clearCart,
+      idBussiness,
+      setIdBussiness,
+      color,
+      setColor,
+      nombre,
+      setNombre
+    };
+  }, [
+    cart,
+    phoneNumber,
+    setCart,
+    setPhoneNumber,
+    addProductToCart,
+    removeProductFromCart,
+    clearCart,
+    idBussiness,
+    setIdBussiness,
+    color,
+    setColor,
+    nombre,
+    setNombre
+  ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
 };

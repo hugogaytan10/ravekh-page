@@ -10,4 +10,8 @@ export type AppContextState = {
     clearCart: () => void;
     idBussiness: string;
     setIdBussiness: Dispatch<string>;
+    color: string;
+    setColor: Dispatch<string>;
+    nombre: string;
+    setNombre: Dispatch<string>;
 }
