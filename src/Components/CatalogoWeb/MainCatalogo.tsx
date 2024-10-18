@@ -35,6 +35,10 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       if (data.length === 0) {
         return;
       }
+      if (idBusiness == "26") {
+        window.location.href = "https://mrcongelados.com/";
+        return;
+      }
       setColor(data.Color || null);
       context.setColor(data.Color || null);
       localStorage.setItem("color", data.Color || "");
