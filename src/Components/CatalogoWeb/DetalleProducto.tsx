@@ -49,13 +49,6 @@ export const DetalleProducto: React.FC = () => {
     return `#${newR}${newG}${newB}`;
   }
   useEffect(() => {
-    if (!context.color) {
-      const storedColor = localStorage.getItem("color");
-      if (storedColor) {
-        context.setColor(storedColor);
-        setColor(storedColor);
-      }
-    }
     const menuIcono = document.getElementById("menuIcono");
     menuIcono?.classList.add("hidden");
 
@@ -74,6 +67,16 @@ export const DetalleProducto: React.FC = () => {
       setProducto(data);
     });
   }, [idProducto]);
+
+  useEffect(() => {
+    if (!context.color) {
+      const storedColor = localStorage.getItem("color");
+      if (storedColor) {
+        context.setColor(storedColor);
+        setColor(storedColor);
+      }
+    }
+  }, [producto]);
 
   if (!producto) {
     return (
