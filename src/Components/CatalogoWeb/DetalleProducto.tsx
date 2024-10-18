@@ -14,10 +14,9 @@ export const DetalleProducto: React.FC = () => {
     telefono: string;
   }>();
   const [producto, setProducto] = useState<Producto | null>(null);
-  const context = useContext(AppContext);
+  const { color, setColor, addProductToCart } = useContext(AppContext);
   const [count, setCount] = useState(1);
-  const [color, setColor] = useState<string | null>(null);
-
+  const context = useContext(AppContext);
   // Función para generar un descuento aleatorio entre 10% y 30%
   function getRandomInt(min: number, max: number) {
     return Math.floor(Math.random() * (max - min)) + min;
@@ -30,11 +29,10 @@ export const DetalleProducto: React.FC = () => {
       ...producto,
       Quantity: count,
     };
-    context.addProductToCart(productoCantidad);
+    addProductToCart(productoCantidad);
   };
   function adjustColor(hex) {
     // Convertimos el color hexadecimal a RGB
-    console.log(hex);
     const r = parseInt(hex.slice(1, 3), 16); // Rojo
     const g = parseInt(hex.slice(3, 5), 16); // Verde
     const b = parseInt(hex.slice(5, 7), 16); // Azul
@@ -45,10 +43,15 @@ export const DetalleProducto: React.FC = () => {
     const newB = Math.max(0, b - 100).toString(16).padStart(2, '0');
 
     // Retornamos el color modificado en formato hexadecimal
-    console.log(`#${newR}${newG}${newB}`);
     return `#${newR}${newG}${newB}`;
   }
   useEffect(() => {
+    if (!context.color) {
+      const storedColor = localStorage.getItem("color");
+      if (storedColor) {
+        setColor(storedColor);
+      }
+    }
     const menuIcono = document.getElementById("menuIcono");
     menuIcono?.classList.add("hidden");
 
@@ -68,15 +71,6 @@ export const DetalleProducto: React.FC = () => {
     });
   }, [idProducto]);
 
-  useEffect(() => {
-    if (!context.color) {
-      const storedColor = localStorage.getItem("color");
-      if (storedColor) {
-        context.setColor(storedColor);
-        setColor(storedColor);
-      }
-    }
-  }, [producto]);
 
   if (!producto) {
     return (

@@ -38,7 +38,6 @@ export const Pedido: React.FC = () => {
 
   function adjustColor(hex) {
     // Convertimos el color hexadecimal a RGB
-    console.log(hex);
     const r = parseInt(hex.slice(1, 3), 16); // Rojo
     const g = parseInt(hex.slice(3, 5), 16); // Verde
     const b = parseInt(hex.slice(5, 7), 16); // Azul
@@ -49,7 +48,6 @@ export const Pedido: React.FC = () => {
     const newB = Math.max(0, b - 100).toString(16).padStart(2, '0');
 
     // Retornamos el color modificado en formato hexadecimal
-    console.log(`#${newR}${newG}${newB}`);
     return `#${newR}${newG}${newB}`;
   }
   const totalArticulos = cart.reduce(
