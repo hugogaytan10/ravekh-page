@@ -20,6 +20,10 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   context.setIdBussiness(idBusiness || "1");
 
   useEffect(() => {
+    if (idBusiness == "26") {
+      window.location.href = "https://mrcongelados.com/";
+      return;
+    }
     const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
     const isDifferentBusiness = storedCart.some(
       (item: Producto) => item.Business_Id.toString() !== idBusiness
@@ -33,10 +37,6 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
 
     getBusinessById(idBusiness || "1").then((data) => {
       if (data.length === 0) {
-        return;
-      }
-      if (idBusiness == "26") {
-        window.location.href = "https://mrcongelados.com/";
         return;
       }
       setColor(data.Color || null);
