@@ -158,13 +158,17 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
 
                       {/* Precio normal y promocional en un solo renglón */}
                       <div className="flex justify-between items-center mt-2 p-2">
-                        <p className="text-gray-800 text-xl font-semibold">${producto.Price}</p>
-                        {producto.PromotionPrice && (
-                          <p className="text-gray-300 line-through font-light">
-                            {producto.PromotionPrice}
-                          </p>
-                        )}
-                      </div>
+                          {producto.PromotionPrice ? (
+                          <>
+                            <p className="text-gray-800 text-xl font-semibold">${producto.PromotionPrice}</p>
+                            <p className="text-gray-300 line-through font-light">
+                            ${producto.Price}
+                            </p>
+                          </>
+                          ) : (
+                          <p className="text-gray-800 text-xl font-semibold">${producto.Price}</p>
+                          )}
+                        </div>
 
                       {/* Botón centrado */}
                       <div className="flex justify-center mt-4 p-2">
@@ -180,7 +184,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
                           onMouseLeave={(e) =>
                             (e.currentTarget.style.backgroundColor = color || '#6D01D1')
                           }
-                          className="text-white w-full md:w-3/4 py-2 px-6 rounded-full shadow-md hover:transform hover:scale-105"
+                          className="text-white w-full md:w-3/4 py-2 px-4 rounded-full shadow-md hover:transform hover:scale-105"
                         >
                           Añadir al carrito
                         </button>

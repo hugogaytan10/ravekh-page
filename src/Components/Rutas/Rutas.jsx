@@ -162,7 +162,7 @@ export const Rutas = () => {
                 </NavLink>
               </li>
               <li>
-                <NavLink to="/politica" onClick={handleMenuClick}>
+                <NavLink to="/politica" onClick={handleMenuClick} className='text-base'>
                   Politica de Privacidad
                 </NavLink>
               </li>

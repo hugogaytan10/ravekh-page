@@ -98,6 +98,7 @@ export const Pedido: React.FC = () => {
   }, [cart, setCart]);
 
   useEffect(() => {
+    window.scrollTo(0, 0);
     if (!context.phoneNumber) {
       const storedPhoneNumber = localStorage.getItem("telefono");
       if (storedPhoneNumber) {
