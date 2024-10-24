@@ -121,7 +121,7 @@ export const Pedido: React.FC = () => {
                         ${cart
                           .map(
                             (producto) =>
-                              `${producto.Name} x ${producto.Quantity || 1}`
+                              `${producto.Name} x ${producto.Quantity || 1} $${(producto.Quantity || 1) * producto.Price}`
                           )
                           .join("\n")}
                         Total: $${totalPrecio.toFixed(2)}
@@ -133,7 +133,8 @@ export const Pedido: React.FC = () => {
                         Método de pago: ${paymentMethod}
                         Nombre: ${nombre}
                         Email: ${email || "No proporcionado"}
-                        Teléfono: ${clientPhoneNumber}`;
+                        Teléfono: ${clientPhoneNumber}
+                        ${deliveryMethod === "domicilio" ? `Dirección: ${calle}, C.P. ${codigoPostal},  ${municipio}, ${estado}\nReferencias: ${referencia}` : ""}`;
 
       const url = `https://wa.me/${storePhoneNumber}?text=${encodeURIComponent(
         mensaje
