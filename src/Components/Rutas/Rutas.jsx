@@ -1,4 +1,4 @@
-import React, { useRef, useEffect, useContext } from "react";
+import React, { useRef, useEffect, useContext, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { LandingPage } from "../LandingPage/LandingPage";
@@ -34,8 +34,16 @@ export const Rutas = () => {
   const slideDownRefCatalogo = useRef(null);
   const listItemsRefCatalogo = useRef(null);
   const menuToggleCatalogo = useRef(null);
+  const [color, setcolor] = useState("")
+  const [nombre, setnombre] = useState("")
 
   useEffect(() => {
+    if (context.cart.length === 0) {
+      const localCart = localStorage.getItem("cart");
+      if (localCart) {
+        context.setCart(JSON.parse(localCart));
+      }
+    }
     gsap.set(slideDownRef.current, { y: "-100%", display: "block" });
 
     menuToggle.current = new TimelineMax({ paused: true, reversed: true })
@@ -71,6 +79,32 @@ export const Rutas = () => {
       );
   }, []);
 
+
+  useEffect(() => {
+    const localColor = localStorage.getItem("color");
+    const localNombre = localStorage.getItem("nombre");
+    const localCart = localStorage.getItem("cart");
+
+    if (localColor) {
+      context.setColor(localColor);
+      setcolor(localColor);
+    }
+
+    if (localNombre) {
+      context.setNombre(localNombre);
+      setnombre(localNombre);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (context.color !== "") {
+      setcolor(context.color);
+    }
+    if (context.nombre !== "") {
+      setnombre(context.nombre);
+    }
+  }, [context.color, context.nombre]);
+
   const handleMenuClick = () => {
     menuToggle.current.reversed()
       ? menuToggle.current.restart()
@@ -91,7 +125,7 @@ export const Rutas = () => {
         <div className="  drawer-content flex flex-col h-full min-w-full relative ">
           <div
             ref={menuIconRef}
-            className="z-40 nav-menu bg-white w-10 h-10 rounded-full flex items-center justify-center fixed top-2 right-1 z-10"
+            className="z-40 nav-menu bg-white w-10 h-10 rounded-full flex items-center justify-center fixed top-2 right-1"
             onClick={handleMenuClick}
             id="menuIcono"
           >
@@ -100,8 +134,8 @@ export const Rutas = () => {
 
           <nav
             ref={slideDownRef}
-            className=" menu-container fixed top-0 left-0 w-full h-full bg-morado-oscuro z-30"
-            style={{ display: "none" }}
+            className="menu-container fixed top-0 left-0 w-full h-full z-30"
+            style={{ display: "none", backgroundColor: "#6D01D1" }}
           >
             <ul
               ref={listItemsRef}
@@ -128,22 +162,24 @@ export const Rutas = () => {
                 </NavLink>
               </li>
               <li>
-                 <NavLink to="/politica" onClick={handleMenuClick}>
-                    Politica de Privacidad
-                  </NavLink>
+                <NavLink to="/politica" onClick={handleMenuClick} className='text-base'>
+                  Politica de Privacidad
+                </NavLink>
               </li>
               <li>
                 <p className="text-white text-base">ravekh.team@gmail.com</p>
               </li>
-             
             </ul>
           </nav>
 
           <div
-            className="  drawer-content flex flex-col  min-w-full relative hidden"
+            className="drawer-content flex flex-col min-w-full relative hidden"
             id="menuIconoCatalogo"
           >
-            <div className="w-full bg-[#6D01D1] min-h-16 rounded-b-lg fixed z-50 flex items-center justify-between px-4">
+            <div
+              className="w-full min-h-16 rounded-b-lg fixed z-50 flex items-center justify-between px-4"
+              style={{ backgroundColor: color }}
+            >
               {/* Icono del carrito a la izquierda */}
 
               <div
@@ -158,14 +194,15 @@ export const Rutas = () => {
               <div
                 onClick={() => window.history.back()}
                 id="backCatalogo"
-                className="bg-[#6D01D1] w-8 h-8 rounded-full flex items-center justify-center transform rotate-180 hidden"
+                className="w-8 h-8 rounded-full flex items-center justify-center transform rotate-180 hidden"
+                style={{ backgroundColor: color }}
               >
                 <img src={arrow} alt="arrow" className="w-8 h-8 " />
               </div>
 
               <div>
                 <h2 className="text-white text-center text-lg font-semibold">
-                  Tienda en línea
+                  {nombre}
                 </h2>
               </div>
 
@@ -173,7 +210,10 @@ export const Rutas = () => {
                 <div className="relative">
                   <img src={cart} alt="cart" className="w-8 h-8" />
                   {context.cart.length > 0 && (
-                    <span className="absolute top-0 right-0 bg-gray-50 text-[#6D01D1] rounded-full w-4 h-4 flex items-center justify-center text-xs">
+                    <span
+                      className="absolute top-0 right-0 bg-gray-50 rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                      style={{ color: color }}
+                    >
                       {context.cart.length}
                     </span>
                   )}
@@ -183,8 +223,8 @@ export const Rutas = () => {
 
             <nav
               ref={slideDownRefCatalogo}
-              className=" menu-container fixed top-0 left-0 w-full h-full bg-[#6D01D1] z-30"
-              style={{ display: "none" }}
+              className="menu-container fixed top-0 left-0 w-full h-full z-30"
+              style={{ display: "none", backgroundColor: color }}
             >
               <ul
                 ref={listItemsRefCatalogo}
