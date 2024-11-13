@@ -6,7 +6,8 @@ import { motion } from "framer-motion";
 import { AppContext } from "./Context/AppContext";
 import logoWhasa from "../../assets/logo-whatsapp.svg";
 import { Helmet, HelmetProvider } from "react-helmet-async";
-import { a } from "framer-motion/client";
+import defaultImage from "../../assets/ravekh.png";
+
 interface MainCatalogoProps {
   idBusiness?: string;
 }
@@ -17,8 +18,16 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [telefono, setTelefono] = useState<string | null>(null);
   const [color, setColor] = useState<string | null>(null);
   const context = useContext(AppContext);
-  context.setIdBussiness(idBusiness || "1");
 
+  // Mover la actualización del contexto a useEffect
+  useEffect(() => {
+    if (idBusiness) {
+      context.setIdBussiness(idBusiness);
+    } else {
+      context.setIdBussiness("1");
+    }
+  }, [idBusiness, context]);
+  
   useEffect(() => {
     if (idBusiness == "26") {
       window.location.href = "https://mrcongelados.com/";
@@ -144,7 +153,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
             content={
               productos.length > 0 && productos[0].Image
                 ? productos[0].Image
-                : require("../../assets/ravekh.png")
+                : defaultImage
             }
           />
           <meta property="og:url" content={window.location.href} />
