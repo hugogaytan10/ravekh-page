@@ -57,7 +57,6 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     });
   }, [idBusiness]);
 
-
   useEffect(() => {
     if (!context.phoneNumber) {
       const storedPhoneNumber = localStorage.getItem("telefono");
@@ -102,9 +101,15 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     const b = parseInt(hex.slice(5, 7), 16); // Azul
 
     // Aplicamos las restas al componente rojo, verde y azul para hacer el color más oscuro
-    const newR = Math.max(0, r - 100).toString(16).padStart(2, '0');
-    const newG = Math.max(0, g - 100).toString(16).padStart(2, '0');
-    const newB = Math.max(0, b - 100).toString(16).padStart(2, '0');
+    const newR = Math.max(0, r - 100)
+      .toString(16)
+      .padStart(2, "0");
+    const newG = Math.max(0, g - 100)
+      .toString(16)
+      .padStart(2, "0");
+    const newB = Math.max(0, b - 100)
+      .toString(16)
+      .padStart(2, "0");
 
     // Retornamos el color modificado en formato hexadecimal
     return `#${newR}${newG}${newB}`;
@@ -115,11 +120,39 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       <>
         <Helmet>
           <meta name="theme-color" content={color || "#6D01D1"} />
+          {/* Título del sitio */}
+          <title>{context.nombre || "Catálogo de Productos"}</title>
+
+          {/* Descripción del sitio */}
+          <meta
+            name="description"
+            content="Explora nuestro catálogo de productos y encuentra todo lo que necesitas a precios increíbles. ¡Compra ahora!"
+          />
+
+          {/* Open Graph Tags */}
+          <meta property="og:type" content="website" />
+          <meta
+            property="og:title"
+            content={context.nombre || "Catálogo de Productos"}
+          />
+          <meta
+            property="og:description"
+            content="Explora nuestro catálogo de productos y encuentra todo lo que necesitas a precios increíbles. ¡Compra ahora!"
+          />
+          <meta
+            property="og:image"
+            content={
+              productos.length > 0 && productos[0].Image
+                ? productos[0].Image
+                : require("../../assets/ravekh.png")
+            }
+          />
+          <meta property="og:url" content={window.location.href} />
+
+        
         </Helmet>
         <div className="p-4 min-h-screen w-full max-w-screen-xl mx-auto py-20">
           {/* Mostrar mensaje si no hay productos */}
-
-
 
           {productos.length === 0 ? (
             <div className="text-center mt-10">
@@ -134,64 +167,71 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
           ) : (
             <div className="grid grid-cols-2  md:grid-cols-4 lg:grid-cols-5 gap-6">
               {Array.isArray(productos) &&
-                productos.map((producto, index) => (
-                  producto.Image != '' && producto.Image != null) && (
-                    <motion.div
-                      key={producto.Id}
-                      className="border rounded-lg shadow-md  bg-white transform transition-transform hover:scale-105 hover:shadow-lg"
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1, duration: 0.5 }}
-                    >
-                      <NavLink
-                        to={`/catalogo/producto/${producto.Id}/${telefono}`}
+                productos.map(
+                  (producto, index) =>
+                    producto.Image != "" &&
+                    producto.Image != null && (
+                      <motion.div
+                        key={producto.Id}
+                        className="border rounded-lg shadow-md  bg-white transform transition-transform hover:scale-105 hover:shadow-lg"
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1, duration: 0.5 }}
                       >
-                        <img
-                          src={producto.Image}
-                          alt={producto.Name}
-                          className="h-48 w-full object-cover mb-4 rounded-t-lg"
-                        />
-                      </NavLink>
-                      <h2 className="text-lg font-semibold text-gray-800 text-center">
-                        {producto.Name}
-                      </h2>
+                        <NavLink
+                          to={`/catalogo/producto/${producto.Id}/${telefono}`}
+                        >
+                          <img
+                            src={producto.Image}
+                            alt={producto.Name}
+                            className="h-48 w-full object-cover mb-4 rounded-t-lg"
+                          />
+                        </NavLink>
+                        <h2 className="text-lg font-semibold text-gray-800 text-center">
+                          {producto.Name}
+                        </h2>
 
-                      {/* Precio normal y promocional en un solo renglón */}
-                      <div className="flex justify-between items-center mt-2 p-2">
+                        {/* Precio normal y promocional en un solo renglón */}
+                        <div className="flex justify-between items-center mt-2 p-2">
                           {producto.PromotionPrice ? (
-                          <>
-                            <p className="text-gray-800 text-xl font-semibold">${producto.PromotionPrice}</p>
-                            <p className="text-gray-300 line-through font-light">
-                            ${producto.Price}
-                            </p>
-                          </>
+                            <>
+                              <p className="text-gray-800 text-xl font-semibold">
+                                ${producto.PromotionPrice}
+                              </p>
+                              <p className="text-gray-300 line-through font-light">
+                                ${producto.Price}
+                              </p>
+                            </>
                           ) : (
-                          <p className="text-gray-800 text-xl font-semibold">${producto.Price}</p>
+                            <p className="text-gray-800 text-xl font-semibold">
+                              ${producto.Price}
+                            </p>
                           )}
                         </div>
 
-                      {/* Botón centrado */}
-                      <div className="flex justify-center mt-4 p-2">
-                        <button
-                          onClick={() => context.addProductToCart(producto)}
-                          style={{
-                            backgroundColor: color || '#6D01D1',
-                            transition: 'background-color 0.3s ease-in-out',
-                          }}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.backgroundColor = adjustColor(color || '#6D01D1'))
-                          }
-                          onMouseLeave={(e) =>
-                            (e.currentTarget.style.backgroundColor = color || '#6D01D1')
-                          }
-                          className="text-white w-full md:w-3/4 py-2 px-4 rounded-full shadow-md hover:transform hover:scale-105"
-                        >
-                          Añadir al carrito
-                        </button>
-
-                      </div>
-                    </motion.div>
-                  )
+                        {/* Botón centrado */}
+                        <div className="flex justify-center mt-4 p-2">
+                          <button
+                            onClick={() => context.addProductToCart(producto)}
+                            style={{
+                              backgroundColor: color || "#6D01D1",
+                              transition: "background-color 0.3s ease-in-out",
+                            }}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.backgroundColor =
+                                adjustColor(color || "#6D01D1"))
+                            }
+                            onMouseLeave={(e) =>
+                              (e.currentTarget.style.backgroundColor =
+                                color || "#6D01D1")
+                            }
+                            className="text-white w-full md:w-3/4 py-2 px-4 rounded-full shadow-md hover:transform hover:scale-105"
+                          >
+                            Añadir al carrito
+                          </button>
+                        </div>
+                      </motion.div>
+                    )
                 )}
             </div>
           )}

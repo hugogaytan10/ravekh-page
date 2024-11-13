@@ -26,46 +26,48 @@
     animation-fill-mode: forwards;
   }
   
-span:nth-of-type(1) {
+
+  .container-carga .title:nth-of-type(1) {
     animation: wave 0.4s, jump 1.1s ease-in-out alternate 0.05s;
   }
   
-span:nth-of-type(2) {
+  .container-carga .title:nth-of-type(2) {
     animation: wave 0.4s, jump 1.1s ease-in-out alternate 0.1s;
   }
   
-span:nth-of-type(3) {
+  .container-carga .title:nth-of-type(3) {
     animation: wave 0.4s, jump 1.1s ease-in-out alternate 0.15s;
   }
   
-span:nth-of-type(4) {
+  .container-carga .title:nth-of-type(4) {
     animation: wave 0.4s, jump 1.1s ease-in-out alternate 0.2s;
   }
   
-span:nth-of-type(5) {
+  .container-carga .title:nth-of-type(5) {
     animation: wave 0.4s, jump 1.1s ease-in-out alternate 0.25s;
   }
   
-span:nth-of-type(6) {
+  .container-carga .title:nth-of-type(6) {
     animation: wave 0.4s, jump 1.1s ease-in-out alternate 0.3s;
   }
   
-span:nth-of-type(7) {
+  .container-carga .title:nth-of-type(7) {
     animation: wave 0.4s, jump 1.1s ease-in-out alternate 0.35s;
   }
   
-span:nth-of-type(8) {
-
+  .container-carga .title:nth-of-type(8) {
     animation: wave 0.4s, jump 1.1s ease-in-out alternate 0.4s;
-}
+  }
   
-span:nth-of-type(9) {
+  .container-carga .title:nth-of-type(9) {
     animation: wave 0.4s, jump 1.1s ease-in-out alternate 0.45s;
-} 
-span:nth-of-type(10) {
-  animation: wave 0.4s, jump 1.1s ease-in-out alternate 0.5s;
-} 
+  }
   
+  .container-carga .title:nth-of-type(10) {
+    animation: wave 0.4s, jump 1.1s ease-in-out alternate 0.5s;
+  }
+  
+
 @keyframes wave {
     0% {
       top: 0%;
