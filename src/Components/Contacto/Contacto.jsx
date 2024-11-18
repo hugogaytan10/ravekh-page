@@ -5,7 +5,7 @@ import GoogleInput from '../Utilidades/GoogleInput';
 import ravekh from '../../assets/ravekh.png';
 import validationSchema from './validationSchema';
 
-export const Contacto = () => {
+export const Contacto = ({ catalogo }) => {
     const formik = useFormik({
         initialValues: {
             email: '',
@@ -50,7 +50,7 @@ export const Contacto = () => {
             <form
                 onSubmit={formik.handleSubmit}
                 className='mt-10 mb-10 md:w-2/4 flex flex-wrap justify-center items-center '>
-                <h3 className='text-3xl text-white text-center block w-full mb-5'>Contáctanos</h3>
+                <h3 className={`text-3xl ${catalogo ? 'text-black' : 'text-gray-100'} text-center block w-full mb-5`}>Contáctanos</h3>
                 <div className='mb-4 w-full md:w-1/2 md:pl-2'>
                     <GoogleInput
                         type='text'
@@ -103,7 +103,7 @@ export const Contacto = () => {
                         <div className='text-red-500'>{formik.errors.email}</div>
                     )}
                 </div>
-                <h5 className='w-full text-gray-100 font-medium text-left px-4 mb-4'>
+                <h5 className={`w-full font-medium text-left px-4 mb-4 ${catalogo ? 'text-black' : 'text-gray-100'}`} >
                     Envíanos un correo personal con tus necesidades y nos pondremos en contacto
                 </h5>
                 <button type='submit' className=' btn'>
@@ -122,7 +122,7 @@ export const Contacto = () => {
                     </div>
                 </div>
             </dialog>
-           {/* <img alt='foto' src={ravekh} className='md:w-1/4 object-contain md:h-72' />*/}
+            {/* <img alt='foto' src={ravekh} className='md:w-1/4 object-contain md:h-72' />*/}
         </div>
     );
 };

@@ -99,7 +99,7 @@ export const LandingPage = () => {
           className="h-screen snap-start w-full"
           data-endcolor="30,30,30"
         >
-          <Contacto />
+          <Contacto catalogo={false} />
         </section>
         <section className="h-screen snap-start w-full">
           <Footer />
