@@ -16,7 +16,7 @@ export const DetalleProducto: React.FC = () => {
   const [producto, setProducto] = useState<Producto | null>(null);
   const { color, setColor, addProductToCart } = useContext(AppContext);
   const [count, setCount] = useState(1);
-  const [limit, setLimit] = useState<number>();
+  const [limit, setLimit] = useState<number | null>();
   const context = useContext(AppContext);
   // Función para generar un descuento aleatorio entre 10% y 30%
   function getRandomInt(min: number, max: number) {
@@ -68,12 +68,9 @@ export const DetalleProducto: React.FC = () => {
     arrowIcon?.classList.remove("hidden");
 
     getProductById(idProducto || "1").then((data) => {
-      console.log('stock del producto: ',data.Stock)
+      console.log('stock del producto: ', data.Stock)
       setProducto(data);
-      if (producto) {
-        setLimit(producto.Stock);
-        console.log(producto.Stock)
-      }
+      setLimit(data.Stock);
     });
   }, [idProducto]);
 
@@ -148,7 +145,12 @@ export const DetalleProducto: React.FC = () => {
             <span className="text-2xl font-semibold">{count}</span>
             <button
               className="bg-gray-200 text-gray-900 w-10 h-10 rounded-full hover:bg-gray-300 transition"
-              onClick={() => {if (count<limit!) setCount(count + 1)}}
+              onClick={() => {
+                if (limit == null) {
+                  setCount(count + 1)
+                } else if (count < limit!) 
+                  { setCount(count + 1) }
+              }}
             >
               +
             </button>
