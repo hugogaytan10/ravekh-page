@@ -1,6 +1,7 @@
 import { URL } from "./Const/Const";
 import { Order } from "../CatalogoWeb/Modelo/Order";
 import { OrderDetails } from "../CatalogoWeb/Modelo/OrderDetails";
+
 export const getProductsByBusiness = async (idBusiness: string) => {
     try {
         const response = await fetch(`${URL}products/showstore/${idBusiness}/1`)
@@ -14,6 +15,27 @@ export const getProductsByBusiness = async (idBusiness: string) => {
         return [];
     }
 }
+
+export const getProductsByBusinessWithStock = async (idBusiness: string, limit: string) => {
+    try {
+        const response = await fetch(`${URL}products/showstore/stockgtzero/${idBusiness}/1`, {
+            method: 'GET',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ Limit: limit }),
+        })
+        const data = await response.json();
+        if (data) {
+            return data;
+        }
+        return [];
+    } catch (error) {
+        console.log(error);
+        return [];
+    }
+}
+
 export const getProductById = async (idProduct: string) => {
     try {
         const response = await fetch(`${URL}products/${idProduct}`);
