@@ -19,11 +19,11 @@ export const getProductsByBusiness = async (idBusiness: string) => {
 export const getProductsByBusinessWithStock = async (idBusiness: string, limit: string) => {
     try {
         const response = await fetch(`${URL}products/showstore/stockgtzero/${idBusiness}/1`, {
-            method: 'GET',
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ Limit: limit }),
+            body: JSON.stringify({ Limit : limit }),
         })
         const data = await response.json();
         if (data) {
@@ -49,6 +49,7 @@ export const getProductById = async (idProduct: string) => {
 
 export const getBusinessById = async (idBusiness: string) => {
     try {
+        console.log(`${URL}business/${idBusiness}`)
         const response = await fetch(`${URL}business/${idBusiness}`);
         const data = await response.json();
         return data;

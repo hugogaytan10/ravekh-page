@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { NavLink, useParams } from "react-router-dom";
-import { getProductsByBusiness, getBusinessById } from "./Petitions";
+import { getProductsByBusiness, getBusinessById, getProductsByBusinessWithStock } from "./Petitions";
 import { Producto } from "./Modelo/Producto";
 import { motion } from "framer-motion";
 import { AppContext } from "./Context/AppContext";
@@ -17,6 +17,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [telefono, setTelefono] = useState<string | null>(null);
   const [color, setColor] = useState<string | null>(null);
+  const [plan, setPlan] = useState<string | null>(null);
   const context = useContext(AppContext);
 
   // Mover la actualización del contexto a useEffect
@@ -27,7 +28,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       context.setIdBussiness("1");
     }
   }, [idBusiness, context]);
-  
+
   useEffect(() => {
     if (idBusiness == "26") {
       window.location.href = "https://mrcongelados.com/";
@@ -45,17 +46,17 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     }
 
     getBusinessById(idBusiness || "1").then((data) => {
-      if (data.length === 0) {
-        return;
+      if (data) {
+        setColor(data.Color || null);
+        context.setColor(data.Color || null);
+        localStorage.setItem("color", data.Color || "");
+        context.setNombre(data.Name || null);
+        localStorage.setItem("nombre", data.Name || "");
+        setPlan(data.Plan);
       }
-      setColor(data.Color || null);
-      context.setColor(data.Color || null);
-      localStorage.setItem("color", data.Color || "");
-      context.setNombre(data.Name || null);
-      localStorage.setItem("nombre", data.Name || "");
     });
 
-    getProductsByBusiness(idBusiness || "1").then((data) => {
+    getProductsByBusinessWithStock(idBusiness || "1", plan!).then((data) => {
       if (data.length === 0) {
         return;
       }
@@ -158,7 +159,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
           />
           <meta property="og:url" content={window.location.href} />
 
-        
+
         </Helmet>
         <div className="p-4 min-h-screen w-full max-w-screen-xl mx-auto py-20">
           {/* Mostrar mensaje si no hay productos */}
@@ -227,12 +228,12 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
                               transition: "background-color 0.3s ease-in-out",
                             }}
                             onMouseEnter={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                adjustColor(color || "#6D01D1"))
+                            (e.currentTarget.style.backgroundColor =
+                              adjustColor(color || "#6D01D1"))
                             }
                             onMouseLeave={(e) =>
-                              (e.currentTarget.style.backgroundColor =
-                                color || "#6D01D1")
+                            (e.currentTarget.style.backgroundColor =
+                              color || "#6D01D1")
                             }
                             className="text-white w-full md:w-3/4 py-2 px-4 rounded-full shadow-md hover:transform hover:scale-105"
                           >
