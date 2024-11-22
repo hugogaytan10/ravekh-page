@@ -11,7 +11,6 @@ export const getProductsByBusiness = async (idBusiness: string) => {
         }
         return [];
     } catch (error) {
-        console.log(error);
         return [];
     }
 }
@@ -31,7 +30,6 @@ export const getProductsByBusinessWithStock = async (idBusiness: string, limit: 
         }
         return [];
     } catch (error) {
-        console.log(error);
         return [];
     }
 }
@@ -42,19 +40,16 @@ export const getProductById = async (idProduct: string) => {
         const data = await response.json();
         return data;
     } catch (error) {
-        console.log(error);
         return null;
     }
 }
 
 export const getBusinessById = async (idBusiness: string) => {
     try {
-        console.log(`${URL}business/${idBusiness}`)
         const response = await fetch(`${URL}business/${idBusiness}`);
         const data = await response.json();
         return data;
     } catch (error) {
-        console.log(error);
         return null;
     }
 }
