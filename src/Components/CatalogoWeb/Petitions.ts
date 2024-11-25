@@ -22,7 +22,7 @@ export const getProductsByBusinessWithStock = async (idBusiness: string, limit: 
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ Limit : limit }),
+            body: JSON.stringify({ Limit: limit }),
         })
         const data = await response.json();
         if (data) {
@@ -66,5 +66,30 @@ export const insertOrder = async (order: Order, orderDetails: OrderDetails[]) =>
         return response.json();
     } catch (e) {
         return e;
+    }
+}
+
+export const sendNotification = async (deviceToken: string) => {
+    try {
+        const response = await fetch(`${URL}send-notification`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ deviceToken: deviceToken }),
+        });
+        return response.json();
+    } catch (error) {
+        return error;
+    }
+}
+
+export const getIdentifier = async (idBusiness: string) => {
+    try {
+        const response = await fetch(`${URL}business/deviceidentifier/${idBusiness}`);
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        return null;
     }
 }
