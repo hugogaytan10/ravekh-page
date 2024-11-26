@@ -4,6 +4,7 @@ import './contacto.css';
 import GoogleInput from '../Utilidades/GoogleInput';
 import ravekh from '../../assets/ravekh.png';
 import validationSchema from './validationSchema';
+import { URL } from '../CatalogoWeb/Const/Const';
 
 export const Contacto = ({ catalogo }) => {
     const formik = useFormik({
@@ -12,12 +13,14 @@ export const Contacto = ({ catalogo }) => {
             nombre: '',
             apellido: '',
             mensaje: '',
+            lada: '',
+            telefono: '',
         },
         validationSchema: validationSchema,
         onSubmit: async (values) => {
             try {
 
-                const res = await fetch(`https://bervk-production.up.railway.app/api/contacto/sendinfo`, {
+                const res = await fetch(`${URL}contacto/sendinfo`, {
                     method: 'POST',
                     mode: 'cors',
                     headers: {
@@ -28,6 +31,8 @@ export const Contacto = ({ catalogo }) => {
                         apellido: values.apellido,
                         email: values.email,
                         mensaje: values.mensaje,
+                        lada: values.lada,
+                        telefono: values.telefono,
                     }),
                 });
 
@@ -75,6 +80,32 @@ export const Contacto = ({ catalogo }) => {
                     />
                     {formik.touched.apellido && formik.errors.apellido && (
                         <div className='text-red-500'>{formik.errors.apellido}</div>
+                    )}
+                </div>
+                <div className='mb-4 w-full md:w-1/2 md:pl-2'>
+                    <GoogleInput
+                        type='tel'
+                        placeholder='Lada'
+                        name='lada'
+                        value={formik.values.lada}
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                    />
+                    {formik.touched.lada && formik.errors.lada && (
+                        <div className='text-red-500'>{formik.errors.lada}</div>
+                    )}
+                </div>
+                <div className='mb-4 w-full md:w-1/2 md:pl-2'>
+                    <GoogleInput
+                        type='tel'
+                        placeholder='Teléfono'
+                        name='telefono'
+                        value={formik.values.telefono}
+                        onChange={formik.handleChange}
+                        onBlur={formik.handleBlur}
+                    />
+                    {formik.touched.telefono && formik.errors.telefono && (
+                        <div className='text-red-500'>{formik.errors.telefono}</div>
                     )}
                 </div>
                 <div className='mb-4 w-full'>
