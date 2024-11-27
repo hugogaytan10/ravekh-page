@@ -1,5 +1,7 @@
 import { Dispatch } from "react";
 import { Producto } from "../Modelo/Producto";
+//apartir de aqui son las variables para el contexto de ravekh pos web
+import { User } from "../PuntoVenta/Model/User";
 export type AppContextState = {
     cart: Producto[];
     setCart: Dispatch<Producto[]>;
@@ -14,4 +16,7 @@ export type AppContextState = {
     setColor: Dispatch<string>;
     nombre: string;
     setNombre: Dispatch<string>;
+    //aparti de aqui son las variables para el contexto de ravekh pos web
+    user: User;
+    setUser: Dispatch<User>;
 }

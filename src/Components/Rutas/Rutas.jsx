@@ -21,6 +21,7 @@ import cart from "../../assets/cart-outline.svg";
 import arrow from "../../assets/arrow-forward-white.svg";
 import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
 import { RavekhPos } from "../RavekhPos/RavekhPos";
+import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
 export const Rutas = () => {
   //contexto
   const context = useContext(AppContext);
@@ -34,8 +35,31 @@ export const Rutas = () => {
   const slideDownRefCatalogo = useRef(null);
   const listItemsRefCatalogo = useRef(null);
   const menuToggleCatalogo = useRef(null);
-  const [color, setcolor] = useState("")
-  const [nombre, setnombre] = useState("")
+  const [color, setcolor] = useState("");
+  const [nombre, setnombre] = useState("");
+
+  // Nueva referencia para el POS
+  const slideDownRefPOS = useRef(null);  // Referencia para el contenedor del menú
+  const menuTogglePOS = useRef(null); // Referencia para la animación del menú
+
+  useEffect(() => {
+    gsap.set(slideDownRefPOS.current, { y: "-100%", display: "block" });
+
+    menuTogglePOS.current = new TimelineMax({
+      paused: true,
+      reversed: true,
+    })
+      .to(slideDownRefPOS.current, 1, { y: "0%", ease: "back.out(1.7)" })
+      .staggerFrom(
+        listItemsRefCatalogo.current.children,
+        0.25,
+        {
+          y: "-30",
+          ease: "power1.out",
+        },
+        0.1
+      );
+  }, []);
 
   useEffect(() => {
     if (context.cart.length === 0) {
@@ -78,7 +102,6 @@ export const Rutas = () => {
         0.1
       );
   }, []);
-
 
   useEffect(() => {
     const localColor = localStorage.getItem("color");
@@ -162,7 +185,16 @@ export const Rutas = () => {
                 </NavLink>
               </li>
               <li>
-                <NavLink to="/politica" onClick={handleMenuClick} className='text-base'>
+                <NavLink to="/login-punto-venta" onClick={handleMenuClick} className="text-base ">
+                  Punto de Venta
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/politica"
+                  onClick={handleMenuClick}
+                  className="text-base "
+                >
                   Politica de Privacidad
                 </NavLink>
               </li>
@@ -264,6 +296,8 @@ export const Rutas = () => {
               element={<DetalleProducto />}
             />
             <Route path="/catalogo/pedido" element={<Pedido />} />
+            {/* RUTAS PARA EL PUNTO DE VENTA */}
+            <Route path="/login-punto-venta" element={<AuthPage />} />
           </Routes>
         </div>
       </div>

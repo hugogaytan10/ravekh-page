@@ -1,6 +1,7 @@
 import React, { useState, createContext, useMemo } from "react";
 import { Producto } from "../Modelo/Producto";
 import { AppContextState } from "./EstadoContexto";
+import { User } from "../PuntoVenta/Model/User";
 
 type AppContextProps = {
   children: React.ReactNode;
@@ -13,6 +14,8 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   const [idBussiness, setIdBussiness] = useState<string>("1");
   const [color, setColor] = useState<string>("");
   const [nombre, setNombre] = useState<string>("");
+  //comienzan los metodos para ravekh pos web
+  const [user, setUser] = useState<User>({} as User);
 
   //funcion para agregar un producto al carrito
   const addProductToCart = (product: Producto) => {
@@ -73,7 +76,9 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
       color,
       setColor,
       nombre,
-      setNombre
+      setNombre,
+      user,
+      setUser
     };
   }, [
     cart,
@@ -88,7 +93,9 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
     color,
     setColor,
     nombre,
-    setNombre
+    setNombre,
+    user,
+    setUser
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;
