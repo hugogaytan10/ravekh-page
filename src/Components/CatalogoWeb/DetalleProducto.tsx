@@ -68,10 +68,20 @@ export const DetalleProducto: React.FC = () => {
     arrowIcon?.classList.remove("hidden");
 
     getProductById(idProducto || "1").then((data) => {
-      console.log('stock del producto: ', data.Stock)
       setProducto(data);
       setLimit(data.Stock);
+      const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
+      const isDifferentBusiness = storedCart.some(
+        (item: Producto) => item.Business_Id.toString() !== data.Business_Id
+      );
+
+      if (isDifferentBusiness || storedCart.length === 0) {
+        localStorage.removeItem("cart");
+
+        context.clearCart();
+      }
     });
+
   }, [idProducto]);
 
 
@@ -148,8 +158,7 @@ export const DetalleProducto: React.FC = () => {
               onClick={() => {
                 if (limit == null) {
                   setCount(count + 1)
-                } else if (count < limit!) 
-                  { setCount(count + 1) }
+                } else if (count < limit!) { setCount(count + 1) }
               }}
             >
               +
