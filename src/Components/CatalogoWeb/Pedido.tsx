@@ -4,7 +4,7 @@ import { Producto } from "./Modelo/Producto";
 import { FiTruck, FiCreditCard, FiPhone } from "react-icons/fi"; // Importando iconos
 import { Order } from "./Modelo/Order";
 import { OrderDetails } from "./Modelo/OrderDetails";
-import { insertOrder } from "./Petitions";
+import { insertOrder, sendNotification, getIdentifier } from "./Petitions";
 import trash from '../../assets/trash.svg';
 import { Helmet, HelmetProvider } from "react-helmet-async";
 
@@ -80,6 +80,11 @@ export const Pedido: React.FC = () => {
     }));
 
     insertOrder(order, orderDetails).then((data) => {
+      console.log(data);
+    });
+    const identifier = await getIdentifier(idBussiness);
+    sendNotification(identifier
+    ).then((data) => {
       console.log(data);
     });
 
