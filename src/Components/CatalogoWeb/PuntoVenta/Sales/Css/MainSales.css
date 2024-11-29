@@ -1,0 +1,44 @@
+.main-sales {
+    background-color: #f8f8f8;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+  }
+  
+  .sales-header {
+    padding: 10px;
+    color: white;
+    text-align: center;
+  }
+  
+  .header-tools {
+    background-color: white;
+   
+  }
+  
+.sales-container {
+  min-height: 100vh;
+  padding: 10px;
+}
+ 
+  
+.sales-footer {
+    display: flex;
+    justify-content: space-between;
+    background-color: white;
+    position: sticky;
+    bottom: 0;
+    height: 80px;
+    padding: 20px;
+    border-top: 0.7px solid #ccc;
+}
+  
+.order-button {
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+}
+  

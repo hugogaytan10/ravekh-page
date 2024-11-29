@@ -105,7 +105,8 @@ export const AuthPage: React.FC = () => {
       localStorage.setItem("user", JSON.stringify({ email, password }));
       context.setUser(dataLogin);
       //redireccionar a la pagina dependiendo el tipo de usuario
-      console.log("data inicio: ", dataLogin);
+      //navegar a la pagina principal
+      navigate("/MainSales");
     }else {
       setErrorUsuario("Revise sus datos");
       setErrorPassword("Revise sus datos");
@@ -146,7 +147,7 @@ export const AuthPage: React.FC = () => {
       loginToServer(email, password).then((data) => {
         if (data) {
           context.setUser(data);
-         
+          navigate("/MainSales");
         }
       });
     }

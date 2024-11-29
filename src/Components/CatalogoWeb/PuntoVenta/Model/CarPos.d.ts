@@ -1,4 +1,4 @@
-export type Cart = {
+export type CartPos = {
     Id?: number;
     Store_Id?: number;
     Name: string;

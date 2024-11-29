@@ -1,0 +1,40 @@
+.sales-bar {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #6d01d1;
+    padding: 8px 4px;
+    width: 100%;
+    border-bottom-left-radius: 10px;
+    border-bottom-right-radius: 10px;
+  }
+  
+  .icon-container {
+    background-color: #fff;
+    border-radius: 50%;
+    height: 40px;
+    width: 40px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+  }
+  
+  .search-icon {
+    border-radius: 25px;
+  }
+  
+  .icons-right {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  .header-text {
+    font-family: "Poppins-SemiBold", sans-serif;
+    color: #fff;
+    font-size: 18px;
+  }
+  

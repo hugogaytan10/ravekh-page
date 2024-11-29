@@ -3,6 +3,7 @@ import "./App.css";
 import { Rutas } from "./Components/Rutas/Rutas";
 import { Carga } from "./Components/PantallaCarga/Carga";
 import AppProvider from "./Components/CatalogoWeb/Context/AppContext";
+import { BrowserRouter } from "react-router-dom";
 /*
 window.addEventListener("scroll", function () {
   
@@ -37,7 +38,9 @@ function App() {
         <Carga />
       ) : (
         <AppProvider>
-          <Rutas />
+          <BrowserRouter>
+            <Rutas />
+          </BrowserRouter>
         </AppProvider>
       )}
     </div>
