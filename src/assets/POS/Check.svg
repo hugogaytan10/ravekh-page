@@ -1,0 +1,14 @@
+  <Svg
+    width={50}
+    height={50}
+    viewBox="0 0 45 45"
+    fill="none">
+   
+    <Path
+      d="M34.375 17.1875L21.25 32.8125L15.625 26.5625"
+      stroke={"#fff"}
+      strokeWidth="8"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    />
+  </Svg>

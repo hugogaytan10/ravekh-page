@@ -1,0 +1,97 @@
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    z-index: 1000;
+  }
+  
+  .modal {
+    position: fixed; /* Asegura que el modal esté posicionado en relación a la ventana */
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background-color: rgba(0, 0, 0, 0.5); /* Fondo semitransparente */
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Asegura que el modal esté sobre otros elementos */
+  }
+  
+  .modal-content {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    text-align: center;
+    z-index: 1010;
+  }
+  
+  
+  @keyframes slide-up {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  
+  .modal-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .close-button {
+    background-color: #f0f0f0;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    font-size: 1rem;
+  }
+  
+  .modal-options {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  
+  .option-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid #f0f0f0;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .option-item:hover {
+    background-color: #f9f9f9;
+  }
+  
+  .option-text {
+    font-size: 1rem;
+    color: #333;
+  }
+  

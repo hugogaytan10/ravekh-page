@@ -23,6 +23,7 @@ import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
 import { RavekhPos } from "../RavekhPos/RavekhPos";
 import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
 import { MainSales } from "../CatalogoWeb/PuntoVenta/Sales/MainSales";
+import { MainCart } from "../CatalogoWeb/PuntoVenta/Sales/Cart/Cart";
 export const Rutas = () => {
   //contexto
   const context = useContext(AppContext);
@@ -167,7 +168,7 @@ export const Rutas = () => {
 
   // Función para determinar si se debe mostrar el navbar
   const shouldShowNavbar = useMemo(() => {
-    const hiddenRoutes = ["/login-punto-venta", "/MainSales"];
+    const hiddenRoutes = ["/login-punto-venta", "/MainSales", "/MainCart"];
     return !hiddenRoutes.includes(location.pathname);
   }, [location.pathname]);
 
@@ -337,6 +338,7 @@ export const Rutas = () => {
           {/* RUTAS PARA EL PUNTO DE VENTA */}
           <Route path="/login-punto-venta" element={<AuthPage />} />
           <Route path="/MainSales" element={<MainSales />} />
+          <Route path="/MainCart" element={<MainCart />} />
         </Routes>
       </div>
     </div>

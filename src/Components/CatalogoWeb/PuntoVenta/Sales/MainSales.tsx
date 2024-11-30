@@ -14,8 +14,10 @@ import "./Css/MainSales.css";
 import { Item } from "../Model/Item";
 import { AppContext } from "../../Context/AppContext";
 import { CartPos } from "../Model/CarPos";
+import { useNavigate } from 'react-router-dom';
 
 export const MainSales: React.FC = () => {
+  const navigate = useNavigate(); // React Router para navegación
   const [products, setProducts] = useState<Item[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Item[]>([]);
   const [view, setView] = useState(true); // Vista de card:row
@@ -23,7 +25,7 @@ export const MainSales: React.FC = () => {
   const [totalPrice, setTotalPrice] = useState(0.0);
   const [totalItems, setTotalItems] = useState(0);
   const [showModalPremium, setShowModalPremium] = useState(false);
-
+ 
   useEffect(() => {
     // Obtener productos al cargar
     getProduct(context.user.Business_Id, context.user.Token).then(
@@ -125,7 +127,13 @@ export const MainSales: React.FC = () => {
         <button
           className="order-button"
           style={{ backgroundColor: context.store.Color || "#6D01D1" }}
-        >
+          onClick={() => {
+            if (context.cartPos.length > 0) {
+              //navegar a la pagina de pago (/MainCart)
+              navigate('/MainCart');
+            }
+          }}
+                  >
           {totalItems.toFixed(2)}x Items = ${totalPrice.toFixed(2)}
         </button>
       </footer>

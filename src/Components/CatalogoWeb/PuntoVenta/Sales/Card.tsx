@@ -94,6 +94,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
       ]);
     }
     navigator.vibrate?.(100); // Vibración para navegadores compatibles
+    context.setStockFlag(!context.stockFlag);
   };
 
   const handleRefresh = async () => {
