@@ -20,7 +20,7 @@ export const MainCart: React.FC = () => {
   const navigate = useNavigate(); // React Router para navegación
 
   const handleNavigate = () => {
-    if (context.cart.length > 0) {
+    if (context.cartPos.length > 0) {
       navigate("/payment-type");
     }
   };
@@ -29,10 +29,9 @@ export const MainCart: React.FC = () => {
     setTotalWithTaxes(newTotalWithTaxes);
   };
 
-  const calculateTotals = useCallback(() => {
+const calculateTotals = useCallback(() => {
     let total = 0;
     let totalP = 0.0;
-    let totalWithTax = 0.0;
 
     context.cartPos.forEach((item: CartPos) => {
       total += item.Quantity;
@@ -42,28 +41,31 @@ export const MainCart: React.FC = () => {
     setTotalItems(total);
 
     if (context.tax) {
-      let taxAmount = context.tax.IsPercent
+      const taxAmount = context.tax.IsPercent
         ? totalP * (context.tax.Value / 100)
         : context.tax.Value || 0;
+      const totalWithTax = totalP + taxAmount;
 
-      totalWithTax = totalP + taxAmount;
       setTotalWithTaxes(totalWithTax);
+      context.setTicketDetail({ ...context.ticketDetail, totalWithTaxes: totalWithTax, total: totalP });
     } else {
       setTotalWithTaxes(totalP);
+      context.setTicketDetail({ ...context.ticketDetail, totalWithTaxes: totalP, total: totalP });
     }
-  }, [context.cart, context.tax]);
+  }, [context.cartPos, context.tax]);
 
-  // Simulando useFocusEffect
   React.useEffect(() => {
     calculateTotals();
   }, [calculateTotals]);
+  
+
 
   return (
     <div className="main-cart" ref={viewRef}>
-      <div className="header">
+      <div className="header-cart"   style={{ backgroundColor: context.store.Color || "#6D01D1" }}>
         <button className="back-button" onClick={() => navigate(-1)}>
-          <ChevronBack width={30} height={30} />
-          <span className="header-title">Carrito</span>
+          <ChevronBack />
+          <span className="header-title text-white">Carrito</span>
         </button>
         <button
           className="add-client-button"
@@ -82,12 +84,14 @@ export const MainCart: React.FC = () => {
       {/* Barra inferior */}
       <div className="bottom-nav">
         <button
-          className="icon-button"
+          className={`icon-button `}
+          //tendra un background dependiendo el color de context.store.Color
+
           onClick={() => setIsVisible(!isVisible)}
         >
-          <Settings fillColor="#6200EE" />
+          <Settings fillColor={`${context.store.Color ? context.store.Color : "#6D01D1"}`} />
         </button>
-        <button className="order-button" onClick={handleNavigate}>
+        <button className={`order-button-cart`}   style={{ backgroundColor: context.store.Color || "#6D01D1" }} onClick={handleNavigate}>
           {totalItems} Items = ${totalWithTaxes.toFixed(2)}
         </button>
       </div>

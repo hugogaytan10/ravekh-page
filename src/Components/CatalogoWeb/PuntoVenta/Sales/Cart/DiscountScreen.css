@@ -1,0 +1,89 @@
+.discount-screen {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background-color: #fff;
+    height: 100vh;
+  }
+  
+.header-discount {
+    display: flex;
+    width: 100%;
+    text-align: center;
+    margin-bottom: 20px;
+    
+  }
+  
+.label {
+    font-size: 1.2rem;
+    color: #666;
+    margin-bottom: 10px;
+  }
+  
+.discount-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  
+.input-container {
+    background-color: #f0f0f0;
+    padding: 10px 20px;
+    border-radius: 5px;
+  }
+  
+.discount-value {
+    font-size: 2rem;
+    font-weight: bold;
+  }
+  
+.new-price {
+    font-size: 1.5rem;
+    color: #333;
+    margin: 10px 0;
+  }
+  
+.keyboard {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin: 20px 0;
+  }
+  
+
+  
+.bottom-nav-discount {
+    position: absolute;
+    bottom: 20px;
+    width: 100%;
+    text-align: center;
+  }
+  
+.save-button-discount {
+    padding: 10px 20px;
+    font-size: 1.2rem;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    width: 50%;
+  }
+  
+.save-button:hover {
+    background-color: #0056b3;
+  }
+  
+
+  
+.btn-keyboard{
+    padding: 10px 80px;
+    font-size: 1.2rem;
+    font-weight: 800;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    background-color: #6D01D1;
+    cursor: pointer;
+    color: #fff;
+}
+  

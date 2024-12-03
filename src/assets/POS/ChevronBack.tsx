@@ -10,8 +10,8 @@ export const ChevronBack: React.FC = () => (
   >
     <path
       d="M22.4219 7.65625L12.5781 17.5L22.4219 27.3438"
-      stroke="currentColor"
-      strokeWidth="2"
+      stroke="#fff"
+      strokeWidth="4"
       strokeLinecap="round"
       strokeLinejoin="round"
     />

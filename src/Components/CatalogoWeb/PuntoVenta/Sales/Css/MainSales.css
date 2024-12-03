@@ -18,7 +18,7 @@
   
 .sales-container {
   min-height: 100vh;
-  padding: 10px;
+  padding: 0px;
 }
  
   
@@ -29,8 +29,9 @@
     position: sticky;
     bottom: 0;
     height: 80px;
-    padding: 20px;
+    padding: 5px;
     border-top: 0.7px solid #ccc;
+    align-items: center;
 }
   
 .order-button {
@@ -40,5 +41,14 @@
     border-radius: 5px;
     font-weight: bold;
     cursor: pointer;
+    width: 80%;
+    border-radius: 25px;
+    height: 45px;
 }
-  
+.cart-info{
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+    font-family: 18px;
+}

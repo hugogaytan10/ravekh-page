@@ -42,6 +42,7 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
         ]);
       }
       navigator.vibrate(100);
+      context.setStockFlag(!context.stockFlag);
     } else {
       console.log("Producto no encontrado");
     }

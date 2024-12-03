@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { getTaxes } from '../Petitions';
 import { Tax } from '../../Model/Tax';
 import {Trash} from '../../../../../assets/POS/Trash';
@@ -34,15 +34,15 @@ export const CartList: React.FC<CartListProps> = ({ onTotalChange }) => {
   useEffect(() => {
     let total = 0;
     let totalP = 0.0;
-
+  
     context.cartPos.forEach((item: CartPos) => {
       total += item.Quantity;
       totalP += item.Quantity * item.Price;
     });
-
+  
     setTotalItems(total);
     setTotalPrice(totalP);
-
+  
     if (taxes) {
       let taxAmount = taxes.IsPercent ? totalP * (taxes.Value / 100) : taxes.Value;
       const totalWithTax = totalP + taxAmount;
@@ -52,7 +52,9 @@ export const CartList: React.FC<CartListProps> = ({ onTotalChange }) => {
       setTotalWithTaxes(totalP);
       onTotalChange(totalP);
     }
-  }, [context.cart, taxes, onTotalChange]);
+  }, [context.cartPos, taxes]);
+  
+  
 
   const handleDeleteItem = (id: string) => {
     const updatedCart = context.cartPos.filter((item: CartPos) => item.Id !== Number(id));

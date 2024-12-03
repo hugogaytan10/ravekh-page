@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useContext, useState, useMemo } from "react";
-import { NavLink, useLocation } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { LandingPage } from "../LandingPage/LandingPage";
 import { BlogMain } from "../Blog/BlogMain";
@@ -24,7 +24,12 @@ import { RavekhPos } from "../RavekhPos/RavekhPos";
 import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
 import { MainSales } from "../CatalogoWeb/PuntoVenta/Sales/MainSales";
 import { MainCart } from "../CatalogoWeb/PuntoVenta/Sales/Cart/Cart";
+import { DiscountScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/DiscountScreen";
+import { PaymentTypeScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/PaymentTypeScreen";
+import { PaymentScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/PaymentScreen";
+import { FinishScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/FinishScreen";
 export const Rutas = () => {
+  const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
   const context = useContext(AppContext);
   const location = useLocation(); // Hook de react-router-dom para obtener la ubicación actual
@@ -50,7 +55,7 @@ export const Rutas = () => {
   const menuTogglePOS = useRef(null); // Referencia para la animación del menú
 
   useEffect(() => {
-    if (listItemsRefCatalogo.current) {
+    if (listItemsRefCatalogo.current && slideDownRefPOS.current) {
       gsap.set(slideDownRefPOS.current, { y: "-100%", display: "block" });
 
       menuTogglePOS.current = new TimelineMax({
@@ -77,7 +82,7 @@ export const Rutas = () => {
         context.setCart(JSON.parse(localCart));
       }
     }
-    if (slideDownRef) {
+    if (slideDownRef.current && listItemsRef.current) {
       gsap.set(slideDownRef.current, { y: "-100%", display: "block" });
 
       menuToggle.current = new TimelineMax({ paused: true, reversed: true })
@@ -114,7 +119,7 @@ export const Rutas = () => {
           0.1
         );
     }
-  }, []);
+  }, [location.pathname]);
 
   useEffect(() => {
     const localColor = localStorage.getItem("color");
@@ -142,9 +147,11 @@ export const Rutas = () => {
   }, [context.color, context.nombre]);
 
   const handleMenuClick = () => {
-    menuToggle.current.reversed()
-      ? menuToggle.current.restart()
-      : menuToggle.current.reverse();
+    if (menuToggle.current) {
+      menuToggle.current.reversed()
+        ? menuToggle.current.restart()
+        : menuToggle.current.reverse();
+    }
   };
 
   const handleMenuClickCatalogo = () => {
@@ -168,9 +175,28 @@ export const Rutas = () => {
 
   // Función para determinar si se debe mostrar el navbar
   const shouldShowNavbar = useMemo(() => {
-    const hiddenRoutes = ["/login-punto-venta", "/MainSales", "/MainCart"];
+    const hiddenRoutes = ["/login-punto-venta", "/MainSales", "/MainCart", "/DiscountScreen", "/payment-type", "/payment", "/finish"];
     return !hiddenRoutes.includes(location.pathname);
   }, [location.pathname]);
+
+  useEffect(() => {
+    const protectedRoutes = [
+      "/mainsales",
+      "/maincart",
+      "/discountscreen",
+      "/payment-type",
+      "/payment",
+      "/finish",
+    ];
+  
+    const currentPath = location.pathname.toLowerCase().replace(/\/+$/, ""); // Convertir a minúsculas y quitar "/" al final
+   
+  
+    if (protectedRoutes.includes(currentPath) && !context.user.Token) {
+      navigate("/");
+    }
+  }, [location, navigate, context.cartPos]);
+  
 
   return (
     <div className="drawer ">
@@ -339,6 +365,10 @@ export const Rutas = () => {
           <Route path="/login-punto-venta" element={<AuthPage />} />
           <Route path="/MainSales" element={<MainSales />} />
           <Route path="/MainCart" element={<MainCart />} />
+          <Route path="/DiscountScreen" element={<DiscountScreen />} />
+          <Route path="/payment-type" element={<PaymentTypeScreen />} />
+          <Route path="/payment" element={<PaymentScreen />} />
+          <Route path="/finish" element={<FinishScreen />} />
         </Routes>
       </div>
     </div>
