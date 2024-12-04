@@ -28,6 +28,7 @@ import { DiscountScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/DiscountScr
 import { PaymentTypeScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/PaymentTypeScreen";
 import { PaymentScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/PaymentScreen";
 import { FinishScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/FinishScreen";
+import { AddProductSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddProductSales";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -175,7 +176,7 @@ export const Rutas = () => {
 
   // Función para determinar si se debe mostrar el navbar
   const shouldShowNavbar = useMemo(() => {
-    const hiddenRoutes = ["/login-punto-venta", "/MainSales", "/MainCart", "/DiscountScreen", "/payment-type", "/payment", "/finish"];
+    const hiddenRoutes = ["/login-punto-venta", "/MainSales", "/MainCart", "/DiscountScreen", "/payment-type", "/payment", "/finish", "/add-product"];
     return !hiddenRoutes.includes(location.pathname);
   }, [location.pathname]);
 
@@ -187,6 +188,7 @@ export const Rutas = () => {
       "/payment-type",
       "/payment",
       "/finish",
+      "/add-product",
     ];
   
     const currentPath = location.pathname.toLowerCase().replace(/\/+$/, ""); // Convertir a minúsculas y quitar "/" al final
@@ -369,6 +371,7 @@ export const Rutas = () => {
           <Route path="/payment-type" element={<PaymentTypeScreen />} />
           <Route path="/payment" element={<PaymentScreen />} />
           <Route path="/finish" element={<FinishScreen />} />
+          <Route path="/add-product" element={<AddProductSales />} />
         </Routes>
       </div>
     </div>

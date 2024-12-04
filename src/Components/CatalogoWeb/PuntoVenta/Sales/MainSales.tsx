@@ -14,7 +14,7 @@ import "./Css/MainSales.css";
 import { Item } from "../Model/Item";
 import { AppContext } from "../../Context/AppContext";
 import { CartPos } from "../Model/CarPos";
-import { useNavigate } from 'react-router-dom';
+import { useNavigate } from "react-router-dom";
 
 export const MainSales: React.FC = () => {
   const navigate = useNavigate(); // React Router para navegación
@@ -25,31 +25,37 @@ export const MainSales: React.FC = () => {
   const [totalPrice, setTotalPrice] = useState(0.0);
   const [totalItems, setTotalItems] = useState(0);
   const [showModalPremium, setShowModalPremium] = useState(false);
- 
+  const [loader, setLoader] = useState(false);
   useEffect(() => {
     // Obtener productos al cargar
-    getProduct(context.user.Business_Id, context.user.Token).then(
-      (data: any) => {
-        try {
-          if (data.length > 0) {
-            const filteredData = data[0]
-              .concat(data[1])
-              .filter((product: Item | null) => product !== null);
-            setProducts(filteredData);
-            setFilteredProducts(filteredData);
+    try {
+      setLoader(true);
+      getProduct(context.user.Business_Id, context.user.Token).then(
+        (data: any) => {
+          try {
+            if (data.length > 0) {
+              const filteredData = data[0]
+                .concat(data[1])
+                .filter((product: Item | null) => product !== null);
+              setProducts(filteredData);
+              setFilteredProducts(filteredData);
+            }
+          } catch (e) {
+            console.error(e);
           }
-        } catch (e) {
-          console.error(e);
         }
-      }
-    );
+      );
 
-    calculateCartTotals();
+      calculateCartTotals();
+    } catch (e) {
+    } finally {
+      setLoader(false);
+    }
   }, [context.stockFlag]);
 
   useEffect(() => {
     calculateCartTotals();
-  }, [context.cart]);
+  }, [context.cartPos]);
 
   const calculateCartTotals = () => {
     let totalP = 0.0;
@@ -71,23 +77,25 @@ export const MainSales: React.FC = () => {
   };
 
   useEffect(() => {
-    getBusinessInformation(context.user.Business_Id+"", context.user.Token).then(
+    getBusinessInformation(
+      context.user.Business_Id + "",
+      context.user.Token
+    ).then((data: any) => {
+      if (data) {
+        context.setStore(data);
+      }
+    });
+    getTaxes(context.user.Business_Id + "", context.user.Token).then(
       (data: any) => {
         if (data) {
-          context.setStore(data);
+          context.setTax(data);
         }
       }
     );
-    getTaxes(context.user.Business_Id+"", context.user.Token).then((data: any) => {
-      if (data) {
-        context.setTax(data);
-      }
-    });
   }, []);
 
   return (
     <div className="main-sales">
-    
       {/* Barra de herramientas */}
       <div className="header-tools">
         <SalesBar
@@ -95,7 +103,6 @@ export const MainSales: React.FC = () => {
           setView={setView}
           products={products}
           setFilteredProducts={setFilteredProducts}
-
         />
       </div>
 
@@ -107,7 +114,7 @@ export const MainSales: React.FC = () => {
           ) : (
             <div>
               <button className="add-product" onClick={handleAddProduct}>
-                <PlusIcon width={30} height={30} color="#007bff"/>
+                <PlusIcon width={30} height={30} color="#007bff" />
                 <span>Agregar Producto</span>
               </button>
               <List Products={filteredProducts} />
@@ -119,37 +126,34 @@ export const MainSales: React.FC = () => {
             <span>Agregar Productos</span>
           </button>
         )}
-          {/* Footer */}
-      <footer className="sales-footer">
-        <div className="cart-info">
-          <span>Pedidos</span>
-        </div>
-        <button
-          className="order-button"
-          style={{ backgroundColor: context.store.Color || "#6D01D1" }}
-          onClick={() => {
-            if (context.cartPos.length > 0) {
-              //navegar a la pagina de pago (/MainCart)
-              navigate('/MainCart');
-            }
-          }}
-                  >
-          {totalItems.toFixed(2)}x Items = ${totalPrice.toFixed(2)}
-        </button>
-      </footer>
+        {/* Footer */}
+        <footer className={loader ? "sales-footer-loader" : "sales-footer"}
+        >
+          <div className="cart-info">
+            <span>Pedidos</span>
+          </div>
+          <button
+            className="order-button"
+            style={{ backgroundColor: context.store.Color || "#6D01D1" }}
+            onClick={() => {
+              if (context.cartPos.length > 0) {
+                //navegar a la pagina de pago (/MainCart)
+                navigate("/MainCart");
+              }
+            }}
+          >
+            {totalItems.toFixed(2)}x Items = ${totalPrice.toFixed(2)}
+          </button>
+        </footer>
       </div>
 
-    
-
       {/* Modal */}
-      {
-        /*
+      {/*
         <PremiumExpirationModal
           isVisible={showModalPremium}
           onClose={() => setShowModalPremium(false)}
         />
-        */
-      }
+        */}
     </div>
   );
 };

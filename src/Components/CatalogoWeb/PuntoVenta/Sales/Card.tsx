@@ -2,6 +2,7 @@ import React, { useContext, useState } from "react";
 import { Item } from "../Model/Item";
 import "./Css/ProductList.css";
 import { AppContext } from "../../Context/AppContext";
+import { useNavigate } from "react-router-dom";
 
 interface CardProps {
   product: Item;
@@ -11,8 +12,8 @@ interface CardProps {
 const Card: React.FC<CardProps> = ({ product, handleAddItem }) => {
   const { Name, Image, Price, PromotionPrice, Color, ForSale } = product;
   const [isImageLoading, setIsImageLoading] = useState(true);
-  const truncatedName = Name.length > 12 ? Name.substring(0, 12) + "..." : Name;
-
+  const truncatedName = Name.length > 18 ? Name.substring(0, 18) + "" : Name;
+  const navigate = useNavigate(); // React Router para navegación 
   if (!ForSale) return null;
 
   return (
@@ -39,9 +40,7 @@ const Card: React.FC<CardProps> = ({ product, handleAddItem }) => {
       ) : (
         <div className="no-image-container">
           <p className="no-image-text">{truncatedName}</p>
-          {Price != null && Price > 0 && (
-            <p className="no-image-price">${Price.toFixed(2)}</p>
-          )}
+         
         </div>
       )}
       <div className="footer-card">
@@ -66,7 +65,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
   const context = useContext(AppContext);
   const [refreshing, setRefreshing] = useState(false);
   const [showModalPremium, setShowModalPremium] = useState(false);
-
+  const navigate = useNavigate(); // React Router para naveg
   const handleAddItem = (product: Item) => {
     const cartProduct = context.cartPos?.find((item) => item.Id === product.Id);
     if (cartProduct) {
@@ -115,7 +114,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
     ) {
       setShowModalPremium(true);
     } else {
-      console.log("Navigate to Add Product Page");
+      navigate("/add-product");
     }
   };
 

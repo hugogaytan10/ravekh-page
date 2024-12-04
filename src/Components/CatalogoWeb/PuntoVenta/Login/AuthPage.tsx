@@ -148,6 +148,10 @@ export const AuthPage: React.FC = () => {
         if (data) {
           context.setUser(data);
           navigate("/MainSales");
+        }else{
+          localStorage.removeItem("user");
+          console.log("No se pudo iniciar sesion");
+
         }
       });
     }

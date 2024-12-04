@@ -21,7 +21,18 @@
   padding: 0px;
 }
  
-  
+.sales-footer-loader {
+  display: flex;
+  justify-content: space-between;
+  background-color: white;
+  position: absolute;
+  bottom: 0;
+  height: 80px;
+  padding: 5px;
+  width: 100%;
+  border-top: 0.7px solid #ccc;
+  align-items: center;
+}
 .sales-footer {
     display: flex;
     justify-content: space-between;

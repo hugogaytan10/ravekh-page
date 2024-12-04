@@ -1,0 +1,96 @@
+/* Fondo semitransparente */
+.overlay-picker-color {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    display: flex;
+    justify-content: flex-end;
+    align-items: flex-end;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease-in-out;
+  }
+  
+  .overlay-picker-color.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  
+  /* Modal tipo bottom sheet */
+  .modal-picker-color {
+    width: 100%;
+    background: #ffffff;
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1);
+    padding: 20px;
+    transform: translateY(100%);
+    animation: slide-up-picker-color 0.3s ease-in-out forwards;
+  }
+  
+  /* Animación para deslizar el modal desde abajo */
+  @keyframes slide-up-picker-color {
+    from {
+      transform: translateY(100%);
+    }
+    to {
+      transform: translateY(0);
+    }
+  }
+  
+  /* Cabecera del modal */
+  .header-picker-color {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid #eee;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+  }
+  
+  .header-picker-color h2 {
+    font-size: 18px;
+    font-weight: bold;
+    color: #333;
+  }
+  
+  .close-picker-color {
+    font-size: 24px;
+    background: none;
+    border: none;
+    color: #999;
+    cursor: pointer;
+  }
+  
+  /* Contenedor de colores */
+  .colors-picker-color {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  
+  .color-item-picker-color {
+    width: 30%;
+    height: 80px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    border-radius: 8px;
+    position: relative;
+    cursor: pointer;
+  }
+  
+  .color-item-picker-color span {
+    color: #fff;
+    font-size: 14px;
+    font-weight: bold;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 4px 8px;
+    border-radius: 4px;
+    position: absolute;
+    bottom: 10px;
+  }
+  

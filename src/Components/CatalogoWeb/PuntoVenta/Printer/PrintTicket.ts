@@ -19,42 +19,42 @@ export const PrintTicket = (
     // Generar el HTML para el ticket
     const ticketHTML = `
       <div style="width: 100%; font-family: Arial, sans-serif; font-size: 12px; margin: 0; text-align: left;">
-        <h2 style="text-align: center; margin: 0; font-size: 16px;">${storeName}</h2>
-        <p style="text-align: center; margin: 5px 0; font-size: 10px;">${new Date().toLocaleString()}</p>
-        <hr style="border: 1px dashed #000; margin: 5px 0;" />
-        <table style="width: 100%; margin: 0; border-collapse: collapse; text-align: left;">
-          <thead>
+      <h2 style="text-align: center; margin: 0; font-size: 16px; width: 100%;">${storeName}</h2>
+      <p style="text-align: center; margin: 5px 0; font-size: 12px; width: 100%;">${new Date().toLocaleString()}</p>
+      <hr style="border: 1px dashed #000; margin: 5px 0; width: 100%;" />
+      <table style="width: 100%; margin: 0; border-collapse: collapse; text-align: left;">
+        <thead>
+        <tr>
+          <th style="text-align: left; width: 20%;">Cant</th>
+          <th style="text-align: left; width: 50%;">Producto</th>
+          <th style="text-align: right; width: 30%;">Sub</th>
+        </tr>
+        </thead>
+        <tbody>
+        ${cart
+          .map(
+          (item) => `
             <tr>
-              <th style="text-align: left; width: 20%;">Cant</th>
-              <th style="text-align: left; width: 50%;">Producto</th>
-              <th style="text-align: right; width: 30%;">Sub</th>
+            <td style="font-size:12px;">${item.Quantity}</td>
+            <td style="font-size:12px;">${truncateText(item.Name, 15)}</td>
+            <td style="text-align: right; font-size: 12px">$${(
+              item.Price * item.Quantity
+            ).toFixed(2)}</td>
             </tr>
-          </thead>
-          <tbody>
-            ${cart
-              .map(
-                (item) => `
-                  <tr>
-                    <td>${item.Quantity}</td>
-                    <td>${truncateText(item.Name, 15)}</td>
-                    <td style="text-align: right;">$${(
-                      item.Price * item.Quantity
-                    ).toFixed(2)}</td>
-                  </tr>
-                `
-              )
-              .join("")}
-          </tbody>
-        </table>
-        <hr style="border: 1px dashed #000; margin: 5px 0;" />
-        <div style="margin: 0;">
-          <p style="margin: 0; font-size: 13px;">Total: <span style="float: right;">$${total.toFixed(2)}</span></p>
-          <p style="margin: 0; font-size: 13px;">Recibido: <span style="float: right;">$${amountR.toFixed(2)}</span></p>
-          <p style="margin: 0; font-size: 13px;">Descuento: <span style="float: right;">${discount.toFixed(2)}%</span></p>
-          <p style="margin: 0; font-size: 13px;">Cambio: <span style="float: right;">$${change.toFixed(2)}</span></p>
-        </div>
-        <hr style="border: 1px dashed #000; margin: 5px 0;" />
-        <p style="text-align: center; font-size: 12px;">Gracias por su compra</p>
+          `
+          )
+          .join("")}
+        </tbody>
+      </table>
+      <hr style="border: 1px dashed #000; margin: 5px 0; width: 100%;" />
+      <div style="margin: 0; width: 100%;">
+        <p style="margin: 0; font-size: 13px; width: 100%;">Total: <span style="float: right;">$${total.toFixed(2)}</span></p>
+        <p style="margin: 0; font-size: 13px; width: 100%;">Recibido: <span style="float: right;">$${amountR.toFixed(2)}</span></p>
+        <p style="margin: 0; font-size: 13px; width: 100%;">Descuento: <span style="float: right;">${discount.toFixed(2)}%</span></p>
+        <p style="margin: 0; font-size: 13px; width: 100%;">Cambio: <span style="float: right;">$${change.toFixed(2)}</span></p>
+      </div>
+      <hr style="border: 1px dashed #000; margin: 5px 0; width: 100%;" />
+      <p style="text-align: center; font-size: 12px; width: 100%;">Gracias por su compra</p>
       </div>
     `;
   
