@@ -7,20 +7,22 @@
 @tailwind utilities;
 @import "~slick-carousel/slick/slick.css";
 @import "~slick-carousel/slick/slick-theme.css";
-
-*{
+* {
     font-family: 'Poppins', sans-serif;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
+    scroll-behavior: smooth;
+   
 }
-::-webkit-scrollbar{
-    width: 0px;
-}
-::-webkit-scrollbar-thumb{
-    background-color: #252424;
-}
-body{
+
+body {
     background-color: #ffffff;
     color: black;
+    overflow: hidden; /* Opcional para evitar scroll en todo el documento */
 }
+
+::-webkit-scrollbar {
+    display: none; /* Chrome, Edge */
+}
+

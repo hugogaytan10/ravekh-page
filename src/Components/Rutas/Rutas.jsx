@@ -29,6 +29,7 @@ import { PaymentTypeScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/PaymentT
 import { PaymentScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/PaymentScreen";
 import { FinishScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/FinishScreen";
 import { AddProductSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddProductSales";
+import { NavBottom } from "./NavBottom";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -57,13 +58,13 @@ export const Rutas = () => {
 
   useEffect(() => {
     if (listItemsRefCatalogo.current && slideDownRefPOS.current) {
-      gsap.set(slideDownRefPOS.current, { y: "-100%", display: "block" });
+      gsap.set(slideDownRefPOS.current, { y: "-90%", display: "block", overflow: "hidden", });
 
       menuTogglePOS.current = new TimelineMax({
         paused: true,
         reversed: true,
       })
-        .to(slideDownRefPOS.current, 1, { y: "0%", ease: "back.out(1.7)" })
+        .to(slideDownRefPOS.current, 1, { y: "0%", ease: "power1.out" })
         .staggerFrom(
           Array.from(listItemsRefCatalogo.current.children), // Convertir a array para seguridad
           0.25,
@@ -84,7 +85,7 @@ export const Rutas = () => {
       }
     }
     if (slideDownRef.current && listItemsRef.current) {
-      gsap.set(slideDownRef.current, { y: "-100%", display: "block" });
+      gsap.set(slideDownRef.current, { y: "-100%", display: "block", overflow: "hidden", });
 
       menuToggle.current = new TimelineMax({ paused: true, reversed: true })
         .to(menuIconRef.current, 0.5, { x: "-30", ease: "back.out(1.7)" })
@@ -102,7 +103,7 @@ export const Rutas = () => {
 
     if (slideDownRefCatalogo) {
       //togle para el catalogo
-      gsap.set(slideDownRefCatalogo.current, { y: "-100%", display: "block" });
+      gsap.set(slideDownRefCatalogo.current, { y: "-100%", display: "block", overflow: "hidden", });
 
       menuToggleCatalogo.current = new TimelineMax({
         paused: true,
@@ -176,7 +177,16 @@ export const Rutas = () => {
 
   // Función para determinar si se debe mostrar el navbar
   const shouldShowNavbar = useMemo(() => {
-    const hiddenRoutes = ["/login-punto-venta", "/MainSales", "/MainCart", "/DiscountScreen", "/payment-type", "/payment", "/finish", "/add-product"];
+    const hiddenRoutes = [
+      "/login-punto-venta",
+      "/MainSales",
+      "/MainCart",
+      "/DiscountScreen",
+      "/payment-type",
+      "/payment",
+      "/finish",
+      "/add-product",
+    ];
     return !hiddenRoutes.includes(location.pathname);
   }, [location.pathname]);
 
@@ -190,21 +200,19 @@ export const Rutas = () => {
       "/finish",
       "/add-product",
     ];
-  
+
     const currentPath = location.pathname.toLowerCase().replace(/\/+$/, ""); // Convertir a minúsculas y quitar "/" al final
-   
-  
+
     if (protectedRoutes.includes(currentPath) && !context.user.Token) {
       navigate("/");
     }
   }, [location, navigate, context.cartPos]);
-  
 
   return (
     <div className="drawer ">
       <input id="my-drawer-3" type="checkbox" className="drawer-toggle" />
 
-      <div className="  drawer-content flex flex-col h-full min-w-full relative ">
+      <div className="  drawer-content flex flex-col h-full min-w-full relative overflow-hidden">
         {shouldShowNavbar && (
           <div
             ref={menuIconRef}
@@ -322,7 +330,7 @@ export const Rutas = () => {
 
           <nav
             ref={slideDownRefCatalogo}
-            className="menu-container fixed top-0 left-0 w-full h-full z-30"
+            className="menu-container fixed top-0 left-0 w-full h-full z-30 "
             style={{ display: "none", backgroundColor: color }}
           >
             <ul
@@ -374,6 +382,7 @@ export const Rutas = () => {
           <Route path="/add-product" element={<AddProductSales />} />
         </Routes>
       </div>
+      {context.user.Token != undefined && <NavBottom />}
     </div>
   );
 };
