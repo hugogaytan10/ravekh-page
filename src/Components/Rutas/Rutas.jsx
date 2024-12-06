@@ -30,6 +30,7 @@ import { PaymentScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/PaymentScree
 import { FinishScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/FinishScreen";
 import { AddProductSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddProductSales";
 import { NavBottom } from "./NavBottom";
+import { CategoriasScreenSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/CategoriasScreenSales";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -380,6 +381,7 @@ export const Rutas = () => {
           <Route path="/payment" element={<PaymentScreen />} />
           <Route path="/finish" element={<FinishScreen />} />
           <Route path="/add-product" element={<AddProductSales />} />
+          <Route path="/select-caterory-sales" element={<CategoriasScreenSales />} />
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}

@@ -11,6 +11,7 @@ import { Item } from "../../Model/Item";
 import { Category } from "../../Model/Category";
 import { ThemeLight } from "../../Theme/Theme";
 import { useNavigate } from "react-router-dom";
+import { ChevronGo } from "../../../../../assets/POS/ChevronGo";
 
 export const AddProductSales: React.FC = () => {
   const context = useContext(AppContext);
@@ -203,6 +204,25 @@ export const AddProductSales: React.FC = () => {
             value={barcode}
             onChange={(e) => setBarcode(e.target.value)}
           />
+          <button
+  className="flex items-center justify-between w-full py-3 px-4 bg-gray-50 rounded shadow-sm hover:bg-gray-100"
+  onClick={() => navigation("/select-caterory-sales")}
+>
+  {context.categorySelected.Name !== "" ? (
+    <>
+      <span className="text-purple-500 font-semibold">
+        {context.categorySelected.Name}
+      </span>
+      <ChevronGo width={20} height={20} stroke={ThemeLight.textColor} />
+    </>
+  ) : (
+    <>
+      <span className="text-gray-700">Asignar Categoría</span>
+      <ChevronGo width={20} height={20} stroke={ThemeLight.textColor} />
+    </>
+  )}
+</button>
+
         </div>
         {/* Expandable Stock Section */}
         <div className="bg-white rounded-lg p-4 form-section-add-product mt-4">
