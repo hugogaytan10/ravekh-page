@@ -13,6 +13,7 @@ import { Wireframe } from "../Wireframe/Wireframe";
 import { Design } from "../Design/Design";
 import { Desarrollo } from "../Desarrollo/Desarrollo";
 import { Helmet, HelmetProvider } from "react-helmet-async"; // Importa Helmet
+import "./LandingPage.css";
 
 export const LandingPage = () => {
   //useScrollBackground();
@@ -53,7 +54,7 @@ export const LandingPage = () => {
       </Helmet>
       <div
         ref={containerRef}
-        className="h-screen flex flex-col overflow-y-scroll snap-y snap-mandatory"
+        className="h-screen flex flex-col overflow-y-scroll snap-y snap-mandatory scrollbar-hidden "
       >
         <section
           className="h-screen snap-start w-full "

@@ -258,7 +258,7 @@ export const Rutas = () => {
                 <NavLink
                   to="/login-punto-venta"
                   onClick={handleMenuClick}
-                  className="text-base "
+                  className="text-base"
                 >
                   Punto de Venta
                 </NavLink>
@@ -382,7 +382,7 @@ export const Rutas = () => {
           <Route path="/add-product" element={<AddProductSales />} />
         </Routes>
       </div>
-      {context.user.Token != undefined && <NavBottom />}
+      {context.showNavBarBottom && <NavBottom />}
     </div>
   );
 };

@@ -19,8 +19,8 @@
   
   .list-items li {
     list-style-type: none;
-    font-size: 50px;
-    margin-bottom: 20px;
+    font-size: 47px;
+    margin-bottom: 10px;
     font-weight: bold;
   }
   .list-items li > a {

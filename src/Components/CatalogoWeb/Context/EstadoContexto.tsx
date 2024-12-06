@@ -65,4 +65,6 @@ export type AppContextState = {
     setCheckout: Dispatch<SetStateAction<boolean>>;
     captureUri: string | null;
     setCaptureUri: Dispatch<SetStateAction<string | null>>;
+    showNavBarBottom: boolean;
+    setShowNavBarBottom: Dispatch<SetStateAction<boolean>>;
 }

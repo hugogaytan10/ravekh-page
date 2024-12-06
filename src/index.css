@@ -19,7 +19,7 @@
 body {
     background-color: #ffffff;
     color: black;
-    overflow: hidden; /* Opcional para evitar scroll en todo el documento */
+    
 }
 
 ::-webkit-scrollbar {

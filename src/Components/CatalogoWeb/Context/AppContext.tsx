@@ -59,6 +59,7 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   const [store, setStore] = useState<Store>({} as Store);
   const [tax, setTax] = useState<Tax>({} as Tax);
   const [checkout, setCheckout] = useState<boolean>(false);
+  const [showNavBarBottom, setShowNavBarBottom] = useState<boolean>(false);
 
     // Función para actualizar una mesa
     const updateTable = (tableId: string, updates: Partial<Table>) => {
@@ -180,7 +181,8 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
       updateTable,
       resetTable,
       addTable,
-
+      showNavBarBottom,
+      setShowNavBarBottom
     };
   }, [
     cart,
@@ -235,6 +237,8 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
     updateTable,
     resetTable,
     addTable,
+    showNavBarBottom,
+    setShowNavBarBottom
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

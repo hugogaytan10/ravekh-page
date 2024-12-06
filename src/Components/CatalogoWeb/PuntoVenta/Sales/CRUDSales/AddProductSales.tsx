@@ -69,6 +69,7 @@ export const AddProductSales: React.FC = () => {
 
       context.setStockFlag(!context.stockFlag);
       context.setCategorySelected({ Id: 0, Name: "", Color: "" } as Category);
+      context.setShowNavBarBottom(true); // Mostrar la barra de navegación inferior
       navigation("/MainSales");
     } catch (error) {
       console.error("Error al guardar el producto:", error);
@@ -92,7 +93,7 @@ export const AddProductSales: React.FC = () => {
           backgroundColor: context.store.Color || ThemeLight.btnBackground,
         }}
       >
-        <button onClick={() => navigation.goBack()} className="mr-auto">
+        <button onClick={() =>{ navigation("/MainSales"); context.setShowNavBarBottom(true);}} className="mr-auto">
           <ChevronBack />
         </button>
         <h1 className="text-lg font-bold text-center">

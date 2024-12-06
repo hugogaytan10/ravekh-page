@@ -1,0 +1,9 @@
+.scrollbar-hidden {
+    overflow-y: scroll; /* Permite el desplazamiento */
+    -ms-overflow-style: none; /* IE y Edge */
+    scrollbar-width: none; /* Firefox */
+  }
+  
+  .scrollbar-hidden::-webkit-scrollbar {
+    display: none; /* Chrome, Safari y Edge */
+  }

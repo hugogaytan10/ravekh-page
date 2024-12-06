@@ -72,7 +72,8 @@ export const MainSales: React.FC = () => {
     if (context.store.Plan === "GRATUITO" && products.length >= 10) {
       setShowModalPremium(true);
     } else {
-      console.log("Navigate to Add Product Page");
+      context.setShowNavBarBottom(false); // Ocultar barra de navegación
+      navigate("/add-product");
     }
   };
 
@@ -107,7 +108,7 @@ export const MainSales: React.FC = () => {
       </div>
 
       {/* Contenido principal */}
-      <div className="sales-container">
+      <div className="sales-container overflow-y-auto">
         {filteredProducts.length > 0 ? (
           view ? (
             <ProductList products={filteredProducts} />

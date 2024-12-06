@@ -38,7 +38,7 @@
     justify-content: space-between;
     background-color: white;
     position: sticky;
-    bottom: 0;
+    bottom: 120px;
     height: 80px;
     padding: 5px;
     border-top: 0.7px solid #ccc;
