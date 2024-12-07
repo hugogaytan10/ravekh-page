@@ -54,7 +54,7 @@ export const CategoriasScreenSales: React.FC = () => {
         {/* Opción: Crear Nueva Categoría */}
         <button
           className="flex items-center py-3 px-4 bg-gray-50 rounded shadow-sm mb-4 list-item-categorias-screen"
-          onClick={() => navigate("AddCategoriesSales")}
+          onClick={() => navigate("/add-category-sales")}
         >
           <PlusIcon color={ThemeLight.btnBackground} width={20} height={20} />
           <span className="ml-2 text-gray-700">Crear nueva categoría</span>

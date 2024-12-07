@@ -38,7 +38,7 @@ export const PickerColor: React.FC<PickerColorProps> = ({
             &times;
           </button>
         </div>
-        <div className="colors-picker-color">
+        <div className="colors-picker-color justify-center">
           {colors.map((color) => (
             <button
               key={color.name}

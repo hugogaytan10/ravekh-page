@@ -139,6 +139,7 @@ export const MainSales: React.FC = () => {
             onClick={() => {
               if (context.cartPos.length > 0) {
                 //navegar a la pagina de pago (/MainCart)
+                context.setShowNavBarBottom(false); // Ocultar barra de navegación
                 navigate("/MainCart");
               }
             }}

@@ -63,7 +63,7 @@ const calculateTotals = useCallback(() => {
   return (
     <div className="main-cart" ref={viewRef}>
       <div className="header-cart"   style={{ backgroundColor: context.store.Color || "#6D01D1" }}>
-        <button className="back-button" onClick={() => navigate(-1)}>
+        <button className="back-button" onClick={() => {context.setShowNavBarBottom(true); navigate(-1);}}>
           <ChevronBack />
           <span className="header-title text-white">Carrito</span>
         </button>
