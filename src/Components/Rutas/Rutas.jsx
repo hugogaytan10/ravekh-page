@@ -34,6 +34,7 @@ import { CategoriasScreenSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales
 import { AddCategoriesSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddCategories";
 import { MainProducts } from "../CatalogoWeb/PuntoVenta/Products/MainProducts";
 import { AddProduct } from "../CatalogoWeb/PuntoVenta/Products/CRUDProducts/AddProduct";
+import MainReports from "../CatalogoWeb/PuntoVenta/Reports/MainReports";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -211,7 +212,8 @@ export const Rutas = () => {
       "/select-caterory-sales",
       "/add-category-sales",
       "/mainproduct",
-      "/add-product-products"
+      "/add-product-products",
+      "/mainreports",
     ];
 
     const currentPath = location.pathname.toLowerCase().replace(/\/+$/, ""); // Convertir a minúsculas y quitar "/" al final
@@ -397,6 +399,7 @@ export const Rutas = () => {
           <Route path="/add-category-sales" element={<AddCategoriesSales />} />
           <Route path="/MainProduct" element={<MainProducts/>} />
           <Route path="/add-product-products" element={<AddProduct />} />
+          <Route path="/MainReports" element={<MainReports />} />
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}
