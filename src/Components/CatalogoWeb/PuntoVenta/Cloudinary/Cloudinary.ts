@@ -1,3 +1,4 @@
+/*
 export const uploadImage = async (uri: string | undefined) => {
     const cloudName = 'ravekh';
     const preset = 'ravekh-fotos';
@@ -29,4 +30,29 @@ export const uploadImage = async (uri: string | undefined) => {
       return '';
     }
   };
+  */
   
+  export const uploadImage = async (file: any) => {
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("upload_preset", "ravekh-fotos"); // Reemplaza 'tu_upload_preset' con tu propio upload preset
+    formData.append("folder", "diana-fotos"); // Especifica el nombre de la carpeta donde quieres subir el archivo
+
+    try {
+      const response = await fetch(
+        "https://api.cloudinary.com/v1_1/ravekh/image/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+      if (data) {
+        return data.secure_url;
+      }
+      // Aquí puedes seguir procesando la respuesta, por ejemplo, guardar la URL de la imagen
+    } catch (error) {
+      console.error("Error al subir la imagen:", error);
+    }
+  };
