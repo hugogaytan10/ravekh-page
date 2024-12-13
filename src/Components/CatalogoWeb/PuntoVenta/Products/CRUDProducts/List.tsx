@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { AppContext } from "../../../Context/AppContext";
 import { getProducts } from "../Petitions";
 import { ThemeLight } from "../../Theme/Theme";
-import {ChevronGo} from "../../../../../assets/POS/ChevronGo";
+import { ChevronGo } from "../../../../../assets/POS/ChevronGo";
 import PlusIcon from "../../../../../assets/POS/PlusIcon";
 import { useNavigate } from "react-router-dom";
 interface Product {
@@ -28,7 +28,6 @@ interface Product {
 }
 
 type ListProps = {
-  navigation: any;
   barCode: string;
 };
 
@@ -36,7 +35,7 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [showModalPremium, setShowModalPremium] = useState(false);
   const context = useContext(AppContext);
-const navigation = useNavigate()
+  const navigation = useNavigate();
   const truncate = (text: string, length: number) =>
     text.length > length ? `${text.substring(0, length)}...` : text;
 
@@ -51,7 +50,7 @@ const navigation = useNavigate()
   useEffect(() => {
     context.setIsShowSplash(true);
 
-    getProducts(context.user.Token, context.user.Business_Id+"").then(
+    getProducts(context.user.Token, context.user.Business_Id + "").then(
       (response) => {
         if (response) {
           if (context.store.Plan === "GRATUITO") {
@@ -71,7 +70,8 @@ const navigation = useNavigate()
 
   const renderHeader = () => {
     const isAdminOrManager =
-      context.user?.Role === "ADMINISTRADOR" || context.user?.Role === "GERENTE";
+      context.user?.Role === "ADMINISTRADOR" ||
+      context.user?.Role === "GERENTE";
     const isHelper = context.user?.Role === "AYUDANTE";
 
     const handleAddProduct = () => {
@@ -94,7 +94,7 @@ const navigation = useNavigate()
       <div className="bg-white mt-2 py-5 px-4 rounded-md mb-2">
         <button
           className="flex justify-between items-center w-full py-2 border-b border-gray-300"
-          onClick={() => navigation("CategoriasScreenEdit")}
+          onClick={() => navigation("/select-category-product")}
         >
           <span className="text-lg font-medium text-gray-700">Categorías</span>
           <ChevronGo width={25} height={25} stroke={ThemeLight.textColor} />
@@ -120,9 +120,12 @@ const navigation = useNavigate()
     return (
       <button
         className="flex items-center w-full bg-white p-2 border-b border-gray-300 rounded-md h-24"
-        onClick={() =>
-          !isHelper && navigation("EditProduct", { productId: item.Id })
-        }
+        onClick={() => {
+          if (!isHelper) {
+            context.setShowNavBarBottom(false); // Hide the bottom navbar
+            navigation(`/edit-product/${item.Id}`);
+          }
+        }}
         disabled={isHelper}
       >
         {item.Image ? (
@@ -140,7 +143,9 @@ const navigation = useNavigate()
           </div>
         )}
         <div className="flex-1 flex justify-between items-center">
-          <span className="text-lg font-medium text-gray-800 md:text-base">{item.Name}</span>
+          <span className="text-lg font-medium text-gray-800 md:text-base">
+            {item.Name}
+          </span>
           <div className="flex flex-col items-end">
             {item.PromotionPrice ? (
               <>
@@ -172,11 +177,11 @@ const navigation = useNavigate()
       {renderHeader()}
       <div className="space-y-1 flex flex-wrap justify-around gap-1 ">
         {products.map((product) => (
-          <div key={product.Id} className="w-full md:w-2/5 lg:w-3/12">{renderItem(product)}</div>
+          <div key={product.Id} className="w-full md:w-2/5 lg:w-3/12">
+            {renderItem(product)}
+          </div>
         ))}
       </div>
-     
     </div>
   );
 };
-

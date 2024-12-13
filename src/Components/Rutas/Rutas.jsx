@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useContext, useState, useMemo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -10,7 +11,6 @@ import menu from "../../assets/menu.svg";
 import "./Rutas.css";
 import { gsap, TimelineMax } from "gsap";
 import { ArticuloValeLaPenaReact } from "../Blog/ArticulosReactNative/ArticuloValeLaPenaReact/ArticuloValeLaPenaReact";
-import { Productos } from "../Producto/Productos";
 import { Muestra } from "../Muestra/Muestra";
 import { Paquetes } from "../Paquetes/Muestra";
 import { MainCatalogo } from "../CatalogoWeb/MainCatalogo";
@@ -34,7 +34,15 @@ import { CategoriasScreenSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales
 import { AddCategoriesSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddCategories";
 import { MainProducts } from "../CatalogoWeb/PuntoVenta/Products/MainProducts";
 import { AddProduct } from "../CatalogoWeb/PuntoVenta/Products/CRUDProducts/AddProduct";
-import MainReports from "../CatalogoWeb/PuntoVenta/Reports/MainReports";
+import { SelectCategory } from "../CatalogoWeb/PuntoVenta/Products/Categories/SelectCategory";
+import { EditProduct } from "../CatalogoWeb/PuntoVenta/Products/CRUDProducts/EditProduct";
+import { EditCategory } from "../CatalogoWeb/PuntoVenta/Products/Categories/EditCaterogy";
+import { List } from "../CatalogoWeb/PuntoVenta/Products/CRUDProducts/List";
+import { StockProducts } from "../CatalogoWeb/PuntoVenta/Products/Stock/StockProducts";
+import { Scanner } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/Scanner";
+import { SearchScreen } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/SearchScreen";
+import { SearchProductScreen } from "../CatalogoWeb/PuntoVenta/Products/NavBar/SearchProductScreen";
+import { MainReports } from "../CatalogoWeb/PuntoVenta/Reports/MainReports";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -193,9 +201,11 @@ export const Rutas = () => {
       "/add-product",
       "/select-caterory-sales",
       "/add-category-sales",
-      "/MainProduct",
-      "/add-product-products"
-
+      "/main-products",
+      "/add-product-products",
+      "/select-category-product",
+      "/edit-product/:productId",
+      "/edit-category",
     ];
     return !hiddenRoutes.includes(location.pathname);
   }, [location.pathname]);
@@ -211,9 +221,11 @@ export const Rutas = () => {
       "/add-product",
       "/select-caterory-sales",
       "/add-category-sales",
-      "/mainproduct",
+      "/main-products",
       "/add-product-products",
-      "/mainreports",
+      "/select-category-product",
+      "/edit-product/:productId",
+      "/edit-category",
     ];
 
     const currentPath = location.pathname.toLowerCase().replace(/\/+$/, ""); // Convertir a minúsculas y quitar "/" al final
@@ -397,9 +409,18 @@ export const Rutas = () => {
           <Route path="/add-product" element={<AddProductSales />} />
           <Route path="/select-caterory-sales" element={<CategoriasScreenSales />} />
           <Route path="/add-category-sales" element={<AddCategoriesSales />} />
-          <Route path="/MainProduct" element={<MainProducts/>} />
+          <Route path="/main-products" element={<MainProducts />}>
+            <Route path="items" element={<List />} />
+            <Route path="stock" element={<StockProducts />} />
+          </Route>
           <Route path="/add-product-products" element={<AddProduct />} />
-          <Route path="/MainReports" element={<MainReports />} />
+          <Route path="select-category-product" element={<SelectCategory />} />
+          <Route path="/edit-product/:productId" element={<EditProduct />} />
+          <Route path="/edit-category" element={<EditCategory />} />
+          <Route path="/scanner-sales" element={<Scanner />} />
+          <Route path="/search-product" element={<SearchScreen />} />
+          <Route path="/search-product-products" element={<SearchProductScreen />} />
+          <Route path="/main-reports" element={<MainReports />} />
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}

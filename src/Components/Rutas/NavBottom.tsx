@@ -13,9 +13,9 @@ export const NavBottom = () => {
   // Define las rutas con íconos y nombres
   const navItems = [
     { path: "/MainSales", label: "Ventas", Icon: SalesIcon },
-    { path: "/MainProduct", label: "Productos", Icon: ProductIcon },
+    { path: "/main-products/items", label: "Productos", Icon: ProductIcon },
     { path: "/contact", label: "Finanzas", Icon: ReportIcon },
-    { path: "/MainReports", label: "Reportes", Icon: ReportIcon },
+    { path: "/main-reports", label: "Reportes", Icon: ReportIcon },
     { path: "/more", label: "Más", Icon: MoreIcon },
   ];
 
