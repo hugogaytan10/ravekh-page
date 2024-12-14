@@ -43,6 +43,7 @@ import { Scanner } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/Scanner";
 import { SearchScreen } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/SearchScreen";
 import { SearchProductScreen } from "../CatalogoWeb/PuntoVenta/Products/NavBar/SearchProductScreen";
 import { MainReports } from "../CatalogoWeb/PuntoVenta/Reports/MainReports";
+import ReportIncome from "../CatalogoWeb/PuntoVenta/Reports/Incomes/ReportIncome";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -421,6 +422,7 @@ export const Rutas = () => {
           <Route path="/search-product" element={<SearchScreen />} />
           <Route path="/search-product-products" element={<SearchProductScreen />} />
           <Route path="/main-reports" element={<MainReports />} />
+          <Route path="/report-income/:period/:businessId" element={<ReportIncome />} />
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}

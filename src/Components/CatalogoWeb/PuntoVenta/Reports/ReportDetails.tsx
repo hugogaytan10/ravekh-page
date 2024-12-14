@@ -6,6 +6,7 @@ import MoneyIcon from "../../../../assets/POS/MoneyIcon";
 import { SalesIcon } from "../../../../assets/POS/SalesIcon";
 import CardIcon from "../../../../assets/POS/CardIcon";
 import { ThemeLight } from "../Theme/Theme";
+import { useNavigate } from "react-router-dom";
 
 interface CurrencyDetail {
     currency: string;
@@ -31,11 +32,11 @@ interface ReportDetailsProps {
 
 export const ReportDetails: React.FC<ReportDetailsProps> = ({
     selectedPeriod,
-    navigation,
 }) => {
     const { user } = useContext(AppContext);
     const context = useContext(AppContext);
     const [isLoading, setIsLoading] = useState(false);
+    const navigation = useNavigate();
     const [reportDetails, setReportDetails] = useState<ReportDetails>({
         balance: [],
         income: [],
@@ -157,10 +158,7 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                             strokeColor={context.store.Color}
                         />,
                         () =>
-                            navigation.navigate("ReportIncome", {
-                                period: selectedPeriod,
-                                businessId: user.Business_Id,
-                            })
+                            navigation("/report-income/" + selectedPeriod + "/" + user.Business_Id)
                     )}
                     {renderCard(
                         "Ganancia",
@@ -185,10 +183,7 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                             strokeColor={context.store.Color}
                         />,
                         () =>
-                            navigation.navigate("ReportSales", {
-                                period: selectedPeriod,
-                                businessId: user.Business_Id,
-                            })
+                            navigation("ReportSales")
                     )}
                 </div>
             </div>
@@ -205,20 +200,14 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                             strokeColor={context.store.Color}
                         />,
                         () =>
-                            navigation.navigate("ReportCardSales", {
-                                period: selectedPeriod,
-                                businessId: user.Business_Id,
-                            })
+                            navigation("ReportCardSales")
                     )}
                     {renderCard(
                         "Efectivo",
                         reportDetails.cashPercentage,
                         <MoneyIcon width={50} height={50} color={context.store.Color} />,
                         () =>
-                            navigation.navigate("ReportCashSales", {
-                                period: selectedPeriod,
-                                businessId: user.Business_Id,
-                            })
+                            navigation("ReportCashSales")
                     )}
                 </div>
             </div>
@@ -235,10 +224,7 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                             strokeColor={context.store.Color}
                         />,
                         () =>
-                            navigation.navigate("BestSellingProducts", {
-                                period: selectedPeriod,
-                                businessId: user.Business_Id,
-                            })
+                            navigation("BestSellingProducts")
                     )}
                     {renderCard(
                         "Mejores Categorías",
@@ -249,10 +235,7 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                             strokeColor={context.store.Color}
                         />,
                         () =>
-                            navigation.navigate("BestSellingCategory", {
-                                period: selectedPeriod,
-                                businessId: user.Business_Id,
-                            })
+                            navigation("BestSellingCategory")
                     )}
                 </div>
             </div>
