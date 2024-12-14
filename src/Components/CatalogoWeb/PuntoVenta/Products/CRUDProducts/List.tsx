@@ -62,11 +62,48 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
               Name: truncate(product.Name, 16),
             }))
           );
+          filterProducts(response);
         }
         context.setIsShowSplash(false);
       }
     );
   }, [context.stockFlag]);
+
+  const filterProducts = (products: Product[]) => {
+    let filteredProducts = [...products];
+    if (context.filterProduct.NoMaganeStock) {
+      filteredProducts = filteredProducts.filter(
+        (product: Product) => product.Stock === null
+      );
+    }
+    if (context.filterProduct.noStock) {
+      filteredProducts = filteredProducts.filter(
+        (product: Product) => product.Stock === 0
+      );
+    }
+    if (context.filterProduct.MinStock) {
+      filteredProducts = filteredProducts.filter(
+        (product: Product) => product.Stock! < product.MinStock!
+      );
+    }
+    if (context.filterProduct.OptStock) {
+      filteredProducts = filteredProducts.filter(
+        (product: Product) => product.Stock! < product.OptStock!
+      );
+    }
+    if (context.filterProduct.orderAsc) {
+      filteredProducts = filteredProducts.sort((a: Product, b: Product) =>
+        a.Name.localeCompare(b.Name)
+      );
+    }
+    if (context.filterProduct.orderDesc) {
+      filteredProducts = filteredProducts.sort((a: Product, b: Product) =>
+        b.Name.localeCompare(a.Name)
+      );
+    }
+    setProducts(filteredProducts);
+  };
+
 
   const renderHeader = () => {
     const isAdminOrManager =
@@ -94,7 +131,10 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
       <div className="bg-white mt-2 py-5 px-4 rounded-md mb-2">
         <button
           className="flex justify-between items-center w-full py-2 border-b border-gray-300"
-          onClick={() => navigation("/select-category-product")}
+          onClick={() => {
+            context.setShowNavBarBottom(false); // Hide the bottom navbar
+            navigation("/select-category-product"); // Redirect to the select category screen
+          }}
         >
           <span className="text-lg font-medium text-gray-700">Categorías</span>
           <ChevronGo width={25} height={25} stroke={ThemeLight.textColor} />

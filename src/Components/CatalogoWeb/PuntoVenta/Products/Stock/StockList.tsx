@@ -70,7 +70,7 @@ export const StockList: React.FC<StockListProps> = ({ barcode }) => {
 
   const renderHeader = () =>
     context.user.Role !== "AYUDANTE" && (
-      <div className="my-4">
+      <div className="mb-2">
         <button
           onClick={() => {
             if (
@@ -86,7 +86,7 @@ export const StockList: React.FC<StockListProps> = ({ barcode }) => {
               navigate("/add-product-products");
             }
           }}
-          className="flex items-center bg-white px-4 py-2 rounded shadow hover:bg-gray-50"
+          className="w-full flex items-center bg-white px-4 py-2 rounded-md shadow hover:bg-gray-50"
         >
           <PlusIcon width={25} height={25} color={context.store.Color} />
           <span
@@ -136,7 +136,7 @@ export const StockList: React.FC<StockListProps> = ({ barcode }) => {
             {item.Name}
           </span>
           <button
-            className={`px-4 py-1 border rounded-full ${stockColor}`}
+            className={`px-4 py-1 border rounded-full ${stockColor} md:w-40`}
             onClick={() => handleStockEdit(item)}
             disabled={isHelper}
           >
@@ -150,7 +150,7 @@ export const StockList: React.FC<StockListProps> = ({ barcode }) => {
   return (
     <div>
       {renderHeader()}
-      <div className="overflow-y-auto">
+      <div className="overflow-y-auto pb-20">
         {products.map((item) => renderItem(item))}
       </div>
     </div>

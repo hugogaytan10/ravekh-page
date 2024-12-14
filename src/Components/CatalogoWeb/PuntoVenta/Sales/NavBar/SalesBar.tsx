@@ -82,7 +82,9 @@ export const SalesBar: React.FC<SalesBarProps> = ({
         {/* Cantidad de ventas */}
         <div className="icon-container">
           <button
-            //onClick={() => navigation.navigate("QuantityNextSell")}
+            onClick={() => {
+              context.setShowNavBarBottom(false); // ocultar la barra inferior
+              navigate("/next-quantity-sell")}} // navegar a la pantalla de cantidad a vender por producto
           >
             <span
               className="header-text"

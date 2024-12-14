@@ -61,6 +61,7 @@ export const updateProduct = async (product: Item, token: string) => {
         const data = await response.json();
         return true;
     } catch (e) {
+        console.log(e);
         return false;
     }
 }

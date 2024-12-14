@@ -65,7 +65,7 @@ export const AddProduct: React.FC = () => {
         MinStock: minStock || null,
         OptStock: optStock || null,
       };
-
+      console.log("Product to save:", product);
       await insertProduct(product, context.user?.Token);
 
       context.setStockFlag(!context.stockFlag);

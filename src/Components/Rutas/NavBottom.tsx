@@ -22,7 +22,7 @@ export const NavBottom = () => {
   return (
     <nav className="fixed bottom-0 w-full flex justify-between bg-white  p-2">
       {navItems.map(({ path, label, Icon }) => {
-        const isActive = location.pathname === path; // Verifica si es la pestaña activa
+        const isActive = location.pathname.startsWith(path) || (path === "/main-products-items" && location.pathname.startsWith("/stock")); // Verifica si es la pestaña activa
         const color = isActive ? context.store.Color : "#CCCCCC"; // Cambia el color basado en si está activo
 
         return (

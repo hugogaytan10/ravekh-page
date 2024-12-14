@@ -11,6 +11,7 @@ import { Trash } from "../../../../../assets/POS/Trash";
 import { ThemeLight } from "../../Theme/Theme";
 import { DeleteProductModal } from "./DeleteProductModal";
 import { Category } from "../../Model/Category";
+import { Item } from "../../Model/Item";
 
 export const EditProduct: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -41,22 +42,22 @@ export const EditProduct: React.FC = () => {
       context.setIsShowSplash(true);
       getProduct(parseInt(productId), context.user.Token).then((response) => {
         if (response) {
-          setProductName(response.Name);
-          setPrice(response.Price.toString());
-          setCost(response.CostPerItem.toString());
+          setProductName(response.Name || "");
+          setPrice(response.Price?.toString() || "");
+          setCost(response.CostPerItem?.toString() || "");
           setBarcode(response.Barcode || "");
-          setStock(response.Stock ? response.Stock.toString() : "");
-          setMinStock(response.MinStock || undefined);
-          setOptStock(response.OptStock || undefined);
-          setPromoPrice(response.PromotionPrice || null);
+          setStock(response.Stock?.toString() || "");
+          setMinStock(response.MinStock ?? undefined);
+          setOptStock(response.OptStock ?? undefined);
+          setPromoPrice(response.PromotionPrice ?? null);
           setDescription(response.Description || "");
           setColorSelected(response.Color || context.store.Color || ThemeLight.secondaryColor);
           setImage(response.Image || null);
-          setIsAvailableForSale(response.ForSale);
-          setIsDisplayedInStore(response.ShowInStore);
+          setIsAvailableForSale(response.ForSale ?? true);
+          setIsDisplayedInStore(response.ShowInStore ?? true);
           context.setCategorySelected({
-            Id: response.Category_Id,
-            Name: response.Category_Name,
+            Id: response.Category_Id || 0,
+            Name: response.Category_Name || "",
           } as Category);
         }
         context.setIsShowSplash(false);
@@ -68,22 +69,23 @@ export const EditProduct: React.FC = () => {
     try {
       context.setIsShowSplash(true);
 
-      const product = {
-        Id: parseInt(productId!),
+      const product: Item = {
+        Id: productId ? parseInt(productId) : undefined,
         Name: productName,
         Price: parseFloat(price),
         CostPerItem: parseFloat(cost),
-        Stock: parseFloat(stock) || null,
+        Stock: stock ? parseFloat(stock) : null,
         ForSale: isAvailableForSale,
         ShowInStore: isDisplayedInStore,
         Image: image || "",
-        Barcode: barcode,
+        Barcode: barcode.length > 0 ? barcode : null,
         Description: description,
         Color: colorSelected,
         Business_Id: context.user.Business_Id,
         PromotionPrice: promoPrice || null,
-        Category_Id: context.categorySelected.Id.toString(),
+        Category_Id: context.categorySelected.Id ? context.categorySelected.Id + "" : null,
       };
+      console.log(product);
 
       await updateProduct(product, context.user.Token); // This line is missing in the original code
       context.setStockFlag(!context.stockFlag); // This line is missing in the original code
@@ -100,7 +102,7 @@ export const EditProduct: React.FC = () => {
   const handleDelete = () => {
     deleteProduct(parseInt(productId!), context.user.Token).then(() => {
       context.setStockFlag(!context.stockFlag);
-      navigate("/items");
+      navigate(-1);
     });
   };
 

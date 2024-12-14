@@ -41,15 +41,12 @@ export const MainProducts: React.FC = () => {
 
         {/* Scan and Filter Icons */}
         <div className="flex space-x-4">
+         
           <button
             className="bg-gray-100 p-2 rounded-full flex items-center justify-center w-12 h-12"
-            onClick={() => setIsShow(true)}
-          >
-            <ScanIcon width={40} height={40} />
-          </button>
-          <button
-            className="bg-gray-100 p-2 rounded-full flex items-center justify-center w-12 h-12"
-            onClick={() => navigation("Filter")}
+            onClick={() => {
+              context.setShowNavBarBottom(false);
+              navigation("/products-filter")}}
           >
             <Settings />
           </button>
@@ -76,7 +73,7 @@ export const MainProducts: React.FC = () => {
       </nav>
 
       {/* Dynamic Content */}
-      <div className="flex-grow p-4 ">
+      <div className="flex-grow p-2 ">
         <Outlet />
       </div>
     </div>

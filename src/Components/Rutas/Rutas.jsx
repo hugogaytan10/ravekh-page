@@ -41,6 +41,8 @@ import { StockProducts } from "../CatalogoWeb/PuntoVenta/Products/Stock/StockPro
 import { Scanner } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/Scanner";
 import { SearchScreen } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/SearchScreen";
 import { SearchProductScreen } from "../CatalogoWeb/PuntoVenta/Products/NavBar/SearchProductScreen";
+import { QuantityNextSell } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/QuantityNextSell";
+import { Filter } from "../CatalogoWeb/PuntoVenta/Products/NavBar/Filter";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -418,6 +420,8 @@ export const Rutas = () => {
           <Route path="/scanner-sales" element={<Scanner />} />
           <Route path="/search-product" element={<SearchScreen />} />
           <Route path="/search-product-products" element={<SearchProductScreen />} />
+          <Route path="/next-quantity-sell" element={<QuantityNextSell />} />
+          <Route path="/products-filter" element={<Filter />} />
 
         </Routes>
       </div>
