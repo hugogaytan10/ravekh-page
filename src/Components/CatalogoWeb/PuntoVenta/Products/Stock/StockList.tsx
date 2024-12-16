@@ -64,7 +64,8 @@ export const StockList: React.FC<StockListProps> = ({ barcode }) => {
 
   const handleStockEdit = (product: Product) => {
     if (context.user.Role !== "AYUDANTE") {
-      navigate(`/keyboardProduct/${product.Id}`);
+      context.setShowNavBarBottom(false); // This is a function from the context
+      navigate(`/keyboardProduct/${product.Id}/${product.Stock}`); // navegar a la ruta /keyboardProduct/:productId/:currentStock
     }
   };
 
@@ -128,7 +129,7 @@ export const StockList: React.FC<StockListProps> = ({ barcode }) => {
             className="w-24 h-16 mr-4 flex items-center justify-center rounded"
             style={{ backgroundColor: item.Color }}
           >
-            <span className="text-white font-bold">{item.Name}</span>
+            <span className="text-white font-bold text-center">{item.Name}</span>
           </div>
         )}
         <div className="flex-1 flex justify-between items-center">
@@ -150,7 +151,7 @@ export const StockList: React.FC<StockListProps> = ({ barcode }) => {
   return (
     <div>
       {renderHeader()}
-      <div className="overflow-y-auto pb-20">
+      <div className="overflow-y-auto pb-28">
         {products.map((item) => renderItem(item))}
       </div>
     </div>

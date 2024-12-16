@@ -29,12 +29,12 @@ export const ExpandableModalStock: React.FC = () => {
 
   return (
     <div
-      className={`fixed bottom-0 left-0 w-full bg-white transition-all shadow-md border border-gray-200 ${
+      className={`fixed bottom-16 left-0 w-full bg-white transition-all shadow-md border border-gray-200 ${
         currentIndex === 0 ? "h-16" : "h-48"
       }`}
     >
       <div
-        className="flex justify-between items-center px-4 py-2 cursor-pointer"
+        className="flex justify-between items-center px-4 py-2 cursor-pointer bg-gray-100"
         onClick={() => setCurrentIndex((prev) => (prev === 0 ? 1 : 0))}
       >
         <div>

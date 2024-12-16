@@ -15,7 +15,8 @@ export const Filter: React.FC = () => {
 
   // Aplicar filtros y actualizar el estado global
   const applyFilters = () => {
-    context.setFilterProduct(filters);
+    context.setFilterProduct(filters); // Actualizar filtros en el contexto
+    context.setShowNavBarBottom(true); // Mostrar barra de navegación inferior
     context.setStockFlag(!context.stockFlag); // Desencadenar actualización
     navigate(-1); // Volver a la pantalla anterior
   };
