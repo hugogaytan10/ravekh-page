@@ -157,8 +157,10 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                             height={50}
                             strokeColor={context.store.Color}
                         />,
-                        () =>
+                        () => {
+                            context.setShowNavBarBottom(false);
                             navigation("/report-income/" + selectedPeriod + "/" + user.Business_Id)
+                        }
                     )}
                     {renderCard(
                         "Ganancia",
@@ -183,7 +185,10 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                             strokeColor={context.store.Color}
                         />,
                         () =>
-                            navigation("ReportSales")
+                        {
+                            context.setShowNavBarBottom(false);
+                            navigation("/report-sales/" + selectedPeriod + "/" + user.Business_Id)
+                        }
                     )}
                 </div>
             </div>
@@ -200,14 +205,20 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                             strokeColor={context.store.Color}
                         />,
                         () =>
-                            navigation("ReportCardSales")
+                        {
+                            context.setShowNavBarBottom(false);
+                            navigation("/card-income/" + selectedPeriod + "/" + user.Business_Id)
+                        }
                     )}
                     {renderCard(
                         "Efectivo",
                         reportDetails.cashPercentage,
                         <MoneyIcon width={50} height={50} color={context.store.Color} />,
                         () =>
-                            navigation("ReportCashSales")
+                        {
+                            context.setShowNavBarBottom(false);
+                            navigation("/cash-income/" + selectedPeriod + "/" + user.Business_Id)
+                        }
                     )}
                 </div>
             </div>
