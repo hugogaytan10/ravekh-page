@@ -42,6 +42,9 @@ import { StockProducts } from "../CatalogoWeb/PuntoVenta/Products/Stock/StockPro
 import { Scanner } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/Scanner";
 import { SearchScreen } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/SearchScreen";
 import { SearchProductScreen } from "../CatalogoWeb/PuntoVenta/Products/NavBar/SearchProductScreen";
+import { QuantityNextSell } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/QuantityNextSell";
+import { Filter } from "../CatalogoWeb/PuntoVenta/Products/NavBar/Filter";
+import { KeyboardStock } from "../CatalogoWeb/PuntoVenta/Products/Stock/KeyBoardStock";
 import { MainReports } from "../CatalogoWeb/PuntoVenta/Reports/MainReports";
 import ReportIncome from "../CatalogoWeb/PuntoVenta/Reports/Incomes/ReportIncome";
 import ReportSales from "../CatalogoWeb/PuntoVenta/Reports/Sales/ReportSales";
@@ -429,6 +432,9 @@ export const Rutas = () => {
           <Route path="/scanner-sales" element={<Scanner />} />
           <Route path="/search-product" element={<SearchScreen />} />
           <Route path="/search-product-products" element={<SearchProductScreen />} />
+          <Route path="/next-quantity-sell" element={<QuantityNextSell />} />
+          <Route path="/products-filter" element={<Filter />} />
+          <Route path="/keyboardProduct/:productId/:currentStock" element={<KeyboardStock />} />
           <Route path="/main-reports" element={<MainReports />} />
           <Route path="/report-income/:period/:businessId" element={<ReportIncome />} />
           <Route path="/report-sales/:period/:businessId" element={<ReportSales />} />

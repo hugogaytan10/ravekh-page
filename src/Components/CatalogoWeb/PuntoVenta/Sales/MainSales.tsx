@@ -113,8 +113,11 @@ export const MainSales: React.FC = () => {
           view ? (
             <ProductList products={filteredProducts} />
           ) : (
-            <div>
-              <button className="add-product" onClick={handleAddProduct}>
+            <div className="p-2">
+              <button
+                className="w-full flex flex-col justify-center items-center text-indigo-900 font-semibold bg-blue-100 border-2 border-dashed border-blue-500 rounded-lg  h-[100px] cursor-pointer transition-all duration-200 hover:bg-blue-200"
+                onClick={handleAddProduct}
+              >
                 <PlusIcon width={30} height={30} color="#007bff" />
                 <span>Agregar Producto</span>
               </button>
@@ -128,8 +131,7 @@ export const MainSales: React.FC = () => {
           </button>
         )}
         {/* Footer */}
-        <footer className={loader ? "sales-footer-loader" : "sales-footer"}
-        >
+        <footer className={loader ? "sales-footer-loader" : "sales-footer"}>
           <div className="cart-info">
             <span>Pedidos</span>
           </div>
