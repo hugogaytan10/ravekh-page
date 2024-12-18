@@ -34,6 +34,7 @@ import { CategoriasScreenSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales
 import { AddCategoriesSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddCategories";
 import { MainProducts } from "../CatalogoWeb/PuntoVenta/Products/MainProducts";
 import { AddProduct } from "../CatalogoWeb/PuntoVenta/Products/CRUDProducts/AddProduct";
+import { MainFinances } from "../CatalogoWeb/PuntoVenta/Finance/MainFinances";
 import { SelectCategory } from "../CatalogoWeb/PuntoVenta/Products/Categories/SelectCategory";
 import { EditProduct } from "../CatalogoWeb/PuntoVenta/Products/CRUDProducts/EditProduct";
 import { EditCategory } from "../CatalogoWeb/PuntoVenta/Products/Categories/EditCaterogy";
@@ -233,6 +234,7 @@ export const Rutas = () => {
       "/add-product",
       "/select-caterory-sales",
       "/add-category-sales",
+      "/MainFinances"
       "/main-products",
       "/add-product-products",
       "/select-category-product",
@@ -418,6 +420,7 @@ export const Rutas = () => {
           <Route path="/payment-type" element={<PaymentTypeScreen />} />
           <Route path="/payment" element={<PaymentScreen />} />
           <Route path="/finish" element={<FinishScreen />} />
+          
           <Route path="/add-product" element={<AddProductSales />} />
           <Route path="/select-caterory-sales" element={<CategoriasScreenSales />} />
           <Route path="/add-category-sales" element={<AddCategoriesSales />} />
@@ -426,6 +429,7 @@ export const Rutas = () => {
             <Route path="stock" element={<StockProducts />} />
           </Route>
           <Route path="/add-product-products" element={<AddProduct />} />
+          <Route path="/MainFinances" element={<MainFinances />} />
           <Route path="select-category-product" element={<SelectCategory />} />
           <Route path="/edit-product/:productId" element={<EditProduct />} />
           <Route path="/edit-category" element={<EditCategory />} />
