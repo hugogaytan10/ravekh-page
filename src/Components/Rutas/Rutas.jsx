@@ -34,6 +34,7 @@ import { CategoriasScreenSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales
 import { AddCategoriesSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddCategories";
 import { MainProducts } from "../CatalogoWeb/PuntoVenta/Products/MainProducts";
 import { AddProduct } from "../CatalogoWeb/PuntoVenta/Products/CRUDProducts/AddProduct";
+import { MainFinances } from "../CatalogoWeb/PuntoVenta/Finance/MainFinances";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -193,8 +194,7 @@ export const Rutas = () => {
       "/select-caterory-sales",
       "/add-category-sales",
       "/MainProduct",
-      "/add-product-products"
-
+      "/add-product-products",
     ];
     return !hiddenRoutes.includes(location.pathname);
   }, [location.pathname]);
@@ -211,7 +211,8 @@ export const Rutas = () => {
       "/select-caterory-sales",
       "/add-category-sales",
       "/mainproduct",
-      "/add-product-products"
+      "/add-product-products",
+      "/MainFinances"
     ];
 
     const currentPath = location.pathname.toLowerCase().replace(/\/+$/, ""); // Convertir a minúsculas y quitar "/" al final
@@ -392,11 +393,13 @@ export const Rutas = () => {
           <Route path="/payment-type" element={<PaymentTypeScreen />} />
           <Route path="/payment" element={<PaymentScreen />} />
           <Route path="/finish" element={<FinishScreen />} />
+          
           <Route path="/add-product" element={<AddProductSales />} />
           <Route path="/select-caterory-sales" element={<CategoriasScreenSales />} />
           <Route path="/add-category-sales" element={<AddCategoriesSales />} />
           <Route path="/MainProduct" element={<MainProducts/>} />
           <Route path="/add-product-products" element={<AddProduct />} />
+          <Route path="/MainFinances" element={<MainFinances />} />
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}
