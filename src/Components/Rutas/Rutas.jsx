@@ -234,7 +234,7 @@ export const Rutas = () => {
       "/add-product",
       "/select-caterory-sales",
       "/add-category-sales",
-      "/MainFinances"
+      "/MainFinances",
       "/main-products",
       "/add-product-products",
       "/select-category-product",
