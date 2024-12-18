@@ -61,15 +61,30 @@ export const MainFinances = ({ navigation }) => {
 
       {/* Modal nativo */}
       {showRegisterModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50"
+          style={{
+            height: "100vh",
+            overflow: "hidden", // Bloquea el scroll global
+          }}
+        >
           {/* Contenedor del modal */}
-          <div className="bg-white w-full max-w-md rounded-lg shadow-lg p-6 relative">
+          <div
+            className="bg-white w-full max-w-md rounded-lg shadow-lg p-6 relative"
+            style={{
+              height: "auto", // Altura automática sin desbordamiento
+              maxHeight: "90vh", // Asegura que el modal no exceda el viewport
+              overflow: "hidden", // Sin scroll adicional
+              display: "flex",
+              flexDirection: "column",
+            }}
+          >
             {/* Botón para cerrar */}
             <button
               onClick={() => setShowRegisterModal(false)}
               className="absolute top-2 right-2 text-gray-600 hover:text-gray-800 text-2xl"
             >
-              &#x2715; {/* Ícono de X visible y grande */}
+              &#x2715; {/* Ícono de X */}
             </button>
 
             {/* Título del modal */}
@@ -77,8 +92,8 @@ export const MainFinances = ({ navigation }) => {
               Agregar Registro
             </h2>
 
-            {/* Contenido del modal */}
-            <div className="max-h-[60vh] overflow-y-auto">
+            {/* Contenido sin scroll */}
+            <div className="w-full">
               <Register />
             </div>
 
@@ -100,6 +115,8 @@ export const MainFinances = ({ navigation }) => {
           </div>
         </div>
       )}
+
+
     </div>
   );
 };
