@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useContext, useState, useMemo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -44,6 +45,15 @@ import { SearchProductScreen } from "../CatalogoWeb/PuntoVenta/Products/NavBar/S
 import { QuantityNextSell } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/QuantityNextSell";
 import { Filter } from "../CatalogoWeb/PuntoVenta/Products/NavBar/Filter";
 import { KeyboardStock } from "../CatalogoWeb/PuntoVenta/Products/Stock/KeyBoardStock";
+import { MainReports } from "../CatalogoWeb/PuntoVenta/Reports/MainReports";
+import ReportIncome from "../CatalogoWeb/PuntoVenta/Reports/Incomes/ReportIncome";
+import ReportSales from "../CatalogoWeb/PuntoVenta/Reports/Sales/ReportSales";
+import ReportOrderDetails from "../CatalogoWeb/PuntoVenta/Reports/Sales/ReportOrderDetails";
+import ReportCommandDetails from "../CatalogoWeb/PuntoVenta/Reports/Sales/ReportCommandDetails";
+import CardIncome from "../CatalogoWeb/PuntoVenta/Reports/Sales/CardIncome";
+import CashIncome from "../CatalogoWeb/PuntoVenta/Reports/Sales/CashIncome";
+import BestSelling from "../CatalogoWeb/PuntoVenta/Reports/BestSellingProducts/BestSelling";
+import BestCategorySelling from "../CatalogoWeb/PuntoVenta/Reports/BestSellingProducts/BestCategorySelling";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -207,6 +217,7 @@ export const Rutas = () => {
       "/select-category-product",
       "/edit-product/:productId",
       "/edit-category",
+      "/report-income/:period/:businessId",
     ];
     return !hiddenRoutes.includes(location.pathname);
   }, [location.pathname]);
@@ -424,7 +435,15 @@ export const Rutas = () => {
           <Route path="/next-quantity-sell" element={<QuantityNextSell />} />
           <Route path="/products-filter" element={<Filter />} />
           <Route path="/keyboardProduct/:productId/:currentStock" element={<KeyboardStock />} />
-
+          <Route path="/main-reports" element={<MainReports />} />
+          <Route path="/report-income/:period/:businessId" element={<ReportIncome />} />
+          <Route path="/report-sales/:period/:businessId" element={<ReportSales />} />
+          <Route path="/report-order-details/:orderId" element={<ReportOrderDetails />} />
+          <Route path="/report-command-details/:commandId" element={<ReportCommandDetails />} />
+          <Route path="/card-income/:period/:businessId" element={<CardIncome />} />
+          <Route path="/cash-income/:period/:businessId" element={<CashIncome />} />
+          <Route path="/best-selling/:period/:businessId" element={<BestSelling />} />
+          <Route path="/best-category-selling/:period/:businessId" element={<BestCategorySelling />} />
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}
