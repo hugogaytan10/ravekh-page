@@ -13,16 +13,16 @@ export const NavBottom = () => {
   // Define las rutas con íconos y nombres
   const navItems = [
     { path: "/MainSales", label: "Ventas", Icon: SalesIcon },
-    { path: "/MainProduct", label: "Productos", Icon: ProductIcon },
+    { path: "/main-products/items", label: "Productos", Icon: ProductIcon },
     { path: "/MainFinances", label: "Finanzas", Icon: ReportIcon },
-    { path: "/reports", label: "Reportes", Icon: ReportIcon },
+    { path: "/main-reports", label: "Reportes", Icon: ReportIcon },
     { path: "/more", label: "Más", Icon: MoreIcon },
   ];
 
   return (
     <nav className="fixed bottom-0 w-full flex justify-between bg-white  p-2">
       {navItems.map(({ path, label, Icon }) => {
-        const isActive = location.pathname === path; // Verifica si es la pestaña activa
+        const isActive = location.pathname.startsWith(path) || (path === "/main-products-items" && location.pathname.startsWith("/stock")); // Verifica si es la pestaña activa
         const color = isActive ? context.store.Color : "#CCCCCC"; // Cambia el color basado en si está activo
 
         return (

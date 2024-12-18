@@ -65,13 +65,13 @@ export const AddProduct: React.FC = () => {
         MinStock: minStock || null,
         OptStock: optStock || null,
       };
-
+      console.log("Product to save:", product);
       await insertProduct(product, context.user?.Token);
 
       context.setStockFlag(!context.stockFlag);
       context.setCategorySelected({ Id: 0, Name: "", Color: "" } as Category);
       context.setShowNavBarBottom(true); // Mostrar la barra de navegación inferior
-      navigation("/MainSales");
+      navigation("/main-products/items");
     } catch (error) {
       console.error("Error al guardar el producto:", error);
     } finally {
@@ -94,7 +94,7 @@ export const AddProduct: React.FC = () => {
           backgroundColor: context.store.Color || ThemeLight.btnBackground,
         }}
       >
-        <button onClick={() =>{ navigation("/MainSales"); context.setShowNavBarBottom(true);}} className="mr-auto">
+        <button onClick={() =>{ navigation("/main-products/items"); context.setShowNavBarBottom(true);}} className="mr-auto">
           <ChevronBack />
         </button>
         <h1 className="text-lg font-bold text-center">

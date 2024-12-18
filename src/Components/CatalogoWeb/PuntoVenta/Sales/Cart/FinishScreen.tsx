@@ -41,6 +41,7 @@ export const FinishScreen: React.FC = () => {
 
     // Navegar a la pantalla principal de ventas
     navigate("/Mainsales");
+    context.setShowNavBarBottom(true); // Mostrar la barra de navegación inferior
   };
 
   useEffect(() => {

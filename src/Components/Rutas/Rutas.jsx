@@ -1,3 +1,4 @@
+
 import React, { useRef, useEffect, useContext, useState, useMemo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { BrowserRouter, Route, Routes } from "react-router-dom";
@@ -10,7 +11,6 @@ import menu from "../../assets/menu.svg";
 import "./Rutas.css";
 import { gsap, TimelineMax } from "gsap";
 import { ArticuloValeLaPenaReact } from "../Blog/ArticulosReactNative/ArticuloValeLaPenaReact/ArticuloValeLaPenaReact";
-import { Productos } from "../Producto/Productos";
 import { Muestra } from "../Muestra/Muestra";
 import { Paquetes } from "../Paquetes/Muestra";
 import { MainCatalogo } from "../CatalogoWeb/MainCatalogo";
@@ -35,6 +35,26 @@ import { AddCategoriesSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/Ad
 import { MainProducts } from "../CatalogoWeb/PuntoVenta/Products/MainProducts";
 import { AddProduct } from "../CatalogoWeb/PuntoVenta/Products/CRUDProducts/AddProduct";
 import { MainFinances } from "../CatalogoWeb/PuntoVenta/Finance/MainFinances";
+import { SelectCategory } from "../CatalogoWeb/PuntoVenta/Products/Categories/SelectCategory";
+import { EditProduct } from "../CatalogoWeb/PuntoVenta/Products/CRUDProducts/EditProduct";
+import { EditCategory } from "../CatalogoWeb/PuntoVenta/Products/Categories/EditCaterogy";
+import { List } from "../CatalogoWeb/PuntoVenta/Products/CRUDProducts/List";
+import { StockProducts } from "../CatalogoWeb/PuntoVenta/Products/Stock/StockProducts";
+import { Scanner } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/Scanner";
+import { SearchScreen } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/SearchScreen";
+import { SearchProductScreen } from "../CatalogoWeb/PuntoVenta/Products/NavBar/SearchProductScreen";
+import { QuantityNextSell } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/QuantityNextSell";
+import { Filter } from "../CatalogoWeb/PuntoVenta/Products/NavBar/Filter";
+import { KeyboardStock } from "../CatalogoWeb/PuntoVenta/Products/Stock/KeyBoardStock";
+import { MainReports } from "../CatalogoWeb/PuntoVenta/Reports/MainReports";
+import ReportIncome from "../CatalogoWeb/PuntoVenta/Reports/Incomes/ReportIncome";
+import ReportSales from "../CatalogoWeb/PuntoVenta/Reports/Sales/ReportSales";
+import ReportOrderDetails from "../CatalogoWeb/PuntoVenta/Reports/Sales/ReportOrderDetails";
+import ReportCommandDetails from "../CatalogoWeb/PuntoVenta/Reports/Sales/ReportCommandDetails";
+import CardIncome from "../CatalogoWeb/PuntoVenta/Reports/Sales/CardIncome";
+import CashIncome from "../CatalogoWeb/PuntoVenta/Reports/Sales/CashIncome";
+import BestSelling from "../CatalogoWeb/PuntoVenta/Reports/BestSellingProducts/BestSelling";
+import BestCategorySelling from "../CatalogoWeb/PuntoVenta/Reports/BestSellingProducts/BestCategorySelling";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -193,8 +213,12 @@ export const Rutas = () => {
       "/add-product",
       "/select-caterory-sales",
       "/add-category-sales",
-      "/MainProduct",
+      "/main-products",
       "/add-product-products",
+      "/select-category-product",
+      "/edit-product/:productId",
+      "/edit-category",
+      "/report-income/:period/:businessId",
     ];
     return !hiddenRoutes.includes(location.pathname);
   }, [location.pathname]);
@@ -210,9 +234,12 @@ export const Rutas = () => {
       "/add-product",
       "/select-caterory-sales",
       "/add-category-sales",
-      "/mainproduct",
-      "/add-product-products",
       "/MainFinances"
+      "/main-products",
+      "/add-product-products",
+      "/select-category-product",
+      "/edit-product/:productId",
+      "/edit-category",
     ];
 
     const currentPath = location.pathname.toLowerCase().replace(/\/+$/, ""); // Convertir a minúsculas y quitar "/" al final
@@ -397,9 +424,30 @@ export const Rutas = () => {
           <Route path="/add-product" element={<AddProductSales />} />
           <Route path="/select-caterory-sales" element={<CategoriasScreenSales />} />
           <Route path="/add-category-sales" element={<AddCategoriesSales />} />
-          <Route path="/MainProduct" element={<MainProducts/>} />
+          <Route path="/main-products" element={<MainProducts />}>
+            <Route path="items" element={<List />} />
+            <Route path="stock" element={<StockProducts />} />
+          </Route>
           <Route path="/add-product-products" element={<AddProduct />} />
           <Route path="/MainFinances" element={<MainFinances />} />
+          <Route path="select-category-product" element={<SelectCategory />} />
+          <Route path="/edit-product/:productId" element={<EditProduct />} />
+          <Route path="/edit-category" element={<EditCategory />} />
+          <Route path="/scanner-sales" element={<Scanner />} />
+          <Route path="/search-product" element={<SearchScreen />} />
+          <Route path="/search-product-products" element={<SearchProductScreen />} />
+          <Route path="/next-quantity-sell" element={<QuantityNextSell />} />
+          <Route path="/products-filter" element={<Filter />} />
+          <Route path="/keyboardProduct/:productId/:currentStock" element={<KeyboardStock />} />
+          <Route path="/main-reports" element={<MainReports />} />
+          <Route path="/report-income/:period/:businessId" element={<ReportIncome />} />
+          <Route path="/report-sales/:period/:businessId" element={<ReportSales />} />
+          <Route path="/report-order-details/:orderId" element={<ReportOrderDetails />} />
+          <Route path="/report-command-details/:commandId" element={<ReportCommandDetails />} />
+          <Route path="/card-income/:period/:businessId" element={<CardIncome />} />
+          <Route path="/cash-income/:period/:businessId" element={<CashIncome />} />
+          <Route path="/best-selling/:period/:businessId" element={<BestSelling />} />
+          <Route path="/best-category-selling/:period/:businessId" element={<BestCategorySelling />} />
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}

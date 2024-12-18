@@ -1,6 +1,5 @@
 import React, { useContext, useEffect, useState } from "react";
 import { Item } from "../Model/Item";
-import "./Css/List.css";
 import { AppContext } from "../../Context/AppContext";
 import { CartPos } from "../Model/CarPos";
 
@@ -55,41 +54,57 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
   const renderProduct = (product: Item) => {
     return (
       <div
-        className="product-container-list"
+        className="flex items-center p-2  bg-gray-100 rounded-lg border border-gray-300 hover:bg-gray-200 cursor-pointer transition-all"
         onClick={() => AddItemToCart(product)}
         key={product.Id}
       >
+        {/* Imagen del producto */}
         {product.Image ? (
-          <div className="product-image-list">
-            <img src={product.Image} alt={product.Name} />
+          <div className="w-16 h-16 flex-shrink-0">
+            <img
+              src={product.Image}
+              alt={product.Name}
+              className="w-full h-full object-cover rounded-lg"
+            />
           </div>
         ) : (
           <div
-            className="product-placeholder-list"
+            className="w-16 h-16 flex items-center justify-center bg-gray-300 rounded-lg text-white font-bold"
             style={{ backgroundColor: product.Color }}
           >
-            <p>{product.Name}</p>
+            <p className="text-xs text-center">{product.Name}</p>
           </div>
         )}
-        <div className="product-info-list">
-          <p className="product-name-list">{truncate(product.Name, 14)}</p>
-          <div className="price-container-list">
-            <span className="product-old-price-list">
-              $ {Number(product.PromotionPrice)?.toFixed(2)}
-            </span>
-            <span className="product-price-list">${Number(product.Price)?.toFixed(2)}</span>
-          </div>
+  
+        {/* Nombre del producto */}
+        <div className="flex-1 ml-4">
+          <p className="text-sm font-medium text-gray-800 truncate">
+            {truncate(product.Name, 25)}
+          </p>
+        </div>
+  
+        {/* Precios del producto */}
+        <div className="flex flex-col items-end">
+          <span className="text-xs line-through text-gray-500">
+            ${Number(product.PromotionPrice)?.toFixed(2)}
+          </span>
+          <span className="text-base font-bold text-gray-800">
+            ${Number(product.Price)?.toFixed(2)}
+          </span>
         </div>
       </div>
     );
   };
-
+  
   return (
-    <div className="product-list">
+    <div className="flex flex-col gap-2 sm:grid sm:grid-cols-2 sm:gap-4 mt-4 pb-40">
       {(context.store.Plan === "GRATUITO"
         ? products.slice(0, 10)
         : products
       ).map((product) => renderProduct(product))}
     </div>
   );
+  
+  
+  
 };

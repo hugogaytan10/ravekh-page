@@ -25,7 +25,7 @@ export const ExpandableModalScanner: React.FC<ExpandableModalScannerProps> = ({
     {
       key: '3',
       title: 'Limpiar carrito',
-      onPress: () => context.setCart([]),
+      onPress: () => context.setCartPos([]),
     },
   ];
 

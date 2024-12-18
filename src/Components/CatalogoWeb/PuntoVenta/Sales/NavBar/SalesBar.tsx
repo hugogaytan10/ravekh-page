@@ -6,6 +6,7 @@ import ScanIcon from "../../../../../assets/POS/ScanCircleIcon";
 import ListSharpIcon from "../../../../../assets/POS/ListSharpIcon";
 import MoreIcon from "../../../../../assets/POS/MoreIcon";
 import { AppContext } from "../../../Context/AppContext";
+import { useNavigate } from "react-router-dom";
 
 interface SalesBarProps {
   view: boolean;
@@ -21,6 +22,7 @@ export const SalesBar: React.FC<SalesBarProps> = ({
   view,
 }) => {
   const context = useContext(AppContext);
+  const navigate = useNavigate();
 
   return (
     <div
@@ -32,7 +34,9 @@ export const SalesBar: React.FC<SalesBarProps> = ({
       {/* Icono de búsqueda */}
       <div className="icon-container search-icon">
         <button
-          //onClick={() => navigation.navigate("SearchScreen", { products })}
+          onClick={() =>{
+            context.setShowNavBarBottom(false);
+            navigate("/search-product")}}
         >
           <Search height={35} width={35} fill={context.store.Color || "#fff"} />
         </button>
@@ -42,16 +46,18 @@ export const SalesBar: React.FC<SalesBarProps> = ({
       <div className="icons-right">
         {/* Escáner */}
         <div className="icon-container">
-          <button
-            //onClick={() => navigation.navigate("Scanner", { products })}
-          >
+            <button
+            onClick={() =>{ 
+              context.setShowNavBarBottom(false);
+              navigate("/scanner-sales"); }}
+            >
             <ScanIcon
               width={40}
               height={40}
               stroke={context.store.Color || "#fff"}
               fill={context.store.Color || "#fff"}
             />
-          </button>
+            </button>
         </div>
 
         {/* Vista de lista o más opciones */}
@@ -76,7 +82,9 @@ export const SalesBar: React.FC<SalesBarProps> = ({
         {/* Cantidad de ventas */}
         <div className="icon-container">
           <button
-            //onClick={() => navigation.navigate("QuantityNextSell")}
+            onClick={() => {
+              context.setShowNavBarBottom(false); // ocultar la barra inferior
+              navigate("/next-quantity-sell")}} // navegar a la pantalla de cantidad a vender por producto
           >
             <span
               className="header-text"
