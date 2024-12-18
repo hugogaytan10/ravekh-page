@@ -54,6 +54,13 @@ import CardIncome from "../CatalogoWeb/PuntoVenta/Reports/Sales/CardIncome";
 import CashIncome from "../CatalogoWeb/PuntoVenta/Reports/Sales/CashIncome";
 import BestSelling from "../CatalogoWeb/PuntoVenta/Reports/BestSellingProducts/BestSelling";
 import BestCategorySelling from "../CatalogoWeb/PuntoVenta/Reports/BestSellingProducts/BestCategorySelling";
+import { MainSettings } from "../CatalogoWeb/PuntoVenta/Settings/MainSettings";
+import { BoxCutting } from "../CatalogoWeb/PuntoVenta/Settings/BoxCutting/BoxCutting";
+import { MainStoreOnline } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/MainStoreOnline";
+import { OrdersScreen } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/Orders";
+import { OrderDetailScreen } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/OrderDetails";
+import { UpdateStoreInfo } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/UpdateStoreInfo";
+import { CuttingByEmployee } from "../CatalogoWeb/PuntoVenta/Settings/BoxCutting/CuttingByEmployee";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -444,6 +451,13 @@ export const Rutas = () => {
           <Route path="/cash-income/:period/:businessId" element={<CashIncome />} />
           <Route path="/best-selling/:period/:businessId" element={<BestSelling />} />
           <Route path="/best-category-selling/:period/:businessId" element={<BestCategorySelling />} />
+          <Route path="/more" element={<MainSettings />} />  
+          <Route path="/box-cutting" element={<BoxCutting />} />  
+          <Route path="/cutting-by-employee/:employeeId" element={<CuttingByEmployee />} />  
+          <Route path="/main-store-online" element={<MainStoreOnline />} />  
+          <Route path="/orders" element={<OrdersScreen />} />  
+          <Route path="/order-details/:orderId" element={<OrderDetailScreen />} />  
+          <Route path="/update-store-info" element={<UpdateStoreInfo />} />  
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}
