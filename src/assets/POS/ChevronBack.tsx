@@ -1,10 +1,15 @@
 import React from 'react';
 
-export const ChevronBack: React.FC = () => (
+interface ChevronBackProps {
+  width?: number;
+  height?: number;
+}
+
+export const ChevronBack: React.FC<ChevronBackProps> = ({ width = 35, height = 35 }) => (
   <svg
     xmlns="http://www.w3.org/2000/svg"
-    width="35"
-    height="35"
+    width={width}
+    height={height}
     viewBox="0 0 35 35"
     fill="none"
   >
@@ -17,4 +22,3 @@ export const ChevronBack: React.FC = () => (
     />
   </svg>
 );
-
