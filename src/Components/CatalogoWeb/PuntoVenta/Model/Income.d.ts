@@ -4,5 +4,5 @@ export interface IIncome {
     Name: string;
     Amount: number;
     Date?: Date;
-    MoneyTipe: string;
+    MoneyTipe?: string;
 }
