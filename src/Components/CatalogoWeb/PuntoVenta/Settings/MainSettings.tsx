@@ -83,7 +83,9 @@ export const MainSettings: React.FC = () => {
             {hasAccess(["ADMINISTRADOR"]) && (
               <button
                 className="flex flex-col items-center"
-                onClick={() => navigate("/employees")}
+                onClick={() => {
+                  context.setShowNavBarBottom(false); // Hide the bottom navbar
+                  navigate("/employees")}} // Redirect to the employees screen
               >
                 <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center shadow">
                   <People width={30} height={30} fill={iconColor} />

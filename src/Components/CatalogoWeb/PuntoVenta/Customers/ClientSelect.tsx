@@ -12,7 +12,7 @@ export const ClientSelect: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
-console.log(store)
+
   useEffect(() => {
     async function fetchClients() {
       try {
