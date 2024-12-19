@@ -15,7 +15,7 @@ export const NavBottom = () => {
     { path: "/MainSales", label: "Ventas", Icon: SalesIcon },
     { path: "/main-products/items", label: "Productos", Icon: ProductIcon },
     { path: "/MainFinances", label: "Finanzas", Icon: ReportIcon },
-    { path: "/main-reports", label: "Reportes", Icon: ReportIcon },
+    { path: "/dashboard", label: "Reportes", Icon: ReportIcon },
     { path: "/more", label: "Más", Icon: MoreIcon },
   ];
 
