@@ -55,6 +55,19 @@ import CardIncome from "../CatalogoWeb/PuntoVenta/Reports/Sales/CardIncome";
 import CashIncome from "../CatalogoWeb/PuntoVenta/Reports/Sales/CashIncome";
 import BestSelling from "../CatalogoWeb/PuntoVenta/Reports/BestSellingProducts/BestSelling";
 import BestCategorySelling from "../CatalogoWeb/PuntoVenta/Reports/BestSellingProducts/BestCategorySelling";
+import { MainSettings } from "../CatalogoWeb/PuntoVenta/Settings/MainSettings";
+import { BoxCutting } from "../CatalogoWeb/PuntoVenta/Settings/BoxCutting/BoxCutting";
+import { MainStoreOnline } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/MainStoreOnline";
+import { OrdersScreen } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/Orders";
+import { OrderDetailScreen } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/OrderDetails";
+import { UpdateStoreInfo } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/UpdateStoreInfo";
+import { CuttingByEmployee } from "../CatalogoWeb/PuntoVenta/Settings/BoxCutting/CuttingByEmployee";
+import { ClientSelect } from "../CatalogoWeb/PuntoVenta/Customers/ClientSelect";
+import { Client } from "../CatalogoWeb/PuntoVenta/Customers/Client";
+import { OrdersByCustomer } from "../CatalogoWeb/PuntoVenta/Customers/OrdersByCustomer";
+import { EditClient } from "../CatalogoWeb/PuntoVenta/Customers/EditClient";
+import { Employees } from "../CatalogoWeb/PuntoVenta/Employees/Employees";
+import { NewEmployee } from "../CatalogoWeb/PuntoVenta/Employees/NewEmployee";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -219,8 +232,36 @@ export const Rutas = () => {
       "/edit-product/:productId",
       "/edit-category",
       "/report-income/:period/:businessId",
+      "/report-sales/:period/:businessId",
+      "/report-order-details/:orderId",
+      "/report-command-details/:commandId",
+      "/card-income/:period/:businessId",
+      "/cash-income/:period/:businessId",
+      "/best-selling/:period/:businessId",
+      "/best-category-selling/:period/:businessId",
+      "/more",
+      "/box-cutting",
+      "/cutting-by-employee/:employeeId",
+      "/main-store-online",
+      "/orders",
+      "/order-details/:orderId",
+      "/update-store-info",
+      "/clients",
+      "/orders-by-customer/:customerId/:period",
+      "/edit-customer/:id",
+      "/employees",
+      "/new-employee",
+      "/client-select",
     ];
-    return !hiddenRoutes.includes(location.pathname);
+    const path = location.pathname.toLowerCase(); // Asegúrate de trabajar con minúsculas
+    return !hiddenRoutes.some(route => {
+      const decodedPath = decodeURIComponent(location.pathname); // Decodificar ruta
+      const routeRegex = new RegExp(
+        `^${route.replace(/:\w+/g, "[\\p{L}\\p{N}\\p{M}]+")}$`,
+        "iu"
+      );
+      return routeRegex.test(decodedPath);
+    });
   }, [location.pathname]);
 
   useEffect(() => {
@@ -240,6 +281,34 @@ export const Rutas = () => {
       "/select-category-product",
       "/edit-product/:productId",
       "/edit-category",
+      "/scanner-sales",
+      "/search-product",
+      "/search-product-products",
+      "/next-quantity-sell",
+      "/products-filter",
+      "/keyboardProduct/:productId/:currentStock",
+      "/main-reports",
+      "/report-income/:period/:businessId",
+      "/report-sales/:period/:businessId",
+      "/report-order-details/:orderId",
+      "/report-command-details/:commandId",
+      "/card-income/:period/:businessId",
+      "/cash-income/:period/:businessId",
+      "/best-selling/:period/:businessId",
+      "/best-category-selling/:period/:businessId",
+      "/more",
+      "/box-cutting",
+      "/cutting-by-employee/:employeeId",
+      "/main-store-online",
+      "/orders",
+      "/order-details/:orderId",
+      "/update-store-info",
+      "/clients",
+      "/orders-by-customer/:customerId/:period",
+      "/edit-customer/:id",
+      "/employees",
+      "/new-employee",
+      "/client-select",
     ];
 
     const currentPath = location.pathname.toLowerCase().replace(/\/+$/, ""); // Convertir a minúsculas y quitar "/" al final
@@ -325,7 +394,7 @@ export const Rutas = () => {
           id="menuIconoCatalogo"
         >
           <div
-            className="w-full min-h-16 rounded-b-lg fixed z-50 flex items-center justify-between px-4"
+            className="w-full min-h-16 rounded-b-lg fixed z-40 flex items-center justify-between px-4"
             style={{ backgroundColor: color }}
           >
             {/* Icono del carrito a la izquierda */}
@@ -448,6 +517,20 @@ export const Rutas = () => {
           <Route path="/cash-income/:period/:businessId" element={<CashIncome />} />
           <Route path="/best-selling/:period/:businessId" element={<BestSelling />} />
           <Route path="/best-category-selling/:period/:businessId" element={<BestCategorySelling />} />
+          <Route path="/more" element={<MainSettings />} />  
+          <Route path="/box-cutting" element={<BoxCutting />} />  
+          <Route path="/cutting-by-employee/:employeeId" element={<CuttingByEmployee />} />  
+          <Route path="/main-store-online" element={<MainStoreOnline />} />  
+          <Route path="/orders" element={<OrdersScreen />} />  
+          <Route path="/order-details/:orderId" element={<OrderDetailScreen />} />  
+          <Route path="/update-store-info" element={<UpdateStoreInfo />} />  
+          <Route path="/clients" element={<Client />} />  
+          <Route path="/orders-by-customer/:customerId/:period" element={<OrdersByCustomer />} />  
+          <Route path="/edit-customer/:id" element={<EditClient />} />  
+          <Route path="/employees" element={<Employees />} />  
+          <Route path="/new-employee" element={<NewEmployee />} />  
+          <Route path="/client-select" element={<ClientSelect />} />  
+
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}

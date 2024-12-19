@@ -18,7 +18,7 @@ export const PeriodSelector: React.FC<PeriodSelectorProps> = ({
 
     return (
         <div
-            className="flex items-center justify-around w-full py-2 rounded-b-lg"
+            className="flex items-center justify-around w-full py-2 rounded-b-lg border-none -mt-1"
             style={{ backgroundColor }}
         >
             {periods.map((period) => (
