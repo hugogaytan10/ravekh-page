@@ -1,17 +1,13 @@
-import React, { useContext, useState, useEffect } from 'react';
-import { AppContext } from '../../../Context/AppContext';
-import {ChevronBack} from '../../../../../assets/POS/ChevronBack';
-import {ChevronGo} from '../../../../../assets/POS/ChevronGo';
-import {
-  getExpensesByMonth,
-  getExpensesToday,
-  getIncomeByMonth,
-  getIncomeToday,
-} from '../Petitions';
+import React, { useContext, useState } from "react";
+import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
+import { ChevronGo } from "../../../../../assets/POS/ChevronGo";
+import { AppContext } from "../../../Context/AppContext";
+import { getExpensesByMonth, getExpensesToday, getIncomeByMonth, getIncomeToday } from '../Petitions';
+import { useEffect, useCallback } from "react";
 
 const months = [
-  'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
-  'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
+  "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
+  "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",
 ];
 
 interface MonthNavigatorProps {
@@ -31,7 +27,7 @@ export const MonthNavigator: React.FC<MonthNavigatorProps> = ({
   const [totalExpenseByCoin, setTotalExpenseByCoin] = useState<Record<string, number>>({});
   const context = useContext(AppContext);
 
-  const fetchData = async (month: number, today: boolean) => {
+  const fetchData = useCallback(async (month: number, today: boolean) => {
     try {
       let incomeData, expensesData;
 
@@ -56,15 +52,15 @@ export const MonthNavigator: React.FC<MonthNavigatorProps> = ({
       setTotalIncomeByCoin(groupedIncome || {});
       setTotalExpenseByCoin(groupedExpenses || {});
     } catch (error) {
-      console.error('Error al cargar ingresos o gastos:', error);
+      console.error("Error al cargar ingresos o gastos:", error);
       setTotalIncomeByCoin({});
       setTotalExpenseByCoin({});
     }
-  };
+  }, [context.user.Business_Id, context.user.Token]);
 
   useEffect(() => {
     fetchData(currentMonth, showToday);
-  }, [currentMonth, showToday, context.stockFlag]);
+  }, [currentMonth, showToday, fetchData]);
 
   const goToNextMonth = () => {
     const nextMonth = (currentMonth + 1) % 12;
@@ -79,15 +75,15 @@ export const MonthNavigator: React.FC<MonthNavigatorProps> = ({
   };
 
   const renderTotals = (data: Record<string, number>, label: string, isIncome: boolean) => {
-    const color = isIncome ? 'text-green-500' : 'text-red-500';
+    const color = isIncome ? "text-green-600" : "text-red-600";
 
     return (
       <div className="flex flex-col items-center">
-        <span className={`font-semibold ${color}`}>{label}</span>
+        <span className={`font-medium ${color}`}>{label}</span>
         {Object.entries(data).map(([coin, total]) => (
           <div key={coin} className="flex flex-col items-center">
-            <span className="text-gray-600">{coin || 'Desconocido'}:</span>
-            <span className={`font-bold ${color}`}>${total?.toFixed(2) || '0.00'}</span>
+            <span className="text-gray-600">{coin || "Desconocido"}:</span>
+            <span className={`font-bold ${color}`}>${total?.toFixed(2) || "0.00"}</span>
           </div>
         ))}
       </div>
@@ -95,32 +91,37 @@ export const MonthNavigator: React.FC<MonthNavigatorProps> = ({
   };
 
   return (
-    <div className="bg-white p-4 rounded shadow-md">
-      <div className="flex justify-between items-center mb-4">
+    <div className="p-5 bg-white">
+      {/* Navegador de meses */}
+      <div className="flex justify-between items-center mb-5">
         <button onClick={goToPreviousMonth} className="p-2">
           <ChevronBack height={25} width={25} />
         </button>
-        <span className="text-lg font-semibold">
-          {showToday ? 'Hoy' : months[currentMonth]}
+        <span className="text-lg font-semibold text-gray-800">
+          {showToday ? "Hoy" : months[currentMonth]}
         </span>
         <button onClick={goToNextMonth} className="p-2">
           <ChevronGo height={25} width={25} />
         </button>
       </div>
 
+      {/* Botón para alternar entre "Hoy" y "Este Mes" */}
       {currentMonth === new Date().getMonth() && (
         <button
           onClick={toggleToday}
-          className="py-2 px-4 bg-blue-500 text-white rounded-md mx-auto block"
+          className="self-center my-3 px-4 py-2 bg-blue-600 text-white rounded-lg"
         >
-          {showToday ? 'Ver Este Mes' : 'Ver Hoy'}
+          {showToday ? "Ver Este Mes" : "Ver Hoy"}
         </button>
       )}
 
-      <div className="flex justify-around mt-4">
-        {renderTotals(totalIncomeByCoin, 'Ingresos', true)}
-        {renderTotals(totalExpenseByCoin, 'Gastos', false)}
+      {/* Totales de ingresos y gastos */}
+      <div className="flex justify-around">
+        {renderTotals(totalIncomeByCoin, "Ingresos", true)}
+        {renderTotals(totalExpenseByCoin, "Gastos", false)}
       </div>
     </div>
   );
 };
+
+export default MonthNavigator;
