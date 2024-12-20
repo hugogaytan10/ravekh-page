@@ -2,12 +2,14 @@ import React, { useContext, useState } from "react";
 import MonthNavigator from "./Header/MonthNavigator";
 import TransactionsList from "./RegisterList/TransactionList";
 import { AppContext } from "../../Context/AppContext";
+import { useNavigate } from "react-router-dom";
 
-export const MainFinances: React.FC<{ navigation: any }> = ({ navigation }) => {
+export const MainFinances: React.FC<{ navigation: any }>  = () => {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [showToday, setShowToday] = useState(false);
   const context = useContext(AppContext);
+  const navigation = useNavigate();
 
   const isAssistant = context.user?.Role === "AYUDANTE";
 
@@ -24,7 +26,7 @@ export const MainFinances: React.FC<{ navigation: any }> = ({ navigation }) => {
       >
         <h1 className="text-lg font-semibold">Finanzas</h1>
         <button
-          onClick={() => navigation.navigate("AddRegister")}
+          onClick={() => navigation("/AddRegister")}
           className="flex items-center bg-white text-blue-600 rounded-full px-4 py-2 shadow hover:bg-gray-200 transition mr-8"
         >
           <span className="ml-2 font-semibold">Nuevo</span>

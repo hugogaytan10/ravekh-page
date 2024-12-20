@@ -43,7 +43,7 @@ export const TransactionsList: React.FC<{
       case "general":
         return <MoreIcon width={30} height={30} strokeColor="#4F46E5" />;
       case "nomina":
-        return <People width={30} height={30} fillColor="#4F46E5" />;
+        return <People width={30} height={30} fill="#4F46E5" />;
       case "renta":
         return <HouseIcon width={30} height={30} fillColor="#4F46E5" />;
       case "comida":

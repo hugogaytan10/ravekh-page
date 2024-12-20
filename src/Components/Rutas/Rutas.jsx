@@ -68,6 +68,7 @@ import { OrdersByCustomer } from "../CatalogoWeb/PuntoVenta/Customers/OrdersByCu
 import { EditClient } from "../CatalogoWeb/PuntoVenta/Customers/EditClient";
 import { Employees } from "../CatalogoWeb/PuntoVenta/Employees/Employees";
 import { NewEmployee } from "../CatalogoWeb/PuntoVenta/Employees/NewEmployee";
+import { Register } from "../CatalogoWeb/PuntoVenta/Finance/Register/Register";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -489,7 +490,7 @@ export const Rutas = () => {
           <Route path="/payment-type" element={<PaymentTypeScreen />} />
           <Route path="/payment" element={<PaymentScreen />} />
           <Route path="/finish" element={<FinishScreen />} />
-          
+
           <Route path="/add-product" element={<AddProductSales />} />
           <Route path="/select-caterory-sales" element={<CategoriasScreenSales />} />
           <Route path="/add-category-sales" element={<AddCategoriesSales />} />
@@ -517,20 +518,20 @@ export const Rutas = () => {
           <Route path="/cash-income/:period/:businessId" element={<CashIncome />} />
           <Route path="/best-selling/:period/:businessId" element={<BestSelling />} />
           <Route path="/best-category-selling/:period/:businessId" element={<BestCategorySelling />} />
-          <Route path="/more" element={<MainSettings />} />  
-          <Route path="/box-cutting" element={<BoxCutting />} />  
-          <Route path="/cutting-by-employee/:employeeId" element={<CuttingByEmployee />} />  
-          <Route path="/main-store-online" element={<MainStoreOnline />} />  
-          <Route path="/orders" element={<OrdersScreen />} />  
-          <Route path="/order-details/:orderId" element={<OrderDetailScreen />} />  
-          <Route path="/update-store-info" element={<UpdateStoreInfo />} />  
-          <Route path="/clients" element={<Client />} />  
-          <Route path="/orders-by-customer/:customerId/:period" element={<OrdersByCustomer />} />  
-          <Route path="/edit-customer/:id" element={<EditClient />} />  
-          <Route path="/employees" element={<Employees />} />  
-          <Route path="/new-employee" element={<NewEmployee />} />  
-          <Route path="/client-select" element={<ClientSelect />} />  
-
+          <Route path="/more" element={<MainSettings />} />
+          <Route path="/box-cutting" element={<BoxCutting />} />
+          <Route path="/cutting-by-employee/:employeeId" element={<CuttingByEmployee />} />
+          <Route path="/main-store-online" element={<MainStoreOnline />} />
+          <Route path="/orders" element={<OrdersScreen />} />
+          <Route path="/order-details/:orderId" element={<OrderDetailScreen />} />
+          <Route path="/update-store-info" element={<UpdateStoreInfo />} />
+          <Route path="/clients" element={<Client />} />
+          <Route path="/orders-by-customer/:customerId/:period" element={<OrdersByCustomer />} />
+          <Route path="/edit-customer/:id" element={<EditClient />} />
+          <Route path="/employees" element={<Employees />} />
+          <Route path="/new-employee" element={<NewEmployee />} />
+          <Route path="/client-select" element={<ClientSelect />} />
+          <Route path="/AddRegister" element={<Register />} />
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}
