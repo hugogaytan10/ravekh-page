@@ -68,6 +68,7 @@ import { OrdersByCustomer } from "../CatalogoWeb/PuntoVenta/Customers/OrdersByCu
 import { EditClient } from "../CatalogoWeb/PuntoVenta/Customers/EditClient";
 import { Employees } from "../CatalogoWeb/PuntoVenta/Employees/Employees";
 import { NewEmployee } from "../CatalogoWeb/PuntoVenta/Employees/NewEmployee";
+import { Dashboard } from "../CatalogoWeb/PuntoVenta/Dashboard/Dashboard";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -252,6 +253,7 @@ export const Rutas = () => {
       "/employees",
       "/new-employee",
       "/client-select",
+      "/dashboard",
     ];
     const path = location.pathname.toLowerCase(); // Asegúrate de trabajar con minúsculas
     return !hiddenRoutes.some(route => {
@@ -309,6 +311,7 @@ export const Rutas = () => {
       "/employees",
       "/new-employee",
       "/client-select",
+      "/dashboard",
     ];
 
     const currentPath = location.pathname.toLowerCase().replace(/\/+$/, ""); // Convertir a minúsculas y quitar "/" al final
@@ -530,7 +533,7 @@ export const Rutas = () => {
           <Route path="/employees" element={<Employees />} />  
           <Route path="/new-employee" element={<NewEmployee />} />  
           <Route path="/client-select" element={<ClientSelect />} />  
-
+          <Route path="/dashboard" element={<Dashboard />} />
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}
