@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useContext } from "react";
 import { TrendingDownIcon } from "../../../../assets/POS/TrendingDown";
 import { TrendingUpIcon } from "../../../../assets/POS/TrendingUp";
 import { useNavigate } from "react-router-dom";
+import { AppContext } from "../../Context/AppContext";
 interface StatsCardProps {
   title: string;
   value: string;
@@ -24,10 +25,17 @@ export const StatsCard: React.FC<StatsCardProps> = ({
   const trendColor = trend === "up" ? "text-green-500" : "text-red-500";
   const trendIcon = trend === "up" ? <TrendingUpIcon/> : <TrendingDownIcon/>;
   const navigate = useNavigate();
-
+  const context = useContext(AppContext);
   return (
     <div className="flex justify-between items-center rounded-xl bg-white shadow-md p-6 border border-gray-200"
-    onClick={() => navigation && navigate(navigation)}
+    onClick={() => {
+      if(navigation != ""){
+
+        context.setShowNavBarBottom(false) // Hide Bottom Navbar
+        navigate(navigation) // Navigate to the specified route
+      }
+      
+    }}
     >
       {/* Text Section */}
       <div className="ml-6">

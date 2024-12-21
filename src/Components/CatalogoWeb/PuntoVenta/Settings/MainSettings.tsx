@@ -29,11 +29,12 @@ export const MainSettings: React.FC = () => {
   };
 
   const handleLogout = () => {
-    context.setStore({} as any);
-    context.setUser({} as any);
-    context.setShowNavBar(false);
-    setModalVisible(false);
-    navigate("/login");
+    context.setStore({} as any); // Clear the store data
+    context.setUser({} as any); // Clear the user data
+    context.setShowNavBarBottom(false); // Hide the bottom navbar
+    setModalVisible(false); // Close the modal
+    navigate("/login-punto-venta"); // Redirect to the login screen
+    localStorage.removeItem("user"); // Remove the user data from local storage 
   };
 
   return (

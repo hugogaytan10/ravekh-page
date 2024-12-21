@@ -255,6 +255,21 @@ export const Rutas = () => {
       "/new-employee",
       "/client-select",
       "/dashboard",
+      "/scanner-sales",
+      "/search-product",
+      "/search-product-products",
+      "/next-quantity-sell",
+      "/products-filter",
+      "/keyboardProduct/:productId/:currentStock",
+      "/main-reports",
+      "/report-income/:period/:businessId",
+      "/report-sales/:period/:businessId",
+      "/report-order-details/:orderId",
+      "/report-command-details/:commandId",
+      "/card-income/:period/:businessId",
+      "/main-products/items",
+      "/main-products/stock",
+      "/mainfinances",
     ];
     const path = location.pathname.toLowerCase(); // Asegúrate de trabajar con minúsculas
     return !hiddenRoutes.some(route => {
@@ -313,6 +328,20 @@ export const Rutas = () => {
       "/new-employee",
       "/client-select",
       "/dashboard",
+      "/DiscountScreen",
+      "/payment-type",
+      "/payment",
+      "/finish",
+      "/add-product",
+      "/select-caterory-sales",
+      "/add-category-sales",
+      "/MainFinances",
+      "/main-products",
+      "/add-product-products",
+      "/select-category-product",
+      "/edit-product/:productId",
+      "/main-products/items",
+      "/main-products/stock",
     ];
 
     const currentPath = location.pathname.toLowerCase().replace(/\/+$/, ""); // Convertir a minúsculas y quitar "/" al final
