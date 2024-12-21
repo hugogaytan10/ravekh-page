@@ -1,30 +1,29 @@
 import React, { useContext, useState } from "react";
 import { AppContext } from "../../../Context/AppContext";
-import { CategoryModal } from "./CategoryModal";
-import { insertExpenses, insertIncome } from "../Petitions";
 import MoreIcon from "../../../../../assets/POS/MoreIcon";
 import People from "../../../../../assets/POS/People";
 import HouseIcon from "../../../../../assets/POS/HouseIcon";
-import { Settings } from "../../../../../assets/POS/Settings";
 import FoodIcon from "../../../../../assets/POS/Food";
 import MegaphoneIcon from "../../../../../assets/POS/Megaphone";
 import Archive from "../../../../../assets/POS/Archive";
 import Repeat from "../../../../../assets/POS/Repeat";
 import Car from "../../../../../assets/POS/Car";
 import Euro from "../../../../../assets/POS/Euro";
+import { insertExpenses, insertIncome } from "../Petitions";
+import { useNavigate } from "react-router-dom";
 
 export const Register: React.FC = () => {
   const context = useContext(AppContext);
-  const [quantity, setQuantity] = useState<string>(""); // Input numérico
-  const [isVisible, setIsVisible] = useState<boolean>(false); // Modal para categoría
+  const [quantity, setQuantity] = useState<string>("");
   const [category, setCategory] = useState<string>("1"); // Categoría seleccionada
+  const [isIncome, setIsIncome] = useState<boolean>(false); // Controla si se están viendo ingresos o egresos
   const [isLoading, setIsLoading] = useState<boolean>(false); // Estado de guardado
+  const navigation = useNavigate();
 
   const categoriesExpenses = [
     { id: "1", name: "General", icon: <MoreIcon width={30} height={30} strokeColor={context.store.Color} /> },
-    { id: "2", name: "Nomina", icon: <People width={30} height={30} fillColor={context.store.Color} /> },
+    { id: "2", name: "Nomina", icon: <People width={30} height={30} fill={context.store.Color} /> },
     { id: "3", name: "Renta", icon: <HouseIcon width={30} height={30} fillColor={context.store.Color} /> },
-    { id: "4", name: "Administración", icon: <MoreIcon width={30} height={30} strokeColor={context.store.Color} /> },
     { id: "7", name: "Comida", icon: <FoodIcon width={30} height={30} fillColor={context.store.Color} /> },
     { id: "8", name: "Marketing", icon: <MegaphoneIcon width={30} height={30} fillColor={context.store.Color} /> },
     { id: "9", name: "Papelería", icon: <Archive width={30} height={30} fillColor={context.store.Color} /> },
@@ -34,69 +33,49 @@ export const Register: React.FC = () => {
 
   const categoriesIncome = [
     { id: "30", name: "Venta", icon: <Euro width={30} height={30} fillColor={context.store.Color} /> },
-    { id: "31", name: "Nomina", icon: <People width={30} height={30} fillColor={context.store.Color} /> },
+    { id: "31", name: "Nomina", icon: <People width={30} height={30} fill={context.store.Color} /> },
     { id: "32", name: "Préstamos", icon: <Repeat width={30} height={30} strokeColor={context.store.Color} /> },
     { id: "33", name: "General", icon: <MoreIcon width={30} height={30} strokeColor={context.store.Color} /> },
   ];
 
-  const handlePress = (value: string) => {
-    setQuantity((prev) => {
-      if (value === "BackSpace") {
-        return prev.slice(0, -1); // Borra el último dígito
-      }
-      if (value === "." && (prev === "" || prev.includes("."))) {
-        return prev; // Evita agregar múltiples puntos o iniciar con "."
-      }
-      return prev + value; // Agrega cualquier otro valor
-    });
-  };
+  const categories = isIncome ? categoriesIncome : categoriesExpenses;
 
   const handleSave = async () => {
     if (!quantity) return;
 
     setIsLoading(true);
+    const data = {
+      Business_Id: context.user.Business_Id,
+      Name: categories.find((cat) => cat.id === category)?.name || "Unknown",
+      Amount: parseFloat(quantity),
+    };
 
     try {
-      if (categoriesExpenses.find((item) => item.id === category)) {
-        const expense = {
-          Business_Id: context.user.Business_Id,
-          Name: categoriesExpenses.find((item) => item.id === category)?.name || "",
-          Amount: parseFloat(quantity),
-        };
-
-        const result = await insertExpenses(expense, context.user.Token);
-        if (result) {
-          console.log("Gasto guardado correctamente:", result);
-          context.setStockFlag(!context.stockFlag);
-        } else {
-          console.error("Error al guardar el gasto.");
-        }
-      } else if (categoriesIncome.find((item) => item.id === category)) {
-        const income = {
-          Business_Id: context.user.Business_Id,
-          Name: categoriesIncome.find((item) => item.id === category)?.name || "",
-          Amount: parseFloat(quantity),
-        };
-
-        const result = await insertIncome(income, context.user.Token);
-        if (result) {
-          console.log("Ingreso guardado correctamente:", result);
-          context.setStockFlag(!context.stockFlag);
-        } else {
-          console.error("Error al guardar el ingreso.");
-        }
+      if (isIncome) {
+        await insertIncome(data, context.user.Token);
+      } else {
+        await insertExpenses(data, context.user.Token);
       }
     } catch (error) {
-      console.error("Error en handleSave:", error);
+      console.error("Error al guardar:", error);
     } finally {
       setIsLoading(false);
+      navigation(-1);
     }
   };
 
   return (
-    <div className="h-screen overflow-y-auto flex flex-col items-center justify-center p-4 bg-gray-100 rounded-lg shadow-md">
+    <div className="h-screen flex flex-col items-center p-6 bg-gray-100">
+      {/* Botón Atrás */}
+      <button
+        onClick={() => navigation(-1)}
+        className="self-start mb-4 text-purple-600 font-semibold hover:underline"
+      >
+        Atrás
+      </button>
+
       {/* Monto */}
-      <div className="w-full mb-6">
+      <div className="w-full mb-6 max-w-sm">
         <label className="block text-gray-700 font-medium mb-2">Monto</label>
         <input
           type="text"
@@ -107,63 +86,50 @@ export const Register: React.FC = () => {
         />
       </div>
 
-      {/* Teclado numérico */}
-      <div className="grid grid-cols-3 gap-4 w-full max-w-md mb-6">
-        {["1", "2", "3", "4", "5", "6", "7", "8", "9", ".", "0"].map((value) => (
-          <button
-            key={value}
-            className="bg-purple-600 text-white text-lg font-semibold py-3 rounded-lg shadow-md"
-            onClick={() => handlePress(value)}
-          >
-            {value}
-          </button>
-        ))}
+      {/* Selector de tipo de transacción */}
+      <div className="flex justify-center mb-6">
         <button
-          className="bg-gray-400 text-white text-lg font-semibold py-3 rounded-lg shadow-md"
-          onClick={() => handlePress("BackSpace")}
+          className={`px-4 py-2 mx-2 rounded-lg ${!isIncome ? "bg-purple-600 text-white" : "bg-gray-200 text-gray-600"}`}
+          onClick={() => setIsIncome(false)}
         >
-          Borrar
+          Egresos
+        </button>
+        <button
+          className={`px-4 py-2 mx-2 rounded-lg ${isIncome ? "bg-purple-600 text-white" : "bg-gray-200 text-gray-600"}`}
+          onClick={() => setIsIncome(true)}
+        >
+          Ingresos
         </button>
       </div>
 
-      {/* Categoría */}
-      <button
-        onClick={() => setIsVisible(true)}
-        className="bg-white w-full flex items-center justify-between px-4 py-3 mb-4 rounded-lg shadow-md border"
-      >
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-            {categoriesExpenses.find((item) => item.id === category)?.icon ||
-              categoriesIncome.find((item) => item.id === category)?.icon}
-          </div>
-          <span className="text-lg font-medium text-gray-700">
-            {categoriesExpenses.find((item) => item.id === category)?.name ||
-              categoriesIncome.find((item) => item.id === category)?.name}
-          </span>
+      {/* Selección de Categoría */}
+      <div className="w-full mt-6 max-w-sm p-4 bg-white rounded-lg shadow-md">
+        <h3 className="text-gray-700 font-medium mb-4">Seleccionar Categoría</h3>
+        <div className="grid grid-cols-3 gap-4">
+          {categories.map((cat) => (
+            <button
+              key={cat.id}
+              onClick={() => setCategory(cat.id)}
+              className={`flex flex-col items-center justify-center p-2 rounded-lg shadow-md ${category === cat.id ? "bg-purple-100 border border-purple-600" : "bg-gray-100"}`}
+            >
+              <div>{cat.icon}</div>
+              <span className="mt-2 text-sm text-gray-700">{cat.name}</span>
+            </button>
+          ))}
         </div>
-        <span className="text-purple-600 font-semibold">Editar</span>
-      </button>
+        <p className="text-gray-500 text-sm mt-4">
+          Categoría seleccionada: <span className="font-semibold text-purple-600">{categories.find((cat) => cat.id === category)?.name || "Ninguna"}</span>
+        </p>
+      </div>
 
       {/* Botón de Guardar */}
       <button
         onClick={handleSave}
         disabled={!quantity || isLoading}
-        className={`w-full py-3 text-lg font-semibold text-white rounded-lg ${
-          !quantity || isLoading ? "bg-gray-400" : "bg-purple-600 hover:bg-purple-700"
-        }`}
+        className={`w-full max-w-sm py-3 text-lg font-semibold text-white rounded-lg mt-6 ${!quantity || isLoading ? "bg-gray-400" : "bg-purple-600 hover:bg-purple-700"}`}
       >
         {isLoading ? "Guardando..." : "Guardar"}
       </button>
-
-      {/* Modal de Categoría */}
-      <CategoryModal
-        isVisible={isVisible}
-        setIsVisible={setIsVisible}
-        categories={categoriesExpenses}
-        categoriesIncome={categoriesIncome}
-        category={category}
-        setCategory={setCategory}
-      />
     </div>
   );
 };

@@ -114,6 +114,8 @@ export const insertIncome = async (income: IIncome, token: string) => {
             })
         });
         const data = await response.json();
+        console.log("Ingreso");
+        console.log(data);
         return data;
     }catch(e){
         return false;
@@ -135,6 +137,8 @@ export const insertExpenses = async (expenses: IExpenses, token: string) => {
             })
         });
         const data = await response.json();
+        console.log("Egreso");
+        console.log(data);
         return data;
     }catch(e){
         return false;

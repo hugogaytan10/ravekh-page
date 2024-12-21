@@ -68,6 +68,7 @@ import { OrdersByCustomer } from "../CatalogoWeb/PuntoVenta/Customers/OrdersByCu
 import { EditClient } from "../CatalogoWeb/PuntoVenta/Customers/EditClient";
 import { Employees } from "../CatalogoWeb/PuntoVenta/Employees/Employees";
 import { NewEmployee } from "../CatalogoWeb/PuntoVenta/Employees/NewEmployee";
+import { Register } from "../CatalogoWeb/PuntoVenta/Finance/Register/Register";
 import { Dashboard } from "../CatalogoWeb/PuntoVenta/Dashboard/Dashboard";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
@@ -521,7 +522,7 @@ export const Rutas = () => {
           <Route path="/payment-type" element={<PaymentTypeScreen />} />
           <Route path="/payment" element={<PaymentScreen />} />
           <Route path="/finish" element={<FinishScreen />} />
-          
+
           <Route path="/add-product" element={<AddProductSales />} />
           <Route path="/select-caterory-sales" element={<CategoriasScreenSales />} />
           <Route path="/add-category-sales" element={<AddCategoriesSales />} />
@@ -563,6 +564,7 @@ export const Rutas = () => {
           <Route path="/new-employee" element={<NewEmployee />} />  
           <Route path="/client-select" element={<ClientSelect />} />  
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/AddRegister" element={<Register />} />
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}
