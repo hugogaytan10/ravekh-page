@@ -17,7 +17,7 @@ interface Order {
 
 export const OrdersTable: React.FC<{ businessId: string; token: string }> = ({ businessId, token }) => {
   const [data, setData] = useState<Order[]>([]); // Datos de los pedidos
-  const [range, setRange] = useState<'Día' | 'Mes'>('Mes'); // Selección de rango
+  const [range, setRange] = useState<'Día' | 'Mes'>('Día'); // Selección de rango
   const [sortBy, setSortBy] = useState<keyof Order | null>(null); // Columna para ordenar
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc'); // Dirección de ordenamiento
 

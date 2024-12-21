@@ -89,7 +89,7 @@ export const AuthPage: React.FC = () => {
         /*console.log("data inicio: ", dataSignUp);
         console.log("setUser: ", context.user);*/
         navigate("/");
-      } 
+      }
     }
   };
 
@@ -98,19 +98,16 @@ export const AuthPage: React.FC = () => {
     const email = e.target[0].value;
     const password = e.target[1].value;
     const dataLogin = await loginToServer(email, password);
-
-    if (dataLogin) {
-      //si todo fue cvalido guardar el correo y contraseña en el localstorage
+    if (dataLogin.message === "Ocurrió un error al iniciar sesión.") {
+      setErrorUsuario("Revise sus datos");
+      setErrorPassword("Revise sus datos");
+    } else {
       //como un objeto user
       localStorage.setItem("user", JSON.stringify({ email, password }));
       context.setUser(dataLogin);
-      //redireccionar a la pagina dependiendo el tipo de usuario
-      //navegar a la pagina principal
       context.setShowNavBarBottom(true);
       navigate("/MainSales");
-    }else {
-      setErrorUsuario("Revise sus datos");
-      setErrorPassword("Revise sus datos");
+    
     }
   };
   /*
@@ -146,14 +143,12 @@ export const AuthPage: React.FC = () => {
     if (user) {
       const { email, password } = JSON.parse(user);
       loginToServer(email, password).then((data) => {
-        if (data) {
+        if (data.message) {
+          localStorage.removeItem("user");
+        } else {
           context.setUser(data);
           context.setShowNavBarBottom(true);
           navigate("/MainSales");
-        }else{
-          localStorage.removeItem("user");
-          console.log("No se pudo iniciar sesion");
-
         }
       });
     }
@@ -174,17 +169,15 @@ export const AuthPage: React.FC = () => {
             }}
           >
             <h1>Crear Cuenta</h1>
-            {
-              /*
+            {/*
                <div className="social-container">
                 <GoogleLogin onSuccess={responseMessage} />{" "}
               </div>
-              */
-            }
-           
+              */}
+
             <span>Usa tu correo para registrarte</span>
             <input type="text" placeholder="Nombre" className="input-login" />
-            <input type="email" placeholder="Correo" className="input-login"/>
+            <input type="email" placeholder="Correo" className="input-login" />
             <input
               type="password"
               placeholder="Contraseña"
@@ -213,27 +206,38 @@ export const AuthPage: React.FC = () => {
             }}
           >
             <h1>Iniciar Sesión</h1>
-            {
-              /*
+            {/*
                <div className="social-container">
                 <GoogleLogin onSuccess={responseMessage} />
               </div>
-              */
-            }
-           
+              */}
+
             <span>Usa tu cuenta</span>
-            <input type="email" placeholder="Correo" className="input-login" onChange={(e)=>{setErrorUsuario('')}}/>
+            <input
+              type="email"
+              placeholder="Correo"
+              className="input-login"
+              onChange={(e) => {
+                setErrorUsuario("");
+              }}
+            />
             {errorUsuario != "" && (
-              <span className="text-red-500 text-xs self-start">{errorUsuario}</span>
+              <span className="text-red-500 text-xs self-start">
+                {errorUsuario}
+              </span>
             )}
             <input
               type="password"
               placeholder="Contraseña"
               className="input-login"
-              onChange={(e)=>{setErrorPassword('')}}
+              onChange={(e) => {
+                setErrorPassword("");
+              }}
             />
             {errorPassword != "" && (
-              <span className="text-red-500 text-xs self-start">{errorPassword}</span>
+              <span className="text-red-500 text-xs self-start">
+                {errorPassword}
+              </span>
             )}
             <a href="#" className="self-end text-xs mt-2 mb-2">
               Olvidaste tu contraseña?
