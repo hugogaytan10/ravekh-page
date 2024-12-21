@@ -48,3 +48,6 @@ export const getDetailsToday = (businessId: string, token: string) => {
 export const getDetailsThisMonth = (businessId: string, token: string) => {
   return fetchData(`report2/details-month/${businessId}`, token);
 };
+export const getNewCustomers = (businessId: string, token: string) => {
+  return fetchData(`report2/customers-added-today/${businessId}`, token);
+};

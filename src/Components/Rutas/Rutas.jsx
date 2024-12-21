@@ -68,6 +68,7 @@ import { OrdersByCustomer } from "../CatalogoWeb/PuntoVenta/Customers/OrdersByCu
 import { EditClient } from "../CatalogoWeb/PuntoVenta/Customers/EditClient";
 import { Employees } from "../CatalogoWeb/PuntoVenta/Employees/Employees";
 import { NewEmployee } from "../CatalogoWeb/PuntoVenta/Employees/NewEmployee";
+import { Register } from "../CatalogoWeb/PuntoVenta/Finance/Register/Register";
 import { Dashboard } from "../CatalogoWeb/PuntoVenta/Dashboard/Dashboard";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
@@ -254,6 +255,21 @@ export const Rutas = () => {
       "/new-employee",
       "/client-select",
       "/dashboard",
+      "/scanner-sales",
+      "/search-product",
+      "/search-product-products",
+      "/next-quantity-sell",
+      "/products-filter",
+      "/keyboardProduct/:productId/:currentStock",
+      "/main-reports",
+      "/report-income/:period/:businessId",
+      "/report-sales/:period/:businessId",
+      "/report-order-details/:orderId",
+      "/report-command-details/:commandId",
+      "/card-income/:period/:businessId",
+      "/main-products/items",
+      "/main-products/stock",
+      "/mainfinances",
     ];
     const path = location.pathname.toLowerCase(); // Asegúrate de trabajar con minúsculas
     return !hiddenRoutes.some(route => {
@@ -312,6 +328,20 @@ export const Rutas = () => {
       "/new-employee",
       "/client-select",
       "/dashboard",
+      "/DiscountScreen",
+      "/payment-type",
+      "/payment",
+      "/finish",
+      "/add-product",
+      "/select-caterory-sales",
+      "/add-category-sales",
+      "/MainFinances",
+      "/main-products",
+      "/add-product-products",
+      "/select-category-product",
+      "/edit-product/:productId",
+      "/main-products/items",
+      "/main-products/stock",
     ];
 
     const currentPath = location.pathname.toLowerCase().replace(/\/+$/, ""); // Convertir a minúsculas y quitar "/" al final
@@ -492,7 +522,7 @@ export const Rutas = () => {
           <Route path="/payment-type" element={<PaymentTypeScreen />} />
           <Route path="/payment" element={<PaymentScreen />} />
           <Route path="/finish" element={<FinishScreen />} />
-          
+
           <Route path="/add-product" element={<AddProductSales />} />
           <Route path="/select-caterory-sales" element={<CategoriasScreenSales />} />
           <Route path="/add-category-sales" element={<AddCategoriesSales />} />
@@ -534,6 +564,7 @@ export const Rutas = () => {
           <Route path="/new-employee" element={<NewEmployee />} />  
           <Route path="/client-select" element={<ClientSelect />} />  
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/AddRegister" element={<Register />} />
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}
