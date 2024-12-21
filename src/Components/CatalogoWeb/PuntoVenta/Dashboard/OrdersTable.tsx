@@ -15,7 +15,7 @@ interface Order {
   products: Product[];
 }
 
-export const OrdersTable: React.FC<{ businessId: string; token: string }> = ({ businessId, token }) => {
+const OrdersTable: React.FC<{ businessId: string; token: string }> = ({ businessId, token }) => {
   const [data, setData] = useState<Order[]>([]); // Datos de los pedidos
   const [range, setRange] = useState<'Día' | 'Mes'>('Día'); // Selección de rango
   const [sortBy, setSortBy] = useState<keyof Order | null>(null); // Columna para ordenar
@@ -84,7 +84,7 @@ export const OrdersTable: React.FC<{ businessId: string; token: string }> = ({ b
   return (
     <div className="bg-white rounded-lg shadow-md p-6 mb-20">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-medium text-gray-800">Reporte Pedidos</h3>
+        <h3 className="text-lg font-medium text-gray-800">Reporte ventas</h3>
         {/* Selector de rango */}
         <select
           value={range}
@@ -96,81 +96,84 @@ export const OrdersTable: React.FC<{ businessId: string; token: string }> = ({ b
         </select>
       </div>
 
-      <table className="min-w-full border-collapse border border-gray-200">
-        <thead>
-          <tr className="bg-gray-100">
-            <th
-              onClick={() => handleSort('id')}
-              className="border border-gray-200 px-4 py-2 text-left text-sm font-semibold text-gray-600 cursor-pointer"
-            >
-              Nombre del Producto
-            </th>
-            <th
-              onClick={() => handleSort('date')}
-              className="border border-gray-200 px-4 py-2 text-left text-sm font-semibold text-gray-600 cursor-pointer"
-            >
-              Fecha de Encargo {sortBy === 'date' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
-            </th>
-            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-semibold text-gray-600">
-              Cantidad
-            </th>
-            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-semibold text-gray-600">
-              Monto
-            </th>
-            <th className="border border-gray-200 px-4 py-2 text-left text-sm font-semibold text-gray-600">
-              Estatus
-            </th>
+      <div className="overflow-x-auto">
+        <table className="min-w-full">
+          <thead>
+        <tr className="bg-gray-100">
+          <th
+            onClick={() => handleSort('id')}
+            className="border border-gray-200 px-4 py-2 text-left text-sm font-semibold text-gray-600 cursor-pointer"
+          >
+            Nombre del Producto
+          </th>
+          <th
+            onClick={() => handleSort('date')}
+            className="border border-gray-200 px-4 py-2 text-left text-sm font-semibold text-gray-600 cursor-pointer"
+          >
+            Fecha de Encargo {sortBy === 'date' ? (sortDirection === 'asc' ? '↑' : '↓') : ''}
+          </th>
+          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-semibold text-gray-600">
+            Cantidad
+          </th>
+          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-semibold text-gray-600">
+            Monto
+          </th>
+          <th className="border border-gray-200 px-4 py-2 text-left text-sm font-semibold text-gray-600">
+            Estatus
+          </th>
+        </tr>
+          </thead>
+          <tbody>
+        {sortedData.length === 0 ? (
+          <tr>
+            <td colSpan={6} className="text-center text-gray-500 py-4">
+          No hay datos disponibles
+            </td>
           </tr>
-        </thead>
-        <tbody>
-          {sortedData.length === 0 ? (
-            <tr>
-              <td colSpan={6} className="text-center text-gray-500 py-4">
-                No hay datos disponibles
-              </td>
-            </tr>
-          ) : (
-            sortedData.map((order) =>
-              order.products.map((product, index) => (
-                <tr key={`${order.id}-${index}`} className="hover:bg-gray-50">
-                  <td className="border border-gray-200 px-4 py-2 flex items-center space-x-4">
-                    {product.image ? (
-                      <div className="flex items-center space-x-2">
-                        <img
-                          src={product.image}
-                          alt={product.name}
-                          className="h-10 w-10 rounded-full object-cover"
-                        />
-                        <span className="text-sm font-medium text-gray-800">{product.name}</span>
-                      </div>
-                    ) : (
-                      <span className="text-sm font-medium text-gray-800">{product.name}</span>
-                    )}
-                  </td>
-                  <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
-                    {new Date(order.date).toLocaleString()}
-                  </td>
-                  <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
-                    {product.quantity}
-                  </td>
-                  <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
-                    ${product.amount}
-                  </td>
-                  <td className="border border-gray-200 px-4 py-2 text-sm">
-                    <span
-                      className={`px-3 py-1 rounded-full text-white ${
-                        product.quantity > 1 ? 'bg-green-500' : 'bg-yellow-500'
-                      }`}
-                    >
-                      {product.quantity > 1 ? 'Entregado' : 'Pendiente'}
-                    </span>
-                  </td>
-                </tr>
-              ))
-            )
-          )}
-        </tbody>
-      </table>
+        ) : (
+          sortedData.map((order) =>
+            order.products.map((product, index) => (
+          <tr key={`${order.id}-${index}`} className="hover:bg-gray-50">
+            <td className="border border-gray-200 px-4 py-2 flex items-center space-x-4">
+              {product.image ? (
+            <div className="flex items-center space-x-2">
+              <img
+                src={product.image}
+                alt={product.name}
+                className="h-10 w-10 rounded-full object-cover"
+              />
+              <span className="text-sm font-medium text-gray-800">{product.name}</span>
+            </div>
+              ) : (
+            <span className="text-sm font-medium text-gray-800">{product.name}</span>
+              )}
+            </td>
+            <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
+              {new Date(order.date).toLocaleString()}
+            </td>
+            <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
+              {product.quantity}
+            </td>
+            <td className="border border-gray-200 px-4 py-2 text-sm text-gray-600">
+              ${product.amount}
+            </td>
+            <td className="border border-gray-200 px-4 py-2 text-sm">
+              <span
+            className={`px-3 py-1 rounded-full text-white ${
+              product.quantity > 1 ? 'bg-green-500' : 'bg-yellow-500'
+            }`}
+              >
+            {product.quantity > 1 ? 'Entregado' : 'Pendiente'}
+              </span>
+            </td>
+          </tr>
+            ))
+          )
+        )}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 };
+export default OrdersTable;
