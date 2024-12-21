@@ -10,7 +10,7 @@ interface Product {
   status: 'Entregado' | 'Pendiente';
 }
 
-export const Table: React.FC<{ businessId: string; token: string }> = ({ businessId, token }) => {
+const Table: React.FC<{ businessId: string; token: string }> = ({ businessId, token }) => {
   const [data, setData] = useState<Product[]>([]); // Datos de los pedidos
   const [range, setRange] = useState<'Día' | 'Mes'>('Día'); // Selección de rango
 
@@ -114,3 +114,4 @@ export const Table: React.FC<{ businessId: string; token: string }> = ({ busines
     </div>
   );
 };
+export default Table;

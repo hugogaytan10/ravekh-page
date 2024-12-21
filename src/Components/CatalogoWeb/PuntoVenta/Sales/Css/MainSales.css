@@ -16,10 +16,11 @@
    
   }
   
-.sales-container {
-  min-height: 100vh;
-  padding: 0px;
-}
+  .sales-container {
+    flex-grow: 1; /* Permite que esta sección se expanda */
+    overflow-y: auto;
+    padding-bottom: 30px;
+  }
  
 .sales-footer-loader {
   display: flex;
@@ -34,16 +35,18 @@
   align-items: center;
 }
 .sales-footer {
-    display: flex;
-    justify-content: space-between;
-    background-color: white;
-    position: sticky;
-    bottom: 120px;
-    height: 80px;
-    padding: 5px;
-    border-top: 0.7px solid #ccc;
-    align-items: center;
+  display: flex;
+  justify-content: space-between;
+  background-color: white;
+  position: fixed; /* Cambié sticky por absolute */
+  bottom: 68px; /* Para que siempre esté al fondo */
+  height: 80px;
+  width: 100%;
+  padding: 5px;
+  border-top: 0.7px solid #ccc;
+  align-items: center;
 }
+
   
 .order-button {
     color: white;

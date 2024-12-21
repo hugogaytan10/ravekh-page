@@ -37,7 +37,7 @@ const months = [
   { name: 'Diciembre', value: '12' },
 ];
 
-export const TopCategoriesChart: React.FC<{ businessId: string; token: string }> = ({ businessId, token }) => {
+ const TopCategoriesChart: React.FC<{ businessId: string; token: string }> = ({ businessId, token }) => {
   const currentMonth = new Date().toISOString().slice(5, 7);
   const [selectedMonth, setSelectedMonth] = useState(currentMonth);
   const [chartData, setChartData] = useState<any>({
@@ -135,3 +135,4 @@ export const TopCategoriesChart: React.FC<{ businessId: string; token: string }>
     </div>
   );
 };
+export default TopCategoriesChart;
