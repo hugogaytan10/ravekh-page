@@ -5,6 +5,7 @@ import { ThemeLight } from "../../Theme/Theme";
 import { ChevronGo } from "../../../../../assets/POS/ChevronGo";
 import PlusIcon from "../../../../../assets/POS/PlusIcon";
 import { useNavigate } from "react-router-dom";
+
 interface Product {
   Id?: number;
   Business_Id?: number;
@@ -33,9 +34,11 @@ type ListProps = {
 
 export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
   const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true); // Estado de carga
   const [showModalPremium, setShowModalPremium] = useState(false);
   const context = useContext(AppContext);
   const navigation = useNavigate();
+
   const truncate = (text: string, length: number) =>
     text.length > length ? `${text.substring(0, length)}...` : text;
 
@@ -48,8 +51,7 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
   }, [barCode]);
 
   useEffect(() => {
-    context.setIsShowSplash(true);
-
+    setLoading(true); // Activar el estado de carga
     getProducts(context.user.Token, context.user.Business_Id + "").then(
       (response) => {
         if (response) {
@@ -62,48 +64,27 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
               Name: truncate(product.Name, 16),
             }))
           );
-          filterProducts(response);
         }
-        context.setIsShowSplash(false);
+        setLoading(false); // Desactivar el estado de carga cuando los datos estén listos
       }
     );
   }, [context.stockFlag]);
 
-  const filterProducts = (products: Product[]) => {
-    let filteredProducts = [...products];
-    if (context.filterProduct.NoMaganeStock) {
-      filteredProducts = filteredProducts.filter(
-        (product: Product) => product.Stock === null
-      );
-    }
-    if (context.filterProduct.noStock) {
-      filteredProducts = filteredProducts.filter(
-        (product: Product) => product.Stock === 0
-      );
-    }
-    if (context.filterProduct.MinStock) {
-      filteredProducts = filteredProducts.filter(
-        (product: Product) => product.Stock! < product.MinStock!
-      );
-    }
-    if (context.filterProduct.OptStock) {
-      filteredProducts = filteredProducts.filter(
-        (product: Product) => product.Stock! < product.OptStock!
-      );
-    }
-    if (context.filterProduct.orderAsc) {
-      filteredProducts = filteredProducts.sort((a: Product, b: Product) =>
-        a.Name.localeCompare(b.Name)
-      );
-    }
-    if (context.filterProduct.orderDesc) {
-      filteredProducts = filteredProducts.sort((a: Product, b: Product) =>
-        b.Name.localeCompare(a.Name)
-      );
-    }
-    setProducts(filteredProducts);
+  const renderSkeleton = () => {
+    return (
+      <div className="p-2 rounded-md mb-20">
+        <div className="bg-gray-200 animate-pulse h-10 w-full mb-4"></div>
+        <div className="flex flex-wrap gap-4">
+          {[...Array(8)].map((_, index) => (
+            <div
+              key={index}
+              className="bg-gray-200 animate-pulse h-24 w-full md:w-2/5 lg:w-3/12 rounded-md"
+            ></div>
+          ))}
+        </div>
+      </div>
+    );
   };
-
 
   const renderHeader = () => {
     const isAdminOrManager =
@@ -120,8 +101,8 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
       ) {
         setShowModalPremium(true);
       } else {
-        context.setShowNavBarBottom(false); // Hide the bottom navbar
-        navigation("/add-product-products"); // Redirect to the add product screen
+        context.setShowNavBarBottom(false); // Ocultar la barra de navegación
+        navigation("/add-product-products");
       }
     };
 
@@ -132,8 +113,8 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
         <button
           className="flex justify-between items-center w-full py-2 border-b border-gray-300"
           onClick={() => {
-            context.setShowNavBarBottom(false); // Hide the bottom navbar
-            navigation("/select-category-product"); // Redirect to the select category screen
+            context.setShowNavBarBottom(false);
+            navigation("/select-category-product");
           }}
         >
           <span className="text-lg font-medium text-gray-700">Categorías</span>
@@ -145,7 +126,7 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
             onClick={handleAddProduct}
           >
             <PlusIcon width={25} height={25} color={context.store.Color} />
-            <span className="ml-3 text-lg font-medium text-purple-500 ">
+            <span className="ml-3 text-lg font-medium text-purple-500">
               Crear nuevo producto
             </span>
           </button>
@@ -162,7 +143,7 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
         className="flex items-center w-full bg-white p-2 border-b border-gray-300 rounded-md h-24"
         onClick={() => {
           if (!isHelper) {
-            context.setShowNavBarBottom(false); // Hide the bottom navbar
+            context.setShowNavBarBottom(false);
             navigation(`/edit-product/${item.Id}`);
           }
         }}
@@ -212,10 +193,10 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
     );
   };
 
-  return (
-    <div className="p-2 rounded-md mb-20 ">
+  return loading ? renderSkeleton() : (
+    <div className="p-2 rounded-md mb-20">
       {renderHeader()}
-      <div className="space-y-1 flex flex-wrap justify-around gap-1 ">
+      <div className="space-y-1 flex flex-wrap justify-around gap-1">
         {products.map((product) => (
           <div key={product.Id} className="w-full md:w-2/5 lg:w-3/12">
             {renderItem(product)}
