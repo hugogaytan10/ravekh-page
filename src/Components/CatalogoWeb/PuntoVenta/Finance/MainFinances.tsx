@@ -17,6 +17,11 @@ export const MainFinances: React.FC<{ navigation: any }> = () => {
     setShowToday(!showToday);
   };
 
+  const handleMonthChange = (newMonth: number) => {
+    setCurrentMonth(newMonth);
+    setShowToday(false); // Cambia a "Ver Hoy" al cambiar el mes
+  };
+
   useEffect(() => {
     context.setShowNavBarBottom(true);
   }, []);
@@ -48,10 +53,10 @@ export const MainFinances: React.FC<{ navigation: any }> = () => {
         </div>
       ) : (
         <>
-          {/* Nave</div>gador de meses */}
+          {/* Navegador de meses */}
           <MonthNavigator
             currentMonth={currentMonth}
-            onMonthChange={setCurrentMonth}
+            onMonthChange={handleMonthChange} // Usa el manejador personalizado
             showToday={showToday}
             toggleToday={toggleToday}
           />
