@@ -1,199 +1,104 @@
-import React, { useState, useContext, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
-  TextInput,
-  Pressable,
-  Animated,
-  Platform,
-} from 'react-native';
-import { ThemeLight } from '../../Theme/Theme';
-import { AppContext } from '../../Context/AppContext';
-import { ChevronBack } from '../../../assets/SVG/ChevronBack';
+import React, { useState, useContext, useEffect, useRef } from "react";
+import { AppContext } from "../../../Context/AppContext";
+import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
+import { ThemeLight } from "../../Theme/Theme";
 
-export const PhoneStore = ({ navigation }: any) => {
+export const PhoneStore: React.FC<{ navigation: any }> = ({ navigation }) => {
   const context = useContext(AppContext);
-  const [phoneNumber, setPhoneNumber] = useState(context.store.PhoneNumber || '');
+  const [phoneNumber, setPhoneNumber] = useState(context.store.PhoneNumber || "");
   const [phoneFocus, setPhoneFocus] = useState(false);
 
   // Animaciones
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(50)).current;
+  const fadeAnim = useRef(0);
+  const slideAnim = useRef(0);
 
   const isValidPhoneNumber = (phone: string) => phone.length >= 10;
 
   useEffect(() => {
-    Animated.parallel([
-      Animated.timing(fadeAnim, {
-        toValue: 1,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-      Animated.timing(slideAnim, {
-        toValue: 0,
-        duration: 800,
-        useNativeDriver: true,
-      }),
-    ]).start();
-  }, [fadeAnim, slideAnim]);
+    fadeAnim.current = 1;
+    slideAnim.current = 0;
+  }, []);
 
   return (
-    <Animated.View
-      style={[
-        styles.container,
-        { opacity: fadeAnim, transform: [{ translateY: slideAnim }] },
-      ]}
+    <div
+      className="flex flex-col min-h-screen bg-white transition-all"
+      style={{
+        opacity: fadeAnim.current,
+        transform: `translateY(${slideAnim.current}px)`,
+      }}
     >
       {/* Header */}
-      <View style={styles.headerContainer}>
-        <Pressable style={styles.backButton} onPress={() => navigation.goBack()}>
-          <ChevronBack strokeColor="#000" />
-        </Pressable>
-        <Text style={styles.headerText}>Número de teléfono</Text>
-      </View>
+      <header className="flex items-center py-4 px-6 bg-white shadow-md">
+        <button className="p-2 mr-4" onClick={() => navigation.goBack()}>
+          <ChevronBack/>
+        </button>
+        <h1 className="text-lg font-bold text-gray-800">Número de teléfono</h1>
+      </header>
 
       {/* Progreso */}
-      <View style={styles.progressContainer}>
-        <Text style={styles.progressText}>Ingresa tu número 2/4</Text>
-        <View style={styles.progressBar}>
-          <View style={styles.progressStepInactive} />
-          <View style={styles.progressStepActive} />
-          <View style={styles.progressStepInactive} />
-          <View style={styles.progressStepInactive} />
-        </View>
-      </View>
+      <section className="flex flex-col items-center mt-6">
+        <p className="text-gray-700 font-semibold mb-2">Ingresa tu número 2/4</p>
+        <div className="flex space-x-2">
+          <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
+          <div
+            className="w-10 h-1 rounded-full"
+            style={{ backgroundColor: ThemeLight.secondaryColor }}
+          ></div>
+          <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
+          <div className="w-10 h-1 bg-gray-300 rounded-full"></div>
+        </div>
+      </section>
 
       {/* Input */}
-      <View style={styles.inputContainer}>
-        <Text style={styles.label}>Teléfono</Text>
-        <TextInput
-          style={[
-            styles.input,
-          ]}
+      <div className="w-4/5 mx-auto mt-8">
+        <label
+          htmlFor="phoneInput"
+          className={`block text-sm font-semibold mb-1 ${
+            phoneFocus ? "text-primary" : "text-gray-500"
+          }`}
+          style={{
+            color: phoneFocus ? ThemeLight.secondaryColor : ThemeLight.borderColor,
+          }}
+        >
+          Teléfono
+        </label>
+        <input
+          id="phoneInput"
+          className="w-full h-12 border rounded-lg px-4 text-gray-800 text-sm"
+          style={{
+            borderColor: phoneFocus ? ThemeLight.secondaryColor : ThemeLight.borderColor,
+          }}
           placeholder="Ingresa el número"
-          placeholderTextColor="#aaa"
+          type="tel"
           value={phoneNumber}
-          keyboardType="phone-pad"
-          onChangeText={setPhoneNumber}
           onFocus={() => setPhoneFocus(true)}
           onBlur={() => setPhoneFocus(false)}
+          onChange={(e) => setPhoneNumber(e.target.value)}
         />
-      </View>
+      </div>
 
       {/* Botón Continuar */}
-      <Pressable
-        style={[
-          styles.btnContinue,
-          isValidPhoneNumber(phoneNumber) ? styles.btnActive : styles.btnDisabled,
-        ]}
-        onPress={() => {
+      <button
+        className={`w-4/5 h-12 rounded-lg mt-6 mx-auto text-lg font-bold text-white ${
+          isValidPhoneNumber(phoneNumber)
+            ? "bg-primary"
+            : "bg-gray-300 cursor-not-allowed"
+        }`}
+        style={{
+          backgroundColor: isValidPhoneNumber(phoneNumber)
+            ? ThemeLight.secondaryColor
+            : "#eee",
+        }}
+        disabled={!isValidPhoneNumber(phoneNumber)}
+        onClick={() => {
           if (isValidPhoneNumber(phoneNumber)) {
             context.setStore({ ...context.store, PhoneNumber: phoneNumber });
-            navigation.navigate('AddressStore');
+            navigation.navigate("AddressStore");
           }
         }}
       >
-        <Text
-          style={[
-            styles.btnText,
-            isValidPhoneNumber(phoneNumber) ? { color: '#fff' } : { color: '#aaa' },
-          ]}
-        >
-          Continuar
-        </Text>
-      </Pressable>
-    </Animated.View>
+        Continuar
+      </button>
+    </div>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: '#fff',
-    paddingHorizontal: 0,
-    paddingTop: Platform.OS === 'ios' ? 60 : 10,
-  },
-  headerContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 20,
-  },
-  backButton: {
-    marginRight: 10,
-  },
-  headerText: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
-  },
-  progressContainer: {
-    alignItems: 'center',
-    marginBottom: 30,
-  },
-  progressText: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#333',
-    marginBottom: 10,
-  },
-  progressBar: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  progressStepActive: {
-    width: 40,
-    height: 4,
-    backgroundColor: ThemeLight.secondaryColor,
-    marginHorizontal: 5,
-    borderRadius: 2,
-  },
-  progressStepInactive: {
-    width: 40,
-    height: 4,
-    backgroundColor: '#ccc',
-    marginHorizontal: 5,
-    borderRadius: 2,
-  },
-  inputContainer: {
-    marginBottom: 30,
-    width: '90%',
-    alignSelf: 'center',
-  },
-  label: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 5,
-    color: '#555',
-  },
-  input: {
-    height: 50,
-    borderWidth: 0.7,
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    fontSize: 16,
-    color: '#333',
-    borderColor: ThemeLight.borderColor,
-  },
-  btnContinue: {
-    borderRadius: 8,
-    paddingVertical: 15,
-    alignItems: 'center',
-    justifyContent: 'center',
-    width: '90%',
-    marginTop: 20,
-    alignSelf: 'center',
-    height: 67,
-  },
-  btnActive: {
-    backgroundColor: ThemeLight.secondaryColor,
-  },
-  btnDisabled: {
-    backgroundColor: '#eee',
-  },
-  btnText: {
-    fontSize: 18,
-    fontWeight: '600',
-  },
-});

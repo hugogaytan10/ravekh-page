@@ -1,18 +1,15 @@
-/*import React, { useState, useEffect, useContext, useCallback } from 'react';
-import { View, Text, StyleSheet, Pressable, Image, ActivityIndicator, Platform } from 'react-native';
-import { ThemeLight } from '../Theme/Theme';
-import { PickerColor } from '../CustomizeApp/PickerColor';
-import { ImageIcon } from '../../assets/SVG/Image';
-import { PickerPhoto } from '../CustomizeApp/PickerPhoto';
-import { AppContext } from '../Context/AppContext';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { uploadImage } from '../Cloudinary/Cloudinary';
-import { updateBusiness } from './Petitions';
-import { Store } from '../Model/Store';
+import React, { useState, useContext, useCallback } from "react";
+import { ThemeLight } from "../../Theme/Theme";
+import { PickerColor } from "../../CustomizeApp/PickerColor";
+import { ImageIcon } from "../../../../../assets/POS/Image";
+import { PickerPhoto } from "../../CustomizeApp/PickerPhoto";
+import { AppContext } from "../../../Context/AppContext";
+import { uploadImage } from "../../Cloudinary/Cloudinary";
+import { updateBusiness } from "./Petitions";
 
-export const CustomizeApp = ({navigation}: any) => {
+export const CustomizeApp: React.FC<{ navigation: any }> = ({ navigation }) => {
   const context = useContext(AppContext);
-  const [color, setColor] = useState('#6D01D1');
+  const [color, setColor] = useState("#6D01D1");
   const [isVisible, setIsVisible] = useState(false);
   const [urlPhoto, setUrlPhoto] = useState(context.store.Logo);
   const [isLoading, setIsLoading] = useState(false);
@@ -22,12 +19,16 @@ export const CustomizeApp = ({navigation}: any) => {
     try {
       setIsLoadingBig(true);
       let business = { Color: color, Logo: urlPhoto };
-      if (urlPhoto && urlPhoto !== 'error') {
+      if (urlPhoto && urlPhoto !== "error") {
         const uriPhoto = await uploadImage(urlPhoto);
         business = { ...business, Logo: uriPhoto };
-        const data = await updateBusiness(context.user.Token, context.user.Business_Id+"", business);
+        const data = await updateBusiness(
+          context.user.Token,
+          context.user.Business_Id + "",
+          business
+        );
         if (data) {
-          context.setStore({...context.store, Logo: uriPhoto, Color: color});
+          context.setStore({ ...context.store, Logo: uriPhoto, Color: color });
           navigation.goBack();
         }
       }
@@ -40,308 +41,111 @@ export const CustomizeApp = ({navigation}: any) => {
 
   const handleImagePick = useCallback(async () => {
     setIsLoading(true);
-    let url = await PickerPhoto();
+    const url = await PickerPhoto();
     setUrlPhoto(url);
     setIsLoading(false);
   }, []);
 
   return (
-    <View style={styles.container}>
-       <View
+    <div className="flex flex-col items-center min-h-screen bg-white">
+      <div
+        className="w-full"
         style={{
-          backgroundColor:
-            context.store.Color ? context.store.Color : ThemeLight.btnBackground,
-          height: Platform.OS === 'ios' ? 50 : 0,
+          height: 50,
+          backgroundColor: context.store.Color || ThemeLight.btnBackground,
         }}
-
       />
-      <View style={styles.containerHeader}>
-        <Text style={styles.title}>Indica tu estilo</Text>
-        <Text style={styles.subTitle}>
+      <div className="w-full flex flex-col items-center bg-white py-4">
+        <h1 className="text-xl font-bold text-secondary">
+          Indica tu estilo
+        </h1>
+        <p className="text-base text-gray-600">
           Para un ticket y catálogo profesional
-        </Text>
-      </View>
+        </p>
+      </div>
 
-      <Pressable
-        style={styles.btnAddLogo}
-        onPress={handleImagePick}>
+      {/* Botón para agregar logo */}
+      <button
+        className="flex items-center justify-center bg-white shadow-md rounded-lg px-4 py-2 mt-4"
+        onClick={handleImagePick}
+      >
         <ImageIcon />
-        <Text style={[styles.textColor, { color: ThemeLight.btnBackground }]}>
-          {urlPhoto && urlPhoto !== 'error' ? 'Cambiar logo' : 'Agrega tu logo'}
-        </Text>
-      </Pressable>
-      <View
-        style={{
-          flexDirection: 'row',
-          backgroundColor: '#fff',
-          justifyContent: 'space-around',
-          alignItems: 'center',
-          marginTop: 40,
-          height: 350,
-          width: '90%',
-          borderRadius: 8,
-        }}>
-        <View style={styles.cardContainer}>
-          <View
-            style={{
-              width: '100%',
-              justifyContent: 'center',
-              alignItems: 'center',
-              marginTop: 15,
-            }}>
-            {isLoading ? (
-              <ActivityIndicator size="large" color={ThemeLight.secondaryColor} />
-            ) : urlPhoto && urlPhoto !== 'error' ? (
-              <Image
-                source={{ uri: urlPhoto }}
-                style={styles.squarePhoto}
-              />
-            ) : (
-              <View style={styles.square} />
-            )}
-            <View style={styles.textSkeleton} />
-          </View>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-around',
-              alignItems: 'center',
-            }}>
-            <View>
-              <View style={styles.textSkeleton} />
-              <View style={styles.textSkeleton} />
-            </View>
-            <View>
-              <View style={styles.square} />
-              <View
-                style={[
-                  styles.textSkeleton,
-                  { width: 30, backgroundColor: color },
-                ]}
-              />
-            </View>
-          </View>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-around',
-              alignItems: 'center',
-              marginTop: 15,
-            }}>
-            <View>
-              <View style={styles.textSkeleton} />
-              <View style={styles.textSkeleton} />
-            </View>
-            <View>
-              <View style={styles.square} />
-              <View
-                style={[
-                  styles.textSkeleton,
-                  { width: 30, backgroundColor: color },
-                ]}
-              />
-            </View>
-          </View>
-        </View>
+        <span className="text-primary ml-2">
+          {urlPhoto && urlPhoto !== "error" ? "Cambiar logo" : "Agrega tu logo"}
+        </span>
+      </button>
 
-        <View style={[styles.cardContainer, { alignItems: 'center' }]}>
-          <View
-            style={{
-              flexDirection: 'row',
-              justifyContent: 'space-around',
-              marginTop: 15,
-              width: '100%',
-            }}>
-            <View style={styles.textSkeleton} />
-            <View style={styles.textSkeleton} />
-          </View>
-          <View style={styles.rectangle} />
-          <View style={styles.rectangle} />
-          <View
-            style={[
-              styles.textSkeleton,
-              { height: 20, width: '40%', marginTop: 15 },
-            ]}
-          />
-          <View
-            style={[
-              styles.textSkeleton,
-              { height: 20, width: '90%', marginTop: 15, backgroundColor: color },
-            ]}
-          />
-        </View>
-      </View>
-      <Pressable
-        onPress={() => {
-          setIsVisible(!isVisible);
-        }}
-        style={styles.btnOpenPickerColor}>
-        <Text style={styles.textColor}>Color: </Text>
-        <View style={[styles.square, { width: 30, backgroundColor: color }]} />
-      </Pressable>
+      {/* Vista de muestra */}
+      <div className="flex justify-around items-center bg-white w-[90%] h-[350px] mt-10 rounded-lg shadow-md">
+        <div className="w-[45%] flex flex-col items-center bg-white rounded-lg shadow-sm border border-gray-200">
+          {isLoading ? (
+            <div className="flex justify-center items-center h-full">
+              <div className="loader border-t-4 border-primary"></div>
+            </div>
+          ) : urlPhoto && urlPhoto !== "error" ? (
+            <img src={urlPhoto} className="w-20 h-20 rounded-lg mt-4" />
+          ) : (
+            <div className="w-20 h-20 bg-gray-200 rounded-lg mt-4" />
+          )}
+          <div className="flex flex-col mt-4">
+            <div className="w-12 h-2 bg-gray-200 rounded"></div>
+            <div className="w-12 h-2 bg-gray-200 rounded mt-2"></div>
+          </div>
+        </div>
+
+        <div className="w-[45%] flex flex-col items-center bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="flex justify-around w-full mt-4">
+            <div className="w-12 h-2 bg-gray-200 rounded"></div>
+            <div className="w-12 h-2 bg-gray-200 rounded"></div>
+          </div>
+          <div className="w-[80%] h-6 bg-gray-200 rounded mt-4"></div>
+          <div className="w-[80%] h-6 bg-gray-200 rounded mt-4"></div>
+          <div className="w-[40%] h-4 bg-gray-200 rounded mt-4"></div>
+          <div
+            className="w-[90%] h-4 mt-4 rounded"
+            style={{ backgroundColor: color }}
+          ></div>
+        </div>
+      </div>
+
+      {/* Selector de color */}
+      <button
+        className="flex items-center justify-around bg-white rounded-lg w-[40%] h-10 mt-6"
+        onClick={() => setIsVisible(!isVisible)}
+      >
+        <span className="text-primary">Color:</span>
+        <div
+          className="w-8 h-8 rounded"
+          style={{ backgroundColor: color }}
+        ></div>
+      </button>
       <PickerColor
         colorSelected={color}
         setColorSelected={setColor}
         isVisible={isVisible}
         setIsVisible={setIsVisible}
       />
-      <View style={styles.backgroundColorFooter}>
 
-        <Pressable
-          style={[styles.btnChooseImage, { backgroundColor: color }]}
-          onPress={urlPhoto === 'error' || urlPhoto === '' ? handleImagePick : ommited}>
-          <Text
-            style={{
-              color: '#fff',
-              fontSize: 20,
-              fontFamily: 'Poppins-SemiBold',
-              textAlign: 'center',
-            }}>
-            {urlPhoto === 'error' || urlPhoto === ''
-              ? 'Elegir Imagen'
-              : 'Guardar'}
-          </Text>
-        </Pressable>
-       
-      </View>
+      {/* Botón de guardar */}
+      <div className="fixed bottom-0 bg-white w-full py-4 flex justify-center">
+        <button
+          className="w-[80%] py-3 text-lg font-semibold text-white rounded-lg"
+          style={{
+            backgroundColor: urlPhoto === "error" || !urlPhoto ? "#CCCCCC" : color,
+          }}
+          onClick={
+            urlPhoto === "error" || urlPhoto === "" ? handleImagePick : ommited
+          }
+        >
+          {urlPhoto === "error" || urlPhoto === "" ? "Elegir Imagen" : "Guardar"}
+        </button>
+      </div>
+
       {isLoadingBig && (
-        <View style={styles.loadingOverlayFullScreen}>
-          <ActivityIndicator size="large" color={ThemeLight.secondaryColor} />
-        </View>
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="loader border-t-4 border-secondary"></div>
+        </div>
       )}
-    </View>
+    </div>
   );
 };
-
-const styles = StyleSheet.create({
-  contentContainer: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: '#fff',
-  },
-  container: {
-    flex: 1,
-    alignItems: 'center',
-    backgroundColor: ThemeLight.backgrounColor,
-  },
-  containerHeader: {
-    alignItems: 'center',
-    backgroundColor: '#fff',
-    height: 115,
-    width: '100%',
-  },
-  title: {
-    fontSize: 20,
-    fontFamily: 'Poppins-Bold',
-    color: ThemeLight.secondaryColor,
-  },
-  subTitle: {
-    fontSize: 18,
-    fontFamily: 'Poppins-Regular',
-    color: ThemeLight.textColor,
-  },
-  btnAddLogo: {
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
-    backgroundColor: '#fff',
-    width: 200,
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginTop: 20,
-    borderRadius: 8,
-    padding: 4,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-  },
-  cardContainer: {
-    backgroundColor: '#fff',
-    height: 290,
-    width: '39%',
-    borderRadius: 20,
-    borderWidth: 0.7,
-    borderColor: ThemeLight.borderColor,
-  },
-  square: {
-    backgroundColor: ThemeLight.boxShadow,
-    height: 30,
-    width: 30,
-    borderRadius: 4,
-  },
-  squarePhoto: {
-    height: 30,
-    width: 30,
-    borderRadius: 4,
-  },
-  textSkeleton: {
-    backgroundColor: ThemeLight.boxShadow,
-    height: 9,
-    width: 48,
-    borderRadius: 10,
-    marginTop: 2,
-  },
-  rectangle: {
-    backgroundColor: ThemeLight.boxShadow,
-    height: 30,
-    width: '80%',
-    borderRadius: 4,
-    marginTop: 15,
-  },
-  btnOpenPickerColor: {
-    flexDirection: 'row',
-    backgroundColor: '#fff',
-    height: 40,
-    width: '40%',
-    borderRadius: 10,
-    justifyContent: 'space-around',
-    alignItems: 'center',
-    alignSelf: 'center',
-    marginTop: 20,
-  },
-  textColor: {
-    color: ThemeLight.textColor,
-    textAlign: 'center',
-    fontSize: 18,
-    fontFamily: 'Poppins-Bold',
-  },
-  backgroundColorFooter: {
-    position: 'absolute',
-    bottom: 0,
-    width: '100%',
-    height: 100,
-    backgroundColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'space-around',
-  },
-  btnChooseImage: {
-    backgroundColor: ThemeLight.btnBackground,
-    borderRadius: 10,
-    width: '80%',
-    height: 34,
-  },
-  btnSkip: {},
-  loadingOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingOverlayFullScreen: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-});
-*/
