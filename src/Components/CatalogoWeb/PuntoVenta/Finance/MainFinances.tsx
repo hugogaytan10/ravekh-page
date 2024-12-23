@@ -4,22 +4,30 @@ import TransactionsList from "./RegisterList/TransactionList";
 import { AppContext } from "../../Context/AppContext";
 import { useNavigate } from "react-router-dom";
 
-export const MainFinances: React.FC<{ navigation: any }> = () => {
+export const MainFinances: React.FC = () => {
   const today = new Date();
   const [currentMonth, setCurrentMonth] = useState(today.getMonth());
   const [showToday, setShowToday] = useState(false);
+  const [currentDate, setCurrentDate] = useState(today);
   const context = useContext(AppContext);
   const navigation = useNavigate();
 
   const isAssistant = context.user?.Role === "AYUDANTE";
 
   const toggleToday = () => {
-    setShowToday(!showToday);
+    if (showToday) {
+      setShowToday(false);
+      setCurrentMonth(today.getMonth());
+      setCurrentDate(today);
+    } else {
+      setShowToday(true);
+      setCurrentDate(new Date());
+    }
   };
 
   const handleMonthChange = (newMonth: number) => {
     setCurrentMonth(newMonth);
-    setShowToday(false); // Cambia a "Ver Hoy" al cambiar el mes
+    setShowToday(false);
   };
 
   useEffect(() => {
@@ -56,15 +64,17 @@ export const MainFinances: React.FC<{ navigation: any }> = () => {
           {/* Navegador de meses */}
           <MonthNavigator
             currentMonth={currentMonth}
-            onMonthChange={handleMonthChange} // Usa el manejador personalizado
+            currentDate={currentDate}
+            onMonthChange={handleMonthChange}
+            onToggleToday={toggleToday}
             showToday={showToday}
-            toggleToday={toggleToday}
           />
 
           {/* Lista de transacciones */}
           <TransactionsList
             selectedMonth={currentMonth}
             todayOnly={showToday}
+            onToggleToday={toggleToday}
           />
         </>
       )}
