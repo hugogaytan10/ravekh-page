@@ -15,25 +15,11 @@ import HouseIcon from "../../../../../assets/POS/HouseIcon";
 import FoodIcon from "../../../../../assets/POS/Food";
 import Euro from "../../../../../assets/POS/Euro";
 
-const months = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
-];
-
 export const TransactionsList: React.FC<{
   selectedMonth: number;
   todayOnly: boolean;
-}> = ({ selectedMonth, todayOnly }) => {
+  onToggleToday: () => void;
+}> = ({ selectedMonth, todayOnly, onToggleToday }) => {
   const [combinedData, setCombinedData] = useState<(IIncome | IExpenses)[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const context = useContext(AppContext);
@@ -111,14 +97,14 @@ export const TransactionsList: React.FC<{
   }, [selectedMonth, todayOnly]);
 
   return (
-    <div className="p-5 bg-white mt-4 max-h-[60vh] overflow-y-auto pb-40">
-      <h2 className="text-2xl font-semibold text-gray-800 mb-4">
-        {selectedMonth === new Date().getMonth()
-          ? todayOnly
-            ? "Hoy"
-            : "Este Mes"
-          : `Mes: ${months[selectedMonth]}`}
-      </h2>
+    <div className="p-5 bg-white flex-grow overflow-y-auto">
+      <button
+        onClick={onToggleToday}
+        className="self-center my-3 px-4 py-2 bg-blue-600 text-white rounded-lg"
+      >
+        {todayOnly ? "Ver Este Mes" : "Ver Hoy"}
+      </button>
+
       {loading ? (
         <div className="flex justify-center items-center h-32">
           <div className="spinner-border animate-spin inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full"></div>
@@ -130,7 +116,9 @@ export const TransactionsList: React.FC<{
               key={item.Id || Math.random().toString()}
               name={item.Name}
               amount={item.Amount}
-              coinName={"MoneyTipe" in item ? item.MoneyTipe ?? "Desconocido" : "Desconocido"}
+              coinName={
+                "MoneyTipe" in item ? item.MoneyTipe ?? "Desconocido" : "Desconocido"
+              }
               getIcon={getIconByType}
             />
           ))}
@@ -155,7 +143,9 @@ const TransactionTile: React.FC<{
       <p className="font-semibold text-lg text-gray-800 mb-1">{name}</p>
       <p className="text-sm text-gray-500 mb-2">Moneda: {coinName}</p>
       <p
-        className={`font-bold text-xl ${isPositive ? "text-green-600" : "text-red-600"}`}
+        className={`font-bold text-xl ${
+          isPositive ? "text-green-600" : "text-red-600"
+        }`}
       >
         {isPositive ? `$${amount.toFixed(2)}` : `-$${Math.abs(amount).toFixed(2)}`}
       </p>
