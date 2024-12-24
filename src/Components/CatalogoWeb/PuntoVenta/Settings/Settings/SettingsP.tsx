@@ -2,7 +2,7 @@ import React, { useContext } from "react";
 import { AppContext } from "../../../Context/AppContext";
 import { Header } from '../../Utilities/Header';
 import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
-import {Tablet} from "../../../../../assets/POS/Tablet";
+import { Tablet } from "../../../../../assets/POS/Tablet";
 import Cloud from "../../../../../assets/POS/Cloud";
 import Printer from "../../../../../assets/POS/Printer";
 import { Settings } from "../../../../../assets/POS/Settings";
@@ -14,22 +14,34 @@ import { Trash } from "../../../../../assets/POS/Trash";
 import { ThemeLight } from "../../Theme/Theme";
 import { MoreIcon } from "../../../../../assets/POS/MoreIcon";
 import People from "../../../../../assets/POS/People";
+import { useNavigate } from "react-router-dom";
 
 export const SettingsP: React.FC<{ navigation: any }> = ({ navigation }) => {
+  const navigate = useNavigate();
   const context = useContext(AppContext);
   const iconColor = context.store?.Color || ThemeLight.btnBackground; // Definir color del icono
 
   return (
     <div className="min-h-screen bg-white">
-      {/* Header */}
-      <Header screenName="Ajustes" navigation={navigation} />
+      {/* Header 
+      <Header screenName="Ajustes" navigation={navigation} />*/}
+      <div
+        className="flex items-center px-4 py-2 rounded-b-2xl"
+        style={{ backgroundColor: context.store.Color || ThemeLight.btnBackground }}
+        onClick={() => navigate(-1)}
+      >
+        <button className="mr-2">
+          <ChevronBack width={30} height={30} />
+        </button>
+        <h1 className="text-lg font-bold text-white">Ajustes</h1>
+      </div>
 
       <div className="mt-4 px-4">
         {/* Información del negocio */}
         {context.user.Role === "ADMINISTRADOR" && (
           <button
             className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg mb-2 shadow-sm"
-            onClick={() => navigation.navigate("UpdateStoreInfo")}
+            onClick={() => navigate("/update-store-info")}
           >
             <div className="flex items-center">
               <Store width={30} height={30} /*fillColor={iconColor}*/ />
@@ -41,7 +53,7 @@ export const SettingsP: React.FC<{ navigation: any }> = ({ navigation }) => {
           </button>
         )}
 
-        {/* Hardware */}
+        {/* Hardware
         <button
           className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg mb-2 shadow-sm"
           onClick={() => navigation.navigate("HardwareSettings")}
@@ -53,13 +65,13 @@ export const SettingsP: React.FC<{ navigation: any }> = ({ navigation }) => {
             </span>
           </div>
           <ChevronGo width={30} height={30} />
-        </button>
+        </button> */}
 
         {/* Impuesto de venta */}
         {context.user.Role === "ADMINISTRADOR" && (
           <button
             className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg mb-2 shadow-sm"
-            onClick={() => navigation.navigate("SalesTaxSettings")}
+            onClick={() => navigate("/sales-tax-settings")}
           >
             <div className="flex items-center">
               <Stongs width={30} height={30} strokeColor={iconColor} />
@@ -71,7 +83,7 @@ export const SettingsP: React.FC<{ navigation: any }> = ({ navigation }) => {
           </button>
         )}
 
-        {/* Exportar reportes */}
+        {/* Exportar reportes 
         <button
           className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg mb-2 shadow-sm"
           onClick={() => navigation.navigate("ExportReports")}
@@ -83,13 +95,18 @@ export const SettingsP: React.FC<{ navigation: any }> = ({ navigation }) => {
             </span>
           </div>
           <ChevronGo width={30} height={30} />
-        </button>
+        </button>*/}
 
         {/* Color de App */}
         {context.user.Role === "ADMINISTRADOR" && (
           <button
             className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg mb-2 shadow-sm"
-            onClick={() => navigation.navigate("CustomizeApp")}
+            onClick={() => 
+              {
+                context.setShowNavBarBottom(false);// Ocultar barra inferior
+                navigate("/customize-app")
+              }
+            }
           >
             <div className="flex items-center">
               <MoreIcon width={30} height={30} strokeColor={iconColor} />
@@ -101,7 +118,7 @@ export const SettingsP: React.FC<{ navigation: any }> = ({ navigation }) => {
           </button>
         )}
 
-        {/* Mesas */}
+        {/* Mesas 
         {context.user.Role === "ADMINISTRADOR" && (
           <button
             className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg mb-2 shadow-sm"
@@ -115,12 +132,12 @@ export const SettingsP: React.FC<{ navigation: any }> = ({ navigation }) => {
             </div>
             <ChevronGo width={30} height={30} />
           </button>
-        )}
+        )}*/}
 
         {/* Cerrar sesión */}
         <button
           className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg mb-2 shadow-sm"
-          onClick={() => navigation.navigate("CloseSession")}
+          onClick={() => navigate("/close-session")}
         >
           <div className="flex items-center">
             <People width={30} height={30} />
@@ -134,7 +151,7 @@ export const SettingsP: React.FC<{ navigation: any }> = ({ navigation }) => {
         {/* Borrar cuenta */}
         <button
           className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
-          onClick={() => navigation.navigate("DeleteAccount")}
+          onClick={() => navigate("/delete-account")}
         >
           <div className="flex items-center">
             <Trash width={30} height={30} fill={iconColor} />

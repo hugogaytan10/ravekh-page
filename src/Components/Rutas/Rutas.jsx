@@ -20,8 +20,13 @@ import { AppContext } from "../CatalogoWeb/Context/AppContext";
 import cart from "../../assets/cart-outline.svg";
 import arrow from "../../assets/arrow-forward-white.svg";
 import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
+//importaciones para el catalogo web
 import { RavekhPos } from "../RavekhPos/RavekhPos";
+
+// Importaciones para el punto de venta - Login
 import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
+
+// Importaciones para el punto de venta - Sales
 import { MainSales } from "../CatalogoWeb/PuntoVenta/Sales/MainSales";
 import { MainCart } from "../CatalogoWeb/PuntoVenta/Sales/Cart/Cart";
 import { DiscountScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/DiscountScreen";
@@ -29,23 +34,25 @@ import { PaymentTypeScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/PaymentT
 import { PaymentScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/PaymentScreen";
 import { FinishScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/FinishScreen";
 import { AddProductSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddProductSales";
-import { NavBottom } from "./NavBottom";
 import { CategoriasScreenSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/CategoriasScreenSales";
 import { AddCategoriesSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddCategories";
+import { Scanner } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/Scanner";
+import { SearchScreen } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/SearchScreen";
+import { QuantityNextSell } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/QuantityNextSell";
+
+// Importaciones para el punto de venta - Products
 import { MainProducts } from "../CatalogoWeb/PuntoVenta/Products/MainProducts";
 import { AddProduct } from "../CatalogoWeb/PuntoVenta/Products/CRUDProducts/AddProduct";
-import { MainFinances } from "../CatalogoWeb/PuntoVenta/Finance/MainFinances";
 import { SelectCategory } from "../CatalogoWeb/PuntoVenta/Products/Categories/SelectCategory";
 import { EditProduct } from "../CatalogoWeb/PuntoVenta/Products/CRUDProducts/EditProduct";
 import { EditCategory } from "../CatalogoWeb/PuntoVenta/Products/Categories/EditCaterogy";
 import { List } from "../CatalogoWeb/PuntoVenta/Products/CRUDProducts/List";
 import { StockProducts } from "../CatalogoWeb/PuntoVenta/Products/Stock/StockProducts";
-import { Scanner } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/Scanner";
-import { SearchScreen } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/SearchScreen";
 import { SearchProductScreen } from "../CatalogoWeb/PuntoVenta/Products/NavBar/SearchProductScreen";
-import { QuantityNextSell } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/QuantityNextSell";
 import { Filter } from "../CatalogoWeb/PuntoVenta/Products/NavBar/Filter";
 import { KeyboardStock } from "../CatalogoWeb/PuntoVenta/Products/Stock/KeyBoardStock";
+
+// Importaciones para el punto de venta - Reports
 import { MainReports } from "../CatalogoWeb/PuntoVenta/Reports/MainReports";
 import ReportIncome from "../CatalogoWeb/PuntoVenta/Reports/Incomes/ReportIncome";
 import ReportSales from "../CatalogoWeb/PuntoVenta/Reports/Sales/ReportSales";
@@ -55,21 +62,63 @@ import CardIncome from "../CatalogoWeb/PuntoVenta/Reports/Sales/CardIncome";
 import CashIncome from "../CatalogoWeb/PuntoVenta/Reports/Sales/CashIncome";
 import BestSelling from "../CatalogoWeb/PuntoVenta/Reports/BestSellingProducts/BestSelling";
 import BestCategorySelling from "../CatalogoWeb/PuntoVenta/Reports/BestSellingProducts/BestCategorySelling";
+
+// Importaciones para el punto de venta - Settings
+// Importaciones para el punto de venta - Settings - principal
 import { MainSettings } from "../CatalogoWeb/PuntoVenta/Settings/MainSettings";
+// Importaciones para el punto de venta - Settings - BoxCutting
 import { BoxCutting } from "../CatalogoWeb/PuntoVenta/Settings/BoxCutting/BoxCutting";
+import { CuttingByEmployee } from "../CatalogoWeb/PuntoVenta/Settings/BoxCutting/CuttingByEmployee";
+// Importaciones para el punto de venta - Settings - ExportReports
+import { ExportReports } from "../CatalogoWeb/PuntoVenta/Settings/ExportReports/ExportReports";
+// Importaciones para el punto de venta - Settings - HardwareSettings
+
+// Importaciones para el punto de venta - Settings - Pricing
+import { AnimatedSlider } from "../CatalogoWeb/PuntoVenta/Settings/Pricing/pricing";
+// Importaciones para el punto de venta - Settings - settings
+import { CloseSession } from "../CatalogoWeb/PuntoVenta/Settings/Settings/CloseSession";
+import { CustomizeApp } from "../CatalogoWeb/PuntoVenta/Settings/Settings/CustomizeApp";
+import { DeleteAccount } from "../CatalogoWeb/PuntoVenta/Settings/Settings/DeleteAccount";
+import { GeneralSettings} from "../CatalogoWeb/PuntoVenta/Settings/Settings/GeneralSettings";
+import { LanguageSelection } from "../CatalogoWeb/PuntoVenta/Settings/Settings/LanguageSelection";
+import { PaymentMethods } from "../CatalogoWeb/PuntoVenta/Settings/Settings/PaymentMethods";
+import { SalesTaxSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/SalesTaxSettings";
+import { SelectMoney } from "../CatalogoWeb/PuntoVenta/Settings/Settings/SelectMoney";
+import { SettingsP } from "../CatalogoWeb/PuntoVenta/Settings/Settings/SettingsP";
+// Importaciones para el punto de venta - Settings - StoreOnline
 import { MainStoreOnline } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/MainStoreOnline";
 import { OrdersScreen } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/Orders";
 import { OrderDetailScreen } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/OrderDetails";
 import { UpdateStoreInfo } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/UpdateStoreInfo";
-import { CuttingByEmployee } from "../CatalogoWeb/PuntoVenta/Settings/BoxCutting/CuttingByEmployee";
+import { AddressStore } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/AddressStore";
+import { NameStore } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/nameStore";
+import { PhoneStore } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/PhoneStore ";
+import { ReferenceStore } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/ReferenceStore";
+import { StartedStore } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/StartedStore";
+
+// Importaciones para el punto de venta - Customers
 import { ClientSelect } from "../CatalogoWeb/PuntoVenta/Customers/ClientSelect";
 import { Client } from "../CatalogoWeb/PuntoVenta/Customers/Client";
 import { OrdersByCustomer } from "../CatalogoWeb/PuntoVenta/Customers/OrdersByCustomer";
 import { EditClient } from "../CatalogoWeb/PuntoVenta/Customers/EditClient";
+
+// Importaciones para el punto de venta - Employees
 import { Employees } from "../CatalogoWeb/PuntoVenta/Employees/Employees";
 import { NewEmployee } from "../CatalogoWeb/PuntoVenta/Employees/NewEmployee";
+
+// Importaciones para el punto de venta - Finance
 import { Register } from "../CatalogoWeb/PuntoVenta/Finance/Register/Register";
+import { MainFinances } from "../CatalogoWeb/PuntoVenta/Finance/MainFinances";
+
+// Importaciones para el punto de venta - Dashboard
 import { Dashboard } from "../CatalogoWeb/PuntoVenta/Dashboard/Dashboard";
+
+// Importaciones generales
+import { NavBottom } from "./NavBottom";
+//import { deleteAccount } from "../CatalogoWeb/PuntoVenta/Settings/Settings/Petitions";
+//import { LanguageSelection } from "../CatalogoWeb/PuntoVenta/Settings/Settings/LanguageSelection";
+//import { SalesTaxSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/SalesTaxSettings";
+
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -552,11 +601,26 @@ export const Rutas = () => {
           <Route path="/best-category-selling/:period/:businessId" element={<BestCategorySelling />} />
           <Route path="/more" element={<MainSettings />} />  
           <Route path="/box-cutting" element={<BoxCutting />} />  
-          <Route path="/cutting-by-employee/:employeeId" element={<CuttingByEmployee />} />  
+          <Route path="/cutting-by-employee/:employeeId" element={<CuttingByEmployee />} />
+          <Route path="/pricing" element={<AnimatedSlider />} />
+          <Route path="/close-session" element={<CloseSession />} />
+          <Route path="/customize-app" element={<CustomizeApp />} />
+          <Route path="/delete-account" element={<DeleteAccount />} />
+          <Route path="/general-settings" element={<GeneralSettings />} />
+          <Route path="/language-selection" element={<LanguageSelection />} />
+          <Route path="/payment-methods" element={<PaymentMethods />} />
+          <Route path="/sales-tax-settings" element={<SalesTaxSettings />} />
+          <Route path="/select-money" element={<SelectMoney />} />
+          <Route path="/settings-p" element={<SettingsP />} />
           <Route path="/main-store-online" element={<MainStoreOnline />} />  
           <Route path="/orders" element={<OrdersScreen />} />  
           <Route path="/order-details/:orderId" element={<OrderDetailScreen />} />  
           <Route path="/update-store-info" element={<UpdateStoreInfo />} />  
+          <Route path="/address-store" element={<AddressStore />} />
+          <Route path="/name-store" element={<NameStore />} />
+          <Route path="/phone-store" element={<PhoneStore />} />
+          <Route path="/reference-store" element={<ReferenceStore />} />
+          <Route path="/started-store" element={<StartedStore />} />
           <Route path="/clients" element={<Client />} />  
           <Route path="/orders-by-customer/:customerId/:period" element={<OrdersByCustomer />} />  
           <Route path="/edit-customer/:id" element={<EditClient />} />  
@@ -564,7 +628,8 @@ export const Rutas = () => {
           <Route path="/new-employee" element={<NewEmployee />} />  
           <Route path="/client-select" element={<ClientSelect />} />  
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/AddRegister" element={<Register />} />
+          <Route path="/AddRegister" element={<Register />} />          
+
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}

@@ -30,7 +30,7 @@ interface IEmployeeReport {
   TotalSales: number;
 }
 
-const ExportReports: React.FC<{ navigation: any }> = ({ navigation }) => {
+export const ExportReports: React.FC<{ navigation: any }> = ({ navigation }) => {
   const context = useContext(AppContext);
   const [selectedPeriod, setSelectedPeriod] = useState("Día");
   const [currentYear] = useState(new Date().getFullYear());
@@ -193,5 +193,3 @@ const ExportReports: React.FC<{ navigation: any }> = ({ navigation }) => {
     </div>
   );
 };
-
-export default ExportReports;
