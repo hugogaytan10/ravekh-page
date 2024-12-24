@@ -14,7 +14,7 @@ import "./Css/MainSales.css";
 import { Item } from "../Model/Item";
 import { AppContext } from "../../Context/AppContext";
 import { CartPos } from "../Model/CarPos";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 export const MainSales: React.FC = () => {
   const navigate = useNavigate(); // React Router para navegación
@@ -26,6 +26,25 @@ export const MainSales: React.FC = () => {
   const [totalItems, setTotalItems] = useState(0);
   const [showModalPremium, setShowModalPremium] = useState(false);
   const [loader, setLoader] = useState(false);
+  const location = useLocation(); // React Router para obtener la ubicación actual
+  //realizamos un metodo para cuando la pantalla
+  //este enfocada entonces sea visible la barrar de navegacion
+  //similar al useOnFocus
+  // Efecto para mostrar la barra de navegación al regresar a esta pantalla
+  useEffect(() => {
+    const checkFocus = () => {
+      // Asegurar que la barra de navegación sea visible al estar en esta pantalla
+      context.setShowNavBarBottom(true);
+    };
+
+    checkFocus(); // Llamar al cargar
+    window.addEventListener("popstate", checkFocus); // Detectar navegación por gestos o botones del navegador
+
+    return () => {
+      window.removeEventListener("popstate", checkFocus); // Limpiar el evento
+    };
+  }, [location.pathname, context]);
+
   useEffect(() => {
     // Obtener productos al cargar
     try {

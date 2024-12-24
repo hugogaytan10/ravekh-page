@@ -1,5 +1,5 @@
-import React, { useContext, useState } from "react";
-import { NavLink, Outlet, useNavigate } from "react-router-dom"; // Para las rutas y enlaces
+import React, { useContext, useEffect, useState } from "react";
+import { NavLink, Outlet, useLocation, useNavigate } from "react-router-dom"; // Para las rutas y enlaces
 import { ThemeLight } from "../Theme/Theme";
 import Search from "../../../../assets/POS/Search";
 import ScanIcon from "../../../../assets/POS/ScanCircleIcon";
@@ -10,10 +10,28 @@ export const MainProducts: React.FC = () => {
   const [isShow, setIsShow] = useState(false);
   const context = useContext(AppContext);
   const navigation = useNavigate()
+  const location = useLocation();
+
+  // nuestro arreglo de tabs superiores
   const tabs = [
     { name: "Items", path: "/main-products/items" },
     { name: "Stock", path: "/main-products/stock" },
   ];
+
+  // Efecto para mostrar la barra de navegación al regresar a esta pantalla
+  useEffect(() => {
+    const checkFocus = () => {
+      // Asegurar que la barra de navegación sea visible al estar en esta pantalla
+      context.setShowNavBarBottom(true);
+    };
+
+    checkFocus(); // Llamar al cargar
+    window.addEventListener("popstate", checkFocus); // Detectar navegación por gestos o botones del navegador
+
+    return () => {
+      window.removeEventListener("popstate", checkFocus); // Limpiar el evento
+    };
+  }, [location.pathname, context]);
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-100">
