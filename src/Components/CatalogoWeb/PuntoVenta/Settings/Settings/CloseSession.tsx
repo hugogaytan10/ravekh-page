@@ -46,10 +46,12 @@ export const CloseSession: React.FC<{ navigation: any }> = ({ navigation }) => {
           </p>
 
           <button
-            className="flex items-center justify-center w-3/4 bg-primary text-white py-3 rounded-lg shadow-md hover:bg-primary-dark"
+            className="flex items-center justify-center w-3/4  text-white py-3 rounded-lg shadow-md hover:bg-primary-dark"
             onClick={() => setModalVisible(true)}
+            style={{ backgroundColor: context.store.Color || ThemeLight.btnBackground }}
+
           >
-            <Tablet width={24} height={24} />
+            <Tablet width={24} height={24} fillColor='#fff'/>
             <span className="ml-2 text-lg font-bold">Cerrar Sesión</span>
           </button>
         </div>

@@ -28,7 +28,9 @@ export const SettingsP: React.FC<{ navigation: any }> = ({ navigation }) => {
       <div
         className="flex items-center px-4 py-2 rounded-b-2xl"
         style={{ backgroundColor: context.store.Color || ThemeLight.btnBackground }}
-        onClick={() => navigate(-1)}
+        onClick={() => {
+          context.setShowNavBarBottom(true);
+          navigate(-1)}}
       >
         <button className="mr-2">
           <ChevronBack width={30} height={30} />
@@ -44,7 +46,7 @@ export const SettingsP: React.FC<{ navigation: any }> = ({ navigation }) => {
             onClick={() => navigate("/update-store-info")}
           >
             <div className="flex items-center">
-              <Store width={30} height={30} /*fillColor={iconColor}*/ />
+              <Store width={30} height={30} fill={iconColor} />
               <span className="ml-4 text-base font-semibold text-gray-800">
                 Información del negocio
               </span>
@@ -137,10 +139,12 @@ export const SettingsP: React.FC<{ navigation: any }> = ({ navigation }) => {
         {/* Cerrar sesión */}
         <button
           className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg mb-2 shadow-sm"
-          onClick={() => navigate("/close-session")}
+          onClick={() =>{
+            context.setShowNavBarBottom(false); // Ocultar barra inferior
+            navigate("/close-session")}}
         >
           <div className="flex items-center">
-            <People width={30} height={30} />
+            <People width={30} height={30} fill={iconColor}/>
             <span className="ml-4 text-base font-semibold text-gray-800">
               Cerrar Sesión
             </span>
@@ -151,7 +155,9 @@ export const SettingsP: React.FC<{ navigation: any }> = ({ navigation }) => {
         {/* Borrar cuenta */}
         <button
           className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg shadow-sm"
-          onClick={() => navigate("/delete-account")}
+          onClick={() => {
+            context.setShowNavBarBottom(false); // Ocultar barra inferior
+            navigate("/delete-account")}}
         >
           <div className="flex items-center">
             <Trash width={30} height={30} fill={iconColor} />

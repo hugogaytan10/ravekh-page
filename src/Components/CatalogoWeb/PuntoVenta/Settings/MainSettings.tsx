@@ -1,5 +1,5 @@
-import React, { useContext, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useContext, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AppContext } from "../../Context/AppContext";
 import Tv from "../../../../assets/POS/Tv";
 import Repeat from "../../../../assets/POS/Repeat";
@@ -23,7 +23,24 @@ export const MainSettings: React.FC = () => {
   const [modalVisible, setModalVisible] = useState(false);
 
   const hasAccess = (rolesAllowed: string[]) => rolesAllowed.includes(userRole);
+  const location = useLocation(); // React Router para obtener la ubicación actual
+  //realizamos un metodo para cuando la pantalla
+  //este enfocada entonces sea visible la barrar de navegacion
+  //similar al useOnFocus
+  // Efecto para mostrar la barra de navegación al regresar a esta pantalla
+  useEffect(() => {
+    const checkFocus = () => {
+      // Asegurar que la barra de navegación sea visible al estar en esta pantalla
+      context.setShowNavBarBottom(true);
+    };
 
+    checkFocus(); // Llamar al cargar
+    window.addEventListener("popstate", checkFocus); // Detectar navegación por gestos o botones del navegador
+
+    return () => {
+      window.removeEventListener("popstate", checkFocus); // Limpiar el evento
+    };
+  }, [location.pathname]);
   const openBrowserWithLink = () => {
     window.open(catalogLink, "_blank");
   };
@@ -99,7 +116,9 @@ export const MainSettings: React.FC = () => {
 
             <button
               className="flex flex-col items-center"
-              onClick={() => navigate("/settings-p")}
+              onClick={() => {
+                context.setShowNavBarBottom(false); // Hide the bottom navbar
+                navigate("/settings-p")}} // Redirect to the settings screen
             >
               <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center shadow">
                 <Settings width={30} height={30} fill={iconColor} />

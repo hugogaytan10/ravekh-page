@@ -17,7 +17,6 @@ export const CustomizeApp: React.FC<{ navigation: any }> = ({ navigation }) => {
   const [urlPhoto, setUrlPhoto] = useState(context.store.Logo);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingBig, setIsLoadingBig] = useState(false);
-
   const ommited = useCallback(async () => {
     try {
       setIsLoadingBig(true);
@@ -32,7 +31,7 @@ export const CustomizeApp: React.FC<{ navigation: any }> = ({ navigation }) => {
         );
         if (data) {
           context.setStore({ ...context.store, Logo: uriPhoto, Color: color });
-          navigate(-1)
+          navigate(-1);
         }
       }
     } catch (e) {
@@ -53,12 +52,13 @@ export const CustomizeApp: React.FC<{ navigation: any }> = ({ navigation }) => {
     <div>
       <div
         className="flex items-center px-4 py-2 rounded-b-2xl"
-        style={{ backgroundColor: context.store.Color || ThemeLight.btnBackground }}
+        style={{
+          backgroundColor: context.store.Color || ThemeLight.btnBackground,
+        }}
         onClick={() => {
-                          context.setShowNavBarBottom(true);
-                          navigate(-1)
-                        }
-                      }
+          context.setShowNavBarBottom(true);
+          navigate(-1);
+        }}
       >
         <button className="mr-2">
           <ChevronBack width={30} height={30} />
@@ -74,9 +74,7 @@ export const CustomizeApp: React.FC<{ navigation: any }> = ({ navigation }) => {
         }}
       />*/}
         <div className="w-full flex flex-col items-center bg-white py-4">
-          <h1 className="text-xl font-bold text-secondary">
-            Indica tu estilo
-          </h1>
+          <h1 className="text-xl font-bold text-secondary">Indica tu estilo</h1>
           <p className="text-base text-gray-600">
             Para un ticket y catálogo profesional
           </p>
@@ -84,17 +82,19 @@ export const CustomizeApp: React.FC<{ navigation: any }> = ({ navigation }) => {
 
         {/* Botón para agregar logo */}
         <button
-          className="flex items-center justify-center bg-white shadow-md rounded-lg px-4 py-2 mt-4"
+          className="flex items-center justify-center bg-white shadow-md rounded-lg px-4 py-2 "
           onClick={handleImagePick}
         >
           <ImageIcon />
           <span className="text-primary ml-2">
-            {urlPhoto && urlPhoto !== "error" ? "Cambiar logo" : "Agrega tu logo"}
+            {urlPhoto && urlPhoto !== "error"
+              ? "Cambiar logo"
+              : "Agrega tu logo"}
           </span>
         </button>
 
         {/* Vista de muestra */}
-        <div className="flex justify-around items-center bg-white w-[90%] h-[350px] mt-10 rounded-lg shadow-md">
+        <div className="flex justify-around items-center bg-white w-[90%] h-[350px]  rounded-lg shadow-md">
           <div className="w-[45%] flex flex-col items-center bg-white rounded-lg shadow-sm border border-gray-200">
             {isLoading ? (
               <div className="flex justify-center items-center h-full">
@@ -105,13 +105,13 @@ export const CustomizeApp: React.FC<{ navigation: any }> = ({ navigation }) => {
             ) : (
               <div className="w-20 h-20 bg-gray-200 rounded-lg mt-4" />
             )}
-            <div className="flex flex-col mt-4">
+            <div className="flex flex-col mt-4 p-2">
               <div className="w-12 h-2 bg-gray-200 rounded"></div>
               <div className="w-12 h-2 bg-gray-200 rounded mt-2"></div>
             </div>
           </div>
 
-          <div className="w-[45%] flex flex-col items-center bg-white rounded-lg shadow-sm border border-gray-200">
+          <div className="p-2 w-[45%] flex flex-col items-center bg-white rounded-lg shadow-sm border border-gray-200">
             <div className="flex justify-around w-full mt-4">
               <div className="w-12 h-2 bg-gray-200 rounded"></div>
               <div className="w-12 h-2 bg-gray-200 rounded"></div>
@@ -129,7 +129,11 @@ export const CustomizeApp: React.FC<{ navigation: any }> = ({ navigation }) => {
         {/* Selector de color */}
         <button
           className="flex items-center justify-around bg-white rounded-lg w-[40%] h-10 mt-6"
-          onClick={() => setIsVisible(!isVisible)}
+          onClick={() =>{
+            
+            setIsVisible(!isVisible)
+            
+          }}
         >
           <span className="text-primary">Color:</span>
           <div
@@ -145,19 +149,26 @@ export const CustomizeApp: React.FC<{ navigation: any }> = ({ navigation }) => {
         />
 
         {/* Botón de guardar */}
-        <div className="fixed bottom-0 bg-white w-full py-4 flex justify-center">
-          <button
-            className="w-[80%] py-3 text-lg font-semibold text-white rounded-lg"
-            style={{
-              backgroundColor: urlPhoto === "error" || !urlPhoto ? "#CCCCCC" : color,
-            }}
-            onClick={
-              urlPhoto === "error" || urlPhoto === "" ? handleImagePick : ommited
-            }
-          >
-            {urlPhoto === "error" || urlPhoto === "" ? "Elegir Imagen" : "Guardar"}
-          </button>
-        </div>
+        {!isVisible && (
+          <div className="fixed bottom-0 bg-white w-full py-4 flex justify-center">
+            <button
+              className="w-[80%] py-3 text-lg font-semibold text-white rounded-lg"
+              style={{
+                backgroundColor:
+                  urlPhoto === "error" || !urlPhoto ? "#CCCCCC" : color,
+              }}
+              onClick={
+                urlPhoto === "error" || urlPhoto === ""
+                  ? handleImagePick
+                  : ommited
+              }
+            >
+              {urlPhoto === "error" || urlPhoto === ""
+                ? "Elegir Imagen"
+                : "Guardar"}
+            </button>
+          </div>
+        )}
 
         {isLoadingBig && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">

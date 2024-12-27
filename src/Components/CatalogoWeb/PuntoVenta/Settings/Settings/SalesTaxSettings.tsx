@@ -181,14 +181,14 @@ export const SalesTaxSettings: React.FC<{ navigation: any }> = ({
                 placeholder="Descripción"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                className="input"
+                className="input bg-white border-b-2 border-gray-100"
               />
               <input
                 type="number"
                 placeholder="Impuesto de venta"
                 value={taxValue}
                 onChange={(e) => setTaxValue(e.target.value)}
-                className="input"
+                className="input bg-white border-b-2 border-gray-100"
               />
             </div>
           </>
