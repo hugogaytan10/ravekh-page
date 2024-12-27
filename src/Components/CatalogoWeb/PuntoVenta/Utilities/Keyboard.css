@@ -1,0 +1,38 @@
+.keyboard-container {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 360px;
+    margin: 0 auto;
+    padding: 15px;
+    gap: 10px;
+  }
+  
+  .key {
+    width: 30%; /* Ocupa el 30% del ancho del contenedor */
+    position: relative;
+    background-color: #4a148c;
+    border: none;
+    border-radius: 50%;
+    color: #ffffff;
+    font-size: 24px;
+    font-family: "Poppins-SemiBold", sans-serif;
+    cursor: pointer;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .key:after {
+    content: "";
+    display: block;
+    padding-bottom: 100%; /* Mantiene la proporción cuadrada */
+  }
+  
+  .backspace-key {
+    background-color: transparent;
+    color: #4a148c;
+    font-size: 24px;
+  }
+  

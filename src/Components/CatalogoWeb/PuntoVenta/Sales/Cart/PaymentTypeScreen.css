@@ -1,0 +1,103 @@
+.payment-type-screen-container {
+    display: flex;
+    flex-direction: column;
+    background-color: #fff;
+    height: 100vh;
+    justify-content: space-around;
+  }
+  
+  .payment-type-screen-header {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    color: #fff;
+    position: absolute;
+    top: 0;
+    width: 100%;
+  }
+  
+  .payment-type-screen-back-button {
+    display: flex;
+    align-items: center;
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+  }
+  
+  .payment-type-screen-header-title {
+    font-size: 20px;
+    font-weight: bold;
+  }
+  
+  .payment-type-screen-amount-container {
+    text-align: center;
+    margin: 20px 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  
+  .payment-type-screen-amount {
+    font-size: 36px;
+    font-weight: bold;
+    color: #000;
+  }
+  
+  .payment-type-screen-tip-link {
+    color: #ff00b3;
+    font-size: 12px;
+    cursor: pointer;
+  }
+  
+  .payment-type-screen-payment-options-container {
+    padding: 20px;
+  }
+  
+  .payment-type-screen-payment-option-row {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+  }
+  
+  .payment-type-screen-payment-option {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #f0f0f0;
+    border-radius: 10px;
+    padding: 10px;
+    cursor: pointer;
+    width: 30%;
+  }
+  
+  .payment-type-screen-payment-option.selected {
+    background: #6200ee;
+  }
+  
+  .payment-type-screen-payment-option-text {
+    margin-top: 5px;
+    color: #6200ee;
+    font-size: 12px;
+    font-weight: 600;
+  }
+  
+  .payment-type-screen-payment-option-text.selected {
+    color: #fff;
+  }
+  
+  .payment-type-screen-confirm-button {
+    background-color: #6200ee;
+    color: #fff;
+    font-size: 16px;
+    font-weight: bold;
+    border: none;
+    border-radius: 8px;
+    padding: 10px;
+    margin: 20px;
+    cursor: pointer;
+    position: fixed;
+    bottom: 0;
+    width: calc(100% - 40px);
+  }
+  

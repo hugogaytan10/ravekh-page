@@ -1,0 +1,234 @@
+/* Contenedor general de la lista de productos */
+.product-list-main-sales {
+  background-color: #fff;
+  padding: 16px;
+  min-height: 100vh;
+  padding-bottom: 120px;
+}
+
+/* Contenedor para cada fila de productos */
+.row-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); /* Ajusta las columnas automáticamente */
+  grid-auto-rows: 250px; /* Establece una altura fija para las filas */
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+
+/* Estilo de las tarjetas de productos */
+.card-container {
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.1);
+  cursor: pointer;
+  height: 250px;
+  position: relative;
+  transition: transform 0.2s ease;
+  overflow: hidden;
+}
+
+.card-container:hover {
+  transform: scale(1.05);
+}
+
+/* Contenedor para las imágenes */
+.image-container {
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+  object-fit: cover;
+}
+
+.product-image {
+  object-fit: cover;
+  border-radius: 8px;
+  width: 100%;
+  height: 100%;
+}
+
+/* Estilo para productos sin imagen */
+.no-image-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #ccc;
+  width: 100%;
+  height: 100%;
+  border-radius: 8px;
+}
+
+.no-image-text {
+  font-size: 14px;
+  font-weight: bold;
+  color: #fff;
+  text-align: center;
+}
+
+.no-image-price {
+  font-size: 12px;
+  color: #fff;
+}
+
+/* Footer de la tarjeta */
+.footer-card {
+  width: 100%;
+  padding: 8px;
+  background-color: rgba(0, 0, 0, 0.7);
+  border-radius: 0 0 8px 8px;
+  color: #fff;
+  text-align: center;
+  position: absolute;
+  bottom: 0;
+}
+
+.title-card {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.price {
+  font-size: 16px;
+  font-weight: bold;
+  color: #fff;
+}
+
+
+.add-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  background-color: #e8f4ff;
+  border: 2px dashed #007bff;
+  border-radius: 8px;
+  height: 250px; /* Igual que las demás tarjetas */
+  width: 100%; /* Asegura que ocupe el mismo ancho */
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.add-card:hover {
+  background-color: #d7ecff;
+}
+
+.plus-icon {
+  width: 40px;
+  height: 40px;
+  background-color: #007bff;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.plus-icon::before {
+  content: "+";
+  color: #fff;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  text-align: center;
+  box-shadow: 0px 2px 10px rgba(0, 0, 0, 0.2);
+}
+
+.modal-content p {
+  margin-bottom: 20px;
+  font-size: 16px;
+  color: #333;
+}
+
+.modal-content button {
+  background-color: #007bff;
+  color: #fff;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s ease;
+}
+
+.modal-content button:hover {
+  background-color: #0056b3;
+}
+
+/* Spinner para actualización */
+.spinner-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  border-radius: 8px;
+}
+
+.spinner {
+  width: 24px;
+  height: 24px;
+  border: 3px solid #007bff;
+  border-top: 3px solid transparent;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* Animación para el spinner */
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Responsive Design */
+@media (min-width: 480px) {
+  .row-container {
+    grid-template-columns: repeat(2, 1fr); /* Dos columnas en pantallas pequeñas */
+  }
+}
+
+@media (min-width: 768px) {
+  .row-container {
+    grid-template-columns: repeat(3, 1fr); /* 3 columnas */
+  }
+
+  .footer-card {
+    padding: 4px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .row-container {
+    grid-template-columns: repeat(4, 1fr); /* 4 columnas */
+  }
+}
+
+@media (min-width: 1440px) {
+  .row-container {
+    grid-template-columns: repeat(5, 1fr); /* 5 columnas */
+  }
+}

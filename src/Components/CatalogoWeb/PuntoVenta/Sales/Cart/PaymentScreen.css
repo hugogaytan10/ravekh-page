@@ -1,0 +1,71 @@
+.payment-screen-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 0px;
+    background-color: #fff;
+    height: 100vh;
+  }
+  
+  .payment-screen-header {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    width: 100%;
+    color: #fff;
+  }
+  
+  .payment-screen-back-button {
+    background: none;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    margin-right: 20px;
+  }
+  
+  .payment-screen-title {
+    font-size: 20px;
+    font-weight: bold;
+  }
+  
+  .payment-screen-amount-container {
+    text-align: center;
+    margin: 20px 0;
+  }
+  
+  .payment-screen-label {
+    font-size: 14px;
+    color: #ff00b3;
+  }
+  
+  .payment-screen-amount {
+    font-size: 36px;
+    font-weight: bold;
+    color: #000;
+  }
+  
+  .payment-screen-change {
+    margin-top: 5px;
+    font-size: 16px;
+    color: #ff00b3;
+  }
+  
+  .payment-screen-confirm-button {
+    width: 90%;
+    max-width: 360px;
+    background-color: #6200ee;
+    color: #fff;
+    font-size: 18px;
+    font-weight: bold;
+    padding: 10px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    margin-top: 1px;
+  }
+  
+  .payment-screen-confirm-button.disabled {
+    background-color: #d3d3d3;
+    cursor: not-allowed;
+  }
+  
