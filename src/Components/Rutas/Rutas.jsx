@@ -433,14 +433,53 @@ export const Rutas = () => {
       "/name-store",
       "/phone-store",
       "/reference-store",
+      "/register",
+      "/dashboard",
+      "/settings-p",
+      "/employees/:id",
+      "/mainfinances"
     ];
 
-    const currentPath = location.pathname.toLowerCase().replace(/\/+$/, ""); // Convertir a minúsculas y quitar "/" al final
+    const currentPath = location.pathname.toLowerCase().replace(/\/+$/, "");
 
-    if (protectedRoutes.includes(currentPath) && !context.user.Token) {
-      navigate("/");
-    }
+  // Validar rutas dinámicas con parámetros
+  if (
+    protectedRoutes.some(route =>
+      currentPath.startsWith(route.replace(/:\w+/g, ""))
+    ) &&
+    !context.user.Token
+  ) {
+    context.setShowNavBarBottom(false);
+    navigate("/");
+  }
   }, [location, navigate, context.cartPos]);
+
+  useEffect(() => {
+    let timeout;
+  
+    const resetTimer = () => {
+      if (timeout) clearTimeout(timeout);
+      timeout = setTimeout(() => {
+        context.setUser(null); // Remueve el usuario del contexto
+        navigate("/login-punto-venta"); // Redirige a login
+      }, 30 * 60 * 1000); // 30 minutos de inactividad
+    };
+  
+    // Eventos que resetean el temporizador
+    window.addEventListener("mousemove", resetTimer);
+    window.addEventListener("keydown", resetTimer);
+    window.addEventListener("click", resetTimer);
+  
+    resetTimer(); // Iniciar el temporizador al montar el componente
+  
+    return () => {
+      if (timeout) clearTimeout(timeout);
+      window.removeEventListener("mousemove", resetTimer);
+      window.removeEventListener("keydown", resetTimer);
+      window.removeEventListener("click", resetTimer);
+    };
+  }, [navigate, context]);
+  
 
   return (
     <div className="drawer ">
