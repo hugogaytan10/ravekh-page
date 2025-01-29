@@ -65,7 +65,7 @@ export const MainSettings: React.FC = () => {
 
       <main className="flex-grow overflow-y-auto px-4 pb-4 mt-2">
         {/* Opciones principales */}
-        <section className="bg-white p-4 rounded-lg shadow mb-4">
+        <section className="bg-white p-4 rounded-lg  mb-4">
           <div className="grid grid-cols-3 gap-4">
             <button
               className="flex flex-col items-center"
@@ -74,7 +74,7 @@ export const MainSettings: React.FC = () => {
                 navigate("/main-store-online");
               }}
             >
-              <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center shadow">
+              <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center ">
                 <Basket width={30} height={30} fill={iconColor} />
               </div>
               <span className="mt-2 text-sm font-medium text-gray-700">
@@ -89,7 +89,7 @@ export const MainSettings: React.FC = () => {
                   context.setShowNavBarBottom(false);// Hide the bottom navbar
                   navigate("/clients")}} // Redirect to the clients screen
               >
-                <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center shadow">
+                <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center ">
                   <Client width={30} height={30} fill={iconColor} />
                 </div>
                 <span className="mt-2 text-sm font-medium text-gray-700">
@@ -105,7 +105,7 @@ export const MainSettings: React.FC = () => {
                   context.setShowNavBarBottom(false); // Hide the bottom navbar
                   navigate("/employees")}} // Redirect to the employees screen
               >
-                <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center shadow">
+                <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center ">
                   <People width={30} height={30} fill={iconColor} />
                 </div>
                 <span className="mt-2 text-sm font-medium text-gray-700">
@@ -120,7 +120,7 @@ export const MainSettings: React.FC = () => {
                 context.setShowNavBarBottom(false); // Hide the bottom navbar
                 navigate("/settings-p")}} // Redirect to the settings screen
             >
-              <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center shadow">
+              <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center ">
                 <Settings width={30} height={30} fill={iconColor} />
               </div>
               <span className="mt-2 text-sm font-medium text-gray-700">
@@ -129,7 +129,7 @@ export const MainSettings: React.FC = () => {
             </button>
 
             <button className="flex flex-col items-center">
-              <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center shadow">
+              <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center ">
                 <Help width={30} height={30} fill={iconColor} />
               </div>
               <span className="mt-2 text-sm font-medium text-gray-700">
@@ -145,7 +145,7 @@ export const MainSettings: React.FC = () => {
                   navigate("/box-cutting");
                 }}
               >
-                <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center shadow">
+                <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center ">
                   <CashRegister width={30} height={30} fill={iconColor} />
                 </div>
                 <span className="mt-2 text-sm font-medium text-gray-700">
@@ -157,20 +157,12 @@ export const MainSettings: React.FC = () => {
         </section>
 
         {/* Otras opciones */}
-        <section className="bg-white p-4 rounded-lg shadow mb-4">
+        <section className="bg-white p-4 rounded-lg  mb-4">
           <h2 className="text-lg font-semibold mb-4 text-gray-700">
             Otras Opciones
           </h2>
           <div className="flex flex-col space-y-4">
-            <button
-              className="flex items-center space-x-4"
-              onClick={openBrowserWithLink}
-            >
-              <Tv width={30} height={30} strokeColor={iconColor} />
-              <span className="text-sm font-medium text-gray-700">
-                Versión en computadora
-              </span>
-            </button>
+           
             <button
               className="flex items-center space-x-4"
               onClick={() => setModalVisible(true)}
@@ -186,7 +178,7 @@ export const MainSettings: React.FC = () => {
         {/* Modal de confirmación */}
         {modalVisible && (
           <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white p-6 rounded-lg shadow-lg w-11/12 max-w-md">
+            <div className="bg-white p-6 rounded-lg  w-11/12 max-w-md">
               <h3 className="text-lg font-semibold text-gray-700 mb-4">
                 Confirmar Cambio de Negocio
               </h3>
@@ -212,7 +204,7 @@ export const MainSettings: React.FC = () => {
         )}
 
         {/* Slider animado */}
-        <section className="bg-white p-4 rounded-lg shadow">
+        <section className="bg-white p-4 rounded-lg  md:w-1/2 m-auto h-96 overflow-hidden mb-20">
           <AnimatedSlider />
         </section>
       </main>
