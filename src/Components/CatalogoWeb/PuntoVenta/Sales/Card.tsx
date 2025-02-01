@@ -1,4 +1,12 @@
-import React, { useContext, useState, useEffect } from "react";
+import React, {
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef
+} from "react";
+import { FixedSizeGrid } from "react-window";
 import { Item } from "../Model/Item";
 import "./Css/ProductList.css";
 import { AppContext } from "../../Context/AppContext";
@@ -9,53 +17,59 @@ interface CardProps {
   handleAddItem: (product: Item) => void;
 }
 
-const Card: React.FC<CardProps> = ({ product, handleAddItem }) => {
+const Card: React.FC<CardProps> = React.memo(({ product, handleAddItem }) => {
   const { Name, Image, Price, PromotionPrice, Color, ForSale } = product;
-  const [isImageLoading, setIsImageLoading] = useState(true);
-  const truncatedName = Name.length > 18 ? Name.substring(0, 18) + "" : Name;
-  const navigate = useNavigate();
+  const [isImageLoading, setIsImageLoading] = useState(!!Image); // Solo inicia en true si hay imagen
+
+  const handleLoad = useCallback(() => {
+    setIsImageLoading(false);
+  }, []);
+
+  const handleError = useCallback(() => {
+    setIsImageLoading(false);
+  }, []);
 
   if (!ForSale) return null;
 
   return (
     <div
       className="card-container"
-      style={{ backgroundColor: Color }}
+      style={{ backgroundColor: "transparent" }}
       onClick={() => handleAddItem(product)}
     >
       {Image ? (
         <div className="image-container">
           {isImageLoading && (
             <div className="loading-container">
-              <div className="spinner" />
+              <div className="spinner"></div>
             </div>
           )}
           <img
+            key={Image} // Esto previene que React re-cargue la imagen si no ha cambiado
             src={Image}
             alt={Name}
             className="product-image"
-            onLoad={() => setIsImageLoading(false)}
-            onError={() => setIsImageLoading(false)}
+            loading="lazy"
+            onLoad={handleLoad}
+            onError={handleError}
           />
         </div>
       ) : (
         <div className="no-image-container">
-          <p className="no-image-text">{truncatedName}</p>
+          <p className="no-image-text">{Name}</p>
         </div>
       )}
       <div className="footer-card">
-        <p className="title-card">{truncatedName}</p>
+        <p className="title-card">{Name}</p>
         <p className="price">
-          {PromotionPrice != null && PromotionPrice > 0
+          {PromotionPrice && PromotionPrice > 0
             ? `$${PromotionPrice.toFixed(2)}`
-            : Price != null
-            ? `$${Price.toFixed(2)}`
-            : "N/A"}
+            : `$${Price?.toFixed(2) ?? "N/A"}`}
         </p>
       </div>
     </div>
   );
-};
+});
 
 interface ProductListProps {
   products: Item[];
@@ -63,119 +77,114 @@ interface ProductListProps {
 
 export const ProductList: React.FC<ProductListProps> = ({ products }) => {
   const context = useContext(AppContext);
-  const [columns, setColumns] = useState(2); // Número inicial de columnas
-  const [refreshing, setRefreshing] = useState(false);
-  const [showModalPremium, setShowModalPremium] = useState(false);
+  const [columns, setColumns] = useState(3);
+  const [gridWidth, setGridWidth] = useState(window.innerWidth);
+  const rowHeight = 250;
+  const maxRowsVisible = 3;
   const navigate = useNavigate();
 
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth <= 600) {
-        setColumns(2); // 2 columnas para pantallas pequeñas
-      } else if (window.innerWidth <= 1024) {
-        setColumns(3); // 3 columnas para pantallas medianas
-      } else if (window.innerWidth <= 1440) {
-        setColumns(4); // 4 columnas para pantallas grandes
+      const width = window.innerWidth;
+      if (width < 600) {
+        setColumns(2);
+      } else if (width < 1024) {
+        setColumns(3);
+      } else if (width < 1440) {
+        setColumns(4);
       } else {
-        setColumns(5); // 5 columnas para pantallas extra grandes
+        setColumns(5);
       }
+      setGridWidth(width);
     };
 
-    handleResize(); // Configurar columnas iniciales
-    window.addEventListener("resize", handleResize); // Ajustar dinámicamente
-
+    handleResize();
+    window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleAddItem = (product: Item) => {
-    const cartProduct = context.cartPos?.find((item) => item.Id === product.Id);
-    if (cartProduct) {
-      cartProduct.Quantity += Number(context.quantityNextSell);
-      cartProduct.SubTotal = cartProduct.Quantity * (product.Price ?? 0);
-      context.setStockFlag(!context.stockFlag);
-    } else {
-      context.setCartPos([
-        ...context.cartPos,
-        {
-          Image: product.Image,
-          Id: product.Id,
-          Name: product.Name,
-          Price: product.Price ?? 0,
-          Barcode: product.Barcode ?? undefined,
-          Quantity: Number(context.quantityNextSell),
-          SubTotal: (product.Price ?? 0) * Number(context.quantityNextSell),
-          Cost: product.CostPerItem ?? 0,
-          Category_Id: product.Category_Id ?? undefined,
-          Stock: product.Stock ?? undefined,
-          IsLabeled: product.IsLabeled ?? undefined,
-          Volume: product.Volume ?? undefined,
-          PromotionPrice: product.PromotionPrice ?? undefined,
-        },
-      ]);
-    }
-    navigator.vibrate?.(100); // Vibración para navegadores compatibles
-    context.setStockFlag(!context.stockFlag);
-  };
+  const memoizedProducts = useMemo(() => products, [products]);
 
-  const handleCreateItem = () => {
-    if (
-      (context.store.Plan === "GRATUITO" && products.length >= 10) ||
-      (context.store.Plan === "EMPRENDEDOR" && products.length >= 200)
-    ) {
-      setShowModalPremium(true);
-    } else {
-      context.setShowNavBarBottom(false);
-      navigate("/add-product");
-    }
-  };
+  const handleAddItem = useCallback(
+    (product: Item) => {
+      context.setCartPos((prevCart) => {
+        const updatedCart = prevCart.map((item) =>
+          item.Id === product.Id
+            ? {
+                ...item,
+                Quantity: item.Quantity + Number(context.quantityNextSell),
+                SubTotal:
+                  (item.Price ?? 0) *
+                  (item.Quantity + Number(context.quantityNextSell)),
+              }
+            : item
+        );
 
-// Inserta el botón "Agregar Producto" en la primera fila y agrupa productos
-const groupedProducts: (Item | "addButton")[][] = [];
-const productsWithAddButton: (Item | "addButton")[] = ["addButton", ...products]; // Botón como el primer elemento
+        const exists = prevCart.some((item) => item.Id === product.Id);
+        return exists
+          ? updatedCart
+          : [
+              ...prevCart,
+              {
+                Image: product.Image,
+                Id: product.Id,
+                Name: product.Name,
+                Price: product.Price ?? 0,
+                Barcode: product.Barcode ?? undefined,
+                Quantity: Number(context.quantityNextSell),
+                SubTotal:
+                  (product.Price ?? 0) * Number(context.quantityNextSell),
+                Cost: product.CostPerItem ?? 0,
+                Category_Id: product.Category_Id ?? undefined,
+                Stock: product.Stock ?? undefined,
+                IsLabeled: product.IsLabeled ?? undefined,
+                Volume: product.Volume ?? undefined,
+                PromotionPrice: product.PromotionPrice ?? undefined,
+              },
+            ];
+      });
 
-for (let i = 0; i < productsWithAddButton.length; i += columns) {
-  groupedProducts.push(productsWithAddButton.slice(i, i + columns));
-}
+      navigator.vibrate?.(50); // Reducir el tiempo de vibración
+      //context.setStockFlag((prev) => !prev);
+    },
+    [context.quantityNextSell]
+  );
 
+  const rowCount = Math.ceil(memoizedProducts.length / columns);
+  const gridHeight = rowHeight * maxRowsVisible;
 
   return (
     <div className="product-list-main-sales">
-      {groupedProducts.map((group, groupIndex) => (
-        <div
-          key={groupIndex}
-          className="row-container"
-          style={{ display: "grid", gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: "10px" }}
+      <FixedSizeGrid
+        columnCount={columns}
+        rowCount={rowCount}
+        columnWidth={gridWidth / columns - 10}
+        rowHeight={rowHeight + 15}
+        width={gridWidth}
+        height={gridHeight}
+        overscanRowCount={3} // Precarga más filas para evitar eliminar imágenes
+        className="grid-container"
+        itemKey={({ rowIndex, columnIndex }) => {
+          const index = rowIndex * columns + columnIndex;
+          return memoizedProducts[index]?.Id || index;
+        }}
+      >
+        {({ columnIndex, rowIndex, style }) => {
+          const index = rowIndex * columns + columnIndex;
+          if (index >= memoizedProducts.length) return null;
 
-        >
-          {group.map((product, index) =>
-            product === "addButton" ? (
-              <div
-                key="addButton"
-                className="add-card"
-                onClick={handleCreateItem}
-              >
-                <div className="plus-icon" />
-                <p>Agregar Producto</p>
-              </div>
-            ) : (
-              <Card
-                key={product.Id || index}
-                product={product}
-                handleAddItem={handleAddItem}
-              />
-            )
-          )}
-        </div>
-      ))}
-      {refreshing && <div className="spinner-overlay">Actualizando...</div>}
-      {showModalPremium && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <p>Actualiza tu plan para agregar más productos.</p>
-            <button onClick={() => setShowModalPremium(false)}>Cerrar</button>
-          </div>
-        </div>
-      )}
+          const product = memoizedProducts[index];
+
+          return (
+            <div
+              style={{ ...style, padding: "5px", marginBottom: "10px" }}
+              className="grid-item"
+            >
+              <Card product={product} handleAddItem={handleAddItem} />
+            </div>
+          );
+        }}
+      </FixedSizeGrid>
     </div>
   );
 };
