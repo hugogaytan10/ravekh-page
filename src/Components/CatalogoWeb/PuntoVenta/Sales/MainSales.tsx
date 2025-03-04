@@ -1,14 +1,12 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext, useMemo } from "react";
 import { SalesBar } from "./NavBar/SalesBar";
 import { ProductList } from "../Sales/Card";
 import { List } from "./List";
-//import { PremiumExpirationModal } from "../Utilities/Stripe/PremiumExpirationModal";
 import PlusIcon from "../../../../assets/POS/PlusIcon";
 import {
   getBusinessInformation,
   getProduct,
   getTaxes,
-  updateAdvice,
 } from "./Petitions";
 import "./Css/MainSales.css";
 import { Item } from "../Model/Item";
@@ -17,102 +15,71 @@ import { CartPos } from "../Model/CarPos";
 import { useLocation, useNavigate } from "react-router-dom";
 
 export const MainSales: React.FC = () => {
-  const navigate = useNavigate(); // React Router para navegación
+  const navigate = useNavigate();
+  const context = useContext(AppContext);
+  const location = useLocation();
+
   const [products, setProducts] = useState<Item[]>([]);
   const [filteredProducts, setFilteredProducts] = useState<Item[]>([]);
-  const [view, setView] = useState(true); // Vista de card:row
-  const context = useContext(AppContext);
-  const [totalPrice, setTotalPrice] = useState(0.0);
-  const [totalItems, setTotalItems] = useState(0);
+  const [view, setView] = useState(true);
   const [showModalPremium, setShowModalPremium] = useState(false);
   const [loader, setLoader] = useState(false);
-  const location = useLocation(); // React Router para obtener la ubicación actual
-  //realizamos un metodo para cuando la pantalla
-  //este enfocada entonces sea visible la barrar de navegacion
-  //similar al useOnFocus
-  // Efecto para mostrar la barra de navegación al regresar a esta pantalla
+
+  /** Muestra la barra de navegación al cambiar de página */
   useEffect(() => {
-    const checkFocus = () => {
-      // Asegurar que la barra de navegación sea visible al estar en esta pantalla
-      context.setShowNavBarBottom(true);
-    };
+    const checkFocus = () => context.setShowNavBarBottom(true);
+    checkFocus();
+    window.addEventListener("popstate", checkFocus);
+    return () => window.removeEventListener("popstate", checkFocus);
+  }, [location.pathname]);
 
-    checkFocus(); // Llamar al cargar
-    window.addEventListener("popstate", checkFocus); // Detectar navegación por gestos o botones del navegador
-
-    return () => {
-      window.removeEventListener("popstate", checkFocus); // Limpiar el evento
-    };
-  }, [location.pathname, context]);
-
+  /** Obtiene los productos y datos de negocio */
   useEffect(() => {
-    // Obtener productos al cargar
-    try {
-      setLoader(true);
-      getProduct(context.user.Business_Id, context.user.Token).then(
-        (data: any) => {
-          try {
-            if (data.length > 0) {
-              const filteredData = data[0]
-                .concat(data[1])
-                .filter((product: Item | null) => product !== null);
-              setProducts(filteredData);
-              setFilteredProducts(filteredData);
-            }
-          } catch (e) {
-            console.error(e);
-          }
-        }
-      );
+    setLoader(true);
+    getProduct(context.user.Business_Id, context.user.Token).then((data: any) => {
+      if (data?.length > 0) {
+        const filteredData = [...data[0], ...data[1]].filter(Boolean);
+        setProducts(filteredData);
+        setFilteredProducts(filteredData);
+      }
+    }).finally(() => setLoader(false));
+  }, [context.user.Business_Id, context.user.Token]);
 
-      calculateCartTotals();
-    } catch (e) {
-    } finally {
-      setLoader(false);
-    }
-  }, [context.stockFlag]);
-
+  /** Obtiene la información de impuestos y negocio */
   useEffect(() => {
-    calculateCartTotals();
-  }, [context.cartPos]);
+    getBusinessInformation(context.user.Business_Id.toString(), context.user.Token)
+      .then((data: any) => data && context.setStore(data));
 
-  const calculateCartTotals = () => {
-    let totalP = 0.0;
+    getTaxes(context.user.Business_Id.toString(), context.user.Token)
+      .then((data: any) => data && context.setTax(data));
+  }, [context.user.Business_Id, context.user.Token]);
+
+  /** Calcula totales del carrito */
+  const { totalPrice, totalItems } = useMemo(() => {
+    let totalP = 0;
     let total = 0;
-    (context.cartPos as CartPos[]).forEach((item: CartPos) => {
+    context.cartPos.forEach((item) => {
       total += item.Quantity;
       totalP += item.Quantity * item.Price;
     });
-    setTotalPrice(totalP);
-    setTotalItems(total);
-  };
+    return { totalPrice: totalP, totalItems: total };
+  }, [context.cartPos]);
 
+  /** Manejo de agregar productos */
   const handleAddProduct = () => {
     if (context.store.Plan === "GRATUITO" && products.length >= 10) {
       setShowModalPremium(true);
     } else {
-      context.setShowNavBarBottom(false); // Ocultar barra de navegación
+      context.setShowNavBarBottom(false);
       navigate("/add-product");
     }
   };
 
-  useEffect(() => {
-    getBusinessInformation(
-      context.user.Business_Id + "",
-      context.user.Token
-    ).then((data: any) => {
-      if (data) {
-        context.setStore(data);
-      }
-    });
-    getTaxes(context.user.Business_Id + "", context.user.Token).then(
-      (data: any) => {
-        if (data) {
-          context.setTax(data);
-        }
-      }
-    );
-  }, []);
+  /** Memoiza `ProductList` para evitar re-renders innecesarios */
+  const MemoizedProductList = useMemo(
+    () => <ProductList products={filteredProducts} />,
+    [filteredProducts]
+  );
 
   return (
     <div className="main-sales">
@@ -130,7 +97,7 @@ export const MainSales: React.FC = () => {
       <div className="sales-container overflow-y-auto">
         {filteredProducts.length > 0 ? (
           view ? (
-            <ProductList products={filteredProducts} />
+            MemoizedProductList
           ) : (
             <div className="p-2">
               <button
@@ -149,6 +116,7 @@ export const MainSales: React.FC = () => {
             <span>Agregar Productos</span>
           </button>
         )}
+
         {/* Footer */}
         <footer className={loader ? "sales-footer-loader" : "sales-footer"}>
           <div className="cart-info">
@@ -159,8 +127,7 @@ export const MainSales: React.FC = () => {
             style={{ backgroundColor: context.store.Color || "#6D01D1" }}
             onClick={() => {
               if (context.cartPos.length > 0) {
-                //navegar a la pagina de pago (/MainCart)
-                context.setShowNavBarBottom(false); // Ocultar barra de navegación
+                context.setShowNavBarBottom(false);
                 navigate("/MainCart");
               }
             }}
@@ -169,14 +136,6 @@ export const MainSales: React.FC = () => {
           </button>
         </footer>
       </div>
-
-      {/* Modal */}
-      {/*
-        <PremiumExpirationModal
-          isVisible={showModalPremium}
-          onClose={() => setShowModalPremium(false)}
-        />
-        */}
     </div>
   );
 };

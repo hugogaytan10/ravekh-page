@@ -1,7 +1,7 @@
 /* Contenedor general de la lista de productos */
 .product-list-main-sales {
   background-color: #fff;
-  padding: 16px;
+  padding: 0px;
   min-height: 100vh;
   padding-bottom: 120px;
 }
@@ -26,10 +26,12 @@
   position: relative;
   transition: transform 0.2s ease;
   overflow: hidden;
+  outline: none; /* Evita el flash al hacer click */
+
 }
 
 .card-container:hover {
-  transform: scale(1.05);
+  /*transform: scale(1.05);*/
 }
 
 /* Contenedor para las imágenes */
@@ -41,12 +43,12 @@
 }
 
 .product-image {
-  object-fit: cover;
-  border-radius: 8px;
-  width: 100%;
-  height: 100%;
+  width: 100%; /* Se asegura que siempre ocupe el mismo espacio */
+  height: 100%; /* Mantiene el tamaño sin cambios */
+  object-fit: cover; /* Evita distorsión */
+  transition: opacity 0.3s ease-in-out; /* Suaviza la carga */
+  opacity: 1;
 }
-
 /* Estilo para productos sin imagen */
 .no-image-container {
   display: flex;
@@ -229,6 +231,45 @@
 
 @media (min-width: 1440px) {
   .row-container {
+    grid-template-columns: repeat(5, 1fr); /* 5 columnas */
+  }
+}
+
+/* Contenedor de la grilla */
+.grid-container {
+  border-radius: 8px;
+  background: white;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px; /* Añadir espacio entre las tarjetas */
+}
+
+/* Cada tarjeta dentro de la grilla */
+.grid-item {
+  padding: 5px; /* Espaciado entre las tarjetas */
+}
+
+/* Hacer responsiva la cantidad de columnas */
+@media (max-width: 600px) {
+  .grid-container {
+    grid-template-columns: repeat(2, 1fr); /* 2 columnas en pantallas pequeñas */
+  }
+}
+
+@media (min-width: 600px) and (max-width: 1024px) {
+  .grid-container {
+    grid-template-columns: repeat(3, 1fr); /* 3 columnas */
+  }
+}
+
+@media (min-width: 1024px) and (max-width: 1440px) {
+  .grid-container {
+    grid-template-columns: repeat(4, 1fr); /* 4 columnas */
+  }
+}
+
+@media (min-width: 1440px) {
+  .grid-container {
     grid-template-columns: repeat(5, 1fr); /* 5 columnas */
   }
 }
