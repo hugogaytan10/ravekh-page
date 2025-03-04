@@ -62,7 +62,7 @@ import CardIncome from "../CatalogoWeb/PuntoVenta/Reports/Sales/CardIncome";
 import CashIncome from "../CatalogoWeb/PuntoVenta/Reports/Sales/CashIncome";
 import BestSelling from "../CatalogoWeb/PuntoVenta/Reports/BestSellingProducts/BestSelling";
 import BestCategorySelling from "../CatalogoWeb/PuntoVenta/Reports/BestSellingProducts/BestCategorySelling";
-
+import { RavekhAgenda } from "../AgendaT/RavekhAgenda";
 // Importaciones para el punto de venta - Settings
 // Importaciones para el punto de venta - Settings - principal
 import { MainSettings } from "../CatalogoWeb/PuntoVenta/Settings/MainSettings";
@@ -710,7 +710,7 @@ export const Rutas = () => {
           <Route path="/client-select" element={<ClientSelect />} />  
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/AddRegister" element={<Register />} />          
-
+          <Route path="/RavekhAgenda" element={<RavekhAgenda />} />
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}
