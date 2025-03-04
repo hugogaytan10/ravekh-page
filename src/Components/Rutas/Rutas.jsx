@@ -20,6 +20,7 @@ import { AppContext } from "../CatalogoWeb/Context/AppContext";
 import cart from "../../assets/cart-outline.svg";
 import arrow from "../../assets/arrow-forward-white.svg";
 import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
+import { PoliticaPrivacidadAgenda } from "../PoliticaPrivacidad/PoliticaPrivacidadAgenda";
 //importaciones para el catalogo web
 import { RavekhPos } from "../RavekhPos/RavekhPos";
 
@@ -622,6 +623,7 @@ export const Rutas = () => {
           <Route path="/proyectos" element={<Muestra />} />
           <Route path="/paquetes" element={<Paquetes />} />
           <Route path="/politica" element={<PoliticaPrivacidad />} />
+          <Route path = "/politicaAgenda" element = {<PoliticaPrivacidadAgenda />} />
           <Route path="/RavekhPos" element={<RavekhPos />} />
           <Route path="/blog" element={<BlogMain />} />
           <Route path="/blog/articulosIA" element={<MainArticulosIA />} />
