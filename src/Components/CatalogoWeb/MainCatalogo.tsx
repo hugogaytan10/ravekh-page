@@ -161,7 +161,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
 
 
         </Helmet>
-        <div className="p-4 min-h-screen w-full max-w-screen-xl mx-auto py-20">
+        <div className="p-4 min-h-screen w-full max-w-screen-xl mx-auto py-20 mt-8">
           {/* Mostrar mensaje si no hay productos */}
 
           {productos.length === 0 ? (
@@ -175,72 +175,59 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2  md:grid-cols-4 lg:grid-cols-5 gap-6">
+            <div className="grid grid-cols-2  md:grid-cols-4 lg:grid-cols-5 gap-6 mt-">
               {Array.isArray(productos) &&
                 productos.map(
                   (producto, index) =>
                     producto.Image != "" &&
                     producto.Image != null && (
                       <motion.div
-                        key={producto.Id}
-                        className="border rounded-lg shadow-md  bg-white transform transition-transform hover:scale-105 hover:shadow-lg"
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.1, duration: 0.5 }}
-                      >
-                        <NavLink
-                          to={`/catalogo/producto/${producto.Id}/${telefono}`}
-                        >
-                          <img
-                            src={producto.Image}
-                            alt={producto.Name}
-                            className="h-48 w-full object-cover mb-4 rounded-t-lg"
-                          />
-                        </NavLink>
-                        <h2 className="text-lg font-semibold text-gray-800 text-center">
-                          {producto.Name}
-                        </h2>
+  key={producto.Id}
+  className="border rounded-lg shadow-md bg-white flex flex-col h-full transform transition-transform hover:scale-105 hover:shadow-lg"
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ delay: index * 0.1, duration: 0.5 }}
+>
+  {/* Imagen del producto */}
+  <NavLink to={`/catalogo/producto/${producto.Id}/${telefono}`}>
+    <img src={producto.Image} alt={producto.Name} className="h-48 w-full object-cover rounded-t-lg" />
+  </NavLink>
 
-                        {/* Precio normal y promocional en un solo renglón */}
-                        <div className="flex justify-between items-center mt-2 p-2">
-                          {producto.PromotionPrice ? (
-                            <>
-                              <p className="text-gray-800 text-xl font-semibold">
-                                ${producto.PromotionPrice}
-                              </p>
-                              <p className="text-gray-300 line-through font-light">
-                                ${producto.Price}
-                              </p>
-                            </>
-                          ) : (
-                            <p className="text-gray-800 text-xl font-semibold">
-                              ${producto.Price}
-                            </p>
-                          )}
-                        </div>
+  {/* 📌 Contenedor del texto */}
+  <div className="flex flex-col flex-grow px-4 py-2">
+    {/* Nombre del producto */}
+    <h2 className="text-lg font-semibold text-gray-800 text-center">{producto.Name}</h2>
 
-                        {/* Botón centrado */}
-                        <div className="flex justify-center mt-4 p-2">
-                          <button
-                            onClick={() => context.addProductToCart(producto)}
-                            style={{
-                              backgroundColor: color || "#6D01D1",
-                              transition: "background-color 0.3s ease-in-out",
-                            }}
-                            onMouseEnter={(e) =>
-                            (e.currentTarget.style.backgroundColor =
-                              adjustColor(color || "#6D01D1"))
-                            }
-                            onMouseLeave={(e) =>
-                            (e.currentTarget.style.backgroundColor =
-                              color || "#6D01D1")
-                            }
-                            className="text-white w-full md:w-3/4 py-2 px-4 rounded-full shadow-md hover:transform hover:scale-105"
-                          >
-                            Añadir al carrito
-                          </button>
-                        </div>
-                      </motion.div>
+    {/* Precio y Promoción */}
+    <div className="flex justify-between items-center mt-2">
+      {producto.PromotionPrice ? (
+        <>
+          <p className="text-gray-800 text-xl font-semibold">${producto.PromotionPrice}</p>
+          <p className="text-gray-300 line-through font-light">${producto.Price}</p>
+        </>
+      ) : (
+        <p className="text-gray-800 text-xl font-semibold">${producto.Price}</p>
+      )}
+    </div>
+
+    {/* Descripción del producto (Texto justificado) */}
+    <p className="text-gray-600 text-justify text-sm mt-2 flex-grow">{producto.Description}</p>
+  </div>
+
+  {/* 📌 Botón de "Añadir al carrito" alineado al fondo */}
+  <div className="p-4 mt-auto">
+    <button
+      onClick={() => context.addProductToCart(producto)}
+      style={{ backgroundColor: color || "#6D01D1" }}
+      onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = adjustColor(color || "#6D01D1"))}
+      onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = color || "#6D01D1")}
+      className="text-white w-full py-2 px-4 rounded-full shadow-md hover:transform hover:scale-105"
+    >
+      Añadir al carrito
+    </button>
+  </div>
+</motion.div>
+
                     )
                 )}
             </div>
