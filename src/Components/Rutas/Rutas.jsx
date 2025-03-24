@@ -263,15 +263,15 @@ export const Rutas = () => {
 
     }
   }, [categories]); // Solo ejecuta cuando las categorías cambian
-  useEffect(() => {
-    // Llamada a la API para cargar categorías cuando se monta el componente
-    getCategoriesByBusinesssId(1).then((data) => {
-      //ordenar categorias por el tamano del texto de la categoria
-      data.sort((a, b) => a.Name.length - b.Name.length);
-      setCategories(data);
-
-    });
-  }, []); // Se ejecuta una vez al montar el componente
+  useEffect(() => {    // Llamada a la API para cargar categorías cuando se monta el componente
+    if (context.idBussiness) {
+      getCategoriesByBusinesssId(context.idBussiness).then((data) => {
+        //ordenar categorias por el tamano del texto de la categoria
+        data.sort((a, b) => a.Name.length - b.Name.length);
+        setCategories(data);
+      });
+    }
+  }, [context.idBussiness]); // Se ejecuta una vez al montar el componente
 
 
   useEffect(() => {
@@ -600,78 +600,78 @@ export const Rutas = () => {
           </nav>
         )}
 
-<div className="drawer-content flex flex-col min-w-full relative hidden" id="menuIconoCatalogo">
-  {/* Contenedor del encabezado del catálogo */}
-  <div
-    className="w-full min-h-16 rounded-b-lg fixed z-40 flex flex-col px-4"
-    style={{ backgroundColor: color }}
-  >
-    {/* Primera fila: menú, flecha, título, carrito */}
-    <div className="w-full flex items-center justify-between mt-5">
-      {/* Icono del menú */}
-      <div
-        ref={catalogoIconRef}
-        className="bg-white w-8 h-8 rounded-full flex items-center justify-center"
-        onClick={handleMenuClickCatalogo}
-        id="imgCatalogo"
-      >
-        <img src={menu} alt="menu" className="h-8 w-8" />
-      </div>
+        <div className="drawer-content flex flex-col min-w-full relative hidden" id="menuIconoCatalogo">
+          {/* Contenedor del encabezado del catálogo */}
+          <div
+            className="w-full min-h-16 rounded-b-lg fixed z-40 flex flex-col px-4"
+            style={{ backgroundColor: color }}
+          >
+            {/* Primera fila: menú, flecha, título, carrito */}
+            <div className="w-full flex items-center justify-between mt-5">
+              {/* Icono del menú */}
+              <div
+                ref={catalogoIconRef}
+                className="bg-white w-8 h-8 rounded-full flex items-center justify-center"
+                onClick={handleMenuClickCatalogo}
+                id="imgCatalogo"
+              >
+                <img src={menu} alt="menu" className="h-8 w-8" />
+              </div>
 
-      {/* Botón de regreso */}
-      <div
-        onClick={() => window.history.back()}
-        id="backCatalogo"
-        className="w-8 h-8 rounded-full flex items-center justify-center transform rotate-180 hidden"
-        style={{ backgroundColor: color }}
-      >
-        <img src={arrow} alt="arrow" className="w-8 h-8 " />
-      </div>
+              {/* Botón de regreso */}
+              <div
+                onClick={() => window.history.back()}
+                id="backCatalogo"
+                className="w-8 h-8 rounded-full flex items-center justify-center transform rotate-180 hidden"
+                style={{ backgroundColor: color }}
+              >
+                <img src={arrow} alt="arrow" className="w-8 h-8 " />
+              </div>
 
-      {/* Nombre del catálogo */}
-      <div>
-        <h2 className="text-white text-center text-lg font-semibold">
-          {nombre}
-        </h2>
-      </div>
+              {/* Nombre del catálogo */}
+              <div>
+                <h2 className="text-white text-center text-lg font-semibold">
+                  {nombre}
+                </h2>
+              </div>
 
-      {/* Ícono del carrito */}
-      <NavLink to={"/catalogo/pedido"}>
-        <div className="relative">
-          <img src={cart} alt="cart" className="w-8 h-8" />
-          {context.cart.length > 0 && (
-            <span
-              className="absolute top-0 right-0 bg-gray-50 rounded-full w-4 h-4 flex items-center justify-center text-xs"
-              style={{ color: color }}
-            >
-              {context.cart.length}
-            </span>
-          )}
-        </div>
-      </NavLink>
-    </div>
-
-    {/* Segunda fila: lista de categorías (justo debajo del carrito) */}
-    {showCategoryList && (
-      <div
-        className="w-full mt-2 overflow-x-auto whitespace-nowrap scrollbar-hide mb-2 "
-        ref={slideRef}
-      >
-        <div className="flex flex-nowrap gap-2 px-4">
-          {categories.map((category) => (
-            <button
-              key={category.Id}
-              className="px-4 py-2  text-white rounded-lg shadow-sm transition duration-300 hover:bg-purple-600"
-            >
-              <NavLink to={`/categoria/${category.Id}`} className="whitespace-nowrap">
-                {category.Name}
+              {/* Ícono del carrito */}
+              <NavLink to={"/catalogo/pedido"}>
+                <div className="relative">
+                  <img src={cart} alt="cart" className="w-8 h-8" />
+                  {context.cart.length > 0 && (
+                    <span
+                      className="absolute top-0 right-0 bg-gray-50 rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                      style={{ color: color }}
+                    >
+                      {context.cart.length}
+                    </span>
+                  )}
+                </div>
               </NavLink>
-            </button>
-          ))}
-        </div>
-      </div>
-    )}
-  </div>
+            </div>
+
+            {/* Segunda fila: lista de categorías (justo debajo del carrito) */}
+            {showCategoryList && (
+              <div
+                className="w-full mt-2 overflow-x-auto whitespace-nowrap scrollbar-hide mb-2 "
+                ref={slideRef}
+              >
+                <div className="flex flex-nowrap gap-2 px-4">
+                  {categories.map((category) => (
+                    <button
+                      key={category.Id}
+                      className="px-4 py-2  text-white rounded-lg shadow-sm transition duration-300 hover:bg-purple-600"
+                    >
+                      <NavLink to={`/categoria/${category.Id}`} className="whitespace-nowrap">
+                        {category.Name}
+                      </NavLink>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
 
 
 
