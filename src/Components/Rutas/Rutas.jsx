@@ -120,7 +120,8 @@ import { NavBottom } from "./NavBottom";
 //import { LanguageSelection } from "../CatalogoWeb/PuntoVenta/Settings/Settings/LanguageSelection";
 //import { SalesTaxSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/SalesTaxSettings";
 import { getCategoriesByBusinesssId } from "../CatalogoWeb/Petitions";
-
+// deeplink para la agenda
+import { DeepLinkRedirect } from "../AgendaT/DeepLinkRedict";
 
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
@@ -801,6 +802,9 @@ export const Rutas = () => {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/AddRegister" element={<Register />} />
           <Route path="/RavekhAgenda" element={<RavekhAgenda />} />
+
+          <Route path="/open" element={<DeepLinkRedirect />} />
+
         </Routes>
       </div>
       {context.showNavBarBottom && <NavBottom />}
