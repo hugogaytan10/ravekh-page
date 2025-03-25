@@ -3,7 +3,7 @@ import { Header } from "./Header";
 import { StatsCard } from "./StatsCard";
 import { TrendingDownIcon } from "../../../../assets/POS/TrendingDown";
 import { TrendingUpIcon } from "../../../../assets/POS/TrendingUp";
-import { ReloadIcon } from "../../../../assets/POS/reload";
+import { ReloadIcon } from "../../../../assets/POS/Reload";
 import { Change } from "../../../../assets/POS/change";
 import { StatsIcon } from "../../../../assets/POS/Stats";
 import {
