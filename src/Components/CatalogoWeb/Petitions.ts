@@ -93,3 +93,13 @@ export const getIdentifier = async (idBusiness: string) => {
         return null;
     }
 }
+export const getCategoriesByBusinesssId = async (idBusiness: string) => {
+    try{
+        const response = await fetch(`${URL}categories/business/${idBusiness}`);
+        const data = await response.json();
+        return data;
+    }catch(error){
+        console.log(error);
+        return [];
+    }
+}

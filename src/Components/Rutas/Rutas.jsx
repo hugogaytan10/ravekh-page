@@ -20,6 +20,7 @@ import { AppContext } from "../CatalogoWeb/Context/AppContext";
 import cart from "../../assets/cart-outline.svg";
 import arrow from "../../assets/arrow-forward-white.svg";
 import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
+import { PoliticaPrivacidadAgenda } from "../PoliticaPrivacidad/PoliticaPrivacidadAgenda";
 //importaciones para el catalogo web
 import { RavekhPos } from "../RavekhPos/RavekhPos";
 
@@ -62,7 +63,7 @@ import CardIncome from "../CatalogoWeb/PuntoVenta/Reports/Sales/CardIncome";
 import CashIncome from "../CatalogoWeb/PuntoVenta/Reports/Sales/CashIncome";
 import BestSelling from "../CatalogoWeb/PuntoVenta/Reports/BestSellingProducts/BestSelling";
 import BestCategorySelling from "../CatalogoWeb/PuntoVenta/Reports/BestSellingProducts/BestCategorySelling";
-
+import { RavekhAgenda } from "../AgendaT/RavekhAgenda";
 // Importaciones para el punto de venta - Settings
 // Importaciones para el punto de venta - Settings - principal
 import { MainSettings } from "../CatalogoWeb/PuntoVenta/Settings/MainSettings";
@@ -79,7 +80,7 @@ import { AnimatedSlider } from "../CatalogoWeb/PuntoVenta/Settings/Pricing/prici
 import { CloseSession } from "../CatalogoWeb/PuntoVenta/Settings/Settings/CloseSession";
 import { CustomizeApp } from "../CatalogoWeb/PuntoVenta/Settings/Settings/CustomizeApp";
 import { DeleteAccount } from "../CatalogoWeb/PuntoVenta/Settings/Settings/DeleteAccount";
-import { GeneralSettings} from "../CatalogoWeb/PuntoVenta/Settings/Settings/GeneralSettings";
+import { GeneralSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/GeneralSettings";
 import { LanguageSelection } from "../CatalogoWeb/PuntoVenta/Settings/Settings/LanguageSelection";
 import { PaymentMethods } from "../CatalogoWeb/PuntoVenta/Settings/Settings/PaymentMethods";
 import { SalesTaxSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/SalesTaxSettings";
@@ -118,6 +119,9 @@ import { NavBottom } from "./NavBottom";
 //import { deleteAccount } from "../CatalogoWeb/PuntoVenta/Settings/Settings/Petitions";
 //import { LanguageSelection } from "../CatalogoWeb/PuntoVenta/Settings/Settings/LanguageSelection";
 //import { SalesTaxSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/SalesTaxSettings";
+import { getCategoriesByBusinesssId } from "../CatalogoWeb/Petitions";
+// deeplink para la agenda
+import { DeepLinkRedirect } from "../AgendaT/DeepLinkRedict";
 
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
@@ -132,6 +136,11 @@ export const Rutas = () => {
   const slideDownRef = useRef(null);
   const listItemsRef = useRef(null);
   const menuToggle = useRef(null);
+
+  //agregados de marco
+  const slideRef = useRef(null);
+  const [categories, setCategories] = useState([])
+
 
   //togle para el catalogo
   const catalogoIconRef = useRef(null);
@@ -166,6 +175,8 @@ export const Rutas = () => {
     }
   }, []);
 
+
+
   useEffect(() => {
     if (context.cart.length === 0) {
       const localCart = localStorage.getItem("cart");
@@ -189,6 +200,7 @@ export const Rutas = () => {
           0.1
         );
     }
+
 
     if (slideDownRefCatalogo) {
       //togle para el catalogo
@@ -226,7 +238,41 @@ export const Rutas = () => {
       context.setNombre(localNombre);
       setnombre(localNombre);
     }
-  }, []);
+
+    // Asegurar que las categorías están cargadas antes de iniciar la animación
+    if (categories.length > 0) {
+      gsap.set(slideDownRef.current, { y: "-100%", display: "block" });
+
+      menuToggle.current = new TimelineMax({ paused: true, reversed: true })
+        .to(menuIconRef.current, 0.5, { x: "30", ease: "back.out(1.7)" })
+        .to(slideDownRef.current, 1, { y: "0%", ease: "back.out(1.7)" })
+        .staggerFrom(
+          listItemsRef.current.children,
+          0.25,
+          {
+            y: "-70px",
+            opacity: 1,
+            ease: "power1.out",
+            onComplete: function () {
+              // Al final de la animación, asegurar que todos los elementos son visibles
+              gsap.set(listItemsRef.current.children, { opacity: 1, transform: "translate(0px, 0px)" });
+            }
+          },
+          0.1
+        );
+
+    }
+  }, [categories]); // Solo ejecuta cuando las categorías cambian
+  useEffect(() => {    // Llamada a la API para cargar categorías cuando se monta el componente
+    if (context.idBussiness) {
+      getCategoriesByBusinesssId(context.idBussiness).then((data) => {
+        //ordenar categorias por el tamano del texto de la categoria
+        data.sort((a, b) => a.Name.length - b.Name.length);
+        setCategories(data);
+      });
+    }
+  }, [context.idBussiness]); // Se ejecuta una vez al montar el componente
+
 
   useEffect(() => {
     if (context.color !== "") {
@@ -324,7 +370,7 @@ export const Rutas = () => {
       "/close-session",
       "/sales-tax-settings",
     ];
-    
+
     const path = location.pathname.toLowerCase(); // Asegúrate de trabajar con minúsculas
     return !hiddenRoutes.some(route => {
       const decodedPath = decodeURIComponent(location.pathname); // Decodificar ruta
@@ -442,21 +488,21 @@ export const Rutas = () => {
 
     const currentPath = location.pathname.toLowerCase().replace(/\/+$/, "");
 
-  // Validar rutas dinámicas con parámetros
-  if (
-    protectedRoutes.some(route =>
-      currentPath.startsWith(route.replace(/:\w+/g, ""))
-    ) &&
-    !context.user.Token
-  ) {
-    context.setShowNavBarBottom(false);
-    navigate("/");
-  }
+    // Validar rutas dinámicas con parámetros
+    if (
+      protectedRoutes.some(route =>
+        currentPath.startsWith(route.replace(/:\w+/g, ""))
+      ) &&
+      !context.user.Token
+    ) {
+      context.setShowNavBarBottom(false);
+      navigate("/");
+    }
   }, [location, navigate, context.cartPos]);
 
   useEffect(() => {
     let timeout;
-  
+
     const resetTimer = () => {
       if (timeout) clearTimeout(timeout);
       timeout = setTimeout(() => {
@@ -464,14 +510,14 @@ export const Rutas = () => {
         navigate("/login-punto-venta"); // Redirige a login
       }, 30 * 60 * 1000); // 30 minutos de inactividad
     };
-  
+
     // Eventos que resetean el temporizador
     window.addEventListener("mousemove", resetTimer);
     window.addEventListener("keydown", resetTimer);
     window.addEventListener("click", resetTimer);
-  
+
     resetTimer(); // Iniciar el temporizador al montar el componente
-  
+
     return () => {
       if (timeout) clearTimeout(timeout);
       window.removeEventListener("mousemove", resetTimer);
@@ -479,8 +525,9 @@ export const Rutas = () => {
       window.removeEventListener("click", resetTimer);
     };
   }, [navigate, context]);
-  
 
+  const showCategoryList = location.pathname === "/" || location.pathname.startsWith("/catalogo/");
+  console.log(showCategoryList);
   return (
     <div className="drawer ">
       <input id="my-drawer-3" type="checkbox" className="drawer-toggle" />
@@ -496,6 +543,7 @@ export const Rutas = () => {
             <img src={menu} alt="menu" className="h-10 w-10" />
           </div>
         )}
+
 
         {shouldShowNavbar && (
           <nav
@@ -552,54 +600,96 @@ export const Rutas = () => {
           </nav>
         )}
 
-        <div
-          className="drawer-content flex flex-col min-w-full relative hidden"
-          id="menuIconoCatalogo"
-        >
+        <div className="drawer-content flex flex-col min-w-full relative hidden" id="menuIconoCatalogo">
+          {/* Contenedor del encabezado del catálogo */}
           <div
-            className="w-full min-h-16 rounded-b-lg fixed z-40 flex items-center justify-between px-4"
+            className="w-full min-h-16 rounded-b-lg fixed z-40 flex flex-col px-4"
             style={{ backgroundColor: color }}
           >
-            {/* Icono del carrito a la izquierda */}
-
-            <div
-              ref={catalogoIconRef}
-              className="bg-white w-8 h-8 rounded-full flex items-center justify-center"
-              onClick={handleMenuClickCatalogo}
-              id="imgCatalogo"
-            >
-              <img src={menu} alt="menu" className="h-8 w-8" />
-            </div>
-
-            <div
-              onClick={() => window.history.back()}
-              id="backCatalogo"
-              className="w-8 h-8 rounded-full flex items-center justify-center transform rotate-180 hidden"
-              style={{ backgroundColor: color }}
-            >
-              <img src={arrow} alt="arrow" className="w-8 h-8 " />
-            </div>
-
-            <div>
-              <h2 className="text-white text-center text-lg font-semibold">
-                {nombre}
-              </h2>
-            </div>
-
-            <NavLink to={"/catalogo/pedido"}>
-              <div className="relative">
-                <img src={cart} alt="cart" className="w-8 h-8" />
-                {context.cart.length > 0 && (
-                  <span
-                    className="absolute top-0 right-0 bg-gray-50 rounded-full w-4 h-4 flex items-center justify-center text-xs"
-                    style={{ color: color }}
-                  >
-                    {context.cart.length}
-                  </span>
-                )}
+            {/* Primera fila: menú, flecha, título, carrito */}
+            <div className="w-full flex items-center justify-between mt-5">
+              {/* Icono del menú */}
+              <div
+                ref={catalogoIconRef}
+                className="bg-white w-8 h-8 rounded-full flex items-center justify-center"
+                onClick={handleMenuClickCatalogo}
+                id="imgCatalogo"
+              >
+                <img src={menu} alt="menu" className="h-8 w-8" />
               </div>
-            </NavLink>
+
+              {/* Botón de regreso */}
+              <div
+                onClick={() => window.history.back()}
+                id="backCatalogo"
+                className="w-8 h-8 rounded-full flex items-center justify-center transform rotate-180 hidden"
+                style={{ backgroundColor: color }}
+              >
+                <img src={arrow} alt="arrow" className="w-8 h-8 " />
+              </div>
+
+              {/* Nombre del catálogo */}
+              <div>
+                <h2 className="text-white text-center text-lg font-semibold">
+                  {nombre}
+                </h2>
+              </div>
+
+              {/* Ícono del carrito */}
+              <NavLink to={"/catalogo/pedido"}>
+                <div className="relative">
+                  <img src={cart} alt="cart" className="w-8 h-8" />
+                  {context.cart.length > 0 && (
+                    <span
+                      className="absolute top-0 right-0 bg-gray-50 rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                      style={{ color: color }}
+                    >
+                      {context.cart.length}
+                    </span>
+                  )}
+                </div>
+              </NavLink>
+            </div>
+
+            {/* Segunda fila: lista de categorías (justo debajo del carrito) */}
+            {showCategoryList && (
+              <div
+                className="w-full mt-2 overflow-x-auto whitespace-nowrap scrollbar-hide mb-2 "
+                ref={slideRef}
+              >
+                <div className="flex flex-nowrap gap-2 px-4">
+                  {categories.map((category) => (
+                    <button
+                      key={category.Id}
+                      className="px-4 py-2  text-white rounded-lg shadow-sm transition duration-300 hover:bg-purple-600"
+                    >
+                      <NavLink to={`/categoria/${category.Id}`} className="whitespace-nowrap">
+                        {category.Name}
+                      </NavLink>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+
+
+
+
+
+          {/* Menú desplegable del catálogo */}
+          <nav
+            ref={slideDownRefCatalogo}
+            className="menu-container fixed top-0 left-0 w-full h-full z-30"
+            style={{ display: "none", backgroundColor: color }}
+          >
+            <ul ref={listItemsRefCatalogo} className="list-items flex flex-col items-center justify-center h-full">
+              <li>
+                <p className="text-white text-base">ravekh.team@gmail.com</p>
+              </li>
+            </ul>
+          </nav>
+
 
           <nav
             ref={slideDownRefCatalogo}
@@ -622,6 +712,7 @@ export const Rutas = () => {
           <Route path="/proyectos" element={<Muestra />} />
           <Route path="/paquetes" element={<Paquetes />} />
           <Route path="/politica" element={<PoliticaPrivacidad />} />
+          <Route path="/politicaAgenda" element={<PoliticaPrivacidadAgenda />} />
           <Route path="/RavekhPos" element={<RavekhPos />} />
           <Route path="/blog" element={<BlogMain />} />
           <Route path="/blog/articulosIA" element={<MainArticulosIA />} />
@@ -680,8 +771,8 @@ export const Rutas = () => {
           <Route path="/cash-income/:period/:businessId" element={<CashIncome />} />
           <Route path="/best-selling/:period/:businessId" element={<BestSelling />} />
           <Route path="/best-category-selling/:period/:businessId" element={<BestCategorySelling />} />
-          <Route path="/more" element={<MainSettings />} />  
-          <Route path="/box-cutting" element={<BoxCutting />} />  
+          <Route path="/more" element={<MainSettings />} />
+          <Route path="/box-cutting" element={<BoxCutting />} />
           <Route path="/cutting-by-employee/:employeeId" element={<CuttingByEmployee />} />
           <Route path="/pricing" element={<AnimatedSlider />} />
           <Route path="/close-session" element={<CloseSession />} />
@@ -693,23 +784,26 @@ export const Rutas = () => {
           <Route path="/sales-tax-settings" element={<SalesTaxSettings />} />
           <Route path="/select-money" element={<SelectMoney />} />
           <Route path="/settings-p" element={<SettingsP />} />
-          <Route path="/main-store-online" element={<MainStoreOnline />} />  
-          <Route path="/orders" element={<OrdersScreen />} />  
-          <Route path="/order-details/:orderId" element={<OrderDetailScreen />} />  
-          <Route path="/update-store-info" element={<UpdateStoreInfo />} />  
+          <Route path="/main-store-online" element={<MainStoreOnline />} />
+          <Route path="/orders" element={<OrdersScreen />} />
+          <Route path="/order-details/:orderId" element={<OrderDetailScreen />} />
+          <Route path="/update-store-info" element={<UpdateStoreInfo />} />
           <Route path="/address-store" element={<AddressStore />} />
           <Route path="/name-store" element={<NameStore />} />
           <Route path="/phone-store" element={<PhoneStore />} />
           <Route path="/reference-store" element={<ReferenceStore />} />
           <Route path="/started-store" element={<StartedStore />} />
-          <Route path="/clients" element={<Client />} />  
-          <Route path="/orders-by-customer/:customerId/:period" element={<OrdersByCustomer />} />  
-          <Route path="/edit-customer/:id" element={<EditClient />} />  
-          <Route path="/employees" element={<Employees />} />  
-          <Route path="/new-employee" element={<NewEmployee />} />  
-          <Route path="/client-select" element={<ClientSelect />} />  
+          <Route path="/clients" element={<Client />} />
+          <Route path="/orders-by-customer/:customerId/:period" element={<OrdersByCustomer />} />
+          <Route path="/edit-customer/:id" element={<EditClient />} />
+          <Route path="/employees" element={<Employees />} />
+          <Route path="/new-employee" element={<NewEmployee />} />
+          <Route path="/client-select" element={<ClientSelect />} />
           <Route path="/dashboard" element={<Dashboard />} />
-          <Route path="/AddRegister" element={<Register />} />          
+          <Route path="/AddRegister" element={<Register />} />
+          <Route path="/RavekhAgenda" element={<RavekhAgenda />} />
+
+          <Route path="/open" element={<DeepLinkRedirect />} />
 
         </Routes>
       </div>

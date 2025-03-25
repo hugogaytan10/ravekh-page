@@ -1,3 +1,4 @@
+import tail
 .nav-menu {
     z-index: 5;
     position: absolute;
@@ -5,13 +6,24 @@
     right: 30px;
     cursor: pointer;
   }
+  /* Ocultar la barra de desplazamiento en navegadores basados en WebKit (Chrome, Safari) */
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Ocultar barra de desplazamiento en Edge e Internet Explorer */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Oculta scrollbar en IE y Edge */
+  scrollbar-width: none; /* Oculta scrollbar en Firefox */
+}
+
   
   .menu-container {
     z-index: 1;
     position: fixed;
     height: 95%;
     width: 100%;
-    background: #E94444;
+    background: #1F023F;
     top: 0;
     left: 0;
     overflow: hidden;
