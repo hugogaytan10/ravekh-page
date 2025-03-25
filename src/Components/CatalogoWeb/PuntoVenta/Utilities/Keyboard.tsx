@@ -1,5 +1,5 @@
 import React from "react";
-import "./KeyBoard.css";
+import "./Keyboard.css";
 
 interface KeyBoardProps {
   handlePress: (value: string) => void;
