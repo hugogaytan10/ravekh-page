@@ -1,7 +1,7 @@
 import React, { useContext } from "react";
 import { ChevronBack } from "../../../../../assets/POS/ChevronBack" // Ajusta estas rutas según tu estructura
 import { ThemeLight } from "../../Theme/Theme";
-import { BackSpace } from "../../../../../assets/POS/BackSpace";
+import BackSpace  from "../../../../../assets/POS/BackSpace";
 import { AppContext } from "../../../Context/AppContext";
 
 interface ModalKeyboardProps {
