@@ -92,7 +92,7 @@ import { OrdersScreen } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/Ord
 import { OrderDetailScreen } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/OrderDetails";
 import { UpdateStoreInfo } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/UpdateStoreInfo";
 import { AddressStore } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/AddressStore";
-import { NameStore } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/nameStore";
+import { NameStore } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/NameStore";
 import { PhoneStore } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/PhoneStore ";
 import { ReferenceStore } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/ReferenceStore";
 import { StartedStore } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/StartedStore";
