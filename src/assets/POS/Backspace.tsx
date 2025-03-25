@@ -22,3 +22,4 @@ export const BackSpace: React.FC = () => (
         />
     </svg>
 );
+export default BackSpace;
