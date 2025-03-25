@@ -122,6 +122,7 @@ import { NavBottom } from "./NavBottom";
 import { getCategoriesByBusinesssId } from "../CatalogoWeb/Petitions";
 // deeplink para la agenda
 import { DeepLinkRedirect } from "../AgendaT/DeepLinkRedict";
+import { MainCategoria } from "../CatalogoWeb/Categoria";
 
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
@@ -526,8 +527,9 @@ export const Rutas = () => {
     };
   }, [navigate, context]);
 
-  const showCategoryList = location.pathname === "/" || location.pathname.startsWith("/catalogo/");
-  console.log(showCategoryList);
+  const showCategoryList = location.pathname === "/" ||
+    location.pathname.startsWith("/catalogo/") ||
+    location.pathname.startsWith("/categoria/");
   return (
     <div className="drawer ">
       <input id="my-drawer-3" type="checkbox" className="drawer-toggle" />
@@ -739,11 +741,11 @@ export const Rutas = () => {
           <Route path="/login-punto-venta" element={<AuthPage />} />
           <Route path="/MainSales" element={<MainSales />} />
           <Route path="/MainCart" element={<MainCart />} />
+          <Route path="/categoria/:idCategoria" element={<MainCategoria />} />
           <Route path="/DiscountScreen" element={<DiscountScreen />} />
           <Route path="/payment-type" element={<PaymentTypeScreen />} />
           <Route path="/payment" element={<PaymentScreen />} />
           <Route path="/finish" element={<FinishScreen />} />
-
           <Route path="/add-product" element={<AddProductSales />} />
           <Route path="/select-caterory-sales" element={<CategoriasScreenSales />} />
           <Route path="/add-category-sales" element={<AddCategoriesSales />} />

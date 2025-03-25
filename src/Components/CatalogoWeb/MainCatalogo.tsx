@@ -60,6 +60,9 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
         localStorage.setItem("nombre", dataBusiness.Name || "");
 
         setPlan(dataBusiness.Plan);
+
+        context.setPhoneNumber(dataBusiness.PhoneNumber || null);
+        localStorage.setItem("telefono", dataBusiness.PhoneNumber || "");
       }
 
       // 1.2) Obtener productos con el plan real

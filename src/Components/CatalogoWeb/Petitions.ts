@@ -103,3 +103,24 @@ export const getCategoriesByBusinesssId = async (idBusiness: string) => {
         return [];
     }
 }
+export const getProductsByCategoryId = async (idCategory: string) => {
+    try{
+        const response = await fetch(`${URL}products/category/${idCategory}`);
+        const data = await response.json();
+        return data;
+    }catch(error){
+        console.log(error);
+        return null;
+    }
+}
+export const getProductsByCategoryIdAndDisponibilty = async (idCategory: string) => {
+    try{
+        const response = await fetch(`${URL}/products/category/available/${idCategory}`);
+        const data = await response.json();
+        return data;
+    }catch(error){
+        console.log(error);
+        return null;
+    }
+}
+

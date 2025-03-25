@@ -68,7 +68,6 @@ export const DetalleProducto: React.FC = () => {
     arrowIcon?.classList.remove("hidden");
 
     getProductById(idProducto || "1").then((data) => {
-      console.log('stock del producto: ', data.Stock)
       setProducto(data);
       setLimit(data.Stock);
     });
