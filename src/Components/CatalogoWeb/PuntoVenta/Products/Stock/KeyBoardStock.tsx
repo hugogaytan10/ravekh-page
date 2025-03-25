@@ -2,7 +2,7 @@ import React, { useContext, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
 import { updateStock } from "../Petitions";
-import Backspace from "../../../../../assets/POS/BackSpace";
+import {BackSpace} from "../../../../../assets/POS/BackSpace";
 import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
 import { ThemeLight } from "../../Theme/Theme";
 export const KeyboardStock: React.FC = () => {
@@ -86,7 +86,7 @@ export const KeyboardStock: React.FC = () => {
         className="w-20 h-20 bg-gray-200 text-gray-600 rounded-full flex items-center justify-center"
         onClick={() => handlePress("BackSpace")}
         >
-        <Backspace />
+        <BackSpace />
         </button>
       </div>
     </div>
