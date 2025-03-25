@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useRef, useState } from "react";
 import { NavLink, useParams } from "react-router-dom";
 import { getBusinessById, getProductsByBusinessWithStock } from "./Petitions";
 import { Producto } from "./Modelo/Producto";
@@ -21,10 +21,10 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [plan, setPlan] = useState<string | null>(null);
 
   const context = useContext(AppContext);
+  const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // 1) useEffect principal: primero saca "plan" del negocio y luego productos
   useEffect(() => {
-    
     (async () => {
       // Redirección especial si es "26"
       if (idBusiness === "26") {
@@ -34,10 +34,9 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
 
       // Asegurar que el contexto tenga el ID del negocio
       if (idBusiness) {
+        console.log("ID del negocio:", idBusiness);
         context.setIdBussiness(idBusiness);
-      } else {
-        context.setIdBussiness("1");
-      }
+      } 
 
       // Limpieza de carrito si no coincide el negocio
       const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -50,7 +49,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       }
 
       // 1.1) Obtener datos del negocio
-      const dataBusiness = await getBusinessById(idBusiness || "1");
+      const dataBusiness = await getBusinessById(idBusiness || "0");
       if (dataBusiness) {
         setColor(dataBusiness.Color || null);
         context.setColor(dataBusiness.Color || null);
@@ -63,6 +62,8 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
 
         context.setPhoneNumber(dataBusiness.PhoneNumber || null);
         localStorage.setItem("telefono", dataBusiness.PhoneNumber || "");
+
+
       }
 
       // 1.2) Obtener productos con el plan real
@@ -80,12 +81,11 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
         setProductos([]);
       }
     })();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idBusiness]);
 
   // 2) Efecto para inicializar/ocultar elementos y cargar color/teléfono/nombre del localStorage si no están en contexto
   useEffect(() => {
-    
     if (!context.phoneNumber) {
       const storedPhoneNumber = localStorage.getItem("telefono");
       if (storedPhoneNumber) {
@@ -129,7 +129,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     return `#${newR}${newG}${newB}`;
   }
 
-  // 4) Scroll infinito: cargar 10 más
+  // 4) Función para cargar más productos
   const loadMore = () => {
     setVisibleCount((prev) => {
       const next = Math.min(prev + 10, productos.length);
@@ -137,19 +137,27 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     });
   };
 
-  // 5) Listener de scroll: cuando el usuario se acerca al final, cargamos más
+  // 5) Intersection Observer para cargar más productos cuando se visualiza el "sentinela"
   useEffect(() => {
-    
-    const handleScroll = () => {
-      if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
-        loadMore();
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadMore();
+        }
+      },
+      {
+        rootMargin: "200px", // Se dispara cuando está a 200px de la vista
       }
-    };
+    );
 
-    window.addEventListener("scroll", handleScroll);
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
+      }
     };
   }, [productos.length]);
 
@@ -196,8 +204,8 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
             </div>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {productos.slice(0, visibleCount).map((producto, index) => (
-                producto.Image && (
+              {productos.slice(0, visibleCount).map((producto, index) =>
+                producto.Image ? (
                   <motion.div
                     key={producto.Id}
                     className="border rounded-lg shadow-md bg-white flex flex-col h-full transform transition-transform hover:scale-105 hover:shadow-lg"
@@ -205,7 +213,9 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.1, duration: 0.5 }}
                   >
-                    <NavLink to={`/catalogo/producto/${producto.Id}/${telefono}`}>
+                    <NavLink
+                      to={`/catalogo/producto/${producto.Id}/${telefono}`}
+                    >
                       <img
                         src={producto.Image}
                         alt={producto.Name}
@@ -246,7 +256,8 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
                           ))
                         }
                         onMouseLeave={(e) =>
-                          (e.currentTarget.style.backgroundColor = color || "#6D01D1")
+                          (e.currentTarget.style.backgroundColor =
+                            color || "#6D01D1")
                         }
                         className="text-white w-full py-2 px-4 rounded-full shadow-md hover:transform hover:scale-105"
                       >
@@ -254,9 +265,14 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
                       </button>
                     </div>
                   </motion.div>
-                )
-              ))}
+                ) : null
+              )}
             </div>
+          )}
+
+          {/* Sentinela para disparar el Intersection Observer */}
+          {visibleCount < productos.length && (
+            <div ref={loadMoreRef} className="h-10"></div>
           )}
 
           {/* Botón de WhatsApp */}

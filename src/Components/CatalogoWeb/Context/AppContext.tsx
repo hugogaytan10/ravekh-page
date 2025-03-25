@@ -19,7 +19,7 @@ export const AppContext = createContext({} as AppContextState);
 const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   const [cart, setCart] = useState<Producto[]>([]);
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
-  const [idBussiness, setIdBussiness] = useState<string>("1");
+  const [idBussiness, setIdBussiness] = useState<string>("0");
   const [color, setColor] = useState<string>("");
   const [nombre, setNombre] = useState<string>("");
   //comienzan los metodos para ravekh pos web

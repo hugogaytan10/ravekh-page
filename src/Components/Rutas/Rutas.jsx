@@ -266,6 +266,7 @@ export const Rutas = () => {
   }, [categories]); // Solo ejecuta cuando las categorías cambian
   useEffect(() => {    // Llamada a la API para cargar categorías cuando se monta el componente
     if (context.idBussiness) {
+      console.log("idBussiness", context.idBussiness);
       getCategoriesByBusinesssId(context.idBussiness).then((data) => {
         //ordenar categorias por el tamano del texto de la categoria
         data.sort((a, b) => a.Name.length - b.Name.length);
