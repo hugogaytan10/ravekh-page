@@ -1,6 +1,6 @@
 import React from 'react';
 
-const Backspace: React.FC = () => (
+export const BackSpace: React.FC = () => (
     <svg
         width={45}
         height={45}
@@ -22,5 +22,3 @@ const Backspace: React.FC = () => (
         />
     </svg>
 );
-
-export default Backspace;

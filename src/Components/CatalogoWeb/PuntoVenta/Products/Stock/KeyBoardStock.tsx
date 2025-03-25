@@ -2,7 +2,7 @@ import React, { useContext, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
 import { updateStock } from "../Petitions";
-import Backspace from "../../../../../assets/POS/Backspace";
+import Backspace from "../../../../../assets/POS/BackSpace";
 import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
 import { ThemeLight } from "../../Theme/Theme";
 export const KeyboardStock: React.FC = () => {
