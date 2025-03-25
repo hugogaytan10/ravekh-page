@@ -1,7 +1,6 @@
 import React, { useContext } from "react";
 import { ChevronBack } from "../../../../../assets/POS/ChevronBack" // Ajusta estas rutas según tu estructura
 import { ThemeLight } from "../../Theme/Theme";
-import BackSpace  from "../../../../../assets/POS/BackSpace";
 import { AppContext } from "../../../Context/AppContext";
 
 interface ModalKeyboardProps {
@@ -73,7 +72,7 @@ export const ModalKeyboard: React.FC<ModalKeyboardProps> = ({
             onClick={() => handlePress("BackSpace")}
             className="w-full h-20 flex items-center justify-center back-space-key-modal-keyboard"
           >
-            <BackSpace />
+            {"<"}
           </button>
         </div>
 
