@@ -1,5 +1,5 @@
 import React from 'react';
-import inventario from '../inventario.png';
+import inventario from './inventario.png';
 
 const InventorySection: React.FC = () => {
   return (

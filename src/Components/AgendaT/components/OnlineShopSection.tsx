@@ -1,5 +1,5 @@
 import React from 'react';
-import shopImage from '../shopimage.png'; // Cambia por la imagen correcta de la tienda
+import shopImage from './shopimage.png'; // Cambia por la imagen correcta de la tienda
 
 const OnlineShopSection: React.FC = () => {
   return (

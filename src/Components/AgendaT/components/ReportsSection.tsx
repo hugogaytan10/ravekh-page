@@ -1,5 +1,5 @@
 import React from 'react';
-import reportImage from '../reportImage.png'; // Asegúrate de cambiar la ruta de la imagen.
+import reportImage from './reportimage.png'; // Asegúrate de cambiar la ruta de la imagen.
 
 const ReportsSection: React.FC = () => {
   return (

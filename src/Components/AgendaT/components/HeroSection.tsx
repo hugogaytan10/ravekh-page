@@ -1,5 +1,5 @@
 import React from "react";
-import heroImage1 from "../banner.png"; // Imagen del primer móvil
+import heroImage1 from "./banner.png"; // Imagen del primer móvil
 
 const HeroSection: React.FC = () => {
   return (
