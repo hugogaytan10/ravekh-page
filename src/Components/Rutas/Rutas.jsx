@@ -807,6 +807,7 @@ export const Rutas = () => {
           <Route path="/RavekhAgenda" element={<RavekhAgenda />} />
 
           <Route path="/open" element={<DeepLinkRedirect />} />
+          <Route path="/open/servicebybusiness/:business" element={<DeepLinkRedirect />} />
 
         </Routes>
       </div>
