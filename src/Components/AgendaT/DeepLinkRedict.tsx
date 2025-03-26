@@ -3,8 +3,8 @@ import { useSearchParams } from 'react-router-dom';
 
 export const DeepLinkRedirect: React.FC = () => {
   const [searchParams] = useSearchParams();
-  const businessId = searchParams.get('business');
-  const alreadyRedirected = searchParams.get('redirected'); // para evitar loops
+  const businessId = searchParams.get('business') || '5'; // simulando un valor si no existe
+  const alreadyRedirected = searchParams.get('redirected');
   const [showFallback, setShowFallback] = useState(false);
 
   useEffect(() => {
@@ -14,26 +14,24 @@ export const DeepLinkRedirect: React.FC = () => {
     const isIOS = /iPhone|iPad|iPod/.test(userAgent);
     const isAndroid = /Android/.test(userAgent);
 
-    // URL para redirigir (Universal Link)
+    // Definir las URLs para cada caso
     const universalLink = `https://www.ravekh.com/open/servicebybusiness/${businessId}`;
+    const customScheme = `myapp://open/servicebybusiness/${businessId}`;
 
     if (isIOS) {
-      // Intenta abrir la app vía Universal Link
-      window.location.href = universalLink;
-      // Fallback: si la app no se abre, después de 3 seg muestra el botón para ir a la App Store
+      // Usamos el esquema personalizado en iOS para que el setTimeout tenga oportunidad de ejecutarse
+      window.location.href = customScheme;
       const timer = setTimeout(() => {
         setShowFallback(true);
       }, 3000);
       return () => clearTimeout(timer);
     } else if (isAndroid) {
-      // En Android usamos el esquema personalizado
       window.location.href = `myapp://open/servicebybusiness/${businessId}`;
       const timer = setTimeout(() => {
         window.location.href = 'https://play.google.com/store/apps/details?id=com.agendat';
       }, 3000);
       return () => clearTimeout(timer);
     } else {
-      // Otros dispositivos: redirige a la web
       window.location.href = 'https://ravekh.com';
     }
   }, [businessId, alreadyRedirected]);
