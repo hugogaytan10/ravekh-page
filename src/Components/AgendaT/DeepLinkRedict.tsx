@@ -23,7 +23,7 @@ export const DeepLinkRedirect: React.FC = () => {
       window.location.href = customScheme;
       const timer = setTimeout(() => {
         setShowFallback(true);
-      }, 3000);
+      }, 2000);
       return () => clearTimeout(timer);
     } else if (isAndroid) {
       window.location.href = `myapp://open/servicebybusiness/${businessId}`;
