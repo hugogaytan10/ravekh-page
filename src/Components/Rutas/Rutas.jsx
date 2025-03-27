@@ -501,7 +501,7 @@ export const Rutas = () => {
       navigate("/");
     }
   }, [location, navigate, context.cartPos]);
-
+/*
   useEffect(() => {
     let timeout;
 
@@ -527,7 +527,7 @@ export const Rutas = () => {
       window.removeEventListener("click", resetTimer);
     };
   }, [navigate, context]);
-
+*/
   const showCategoryList = location.pathname === "/" ||
     location.pathname.startsWith("/catalogo/") ||
     location.pathname.startsWith("/categoria/");
