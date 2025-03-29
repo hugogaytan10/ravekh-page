@@ -265,9 +265,16 @@ export const Rutas = () => {
     }
   }, [categories]); // Solo ejecuta cuando las categorías cambian
   useEffect(() => {    // Llamada a la API para cargar categorías cuando se monta el componente
-    if (context.idBussiness) {
-      console.log("idBussiness", context.idBussiness);
+    const idBusiness = localStorage.getItem("idBusiness");
+    // si nuestro contexto tiene algo le damos prioridad sino al localstorage
+    if (context.idBussiness != 0) {
       getCategoriesByBusinesssId(context.idBussiness).then((data) => {
+        //ordenar categorias por el tamano del texto de la categoria
+        data.sort((a, b) => a.Name.length - b.Name.length);
+        setCategories(data);
+      });
+    }else{
+      getCategoriesByBusinesssId(idBusiness).then((data) => {
         //ordenar categorias por el tamano del texto de la categoria
         data.sort((a, b) => a.Name.length - b.Name.length);
         setCategories(data);
@@ -312,6 +319,7 @@ export const Rutas = () => {
     }
   }, []);
 
+  
   // Función para determinar si se debe mostrar el navbar
   const shouldShowNavbar = useMemo(() => {
     const hiddenRoutes = [

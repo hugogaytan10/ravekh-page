@@ -27,6 +27,8 @@ export const MainCategoria: React.FC = () => {
           context.setPhoneNumber(data[0].PhoneNumber || null);
           localStorage.setItem("telefono", data[0].PhoneNumber || "");
         });*/
+        //rescatamos el id del negocio del local storage
+      
         if (idCategoria) {
             getProductsByCategoryIdAndDisponibilty(idCategoria).then((data) => {
                 setProductos(data);

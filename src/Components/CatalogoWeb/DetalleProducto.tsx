@@ -53,6 +53,23 @@ export const DetalleProducto: React.FC = () => {
         setColor(storedColor);
       }
     }
+
+    //rescatamos los valores del local storage en caso de que el contexto no tenga valores
+    if (!context.phoneNumber) {
+      const storedPhoneNumber = localStorage.getItem("telefono");
+      if (storedPhoneNumber) {
+        context.setPhoneNumber(storedPhoneNumber);
+      }
+    }
+
+    if(context.idBussiness){
+      const storedIdBusiness = localStorage.getItem("idBusiness");
+      if (storedIdBusiness) {
+        context.setIdBussiness(storedIdBusiness);
+      }
+    }
+
+
     const menuIcono = document.getElementById("menuIcono");
     menuIcono?.classList.add("hidden");
 
