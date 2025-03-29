@@ -82,11 +82,11 @@ export const Pedido: React.FC = () => {
     insertOrder(order, orderDetails).then((data) => {
       console.log(data);
     });
-    const identifier = await getIdentifier(idBussiness);
-    sendNotification(identifier
-    ).then((data) => {
-      console.log(data);
-    });
+    // const identifier = await getIdentifier(idBussiness);
+    // sendNotification(identifier
+    // ).then((data) => {
+    //   console.log(data);
+    // });
 
   }
 
