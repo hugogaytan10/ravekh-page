@@ -34,8 +34,9 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
 
       // Asegurar que el contexto tenga el ID del negocio
       if (idBusiness) {
-        console.log("ID del negocio:", idBusiness);
         context.setIdBussiness(idBusiness);
+        //guradamos el id del negocio en el local storage
+        localStorage.setItem("idBusiness", idBusiness);
       } 
 
       // Limpieza de carrito si no coincide el negocio
@@ -80,6 +81,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       } else {
         setProductos([]);
       }
+     
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idBusiness]);
