@@ -115,7 +115,7 @@ export const getProductsByCategoryId = async (idCategory: string) => {
 }
 export const getProductsByCategoryIdAndDisponibilty = async (idCategory: string) => {
     try{
-        const response = await fetch(`${URL}/products/category/availablegtzero/${idCategory}`);
+        const response = await fetch(`${URL}products/category/availablegtzero/${idCategory}`);
         const data = await response.json();
         return data;
     }catch(error){
