@@ -19,6 +19,8 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [telefono, setTelefono] = useState<string | null>(null);
   const [color, setColor] = useState<string | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
+  const [notPay, setNotPay] = useState<boolean>(false);
+  const [notPayMessage, setNotPayMessage] = useState<string | null>(null);
 
   const context = useContext(AppContext);
   const loadMoreRef = useRef<HTMLDivElement>(null);
@@ -29,6 +31,12 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       // Redirección especial si es "26"
       if (idBusiness === "26") {
         window.location.href = "https://mrcongelados.com/";
+        return;
+      }
+
+      if(idBusiness == "92") {
+        setNotPay(true);
+        setNotPayMessage("No tienes acceso a este catálogo por falta de pago.");
         return;
       }
 
@@ -162,6 +170,19 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       }
     };
   }, [productos.length]);
+
+  if(notPay) {
+    return (
+      <div className="flex flex-col items-center justify-center h-screen">
+        <h1 className="text-2xl font-bold text-red-600">
+          {notPayMessage}
+        </h1>
+        <p className="mt-4 text-gray-600">
+          Por favor, contacta a tu proveedor para más información.
+        </p>
+      </div>
+    );
+  }
 
   // 6) Render
   return (

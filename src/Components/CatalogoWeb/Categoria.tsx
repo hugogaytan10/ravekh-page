@@ -15,6 +15,8 @@ export const MainCategoria: React.FC = () => {
     const [productos, setProductos] = useState<Producto[]>([]);
     const [telefono, setTelefono] = useState<string | null>(null);
     const context = useContext(AppContext);
+    const [notPay, setNotPay] = useState(false);
+    const [idBusiness, setIdBusiness] = useState<string | null>(null);
 
     useEffect(() => {
         /*context.setIdBussiness(idBusiness);
@@ -71,6 +73,23 @@ export const MainCategoria: React.FC = () => {
         arrowIcon?.classList.add("hidden");
     }, []);
 
+    useEffect(() => {
+        //rescatamos el id del negocio del local storage
+        const storedIdBusiness = localStorage.getItem("idBusiness");
+        if (storedIdBusiness && storedIdBusiness == "92") {
+            setNotPay(true);
+        }
+    }, [productos]);
+
+    if(notPay) {
+        return (
+            <div className="flex flex-col items-center justify-center min-h-screen">
+                <h1 className="text-2xl font-bold mb-4">Lo sentimos</h1>
+                <p className="text-lg">No puedes comprar en esta tienda.</p>
+                <p className="text-lg">Por favor, contacta a la tienda para más información.</p>
+            </div>
+        );
+    }
     return (
         <HelmetProvider>
             <>
