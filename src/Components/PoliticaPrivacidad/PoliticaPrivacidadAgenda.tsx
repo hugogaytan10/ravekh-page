@@ -5,11 +5,11 @@ export const PoliticaPrivacidadAgenda = () => {
     <div className="bg-gray-100 py-10 px-5 md:px-20">
       <div className="max-w-4xl mx-auto bg-white shadow-lg p-8 rounded-lg">
         <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">Política de Privacidad</h1>
-        
+
         <section className="mb-6">
           <h2 className="text-2xl font-semibold text-gray-700 mb-4">1. Introducción</h2>
           <p className="text-gray-600 leading-relaxed">
-            Esta Política de Privacidad describe cómo nuestra aplicación móvil de agenda en línea recopila, utiliza y protege la información personal que nos proporcionas. Nuestra plataforma permite gestionar citas, pero no recopila información médica. 
+            Esta Política de Privacidad describe cómo nuestra aplicación móvil de agenda en línea recopila, utiliza y protege la información personal que nos proporcionas. Nuestra plataforma permite gestionar citas, pero no recopila información médica.
           </p>
         </section>
 
@@ -39,6 +39,14 @@ export const PoliticaPrivacidadAgenda = () => {
             <li>Proveer soporte al usuario y mejorar la experiencia de uso.</li>
           </ul>
         </section>
+
+        <section className="mb-6">
+          <h2 className="text-2xl font-semibold text-gray-700 mb-4">Información Médica</h2>
+          <p className="text-gray-600 leading-relaxed">
+            Es importante destacar que **nuestra aplicación no recopila ni procesa ninguna información médica sensible**. La plataforma está diseñada únicamente para **gestionar citas** de servicios profesionales, como nutriólogos, psicólogos, entre otros. **No almacenamos ni tratamos información relacionada con la salud de los usuarios**. La única información que gestionamos está relacionada con el agendamiento de citas y detalles logísticos de los servicios.
+          </p>
+        </section>
+
 
         <section className="mb-6">
           <h2 className="text-2xl font-semibold text-gray-700 mb-4">4. Compartir información</h2>
