@@ -265,9 +265,10 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
                           </p>
                         )}
                       </div>
+                      {/*
                       <p className="text-gray-600 text-justify text-sm mt-2 flex-grow">
                         {producto.Description}
-                      </p>
+                      </p>*/}
                     </div>
                     <div className="p-4 mt-auto">
                       <button
