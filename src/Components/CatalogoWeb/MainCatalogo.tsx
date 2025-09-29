@@ -1,12 +1,19 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
-import { NavLink, useParams } from "react-router-dom";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { useParams } from "react-router-dom";
 import { getBusinessById, getProductsByBusinessWithStock } from "./Petitions";
 import { Producto } from "./Modelo/Producto";
-import { motion } from "framer-motion";
 import { AppContext } from "./Context/AppContext";
 import logoWhasa from "../../assets/logo-whatsapp.svg";
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import defaultImage from "../../assets/ravekh.png";
+import { ProductGrid } from "./ProductGrid";
 
 interface MainCatalogoProps {
   idBusiness?: string;
@@ -23,6 +30,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [notPayMessage, setNotPayMessage] = useState<string | null>(null);
 
   const context = useContext(AppContext);
+  const addProductToCart = context.addProductToCart;
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // 1) useEffect principal: primero saca "plan" del negocio y luego productos
@@ -128,8 +136,22 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     arrowIcon?.classList.add("hidden");
   }, [context]);
 
+  const sanitizedProducts = useMemo(
+    () => productos.filter((producto) => Boolean(producto.Image)),
+    [productos]
+  );
+
+  const sanitizedLength = sanitizedProducts.length;
+
+  const visibleProducts = useMemo(
+    () => sanitizedProducts.slice(0, visibleCount),
+    [sanitizedProducts, visibleCount]
+  );
+
+  const hasMoreProducts = visibleCount < sanitizedLength;
+
   // 3) Función para ajustar color en hover
-  function adjustColor(hex: string) {
+  const adjustColor = useCallback((hex: string) => {
     const r = parseInt(hex.slice(1, 3), 16);
     const g = parseInt(hex.slice(3, 5), 16);
     const b = parseInt(hex.slice(5, 7), 16);
@@ -137,18 +159,29 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     const newG = Math.max(0, g - 100).toString(16).padStart(2, "0");
     const newB = Math.max(0, b - 100).toString(16).padStart(2, "0");
     return `#${newR}${newG}${newB}`;
-  }
+  }, []);
 
   // 4) Función para cargar más productos
-  const loadMore = () => {
+  const loadMore = useCallback(() => {
     setVisibleCount((prev) => {
-      const next = Math.min(prev + 10, productos.length);
-      return next;
+      if (prev >= sanitizedLength) {
+        return prev;
+      }
+      return Math.min(prev + 10, sanitizedLength);
     });
-  };
+  }, [sanitizedLength]);
+
+  useEffect(() => {
+    const initialCount = sanitizedLength === 0 ? 0 : Math.min(10, sanitizedLength);
+    setVisibleCount(initialCount);
+  }, [sanitizedLength]);
 
   // 5) Intersection Observer para cargar más productos cuando se visualiza el "sentinela"
   useEffect(() => {
+    if (!hasMoreProducts) {
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
@@ -160,16 +193,40 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       }
     );
 
-    if (loadMoreRef.current) {
-      observer.observe(loadMoreRef.current);
+    const currentRef = loadMoreRef.current;
+
+    if (currentRef) {
+      observer.observe(currentRef);
     }
 
     return () => {
-      if (loadMoreRef.current) {
-        observer.unobserve(loadMoreRef.current);
+      if (currentRef) {
+        observer.unobserve(currentRef);
       }
     };
-  }, [productos.length]);
+  }, [hasMoreProducts, loadMore]);
+
+  const currencyFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("es-MX", {
+        style: "currency",
+        currency: "MXN",
+        minimumFractionDigits: 2,
+      }),
+    []
+  );
+
+  const formatPrice = useCallback(
+    (value: number) => currencyFormatter.format(value),
+    [currencyFormatter]
+  );
+
+  const handleAddToCart = useCallback(
+    (product: Producto) => {
+      addProductToCart(product);
+    },
+    [addProductToCart]
+  );
 
   if(notPay) {
     return (
@@ -226,75 +283,18 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
               </p>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
-              {productos.slice(0, visibleCount).map((producto, index) =>
-                producto.Image ? (
-                  <motion.div
-                    key={producto.Id}
-                    className="border rounded-lg shadow-md bg-white flex flex-col h-full transform transition-transform hover:scale-105 hover:shadow-lg"
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: index * 0.1, duration: 0.5 }}
-                  >
-                    <NavLink
-                      to={`/catalogo/producto/${producto.Id}/${telefono}`}
-                    >
-                      <img
-                        src={producto.Image}
-                        alt={producto.Name}
-                        className="h-48 w-full object-cover rounded-t-lg"
-                      />
-                    </NavLink>
-                    <div className="flex flex-col flex-grow px-4 py-2">
-                      <h2 className="text-lg font-semibold text-gray-800 text-center">
-                        {producto.Name}
-                      </h2>
-                      <div className="flex justify-between items-center mt-2">
-                        {producto.PromotionPrice ? (
-                          <>
-                            <p className="text-gray-800 text-xl font-semibold">
-                              ${producto.PromotionPrice}
-                            </p>
-                            <p className="text-gray-300 line-through font-light">
-                              ${producto.Price}
-                            </p>
-                          </>
-                        ) : (
-                          <p className="text-gray-800 text-xl font-semibold">
-                            ${producto.Price}
-                          </p>
-                        )}
-                      </div>
-                      <p className="text-gray-600 text-justify text-sm mt-2 flex-grow">
-                        {producto.Description}
-                      </p>
-                    </div>
-                    <div className="p-4 mt-auto">
-                      <button
-                        onClick={() => context.addProductToCart(producto)}
-                        style={{ backgroundColor: color || "#6D01D1" }}
-                        onMouseEnter={(e) =>
-                          (e.currentTarget.style.backgroundColor = adjustColor(
-                            color || "#6D01D1"
-                          ))
-                        }
-                        onMouseLeave={(e) =>
-                          (e.currentTarget.style.backgroundColor =
-                            color || "#6D01D1")
-                        }
-                        className="text-white w-full py-2 px-4 rounded-full shadow-md hover:transform hover:scale-105"
-                      >
-                        Añadir al carrito
-                      </button>
-                    </div>
-                  </motion.div>
-                ) : null
-              )}
-            </div>
+            <ProductGrid
+              products={visibleProducts}
+              telefono={telefono}
+              color={color}
+              adjustColor={adjustColor}
+              onAdd={handleAddToCart}
+              formatPrice={formatPrice}
+            />
           )}
 
           {/* Sentinela para disparar el Intersection Observer */}
-          {visibleCount < productos.length && (
+          {hasMoreProducts && (
             <div ref={loadMoreRef} className="h-10"></div>
           )}
 
