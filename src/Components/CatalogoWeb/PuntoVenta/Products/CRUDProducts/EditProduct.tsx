@@ -24,9 +24,9 @@ export const EditProduct: React.FC = () => {
   const [cost, setCost] = useState<string>("");
   const [barcode, setBarcode] = useState<string>("");
   const [stock, setStock] = useState<string>("");
-  const [minStock, setMinStock] = useState<number | undefined>(undefined);
-  const [optStock, setOptStock] = useState<number | undefined>(undefined);
-  const [promoPrice, setPromoPrice] = useState<number | null>(null);
+  const [minStock, setMinStock] = useState<string>("");
+  const [optStock, setOptStock] = useState<string>("");
+  const [promoPrice, setPromoPrice] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [unitType, setUnitType] = useState<string>("Unidad");
   const [colorSelected, setColorSelected] = useState<string>("");
@@ -36,20 +36,74 @@ export const EditProduct: React.FC = () => {
   const [isVisibleColorPicker, setIsVisibleColorPicker] = useState<boolean>(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [showModalDelete, setShowModalDelete] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const formLoadedRef = useRef(false);
 
   useEffect(() => {
-    if (productId) {
-      context.setIsShowSplash(true);
-      getProduct(parseInt(productId), context.user.Token).then((response) => {
+    if (!productId || formLoadedRef.current) {
+      return;
+    }
+
+    const currentId = parseInt(productId, 10);
+    const draft = context.productFormState;
+
+    if (draft && draft.mode === "edit" && draft.productId === currentId) {
+      setProductName(draft.productName);
+      setPrice(draft.price);
+      setCost(draft.cost);
+      setBarcode(draft.barcode);
+      setStock(draft.stock);
+      setMinStock(draft.minStock);
+      setOptStock(draft.optStock);
+      setPromoPrice(draft.promoPrice);
+      setDescription(draft.description);
+      setUnitType(draft.unitType);
+      setColorSelected(draft.colorSelected || context.store.Color || ThemeLight.secondaryColor);
+      setImage(draft.image);
+      setIsAvailableForSale(draft.isAvailableForSale);
+      setIsDisplayedInStore(draft.isDisplayedInStore);
+      formLoadedRef.current = true;
+    }
+  }, [context.productFormState, context.store.Color, productId]);
+
+  useEffect(() => {
+    if (!productId) {
+      return;
+    }
+
+    const currentId = parseInt(productId, 10);
+    if (
+      context.productFormState &&
+      context.productFormState.mode === "edit" &&
+      context.productFormState.productId === currentId
+    ) {
+      return;
+    }
+
+    context.setIsShowSplash(true);
+    getProduct(currentId, context.user.Token)
+      .then((response) => {
         if (response) {
           setProductName(response.Name || "");
           setPrice(response.Price?.toString() || "");
           setCost(response.CostPerItem?.toString() || "");
           setBarcode(response.Barcode || "");
           setStock(response.Stock?.toString() || "");
-          setMinStock(response.MinStock ?? undefined);
-          setOptStock(response.OptStock ?? undefined);
-          setPromoPrice(response.PromotionPrice ?? null);
+          setMinStock(
+            response.MinStock !== null && response.MinStock !== undefined
+              ? response.MinStock.toString()
+              : ""
+          );
+          setOptStock(
+            response.OptStock !== null && response.OptStock !== undefined
+              ? response.OptStock.toString()
+              : ""
+          );
+          setPromoPrice(
+            response.PromotionPrice !== null && response.PromotionPrice !== undefined
+              ? response.PromotionPrice.toString()
+              : ""
+          );
           setDescription(response.Description || "");
           setColorSelected(response.Color || context.store.Color || ThemeLight.secondaryColor);
           setImage(response.Image || null);
@@ -60,20 +114,72 @@ export const EditProduct: React.FC = () => {
             Name: response.Category_Name || "",
           } as Category);
         }
+        formLoadedRef.current = true;
+      })
+      .catch((error) => {
+        console.error("Error loading product:", error);
+      })
+      .finally(() => {
         context.setIsShowSplash(false);
       });
+  }, [productId, context.stockFlag, context.user.Token, context.store.Color]);
+
+  useEffect(() => {
+    if (!formLoadedRef.current || !productId) {
+      return;
     }
-  }, [productId, context.stockFlag]);
+
+    context.setProductFormState({
+      mode: "edit",
+      productId: parseInt(productId, 10),
+      productName,
+      price,
+      cost,
+      barcode,
+      stock,
+      minStock,
+      optStock,
+      promoPrice,
+      description,
+      unitType,
+      colorSelected,
+      image,
+      isAvailableForSale,
+      isDisplayedInStore,
+    });
+  }, [
+    productId,
+    productName,
+    price,
+    cost,
+    barcode,
+    stock,
+    minStock,
+    optStock,
+    promoPrice,
+    description,
+    unitType,
+    colorSelected,
+    image,
+    isAvailableForSale,
+    isDisplayedInStore,
+    context.setProductFormState,
+  ]);
 
   const handleSave = async () => {
+    if (isSaving) {
+      return;
+    }
+
     try {
+      setIsSaving(true);
       context.setIsShowSplash(true);
 
       const product: Item = {
         Id: productId ? parseInt(productId) : undefined,
         Name: productName,
-        Price: parseFloat(price),
-        CostPerItem: parseFloat(cost),
+        Price: price ? parseFloat(price) : null,
+        CostPerItem: cost ? parseFloat(cost) : null,
         Stock: stock ? parseFloat(stock) : null,
         ForSale: isAvailableForSale,
         ShowInStore: isDisplayedInStore,
@@ -82,26 +188,33 @@ export const EditProduct: React.FC = () => {
         Description: description,
         Color: colorSelected,
         Business_Id: context.user.Business_Id,
-        PromotionPrice: promoPrice || null,
+        PromotionPrice: promoPrice !== "" ? parseFloat(promoPrice) : null,
         Category_Id: context.categorySelected.Id ? context.categorySelected.Id + "" : null,
+        MinStock: minStock !== "" ? parseInt(minStock, 10) : null,
+        OptStock: optStock !== "" ? parseInt(optStock, 10) : null,
       };
       console.log(product);
 
       await updateProduct(product, context.user.Token); // This line is missing in the original code
       context.setStockFlag(!context.stockFlag); // This line is missing in the original code
       context.setCategorySelected({ Id: 0, Name: "", Color: "", Business_Id: 0 } as Category); // This line is missing in the original code
+      context.setProductFormState(null);
+      formLoadedRef.current = false;
       context.setShowNavBarBottom(true); // This line is missing in the original code
       navigate("/main-products/items");
     } catch (error) {
       console.error("Error saving product:", error);
     } finally {
       context.setIsShowSplash(false);
+      setIsSaving(false);
     }
   };
 
   const handleDelete = () => {
     deleteProduct(parseInt(productId!), context.user.Token).then(() => {
       context.setStockFlag(!context.stockFlag);
+      context.setProductFormState(null);
+      formLoadedRef.current = false;
       navigate(-1);
     });
   };
@@ -120,7 +233,15 @@ export const EditProduct: React.FC = () => {
         className="flex items-center px-4 py-3 text-white "
         style={{ backgroundColor: context.store.Color || ThemeLight.btnBackground }}
       >
-        <button onClick={() => {navigate(-1); context.setShowNavBarBottom(true);}} className="mr-auto">
+        <button
+          onClick={() => {
+            context.setProductFormState(null);
+            formLoadedRef.current = false;
+            navigate(-1);
+            context.setShowNavBarBottom(true);
+          }}
+          className="mr-auto"
+        >
           <ChevronBack />
         </button>
         <h1 className="text-lg font-bold text-center ">{productName || "Editar Producto"}</h1>
@@ -180,7 +301,10 @@ export const EditProduct: React.FC = () => {
           <InputBasic placeholder="Precio" value={price} onChange={(e) => setPrice(e.target.value)} />
           <InputBasic placeholder="Costo de adquisición" value={cost} onChange={(e) => setCost(e.target.value)} />
           <InputBasic placeholder="Código de barras" value={barcode} onChange={(e) => setBarcode(e.target.value)} />
-          <button className="flex items-center justify-between w-full py-3 px-4 bg-gray-50 rounded shadow-sm hover:bg-gray-100">
+          <button
+            className="flex items-center justify-between w-full py-3 px-4 bg-gray-50 rounded shadow-sm hover:bg-gray-100"
+            onClick={() => navigate("/select-caterory-sales")}
+          >
             {context.categorySelected.Name !== "" ? (
               <>
                 <span className="text-purple-500 font-semibold">{context.categorySelected.Name}</span>
@@ -203,12 +327,47 @@ export const EditProduct: React.FC = () => {
           </button>
           {detailsExpanded && (
             <div className="mt-4">
-              <InputBasic placeholder="Existencias" value={stock} onChange={(e) => setStock(e.target.value)} />
+              <InputBasic
+                placeholder="Existencias"
+                value={stock}
+                onChange={(e) => setStock(e.target.value)}
+                keyboardType="number"
+              />
               <div className="flex justify-between flex-wrap">
-                <InputBasic placeholder="Stock Mínimo" value={minStock?.toString() || ""} onChange={(e) => setMinStock(parseInt(e.target.value))} />
-                <InputBasic placeholder="Stock Óptimo" value={optStock?.toString() || ""} onChange={(e) => setOptStock(parseInt(e.target.value))} />
+                <InputBasic
+                  placeholder="Stock Mínimo"
+                  value={minStock}
+                  onChange={(e) => {
+                    const { value } = e.target;
+                    if (value === "" || /^\d+$/.test(value)) {
+                      setMinStock(value);
+                    }
+                  }}
+                  keyboardType="number"
+                />
+                <InputBasic
+                  placeholder="Stock Óptimo"
+                  value={optStock}
+                  onChange={(e) => {
+                    const { value } = e.target;
+                    if (value === "" || /^\d+$/.test(value)) {
+                      setOptStock(value);
+                    }
+                  }}
+                  keyboardType="number"
+                />
               </div>
-              <InputBasic placeholder="Precio Promoción" value={promoPrice?.toString() || ""} onChange={(e) => setPromoPrice(parseFloat(e.target.value))} />
+              <InputBasic
+                placeholder="Precio Promoción"
+                value={promoPrice}
+                onChange={(e) => {
+                  const { value } = e.target;
+                  if (value === "" || /^\d+(\.\d*)?$/.test(value)) {
+                    setPromoPrice(value);
+                  }
+                }}
+                keyboardType="number"
+              />
             </div>
           )}
         </div>
@@ -256,8 +415,9 @@ export const EditProduct: React.FC = () => {
       {/* Footer */}
       <footer className="p-4 bg-white flex justify-center container-btn-add-product">
         <button
-          className="py-3 px-6 bg-purple-500 text-white rounded-lg shadow w-full max-w-96"
+          className="py-3 px-6 bg-purple-500 text-white rounded-lg shadow w-full max-w-96 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={handleSave}
+          disabled={isSaving}
           style={{ backgroundColor: context.store.Color || ThemeLight.secondaryColor }}
         >
           Guardar

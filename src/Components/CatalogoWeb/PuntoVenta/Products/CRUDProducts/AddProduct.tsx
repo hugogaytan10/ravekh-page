@@ -1,4 +1,4 @@
-import React, { useState, useRef, useContext } from "react";
+import React, { useState, useRef, useContext, useEffect } from "react";
 import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
 import ImageIcon from "../../../../../assets/POS/ImageIcon";
 import { InputBasic } from "../../Utilities/InputBasic";
@@ -23,9 +23,9 @@ export const AddProduct: React.FC = () => {
   const [cost, setCost] = useState<string>("");
   const [barcode, setBarcode] = useState("");
   const [stock, setStock] = useState<string>("");
-  const [minStock, setMinStock] = useState<number | undefined>(undefined);
-  const [optStock, setOptStock] = useState<number | undefined>(undefined);
-  const [promoPrice, setPromoPrice] = useState<number | null>(null);
+  const [minStock, setMinStock] = useState<string>("");
+  const [optStock, setOptStock] = useState<string>("");
+  const [promoPrice, setPromoPrice] = useState<string>("");
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [isAvailableForSale, setIsAvailableForSale] = useState(true);
   const [isDisplayedInStore, setIsDisplayedInStore] = useState(true);
@@ -37,11 +37,84 @@ export const AddProduct: React.FC = () => {
   const [isVisibleColorPicker, setIsVisibleColorPicker] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [image, setImage] = useState<string | null>(null);
+  const [isSaving, setIsSaving] = useState(false);
+  const formLoadedRef = useRef(false);
 
   const unitOptions = ["Unidad", "Kilos", "Litros"];
 
+  useEffect(() => {
+    if (formLoadedRef.current) {
+      return;
+    }
+
+    const draft = context.productFormState;
+    if (draft && draft.mode === "add") {
+      setProductName(draft.productName);
+      setPrice(draft.price);
+      setCost(draft.cost);
+      setBarcode(draft.barcode);
+      setStock(draft.stock);
+      setMinStock(draft.minStock);
+      setOptStock(draft.optStock);
+      setPromoPrice(draft.promoPrice);
+      setDescription(draft.description);
+      setUnitType(draft.unitType);
+      setColorSelected(draft.colorSelected || context.store.Color || ThemeLight.secondaryColor);
+      setImage(draft.image);
+      setIsAvailableForSale(draft.isAvailableForSale);
+      setIsDisplayedInStore(draft.isDisplayedInStore);
+    }
+
+    formLoadedRef.current = true;
+  }, [context.productFormState, context.store.Color]);
+
+  useEffect(() => {
+    if (!formLoadedRef.current) {
+      return;
+    }
+
+    context.setProductFormState({
+      mode: "add",
+      productName,
+      price,
+      cost,
+      barcode,
+      stock,
+      minStock,
+      optStock,
+      promoPrice,
+      description,
+      unitType,
+      colorSelected,
+      image,
+      isAvailableForSale,
+      isDisplayedInStore,
+    });
+  }, [
+    productName,
+    price,
+    cost,
+    barcode,
+    stock,
+    minStock,
+    optStock,
+    promoPrice,
+    description,
+    unitType,
+    colorSelected,
+    image,
+    isAvailableForSale,
+    isDisplayedInStore,
+    context.setProductFormState,
+  ]);
+
   const handleSave = async () => {
+    if (isSaving) {
+      return;
+    }
+
     try {
+      setIsSaving(true);
       context.setIsShowSplash(true);
 
       const uriImage = image ? await uploadImage(image) : null;
@@ -54,7 +127,7 @@ export const AddProduct: React.FC = () => {
         Image: uriImage!,
         Stock: stock ? parseFloat(stock) : null,
         Barcode: barcode || null,
-        PromotionPrice: promoPrice,
+        PromotionPrice: promoPrice !== "" ? parseFloat(promoPrice) : null,
         Description: description,
         Color: colorSelected,
         ForSale: isAvailableForSale,
@@ -62,20 +135,23 @@ export const AddProduct: React.FC = () => {
         Category_Id: context.categorySelected.Id
           ? context.categorySelected.Id.toString()
           : null,
-        MinStock: minStock || null,
-        OptStock: optStock || null,
+        MinStock: minStock !== "" ? parseInt(minStock, 10) : null,
+        OptStock: optStock !== "" ? parseInt(optStock, 10) : null,
       };
       console.log("Product to save:", product);
       await insertProduct(product, context.user?.Token);
 
       context.setStockFlag(!context.stockFlag);
       context.setCategorySelected({ Id: 0, Name: "", Color: "" } as Category);
+      context.setProductFormState(null);
+      formLoadedRef.current = false;
       context.setShowNavBarBottom(true); // Mostrar la barra de navegación inferior
       navigation("/main-products/items");
     } catch (error) {
       console.error("Error al guardar el producto:", error);
     } finally {
       context.setIsShowSplash(false);
+      setIsSaving(false);
     }
   };
 
@@ -94,7 +170,15 @@ export const AddProduct: React.FC = () => {
           backgroundColor: context.store.Color || ThemeLight.btnBackground,
         }}
       >
-        <button onClick={() =>{ navigation("/main-products/items"); context.setShowNavBarBottom(true);}} className="mr-auto">
+        <button
+          onClick={() => {
+            context.setProductFormState(null);
+            formLoadedRef.current = false;
+            navigation("/main-products/items");
+            context.setShowNavBarBottom(true);
+          }}
+          className="mr-auto"
+        >
           <ChevronBack />
         </button>
         <h1 className="text-lg font-bold text-center">
@@ -205,23 +289,23 @@ export const AddProduct: React.FC = () => {
             onChange={(e) => setBarcode(e.target.value)}
           />
           <button
-  className="flex items-center justify-between w-full py-3 px-4 bg-gray-50 rounded shadow-sm hover:bg-gray-100"
-  onClick={() => navigation("/select-caterory-sales")}
->
-  {context.categorySelected.Name !== "" ? (
-    <>
-      <span className="text-purple-500 font-semibold">
-        {context.categorySelected.Name}
-      </span>
-      <ChevronGo width={20} height={20} stroke={ThemeLight.textColor} />
-    </>
-  ) : (
-    <>
-      <span className="text-gray-700">Asignar Categoría</span>
-      <ChevronGo width={20} height={20} stroke={ThemeLight.textColor} />
-    </>
-  )}
-</button>
+            className="flex items-center justify-between w-full py-3 px-4 bg-gray-50 rounded shadow-sm hover:bg-gray-100"
+            onClick={() => navigation("/select-caterory-sales")}
+          >
+            {context.categorySelected.Name !== "" ? (
+              <>
+                <span className="text-purple-500 font-semibold">
+                  {context.categorySelected.Name}
+                </span>
+                <ChevronGo width={20} height={20} stroke={ThemeLight.textColor} />
+              </>
+            ) : (
+              <>
+                <span className="text-gray-700">Asignar Categoría</span>
+                <ChevronGo width={20} height={20} stroke={ThemeLight.textColor} />
+              </>
+            )}
+          </button>
 
         </div>
         {/* Expandable Stock Section */}
@@ -239,25 +323,44 @@ export const AddProduct: React.FC = () => {
                 placeholder="Existencias"
                 value={stock}
                 onChange={(e) => setStock(e.target.value)}
+                keyboardType="number"
               />
               <div className="flex justify-between flex-wrap">
                 <InputBasic
                   placeholder="Stock Mínimo"
-                  value={minStock?.toString() || ""}
-                  onChange={(e) => setMinStock(parseInt(e.target.value))}
+                  value={minStock}
+                  onChange={(e) => {
+                    const { value } = e.target;
+                    if (value === "" || /^\d+$/.test(value)) {
+                      setMinStock(value);
+                    }
+                  }}
+                  keyboardType="number"
                 />
                 <InputBasic
                   placeholder="Stock Óptimo"
-                  value={optStock?.toString() || ""}
-                  onChange={(e) => setOptStock(parseInt(e.target.value))}
+                  value={optStock}
+                  onChange={(e) => {
+                    const { value } = e.target;
+                    if (value === "" || /^\d+$/.test(value)) {
+                      setOptStock(value);
+                    }
+                  }}
+                  keyboardType="number"
                 />
               </div>
               <InputBasic
                 placeholder="Precio Promoción"
-                value={promoPrice?.toString() || ""}
-                onChange={(e) => setPromoPrice(parseFloat(e.target.value))}
+                value={promoPrice}
+                onChange={(e) => {
+                  const { value } = e.target;
+                  if (value === "" || /^\d+(\.\d*)?$/.test(value)) {
+                    setPromoPrice(value);
+                  }
+                }}
+                keyboardType="number"
               />
-            
+
             </div>
           )}
         </div>
@@ -325,8 +428,9 @@ export const AddProduct: React.FC = () => {
       {/* Footer */}
       <footer className="p-4 bg-white flex justify-center container-btn-add-product">
         <button
-          className="py-3 px-6 bg-purple-500 text-white rounded-lg shadow w-full max-w-96"
+          className="py-3 px-6 bg-purple-500 text-white rounded-lg shadow w-full max-w-96 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={handleSave}
+          disabled={isSaving}
           //colcoar el color del boton de acuerdo al color de la tienda
           style={{
             backgroundColor: context.store.Color || ThemeLight.secondaryColor,
