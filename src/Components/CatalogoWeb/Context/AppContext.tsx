@@ -10,6 +10,7 @@ import { Customer } from "../PuntoVenta/Model/Customer";
 import { FilterProduct } from "../PuntoVenta/Model/FilterProduct";
 import { Table } from "../PuntoVenta/Model/Table";
 import { CartPos } from "../PuntoVenta/Model/CarPos";
+import { ProductFormState } from "../PuntoVenta/Model/ProductFormState";
 
 type AppContextProps = {
   children: React.ReactNode;
@@ -60,6 +61,7 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   const [tax, setTax] = useState<Tax>({} as Tax);
   const [checkout, setCheckout] = useState<boolean>(false);
   const [showNavBarBottom, setShowNavBarBottom] = useState<boolean>(false);
+  const [productFormState, setProductFormState] = useState<ProductFormState | null>(null);
 
     // Función para actualizar una mesa
     const updateTable = (tableId: string, updates: Partial<Table>) => {
@@ -182,7 +184,9 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
       resetTable,
       addTable,
       showNavBarBottom,
-      setShowNavBarBottom
+      setShowNavBarBottom,
+      productFormState,
+      setProductFormState,
     };
   }, [
     cart,
@@ -238,7 +242,9 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
     resetTable,
     addTable,
     showNavBarBottom,
-    setShowNavBarBottom
+    setShowNavBarBottom,
+    productFormState,
+    setProductFormState
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

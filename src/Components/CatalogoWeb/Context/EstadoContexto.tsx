@@ -1,4 +1,4 @@
-import { Dispatch,SetStateAction } from "react";
+import { Dispatch, SetStateAction } from "react";
 import { Producto } from "../Modelo/Producto";
 //apartir de aqui son las variables para el contexto de ravekh pos web
 import { User } from "../PuntoVenta/Model/User";
@@ -10,6 +10,7 @@ import { Category } from "../PuntoVenta/Model/Category";
 import { Store } from "../PuntoVenta/Model/Store";
 import { Table } from "../PuntoVenta/Model/Table";
 import { Tax } from "../PuntoVenta/Model/Tax";
+import { ProductFormState } from "../PuntoVenta/Model/ProductFormState";
 export type AppContextState = {
     cart: Producto[];
     setCart: Dispatch<Producto[]>;
@@ -67,4 +68,6 @@ export type AppContextState = {
     setCaptureUri: Dispatch<SetStateAction<string | null>>;
     showNavBarBottom: boolean;
     setShowNavBarBottom: Dispatch<SetStateAction<boolean>>;
+    productFormState: ProductFormState | null;
+    setProductFormState: Dispatch<SetStateAction<ProductFormState | null>>;
 }
