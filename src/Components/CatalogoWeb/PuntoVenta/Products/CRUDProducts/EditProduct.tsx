@@ -2,6 +2,7 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
 import { getProduct, updateProduct, deleteProduct } from "../Petitions";
+import { uploadImage } from "../../Cloudinary/Cloudinary";
 import { PickerColor } from "../../CustomizeApp/PickerColor";
 import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
 import { ChevronGo } from "../../../../../assets/POS/ChevronGo";
@@ -175,19 +176,29 @@ export const EditProduct: React.FC = () => {
       setIsSaving(true);
       context.setIsShowSplash(true);
 
+      let imageUrl: string | null = null;
+      if (image) {
+        if (image.startsWith("http")) {
+          imageUrl = image;
+        } else {
+          const uploadedUrl = await uploadImage(image);
+          imageUrl = uploadedUrl || null;
+        }
+      }
+
       const product: Item = {
-        Id: productId ? parseInt(productId) : undefined,
+        Id: productId ? parseInt(productId, 10) : undefined,
         Name: productName,
         Price: price ? parseFloat(price) : null,
         CostPerItem: cost ? parseFloat(cost) : null,
         Stock: stock ? parseFloat(stock) : null,
         ForSale: isAvailableForSale,
         ShowInStore: isDisplayedInStore,
-        Image: image || "",
+        Image: imageUrl || "",
         Barcode: barcode.length > 0 ? barcode : null,
         Description: description,
         Color: colorSelected,
-        Business_Id: context.user.Business_Id,
+        Business_Id: context.user?.Business_Id,
         PromotionPrice: promoPrice !== "" ? parseFloat(promoPrice) : null,
         Category_Id: context.categorySelected.Id ? context.categorySelected.Id + "" : null,
         MinStock: minStock !== "" ? parseInt(minStock, 10) : null,
