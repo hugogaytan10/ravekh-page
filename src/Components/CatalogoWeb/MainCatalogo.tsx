@@ -42,7 +42,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
         return;
       }
 
-      if(idBusiness == "92") {
+      if (idBusiness == "92") {
         setNotPay(true);
         setNotPayMessage("No tienes acceso a este catálogo por falta de pago.");
         return;
@@ -53,7 +53,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
         context.setIdBussiness(idBusiness);
         //guradamos el id del negocio en el local storage
         localStorage.setItem("idBusiness", idBusiness);
-      } 
+      }
 
       // Limpieza de carrito si no coincide el negocio
       const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -97,7 +97,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       } else {
         setProductos([]);
       }
-     
+
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idBusiness]);
@@ -228,7 +228,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     [addProductToCart]
   );
 
-  if(notPay) {
+  if (notPay) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <h1 className="text-2xl font-bold text-red-600">
@@ -253,6 +253,11 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
             content="Explora nuestro catálogo de productos y encuentra todo lo que necesitas a precios increíbles. ¡Compra ahora!"
           />
           <meta property="og:type" content="website" />
+          <meta
+            name="theme-color"
+            content={context.idBussiness === '115' ? "#000000" : color || "#6D01D1"}
+          />
+          <title>{context.nombre || "Catálogo de Productos"}</title>
           <meta
             property="og:title"
             content={context.nombre || "Catálogo de Productos"}
