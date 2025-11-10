@@ -137,7 +137,10 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   }, [context]);
 
   const sanitizedProducts = useMemo(
-    () => productos.filter((producto) => Boolean(producto.Image)),
+    () =>
+      productos.filter((producto) =>
+        Boolean(producto.Image || (producto.Images && producto.Images[0]))
+      ),
     [productos]
   );
 
@@ -264,8 +267,8 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
           <meta
             property="og:image"
             content={
-              productos.length > 0 && productos[0].Image
-                ? productos[0].Image
+              productos.length > 0 && (productos[0].Image || productos[0].Images?.[0])
+                ? productos[0].Image || productos[0].Images?.[0]
                 : defaultImage
             }
           />

@@ -103,7 +103,14 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const memoizedProducts = useMemo(() => products, [products]);
+  const memoizedProducts = useMemo(
+    () =>
+      products.map((product) => ({
+        ...product,
+        Image: product.Image || product.Images?.[0] || "",
+      })),
+    [products]
+  );
 
   const handleAddItem = useCallback(
     (product: Item) => {
@@ -126,7 +133,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
           : [
               ...prevCart,
               {
-                Image: product.Image,
+                Image: product.Image || product.Images?.[0] || "",
                 Id: product.Id,
                 Name: product.Name,
                 Price: product.Price ?? 0,

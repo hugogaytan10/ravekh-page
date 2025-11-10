@@ -5,7 +5,7 @@ import { Item } from '../../Model/Item';
 
 interface CardProps {
   Name: string;
-  Image: string;
+  Image?: string;
   Price: number;
   Id: number;
   Barcode: string;
@@ -77,7 +77,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
               Id={product.Id || 0}
               Name={product.Name}
               Price={product.Price || 0}
-              Image={product.Image}
+              Image={product.Images?.[0] || product.Image}
               Barcode={product.Barcode || ""}
               Color={product.Color || ""}
               ForSale={product.ForSale || false}

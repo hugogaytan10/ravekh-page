@@ -35,7 +35,7 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
             Barcode: product.Barcode ?? undefined,
             Quantity: Number(context.quantityNextSell),
             SubTotal: product.Price ?? 0,
-            Image: product.Image,
+            Image: product.Image || product.Images?.[0] || "",
             Cost: product.CostPerItem ?? 0,
           },
         ]);
@@ -48,7 +48,12 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
   };
 
   useEffect(() => {
-    setProducts(Products);
+    setProducts(
+      Products.map((product) => ({
+        ...product,
+        Image: product.Image || product.Images?.[0] || "",
+      }))
+    );
   }, [Products]);
 
   const renderProduct = (product: Item) => {
@@ -59,10 +64,10 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
         key={product.Id}
       >
         {/* Imagen del producto */}
-        {product.Image ? (
+        {product.Image || product.Images?.[0] ? (
           <div className="w-16 h-16 flex-shrink-0">
             <img
-              src={product.Image}
+              src={product.Image || product.Images?.[0] || ""}
               alt={product.Name}
               className="w-full h-full object-cover rounded-lg"
             />

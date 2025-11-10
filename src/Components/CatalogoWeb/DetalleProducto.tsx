@@ -107,7 +107,7 @@ export const DetalleProducto: React.FC = () => {
         <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
           {/* Imagen del producto con animación */}
           <motion.img
-            src={producto.Image}
+            src={producto.Image || (producto.Images && producto.Images[0]) || ""}
             alt={producto.Name}
             className="w-full h-96 object-cover rounded-lg mb-6"
             initial={{ opacity: 0 }}
