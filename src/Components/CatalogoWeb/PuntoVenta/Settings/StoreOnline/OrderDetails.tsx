@@ -25,7 +25,7 @@ export const OrderDetailScreen: React.FC = () => {
           Name: detail.Name,
           Price: detail.Price,
           Quantity: detail.Item_Quantity,
-          Image: detail.Image,
+        Image: detail.Image || detail.Images?.[0] || "",
         }));
         setCart(cartItems);
         const total = data.orderDetails.reduce(
@@ -122,7 +122,7 @@ export const OrderDetailScreen: React.FC = () => {
             className="bg-white p-4 rounded shadow flex items-center mb-4"
           >
             <img
-              src={detail.Image}
+            src={detail.Image || detail.Images?.[0] || ""}
               alt={detail.Name}
               className="w-20 h-20 rounded mr-4"
             />

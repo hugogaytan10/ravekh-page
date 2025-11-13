@@ -14,7 +14,9 @@ export interface ProductFormState {
   description: string;
   unitType: string;
   colorSelected: string;
-  image: string | null;
+
+  galleryImages: string[];
   isAvailableForSale: boolean;
   isDisplayedInStore: boolean;
+  available: boolean;
 }

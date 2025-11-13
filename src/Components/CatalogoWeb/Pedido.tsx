@@ -246,7 +246,7 @@ export const Pedido: React.FC = () => {
                   className="py-4 flex items-center justify-between"
                 >
                   <img
-                    src={producto.Image}
+                    src={producto.Image || (producto.Images && producto.Images[0]) || ""}
                     alt={producto.Name}
                     className="w-16 h-16 object-cover rounded-lg mr-4"
                   />

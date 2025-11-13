@@ -150,6 +150,8 @@ export const Rutas = () => {
   const menuToggleCatalogo = useRef(null);
   const [color, setcolor] = useState("");
   const [nombre, setnombre] = useState("");
+  const [idBusiness, setidbusiness] = useState("")
+
 
   // Nueva referencia para el POS
   const slideDownRefPOS = useRef(null); // Referencia para el contenedor del menú
@@ -229,12 +231,15 @@ export const Rutas = () => {
     const localColor = localStorage.getItem("color");
     const localNombre = localStorage.getItem("nombre");
     const localCart = localStorage.getItem("cart");
-
+    const localIdBusiness = localStorage.getItem("idBusiness")
     if (localColor) {
       context.setColor(localColor);
       setcolor(localColor);
     }
-
+    if (localIdBusiness) {
+      context.setIdBussiness(localIdBusiness);
+      setidbusiness(localIdBusiness)
+    }
     if (localNombre) {
       context.setNombre(localNombre);
       setnombre(localNombre);
@@ -273,7 +278,7 @@ export const Rutas = () => {
         data.sort((a, b) => a.Name.length - b.Name.length);
         setCategories(data);
       });
-    }else{
+    } else {
       getCategoriesByBusinesssId(idBusiness).then((data) => {
         //ordenar categorias por el tamano del texto de la categoria
         data.sort((a, b) => a.Name.length - b.Name.length);
@@ -319,7 +324,7 @@ export const Rutas = () => {
     }
   }, []);
 
-  
+
   // Función para determinar si se debe mostrar el navbar
   const shouldShowNavbar = useMemo(() => {
     const hiddenRoutes = [
@@ -509,33 +514,33 @@ export const Rutas = () => {
       navigate("/");
     }
   }, [location, navigate, context.cartPos]);
-/*
-  useEffect(() => {
-    let timeout;
-
-    const resetTimer = () => {
-      if (timeout) clearTimeout(timeout);
-      timeout = setTimeout(() => {
-        context.setUser(null); // Remueve el usuario del contexto
-        navigate("/login-punto-venta"); // Redirige a login
-      }, 30 * 60 * 1000); // 30 minutos de inactividad
-    };
-
-    // Eventos que resetean el temporizador
-    window.addEventListener("mousemove", resetTimer);
-    window.addEventListener("keydown", resetTimer);
-    window.addEventListener("click", resetTimer);
-
-    resetTimer(); // Iniciar el temporizador al montar el componente
-
-    return () => {
-      if (timeout) clearTimeout(timeout);
-      window.removeEventListener("mousemove", resetTimer);
-      window.removeEventListener("keydown", resetTimer);
-      window.removeEventListener("click", resetTimer);
-    };
-  }, [navigate, context]);
-*/
+  /*
+    useEffect(() => {
+      let timeout;
+  
+      const resetTimer = () => {
+        if (timeout) clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          context.setUser(null); // Remueve el usuario del contexto
+          navigate("/login-punto-venta"); // Redirige a login
+        }, 30 * 60 * 1000); // 30 minutos de inactividad
+      };
+  
+      // Eventos que resetean el temporizador
+      window.addEventListener("mousemove", resetTimer);
+      window.addEventListener("keydown", resetTimer);
+      window.addEventListener("click", resetTimer);
+  
+      resetTimer(); // Iniciar el temporizador al montar el componente
+  
+      return () => {
+        if (timeout) clearTimeout(timeout);
+        window.removeEventListener("mousemove", resetTimer);
+        window.removeEventListener("keydown", resetTimer);
+        window.removeEventListener("click", resetTimer);
+      };
+    }, [navigate, context]);
+  */
   const showCategoryList = location.pathname === "/" ||
     location.pathname.startsWith("/catalogo/") ||
     location.pathname.startsWith("/categoria/");
@@ -641,7 +646,10 @@ export const Rutas = () => {
 
               {/* Nombre del catálogo */}
               <div>
-                <h2 className="text-white text-center text-lg font-semibold">
+                <h2
+                  className="text-center text-lg font-semibold"
+                  style={{ color: idBusiness === "115" ? "#000000" : "#ffffff" }}
+                >
                   {nombre}
                 </h2>
               </div>
@@ -665,14 +673,18 @@ export const Rutas = () => {
             {/* Segunda fila: lista de categorías (justo debajo del carrito) */}
             {showCategoryList && (
               <div
-                className="w-full mt-2 overflow-x-auto whitespace-nowrap scrollbar-hide mb-2 "
+                className="w-full mt-2 overflow-x-auto whitespace-nowrap scrollbar-hide mb-2"
                 ref={slideRef}
               >
                 <div className="flex flex-nowrap gap-2 px-4">
                   {categories.map((category) => (
                     <button
                       key={category.Id}
-                      className="px-4 py-2  text-white rounded-lg shadow-sm transition duration-300 hover:bg-purple-600"
+                      className={`px-4 py-2 ${
+            idBusiness === "115"
+              ? " text-black"
+              : " text-white"
+          } rounded-lg shadow-sm transition duration-300 hover:bg-purple-600`}
                     >
                       <NavLink to={`/categoria/${category.Id}`} className="whitespace-nowrap">
                         {category.Name}
@@ -813,7 +825,6 @@ export const Rutas = () => {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/AddRegister" element={<Register />} />
           <Route path="/RavekhAgenda" element={<RavekhAgenda />} />
-
           <Route path="/open" element={<DeepLinkRedirect />} />
           <Route path="/open/servicebybusiness/:business" element={<DeepLinkRedirect />} />
 

@@ -36,7 +36,8 @@ export const AddProduct: React.FC = () => {
   );
   const [isVisibleColorPicker, setIsVisibleColorPicker] = useState(false);
   const [showModal, setShowModal] = useState(false);
-  const [image, setImage] = useState<string | null>(null);
+  const [mainImage, setMainImage] = useState<string | null>(null);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const formLoadedRef = useRef(false);
 
@@ -60,7 +61,8 @@ export const AddProduct: React.FC = () => {
       setDescription(draft.description);
       setUnitType(draft.unitType);
       setColorSelected(draft.colorSelected || context.store.Color || ThemeLight.secondaryColor);
-      setImage(draft.image);
+      setMainImage(draft.mainImage);
+      setGalleryImages(draft.galleryImages || []);
       setIsAvailableForSale(draft.isAvailableForSale);
       setIsDisplayedInStore(draft.isDisplayedInStore);
     }
@@ -86,9 +88,10 @@ export const AddProduct: React.FC = () => {
       description,
       unitType,
       colorSelected,
-      image,
+      galleryImages,
       isAvailableForSale,
       isDisplayedInStore,
+      available: true,
     });
   }, [
     productName,
@@ -102,7 +105,7 @@ export const AddProduct: React.FC = () => {
     description,
     unitType,
     colorSelected,
-    image,
+    galleryImages,
     isAvailableForSale,
     isDisplayedInStore,
     context.setProductFormState,
@@ -117,14 +120,30 @@ export const AddProduct: React.FC = () => {
       setIsSaving(true);
       context.setIsShowSplash(true);
 
-      const uriImage = image ? await uploadImage(image) : null;
+      const businessId = context.user?.Business_Id;
+      if (!businessId) {
+        throw new Error("El negocio no está disponible para crear productos");
+      }
+
+      const imagesToUpload = [mainImage, ...galleryImages].filter(
+        (value): value is string => Boolean(value)
+      );
+      const uploadedImages = await Promise.all(
+        imagesToUpload.map(async (imageSource) => {
+          if (imageSource.startsWith("http")) {
+            return imageSource;
+          }
+          const uploadedUrl = await uploadImage(imageSource);
+          return uploadedUrl || "";
+        })
+      );
+      const sanitizedImages = uploadedImages.filter((url) => url);
 
       const product: Item = {
-        Business_Id: context.user?.Business_Id,
+        Business_Id: businessId,
         Name: productName,
         Price: price ? parseFloat(price) : null,
         CostPerItem: cost ? parseFloat(cost) : null,
-        Image: uriImage!,
         Stock: stock ? parseFloat(stock) : null,
         Barcode: barcode || null,
         PromotionPrice: promoPrice !== "" ? parseFloat(promoPrice) : null,
@@ -132,18 +151,24 @@ export const AddProduct: React.FC = () => {
         Color: colorSelected,
         ForSale: isAvailableForSale,
         ShowInStore: isDisplayedInStore,
+        Available: true,
+        Volume: unitType !== "Unidad",
         Category_Id: context.categorySelected.Id
-          ? context.categorySelected.Id.toString()
-          : null,
+          ? context.categorySelected.Id
+          : undefined,
         MinStock: minStock !== "" ? parseInt(minStock, 10) : null,
         OptStock: optStock !== "" ? parseInt(optStock, 10) : null,
+        Images: sanitizedImages.length > 0 ? sanitizedImages : undefined,
+        Image: sanitizedImages[0] || undefined,
       };
-      console.log("Product to save:", product);
+
       await insertProduct(product, context.user?.Token);
 
       context.setStockFlag(!context.stockFlag);
       context.setCategorySelected({ Id: 0, Name: "", Color: "" } as Category);
       context.setProductFormState(null);
+      setMainImage(null);
+      setGalleryImages([]);
       formLoadedRef.current = false;
       context.setShowNavBarBottom(true); // Mostrar la barra de navegación inferior
       navigation("/main-products/items");
@@ -174,6 +199,8 @@ export const AddProduct: React.FC = () => {
           onClick={() => {
             context.setProductFormState(null);
             formLoadedRef.current = false;
+            setMainImage(null);
+            setGalleryImages([]);
             navigation("/main-products/items");
             context.setShowNavBarBottom(true);
           }}
@@ -218,9 +245,9 @@ export const AddProduct: React.FC = () => {
             }}
           >
             {/* Imagen cargada */}
-            {image && (
+            {mainImage && (
               <img
-                src={image}
+                src={mainImage}
                 alt="Product"
                 className="h-full w-full object-cover"
               />
@@ -256,11 +283,108 @@ export const AddProduct: React.FC = () => {
             onChange={async (e) => {
               if (e.target.files && e.target.files[0]) {
                 const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = () => {
-                  setImage(reader.result as string); // Previsualización de la imagen
-                };
-                reader.readAsDataURL(file);
+                try {
+                  const previousMain = mainImage;
+                  const dataUrl = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = () => reject(reader.error);
+                    reader.readAsDataURL(file);
+                  });
+                  if (
+                    previousMain &&
+                    !galleryImages.some((imageValue) => imageValue === previousMain)
+                  ) {
+                    setGalleryImages((prev) => [...prev, previousMain]);
+                  }
+                  setMainImage(dataUrl);
+                  e.target.value = "";
+                } catch (error) {
+                  console.error("Error al cargar la imagen principal:", error);
+                }
+              }
+            }}
+          />
+        </div>
+
+        {/* Imágenes adicionales */}
+        <div className="w-full mb-6">
+          {galleryImages.length > 0 && (
+            <div className="flex flex-wrap gap-3 mb-3">
+              {galleryImages.map((imageUrl, index) => (
+                <div key={`${imageUrl}-${index}`} className="relative">
+                  <img
+                    src={imageUrl}
+                    alt={`Producto adicional ${index + 1}`}
+                    className="w-20 h-20 object-cover rounded"
+                  />
+                  <div className="absolute inset-0 flex flex-col justify-between p-1">
+                    <button
+                      type="button"
+                      className="text-xs bg-black/60 text-white rounded px-1"
+                      onClick={() => {
+                        const selectedImage = galleryImages[index];
+                        if (!selectedImage) {
+                          return;
+                        }
+                        const remaining = galleryImages.filter((_, i) => i !== index);
+                        if (mainImage) {
+                          remaining.push(mainImage);
+                        }
+                        setGalleryImages(remaining);
+                        setMainImage(selectedImage);
+                      }}
+                    >
+                      Principal
+                    </button>
+                    <button
+                      type="button"
+                      className="text-xs bg-red-600 text-white rounded px-1 self-end"
+                      onClick={() => {
+                        setGalleryImages((prev) => prev.filter((_, i) => i !== index));
+                      }}
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <label
+            className="inline-flex items-center gap-2 px-3 py-2 rounded bg-gray-200 text-sm cursor-pointer"
+            htmlFor="galleryUpload"
+          >
+            <ImageIcon />
+            Agregar imágenes adicionales
+          </label>
+          <input
+            id="galleryUpload"
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={async (e) => {
+              if (!e.target.files || e.target.files.length === 0) {
+                return;
+              }
+              try {
+                const files = Array.from(e.target.files);
+                const images = await Promise.all(
+                  files.map(
+                    (file) =>
+                      new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result as string);
+                        reader.onerror = () => reject(reader.error);
+                        reader.readAsDataURL(file);
+                      })
+                  )
+                );
+                setGalleryImages((prev) => [...prev, ...images]);
+                e.target.value = "";
+              } catch (error) {
+                console.error("Error al cargar imágenes adicionales:", error);
               }
             }}
           />

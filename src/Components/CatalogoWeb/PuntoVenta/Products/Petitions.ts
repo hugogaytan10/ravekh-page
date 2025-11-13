@@ -10,7 +10,13 @@ export const getProducts = async (token: string, Business_Id: string) => {
             }
         });
         const data = await response.json();
-        return data;
+        if (Array.isArray(data)) {
+            return data.map((product: Item) => ({
+                ...product,
+                Image: product.Image || (product.Images && product.Images[0]) || "",
+            }));
+        }
+        return [];
     }
     catch (e) {
         return [];
@@ -25,6 +31,9 @@ export const getProduct = async (id: number, token: string) => {
             }
         });
         const data = await response.json();
+        if (data && Array.isArray(data.Images) && !data.Image) {
+            data.Image = data.Images[0];
+        }
         return data;
     } catch (e) {
         return [];
@@ -56,8 +65,9 @@ export const updateProduct = async (product: Item, token: string) => {
                 'Content-Type': 'application/json',
                 token: token
             },
-            body: JSON.stringify(product)
+            body: JSON.stringify( product )
         });
+        console.log("este es el body", product)
         const data = await response.json();
         return true;
     } catch (e) {
@@ -74,7 +84,7 @@ export const insertProduct = async (product: Item, token: string) => {
                 'Content-Type': 'application/json',
                 token: token
             },
-            body: JSON.stringify({ Product: product, Variants: null })
+            body: JSON.stringify({ Product: product })
         });
         const data = await response.json();
         return true;

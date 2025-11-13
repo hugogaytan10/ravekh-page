@@ -47,7 +47,7 @@ export const Scanner: React.FC = () => {
             Barcode: product.Barcode || "",
             Quantity: Number(context.quantityNextSell),
             SubTotal: product.Price || 0,
-            Image: product.Image,
+            Image: product.Image || product.Images?.[0] || "",
           },
         ]);
       }

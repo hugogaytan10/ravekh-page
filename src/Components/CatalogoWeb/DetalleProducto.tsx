@@ -1,202 +1,211 @@
-import React, { useContext, useEffect, useState } from "react";
-import { NavLink, useParams } from "react-router-dom";
-import { motion } from "framer-motion";
+import React, { useContext, useEffect, useMemo, useState } from "react";
+import { useParams } from "react-router-dom";
+import { Helmet, HelmetProvider } from "react-helmet-async";
+import { AppContext } from "./Context/AppContext";
 import { Producto } from "./Modelo/Producto";
 import { getProductById } from "./Petitions";
-import { AppContext } from "./Context/AppContext";
 import logoWhasa from "../../assets/logo-whatsapp.svg";
-import cart from "../../assets/cart-outline.svg";
-import { Helmet, HelmetProvider } from "react-helmet-async";
+import { ProductCarousel } from "./ProductsCarousel";
+
+type Params = {
+  idProducto?: string;
+  telefono?: string;
+};
+
+const currency = new Intl.NumberFormat("es-MX", {
+  style: "currency",
+  currency: "MXN",
+  maximumFractionDigits: 2,
+});
+
+const adjustColor = (hex: string): string => {
+  if (!hex || !/^#?[0-9a-fA-F]{6}$/.test(hex)) return "#6D01D1";
+  const clean = hex.startsWith("#") ? hex.slice(1) : hex;
+  const r = parseInt(clean.slice(0, 2), 16);
+  const g = parseInt(clean.slice(2, 4), 16);
+  const b = parseInt(clean.slice(4, 6), 16);
+  const newR = Math.max(0, r - 100).toString(16).padStart(2, "0");
+  const newG = Math.max(0, g - 100).toString(16).padStart(2, "0");
+  const newB = Math.max(0, b - 100).toString(16).padStart(2, "0");
+  return `#${newR}${newG}${newB}`;
+};
 
 export const DetalleProducto: React.FC = () => {
-  const { idProducto, telefono } = useParams<{
-    idProducto: string;
-    telefono: string;
-  }>();
+  const { idProducto, telefono } = useParams<Params>();
   const [producto, setProducto] = useState<Producto | null>(null);
-  const { color, setColor, addProductToCart } = useContext(AppContext);
-  const [count, setCount] = useState(1);
-  const [limit, setLimit] = useState<number | null>();
-  const context = useContext(AppContext);
-  // Función para generar un descuento aleatorio entre 10% y 30%
-  function getRandomInt(min: number, max: number) {
-    return Math.floor(Math.random() * (max - min)) + min;
-  }
+  const [count, setCount] = useState<number>(1);
+  const [limit, setLimit] = useState<number | null>(null);
+  const { color, setColor, addProductToCart, phoneNumber, setPhoneNumber, idBussiness, setIdBussiness } =
+    useContext(AppContext);
 
-  // Función para añadir el producto al carrito con la cantidad seleccionada
-  const addCart = () => {
-    if (!producto) return;
-    const productoCantidad: Producto = {
-      ...producto,
-      Quantity: count,
-    };
-    addProductToCart(productoCantidad);
-  };
-  function adjustColor(hex) {
-    // Convertimos el color hexadecimal a RGB
-    const r = parseInt(hex.slice(1, 3), 16); // Rojo
-    const g = parseInt(hex.slice(3, 5), 16); // Verde
-    const b = parseInt(hex.slice(5, 7), 16); // Azul
-
-    // Aplicamos las restas al componente rojo, verde y azul para hacer el color más oscuro
-    const newR = Math.max(0, r - 100).toString(16).padStart(2, '0');
-    const newG = Math.max(0, g - 100).toString(16).padStart(2, '0');
-    const newB = Math.max(0, b - 100).toString(16).padStart(2, '0');
-
-    // Retornamos el color modificado en formato hexadecimal
-    return `#${newR}${newG}${newB}`;
-  }
   useEffect(() => {
-    if (!context.color) {
+    // color desde localStorage si no hay en contexto
+    if (!color) {
       const storedColor = localStorage.getItem("color");
-      if (storedColor) {
-        setColor(storedColor);
-      }
+      if (storedColor) setColor(storedColor);
     }
 
-    //rescatamos los valores del local storage en caso de que el contexto no tenga valores
-    if (!context.phoneNumber) {
+    // teléfono desde localStorage si no hay en contexto
+    if (!phoneNumber) {
       const storedPhoneNumber = localStorage.getItem("telefono");
-      if (storedPhoneNumber) {
-        context.setPhoneNumber(storedPhoneNumber);
-      }
+      if (storedPhoneNumber) setPhoneNumber(storedPhoneNumber);
     }
 
-    if(context.idBussiness){
+    // idBusiness desde localStorage si no hay en contexto (FIX: antes lo comprobabas al revés)
+    if (!idBussiness) {
       const storedIdBusiness = localStorage.getItem("idBusiness");
-      if (storedIdBusiness) {
-        context.setIdBussiness(storedIdBusiness);
-      }
+      if (storedIdBusiness) setIdBussiness(storedIdBusiness);
     }
 
+    // toggle UI del menú (si usas Tailwind + IDs específicos)
+    document.getElementById("menuIcono")?.classList.add("hidden");
+    document.getElementById("menuIconoCatalogo")?.classList.remove("hidden");
+    document.getElementById("imgCatalogo")?.classList.add("hidden");
+    document.getElementById("backCatalogo")?.classList.remove("hidden");
+  }, [color, idBussiness, phoneNumber, setColor, setIdBussiness, setPhoneNumber]);
 
-    const menuIcono = document.getElementById("menuIcono");
-    menuIcono?.classList.add("hidden");
-
-    const menuNavegacion = document.getElementById("menuIconoCatalogo");
-    menuNavegacion?.classList.remove("hidden");
-
-    //ocultamos la imagen del menu
-    const menuImagen = document.getElementById("imgCatalogo");
-    menuImagen?.classList.add("hidden");
-
-    //mostramos la flecha de regreso
-    const arrowIcon = document.getElementById("backCatalogo");
-    arrowIcon?.classList.remove("hidden");
-
-    getProductById(idProducto || "1").then((data) => {
+  useEffect(() => {
+    const id = idProducto ?? "1";
+    let mounted = true;
+    getProductById(id).then((data) => {
+      if (!mounted) return;
       setProducto(data);
-      setLimit(data.Stock);
+      setLimit(typeof data?.Stock === "number" ? data.Stock : null);
+      setCount(1); // reset cantidad al cambiar de producto
     });
+    return () => {
+      mounted = false;
+    };
   }, [idProducto]);
 
+  const images = useMemo(() => {
+    if (!producto) return [];
+    const base = [
+      ...(producto as any)?.Image ? [(producto as any).Image as string] : [],
+      ...(Array.isArray(producto.Images) ? producto.Images : []),
+    ];
+    // dedup por URL exacta
+    return Array.from(new Set(base.filter(Boolean)));
+  }, [producto]);
+
+  const canAdd =
+    !!producto &&
+    producto.Available === 1 &&
+    producto.ForSale === 1 &&
+    (limit === null || limit > 0);
+
+  const handleAddCart = () => {
+    if (!producto) return;
+    addProductToCart({ ...producto, Quantity: count });
+  };
 
   if (!producto) {
     return (
-      <div className="text-center text-red-500">Producto no encontrado</div>
+      <div className="px-6 py-20 min-h-screen bg-gray-100">
+        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8 text-center">
+          <p className="text-gray-600">Cargando producto…</p>
+        </div>
+      </div>
     );
   }
 
   return (
     <HelmetProvider>
       <Helmet>
-        <meta name="theme-color" content={color || '#6D01D1'} />
+        <meta name="theme-color" content={color || "#6D01D1"} />
+        <title>{producto.Name}</title>
       </Helmet>
-      <div className="px-6 py-20 min-h-screen bg-gray-100">
-        {/* Contenedor del producto */}
-        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
-          {/* Imagen del producto con animación */}
-          <motion.img
-            src={producto.Image}
-            alt={producto.Name}
-            className="w-full h-96 object-cover rounded-lg mb-6"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.5 }}
-          />
 
-          {/* Nombre del producto y precios */}
-          <h1 className="text-4xl font-bold text-gray-900">{producto.Name}</h1>
+      <div className="px-6 py-20 min-h-screen bg-gray-100">
+        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
+          {/* Carrusel de imágenes */}
+          <ProductCarousel images={images} alt={producto.Name} />
+
+          {/* Título y precios */}
+          <h1 className="text-4xl font-bold text-gray-900 mt-6">
+            {producto.Name}
+          </h1>
 
           <div className="flex justify-between items-center mb-4 w-full">
-            <div className="flex items-center space-x-4">
-              {" "}
-              {/* Añadir espacio entre los elementos */}
-              {/* Precio del producto */}
+            <div className="flex items-center gap-4">
               <div className="text-2xl font-extrabold text-gray-900">
-                ${producto.Price}
+                {currency.format(Number(producto.Price || 0))}
               </div>
-              {/* Cuadro de descuento alineado */}
               <div className="flex items-center justify-center bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg shadow-lg text-sm md:text-base lg:text-lg">
                 <p>nuevo</p>
               </div>
             </div>
 
-            {/* Precio promocional */}
             {producto.PromotionPrice && (
               <span className="line-through text-gray-400 text-sm">
-                ${producto.PromotionPrice}
+                {currency.format(Number(producto.PromotionPrice))}
               </span>
             )}
           </div>
 
-          {/* Descripción del producto */}
-          <div className="my-6">
-            <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-              Descripción
-            </h2>
-            <p className="text-gray-600">{producto.Description}</p>
-          </div>
+          {/* Descripción */}
+          {producto.Description && (
+            <div className="my-6">
+              <h2 className="text-2xl font-semibold text-gray-800 mb-2">
+                Descripción
+              </h2>
+              <p className="text-gray-600">{producto.Description}</p>
+            </div>
+          )}
 
-          {/* Contador de cantidad */}
-          <div className="flex justify-center items-center space-x-6 mt-6">
+          {/* Cantidad */}
+          <div className="flex justify-center items-center gap-6 mt-6">
             <button
-              className="bg-gray-200 text-gray-900 w-10 h-10 rounded-full hover:bg-gray-300 transition"
-              onClick={() => {
-                if (count > 1) setCount(count - 1);
-              }}
+              className="bg-gray-200 text-gray-900 w-10 h-10 rounded-full hover:bg-gray-300 transition disabled:opacity-50"
+              onClick={() => setCount((c) => Math.max(1, c - 1))}
+              disabled={count <= 1}
             >
               -
             </button>
             <span className="text-2xl font-semibold">{count}</span>
             <button
-              className="bg-gray-200 text-gray-900 w-10 h-10 rounded-full hover:bg-gray-300 transition"
+              className="bg-gray-200 text-gray-900 w-10 h-10 rounded-full hover:bg-gray-300 transition disabled:opacity-50"
               onClick={() => {
-                if (limit == null) {
-                  setCount(count + 1)
-                } else if (count < limit!) 
-                  { setCount(count + 1) }
+                if (limit == null) return setCount((c) => c + 1);
+                if (count < limit) setCount((c) => c + 1);
               }}
+              disabled={limit !== null && count >= limit}
+              title={limit !== null ? `Disponible: ${limit}` : undefined}
             >
               +
             </button>
           </div>
 
-          {/* Botón de añadir al carrito */}
+          {/* Añadir al carrito */}
           <div className="flex justify-center mt-10">
             <button
-              onClick={addCart}
+              onClick={handleAddCart}
+              disabled={!canAdd}
               style={{
-                backgroundColor: color || '#6D01D1', // Color de fondo dinámico basado en el estado 'color'
-                transition: 'background-color 0.3s ease-in-out, transform 0.3s ease-in-out', // Transición de color y transformación
+                backgroundColor: color || "#6D01D1",
+                transition:
+                  "background-color 0.3s ease-in-out, transform 0.3s ease-in-out",
               }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.backgroundColor = adjustColor(color || '#6D01D1')) // Cambia el color al pasar el ratón
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.backgroundColor = color || '#6D01D1') // Vuelve al color original al quitar el ratón
-              }
-              className="text-white w-full md:w-3/4 py-3 px-6 rounded-full shadow-lg hover:scale-105" // Clases Tailwind para el estilo
+              onMouseEnter={(e) => {
+                e.currentTarget.style.backgroundColor = adjustColor(color || "#6D01D1");
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.backgroundColor = color || "#6D01D1";
+              }}
+              className="text-white w-full md:w-3/4 py-3 px-6 rounded-full shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Añadir al carrito
             </button>
-
           </div>
         </div>
 
-        {/* Botón de WhatsApp */}
+        {/* WhatsApp */}
         <div className="bg-green-500 hover:bg-green-600 rounded-full p-2 fixed right-2 bottom-4 shadow-lg transition-all">
-          <a href={`https://api.whatsapp.com/send?phone=52${telefono}`}>
+          <a
+            href={`https://api.whatsapp.com/send?phone=52${telefono || phoneNumber || ""}`}
+            target="_blank"
+            rel="noreferrer"
+          >
             <img src={logoWhasa} alt="WhatsApp" className="w-10 h-10" />
           </a>
         </div>

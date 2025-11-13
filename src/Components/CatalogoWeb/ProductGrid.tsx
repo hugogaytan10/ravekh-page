@@ -78,7 +78,7 @@ const ProductCard = memo(
       >
         <NavLink to={`/catalogo/producto/${product.Id}/${telefono ?? ""}`}>
           <img
-            src={product.Image}
+            src={product.Image || (product.Images && product.Images[0]) || ""}
             alt={product.Name}
             className="h-48 w-full object-cover rounded-t-lg"
             loading="lazy"

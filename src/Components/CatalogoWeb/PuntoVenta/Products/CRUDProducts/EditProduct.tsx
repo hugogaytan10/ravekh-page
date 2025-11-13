@@ -31,13 +31,15 @@ export const EditProduct: React.FC = () => {
   const [description, setDescription] = useState<string>("");
   const [unitType, setUnitType] = useState<string>("Unidad");
   const [colorSelected, setColorSelected] = useState<string>("");
-  const [image, setImage] = useState<string | null>(null);
+  const [mainImage, setMainImage] = useState<string | null>(null);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [isAvailableForSale, setIsAvailableForSale] = useState<boolean>(true);
   const [isDisplayedInStore, setIsDisplayedInStore] = useState<boolean>(true);
   const [isVisibleColorPicker, setIsVisibleColorPicker] = useState<boolean>(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
   const [showModalDelete, setShowModalDelete] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [available, setAvailable] = useState<boolean>(true);
   const formLoadedRef = useRef(false);
 
   useEffect(() => {
@@ -60,7 +62,8 @@ export const EditProduct: React.FC = () => {
       setDescription(draft.description);
       setUnitType(draft.unitType);
       setColorSelected(draft.colorSelected || context.store.Color || ThemeLight.secondaryColor);
-      setImage(draft.image);
+      setGalleryImages(draft.galleryImages || []);
+      setAvailable(draft.available);
       setIsAvailableForSale(draft.isAvailableForSale);
       setIsDisplayedInStore(draft.isDisplayedInStore);
       formLoadedRef.current = true;
@@ -107,12 +110,20 @@ export const EditProduct: React.FC = () => {
           );
           setDescription(response.Description || "");
           setColorSelected(response.Color || context.store.Color || ThemeLight.secondaryColor);
-          setImage(response.Image || null);
+          const imagesFromResponse = Array.isArray(response.Images)
+            ? response.Images
+            : response.Image
+            ? [response.Image]
+            : [];
+          setMainImage(imagesFromResponse[0] || null);
+          setGalleryImages(imagesFromResponse.slice(1));
           setIsAvailableForSale(response.ForSale ?? true);
           setIsDisplayedInStore(response.ShowInStore ?? true);
+          setAvailable(response.Available ?? true);
           context.setCategorySelected({
             Id: response.Category_Id || 0,
             Name: response.Category_Name || "",
+            Color: response.Color || "",
           } as Category);
         }
         formLoadedRef.current = true;
@@ -144,9 +155,10 @@ export const EditProduct: React.FC = () => {
       description,
       unitType,
       colorSelected,
-      image,
+      galleryImages,
       isAvailableForSale,
       isDisplayedInStore,
+      available,
     });
   }, [
     productId,
@@ -161,9 +173,10 @@ export const EditProduct: React.FC = () => {
     description,
     unitType,
     colorSelected,
-    image,
+    galleryImages,
     isAvailableForSale,
     isDisplayedInStore,
+    available,
     context.setProductFormState,
   ]);
 
@@ -176,40 +189,52 @@ export const EditProduct: React.FC = () => {
       setIsSaving(true);
       context.setIsShowSplash(true);
 
-      let imageUrl: string | null = null;
-      if (image) {
-        if (image.startsWith("http")) {
-          imageUrl = image;
-        } else {
-          const uploadedUrl = await uploadImage(image);
-          imageUrl = uploadedUrl || null;
-        }
+      const businessId = context.user?.Business_Id;
+      if (!businessId) {
+        throw new Error("El negocio no está disponible para actualizar productos");
       }
+
+      const imagesToUpload = [mainImage, ...galleryImages].filter(
+        (value): value is string => Boolean(value)
+      );
+      const uploadedImages = await Promise.all(
+        imagesToUpload.map(async (imageSource) => {
+          if (imageSource.startsWith("http")) {
+            return imageSource;
+          }
+          const uploadedUrl = await uploadImage(imageSource);
+          return uploadedUrl || "";
+        })
+      );
+      const sanitizedImages = uploadedImages.filter((url) => url);
 
       const product: Item = {
         Id: productId ? parseInt(productId, 10) : undefined,
+        Business_Id: businessId,
         Name: productName,
         Price: price ? parseFloat(price) : null,
         CostPerItem: cost ? parseFloat(cost) : null,
         Stock: stock ? parseFloat(stock) : null,
         ForSale: isAvailableForSale,
         ShowInStore: isDisplayedInStore,
-        Image: imageUrl || "",
+        Available: available,
         Barcode: barcode.length > 0 ? barcode : null,
         Description: description,
         Color: colorSelected,
-        Business_Id: context.user?.Business_Id,
         PromotionPrice: promoPrice !== "" ? parseFloat(promoPrice) : null,
-        Category_Id: context.categorySelected.Id ? context.categorySelected.Id + "" : null,
+        Category_Id: context.categorySelected.Id || undefined,
         MinStock: minStock !== "" ? parseInt(minStock, 10) : null,
         OptStock: optStock !== "" ? parseInt(optStock, 10) : null,
+        Images: sanitizedImages.length > 0 ? sanitizedImages : undefined,
+        Volume: unitType !== "Unidad",
       };
-      console.log(product);
 
       await updateProduct(product, context.user.Token); // This line is missing in the original code
       context.setStockFlag(!context.stockFlag); // This line is missing in the original code
       context.setCategorySelected({ Id: 0, Name: "", Color: "", Business_Id: 0 } as Category); // This line is missing in the original code
       context.setProductFormState(null);
+      setMainImage(null);
+      setGalleryImages([]);
       formLoadedRef.current = false;
       context.setShowNavBarBottom(true); // This line is missing in the original code
       navigate("/main-products/items");
@@ -225,6 +250,8 @@ export const EditProduct: React.FC = () => {
     deleteProduct(parseInt(productId!), context.user.Token).then(() => {
       context.setStockFlag(!context.stockFlag);
       context.setProductFormState(null);
+      setMainImage(null);
+      setGalleryImages([]);
       formLoadedRef.current = false;
       navigate(-1);
     });
@@ -248,6 +275,8 @@ export const EditProduct: React.FC = () => {
           onClick={() => {
             context.setProductFormState(null);
             formLoadedRef.current = false;
+            setMainImage(null);
+            setGalleryImages([]);
             navigate(-1);
             context.setShowNavBarBottom(true);
           }}
@@ -281,7 +310,7 @@ export const EditProduct: React.FC = () => {
               overflow: "hidden",
             }}
           >
-            {image && <img src={image} alt="Product" className="h-full w-full object-cover" />}
+            {mainImage && <img src={mainImage} alt="Product" className="h-full w-full object-cover" />}
             <div className="absolute bottom-0 left-0 w-full h-16 bg-black bg-opacity-40 text-white flex flex-col items-center justify-center">
               <span className="text-sm font-semibold w-full text-center">{productName}</span>
               <span className="text-base font-bold">${price || "0.00"}</span>
@@ -295,12 +324,111 @@ export const EditProduct: React.FC = () => {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => {
+            onChange={async (e) => {
               if (e.target.files && e.target.files[0]) {
                 const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = () => setImage(reader.result as string);
-                reader.readAsDataURL(file);
+                try {
+                  const previousMain = mainImage;
+                  const dataUrl = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = () => reject(reader.error);
+                    reader.readAsDataURL(file);
+                  });
+                  if (
+                    previousMain &&
+                    !galleryImages.some((imageValue) => imageValue === previousMain)
+                  ) {
+                    setGalleryImages((prev) => [...prev, previousMain]);
+                  }
+                  setMainImage(dataUrl);
+                  e.target.value = "";
+                } catch (error) {
+                  console.error("Error al actualizar la imagen principal:", error);
+                }
+              }
+            }}
+          />
+        </div>
+
+        {/* Imágenes adicionales */}
+        <div className="w-full mb-6">
+          {galleryImages.length > 0 && (
+            <div className="flex flex-wrap gap-3 mb-3">
+              {galleryImages.map((imageUrl, index) => (
+                <div key={`${imageUrl}-${index}`} className="relative">
+                  <img
+                    src={imageUrl}
+                    alt={`Producto adicional ${index + 1}`}
+                    className="w-20 h-20 object-cover rounded"
+                  />
+                  <div className="absolute inset-0 flex flex-col justify-between p-1">
+                    <button
+                      type="button"
+                      className="text-xs bg-black/60 text-white rounded px-1"
+                      onClick={() => {
+                        const selectedImage = galleryImages[index];
+                        if (!selectedImage) {
+                          return;
+                        }
+                        const remaining = galleryImages.filter((_, i) => i !== index);
+                        if (mainImage) {
+                          remaining.push(mainImage);
+                        }
+                        setGalleryImages(remaining);
+                        setMainImage(selectedImage);
+                      }}
+                    >
+                      Principal
+                    </button>
+                    <button
+                      type="button"
+                      className="text-xs bg-red-600 text-white rounded px-1 self-end"
+                      onClick={() => {
+                        setGalleryImages((prev) => prev.filter((_, i) => i !== index));
+                      }}
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <label
+            className="inline-flex items-center gap-2 px-3 py-2 rounded bg-gray-200 text-sm cursor-pointer"
+            htmlFor="galleryUpload"
+          >
+            <ImageIcon />
+            Agregar imágenes adicionales
+          </label>
+          <input
+            id="galleryUpload"
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={async (e) => {
+              if (!e.target.files || e.target.files.length === 0) {
+                return;
+              }
+              try {
+                const files = Array.from(e.target.files);
+                const images = await Promise.all(
+                  files.map(
+                    (file) =>
+                      new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result as string);
+                        reader.onerror = () => reject(reader.error);
+                        reader.readAsDataURL(file);
+                      })
+                  )
+                );
+                setGalleryImages((prev) => [...prev, ...images]);
+                e.target.value = "";
+              } catch (error) {
+                console.error("Error al cargar imágenes adicionales:", error);
               }
             }}
           />

@@ -42,7 +42,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
         return;
       }
 
-      if(idBusiness == "92") {
+      if (idBusiness == "92") {
         setNotPay(true);
         setNotPayMessage("No tienes acceso a este catálogo por falta de pago.");
         return;
@@ -53,7 +53,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
         context.setIdBussiness(idBusiness);
         //guradamos el id del negocio en el local storage
         localStorage.setItem("idBusiness", idBusiness);
-      } 
+      }
 
       // Limpieza de carrito si no coincide el negocio
       const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
@@ -97,7 +97,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       } else {
         setProductos([]);
       }
-     
+
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idBusiness]);
@@ -137,7 +137,10 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   }, [context]);
 
   const sanitizedProducts = useMemo(
-    () => productos.filter((producto) => Boolean(producto.Image)),
+    () =>
+      productos.filter((producto) =>
+        Boolean(producto.Image || (producto.Images && producto.Images[0]))
+      ),
     [productos]
   );
 
@@ -228,7 +231,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     [addProductToCart]
   );
 
-  if(notPay) {
+  if (notPay) {
     return (
       <div className="flex flex-col items-center justify-center h-screen">
         <h1 className="text-2xl font-bold text-red-600">
@@ -264,8 +267,8 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
           <meta
             property="og:image"
             content={
-              productos.length > 0 && productos[0].Image
-                ? productos[0].Image
+              productos.length > 0 && (productos[0].Image || productos[0].Images?.[0])
+                ? productos[0].Image || productos[0].Images?.[0]
                 : defaultImage
             }
           />
@@ -300,7 +303,9 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
 
           {/* Botón de WhatsApp */}
           <div className="bg-color-whats rounded-full p-1 fixed right-2 bottom-4">
-            <a href={`https://api.whatsapp.com/send?phone=52${telefono}`}>
+            <a href={`https://api.whatsapp.com/send?phone=${idBusiness === "115"
+              ?"1"
+              :"52"}${telefono}`}>
               <img src={logoWhasa} alt="WS" className="h-12 w-12" />
             </a>
           </div>

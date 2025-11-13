@@ -113,9 +113,12 @@ export const MainCategoria: React.FC = () => {
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
                             {Array.isArray(productos) &&
-                                productos.map(
-                                    (producto, index) =>
-                                        (producto.Image != '' && producto.Image != null) && (
+                                productos.map((producto, index) => {
+                                    const mainImage = producto.Image || (producto.Images && producto.Images[0]);
+                                    if (!mainImage) {
+                                        return null;
+                                    }
+                                    return (
                                             <motion.div
                                                 key={producto.Id}
                                                 className="border rounded-lg shadow-md  bg-white transform transition-transform hover:scale-105 hover:shadow-lg"
@@ -127,7 +130,7 @@ export const MainCategoria: React.FC = () => {
                                                     to={`/catalogo/producto/${producto.Id}/${telefono}`}
                                                 >
                                                     <img
-                                                        src={producto.Image}
+                                                        src={mainImage}
                                                         alt={producto.Name}
                                                         className="h-48 w-full object-cover mb-4 rounded-t-lg"
                                                     />
@@ -161,8 +164,8 @@ export const MainCategoria: React.FC = () => {
                                                     </button>
                                                 </div>
                                             </motion.div>
-                                        )
-                                )}
+                                    );
+                                })}
                         </div>
                     )}
 

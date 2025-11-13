@@ -9,7 +9,8 @@ type Product = {
   Business_Id?: number;
   Name: string;
   Price: number | null;
-  Image: string;
+  Image?: string;
+  Images?: string[];
   Stock?: number | null;
   Barcode: string;
   Color: string;
@@ -48,10 +49,14 @@ export const StockList: React.FC<StockListProps> = ({ barcode }) => {
               response = response.slice(0, 10);
             }
             setProducts(
-              response.map((product) => ({
-                ...product,
-                Name: truncate(product.Name, 16),
-              }))
+              response.map((product) => {
+                const mainImage = product.Image || product.Images?.[0] || "";
+                return {
+                  ...product,
+                  Image: mainImage,
+                  Name: truncate(product.Name, 16),
+                };
+              })
             );
           }
           context.setIsShowSplash(false);
@@ -110,7 +115,7 @@ export const StockList: React.FC<StockListProps> = ({ barcode }) => {
 
     return (
       <div key={item.Id} className="flex items-center p-4 bg-white border-b">
-        {item.Image ? (
+        {(item.Image || item.Images?.[0]) ? (
           <div className="relative w-24 h-16 mr-4">
             {loading && (
               <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
@@ -118,7 +123,7 @@ export const StockList: React.FC<StockListProps> = ({ barcode }) => {
               </div>
             )}
             <img
-              src={item.Image}
+              src={item.Image || item.Images?.[0] || ""}
               alt={item.Name}
               className="w-full h-full object-cover rounded"
               onLoad={() => setLoading(false)}
