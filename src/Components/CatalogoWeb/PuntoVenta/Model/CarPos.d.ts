@@ -14,4 +14,5 @@ export type CartPos = {
     Barcode?: string;
     Quantity: number;
     SubTotal: number;
+    Variant_Id?: number | null;
 }

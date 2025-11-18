@@ -21,4 +21,5 @@ export type Item = {
     OptStock?: number | null;
     Quantity?: number | null;
     Category_Name?: string;
+    Variants?: import('./Variant').Variant[];
 }

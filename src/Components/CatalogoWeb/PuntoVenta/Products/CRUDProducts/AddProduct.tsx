@@ -12,6 +12,8 @@ import { Category } from "../../Model/Category";
 import { ThemeLight } from "../../Theme/Theme";
 import { useNavigate } from "react-router-dom";
 import { ChevronGo } from "../../../../../assets/POS/ChevronGo";
+import { VariantDraft } from './variantTypes';
+import { draftsToVariants, syncDraftColors } from './variantUtils';
 
 export const AddProduct: React.FC = () => {
   const context = useContext(AppContext);
@@ -40,6 +42,7 @@ export const AddProduct: React.FC = () => {
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const formLoadedRef = useRef(false);
+  const [variantDrafts, setVariantDrafts] = useState<VariantDraft[]>([]);
 
   const unitOptions = ["Unidad", "Kilos", "Litros"];
 
