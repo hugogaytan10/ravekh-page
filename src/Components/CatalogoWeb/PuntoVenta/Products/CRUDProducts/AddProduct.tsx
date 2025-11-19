@@ -12,8 +12,9 @@ import { Category } from "../../Model/Category";
 import { ThemeLight } from "../../Theme/Theme";
 import { useNavigate } from "react-router-dom";
 import { ChevronGo } from "../../../../../assets/POS/ChevronGo";
-import { VariantDraft } from './variantTypes';
-import { draftsToVariants, syncDraftColors } from './variantUtils';
+import { VariantDraft } from "./variantTypes";
+import { draftsToVariants, syncDraftColors } from "./variantUtils";
+import VariantsEditor from "./VariantsEditor";
 
 export const AddProduct: React.FC = () => {
   const context = useContext(AppContext);
@@ -28,7 +29,9 @@ export const AddProduct: React.FC = () => {
   const [minStock, setMinStock] = useState<string>("");
   const [optStock, setOptStock] = useState<string>("");
   const [promoPrice, setPromoPrice] = useState<string>("");
+  const [inventoryExpanded, setInventoryExpanded] = useState(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [variantsExpanded, setVariantsExpanded] = useState(false);
   const [isAvailableForSale, setIsAvailableForSale] = useState(true);
   const [isDisplayedInStore, setIsDisplayedInStore] = useState(true);
   const [description, setDescription] = useState("");
@@ -45,6 +48,7 @@ export const AddProduct: React.FC = () => {
   const [variantDrafts, setVariantDrafts] = useState<VariantDraft[]>([]);
 
   const unitOptions = ["Unidad", "Kilos", "Litros"];
+  const accentColor = colorSelected || ThemeLight.secondaryColor;
 
   useEffect(() => {
     if (formLoadedRef.current) {
@@ -68,6 +72,7 @@ export const AddProduct: React.FC = () => {
       setGalleryImages(draft.galleryImages || []);
       setIsAvailableForSale(draft.isAvailableForSale);
       setIsDisplayedInStore(draft.isDisplayedInStore);
+      setVariantDrafts(draft.variantDrafts || []);
     }
 
     formLoadedRef.current = true;
@@ -95,6 +100,7 @@ export const AddProduct: React.FC = () => {
       isAvailableForSale,
       isDisplayedInStore,
       available: true,
+      variantDrafts,
     });
   }, [
     productName,
@@ -111,8 +117,13 @@ export const AddProduct: React.FC = () => {
     galleryImages,
     isAvailableForSale,
     isDisplayedInStore,
+    variantDrafts,
     context.setProductFormState,
   ]);
+
+  useEffect(() => {
+    setVariantDrafts((prev) => syncDraftColors(prev, colorSelected));
+  }, [colorSelected]);
 
   const handleSave = async () => {
     if (isSaving) {
@@ -165,13 +176,16 @@ export const AddProduct: React.FC = () => {
         Image: sanitizedImages[0] || undefined,
       };
 
-      await insertProduct(product, context.user?.Token);
+      const variantsPayload = draftsToVariants(variantDrafts, colorSelected);
+
+      await insertProduct(product, context.user?.Token, variantsPayload);
 
       context.setStockFlag(!context.stockFlag);
       context.setCategorySelected({ Id: 0, Name: "", Color: "" } as Category);
       context.setProductFormState(null);
       setMainImage(null);
       setGalleryImages([]);
+      setVariantDrafts([]);
       formLoadedRef.current = false;
       context.setShowNavBarBottom(true); // Mostrar la barra de navegación inferior
       navigation("/main-products/items");
@@ -204,6 +218,7 @@ export const AddProduct: React.FC = () => {
             formLoadedRef.current = false;
             setMainImage(null);
             setGalleryImages([]);
+            setVariantDrafts([]);
             navigation("/main-products/items");
             context.setShowNavBarBottom(true);
           }}
@@ -439,12 +454,12 @@ export const AddProduct: React.FC = () => {
         <div className="bg-white rounded-lg p-4 form-section-add-product mt-4">
           <button
             className="flex justify-between w-full"
-            onClick={() => setDetailsExpanded(!detailsExpanded)}
+            onClick={() => setInventoryExpanded(!inventoryExpanded)}
           >
             <span>Inventario</span>
-            <span>{detailsExpanded ? "▲" : "▼"}</span>
+            <span>{inventoryExpanded ? "▲" : "▼"}</span>
           </button>
-          {detailsExpanded && (
+          {inventoryExpanded && (
             <div className="mt-4">
               <InputBasic
                 placeholder="Existencias"
@@ -510,17 +525,17 @@ export const AddProduct: React.FC = () => {
               />
               <div className="flex justify-between p-2">
                 <p>Vender por</p>
-              <button onClick={handleUnitChange}>{unitType}</button>
+                <button onClick={handleUnitChange}>{unitType}</button>
               </div>
               <div className="mt-4">
                 <label className="flex justify-between">
                   Disponible para venta
                   <input
-                  type="checkbox"
-                  className="h-6 w-6 bg-white rounded"
-                  style={{
+                    type="checkbox"
+                    className="h-6 w-6 bg-white rounded"
+                    style={{
                     backgroundColor: isAvailableForSale
-                    ? context.store.Color || ThemeLight.secondaryColor
+                    ? accentColor
                     : "white",
                   }}
                   checked={isAvailableForSale}
@@ -528,25 +543,47 @@ export const AddProduct: React.FC = () => {
                   />
                 </label>
               </div>
-                <div className="mt-4">
+              <div className="mt-4">
                 <label className="flex justify-between">
                   Mostrar en tienda
                   <input
-                  type="checkbox"
-                  className="h-6 w-6 bg-white rounded border-2"
-                  style={{
+                    type="checkbox"
+                    className="h-6 w-6 bg-white rounded border-2"
+                    style={{
                     borderColor: isDisplayedInStore
-                    ? context.store.Color || ThemeLight.secondaryColor
+                    ? accentColor
                     : "#e2e8f0",
                     backgroundColor: isDisplayedInStore
-                    ? context.store.Color || ThemeLight.secondaryColor
+                    ? accentColor
                     : "white",
                   }}
                   checked={isDisplayedInStore}
                   onChange={() => setIsDisplayedInStore(!isDisplayedInStore)}
                   />
                 </label>
-                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Variants Section */}
+        <div className="bg-white rounded-lg p-4 form-section-add-product mt-4">
+          <button
+            className="flex justify-between w-full"
+            onClick={() => setVariantsExpanded(!variantsExpanded)}
+          >
+            <span>Variantes</span>
+            <span>{variantsExpanded ? "▲" : "▼"}</span>
+          </button>
+          {variantsExpanded && (
+            <div className="mt-4">
+              <VariantsEditor
+                variants={variantDrafts}
+                onChange={setVariantDrafts}
+                accentColor={accentColor}
+                showSectionHeader={false}
+                containerClassName="bg-transparent border-0 shadow-none p-0"
+              />
             </div>
           )}
         </div>

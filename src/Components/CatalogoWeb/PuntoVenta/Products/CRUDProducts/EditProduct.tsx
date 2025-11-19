@@ -1,7 +1,15 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
-import { getProduct, updateProduct, deleteProduct } from "../Petitions";
+import {
+  getProduct,
+  updateProduct,
+  deleteProduct,
+  getVariantsByProductId,
+  insertVariant as insertVariantRequest,
+  updateVariant as updateVariantRequest,
+  deleteVariant as deleteVariantRequest,
+} from "../Petitions";
 import { uploadImage } from "../../Cloudinary/Cloudinary";
 import { PickerColor } from "../../CustomizeApp/PickerColor";
 import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
@@ -13,6 +21,14 @@ import { ThemeLight } from "../../Theme/Theme";
 import { DeleteProductModal } from "./DeleteProductModal";
 import { Category } from "../../Model/Category";
 import { Item } from "../../Model/Item";
+import { Variant } from "../../Model/Variant";
+import VariantsEditor from "./VariantsEditor";
+import { VariantDraft } from "./variantTypes";
+import {
+  variantsToDrafts,
+  syncDraftColors,
+  calculateVariantChanges,
+} from "./variantUtils";
 
 export const EditProduct: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -37,10 +53,14 @@ export const EditProduct: React.FC = () => {
   const [isDisplayedInStore, setIsDisplayedInStore] = useState<boolean>(true);
   const [isVisibleColorPicker, setIsVisibleColorPicker] = useState<boolean>(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [variantsExpanded, setVariantsExpanded] = useState(false);
   const [showModalDelete, setShowModalDelete] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [available, setAvailable] = useState<boolean>(true);
+  const [variantDrafts, setVariantDrafts] = useState<VariantDraft[]>([]);
+  const [originalVariants, setOriginalVariants] = useState<Variant[]>([]);
   const formLoadedRef = useRef(false);
+  const accentColor = colorSelected || context.store.Color || ThemeLight.secondaryColor;
 
   useEffect(() => {
     if (!productId || formLoadedRef.current) {
@@ -66,6 +86,8 @@ export const EditProduct: React.FC = () => {
       setAvailable(draft.available);
       setIsAvailableForSale(draft.isAvailableForSale);
       setIsDisplayedInStore(draft.isDisplayedInStore);
+      setVariantDrafts(draft.variantDrafts || []);
+      setOriginalVariants(draft.variantOriginals || []);
       formLoadedRef.current = true;
     }
   }, [context.productFormState, context.store.Color, productId]);
@@ -109,7 +131,9 @@ export const EditProduct: React.FC = () => {
               : ""
           );
           setDescription(response.Description || "");
-          setColorSelected(response.Color || context.store.Color || ThemeLight.secondaryColor);
+          const highlightColor =
+            response.Color || context.store.Color || ThemeLight.secondaryColor;
+          setColorSelected(highlightColor);
           const imagesFromResponse = Array.isArray(response.Images)
             ? response.Images
             : response.Image
@@ -120,6 +144,22 @@ export const EditProduct: React.FC = () => {
           setIsAvailableForSale(response.ForSale ?? true);
           setIsDisplayedInStore(response.ShowInStore ?? true);
           setAvailable(response.Available ?? true);
+          const token = context.user?.Token;
+          if (token) {
+            getVariantsByProductId(currentId, token)
+              .then((variants) => {
+                setOriginalVariants(variants);
+                setVariantDrafts(variantsToDrafts(variants, highlightColor));
+              })
+              .catch((error) => {
+                console.error("Error loading product variants:", error);
+                setOriginalVariants([]);
+                setVariantDrafts([]);
+              });
+          } else {
+            setOriginalVariants([]);
+            setVariantDrafts([]);
+          }
           context.setCategorySelected({
             Id: response.Category_Id || 0,
             Name: response.Category_Name || "",
@@ -159,6 +199,8 @@ export const EditProduct: React.FC = () => {
       isAvailableForSale,
       isDisplayedInStore,
       available,
+      variantDrafts,
+      variantOriginals: originalVariants,
     });
   }, [
     productId,
@@ -177,8 +219,14 @@ export const EditProduct: React.FC = () => {
     isAvailableForSale,
     isDisplayedInStore,
     available,
+    variantDrafts,
+    originalVariants,
     context.setProductFormState,
   ]);
+
+  useEffect(() => {
+    setVariantDrafts((prev) => syncDraftColors(prev, accentColor));
+  }, [accentColor]);
 
   const handleSave = async () => {
     if (isSaving) {
@@ -230,11 +278,52 @@ export const EditProduct: React.FC = () => {
       };
 
       await updateProduct(product, context.user.Token); // This line is missing in the original code
+
+      if (product.Id && context.user?.Token) {
+        try {
+          const { toCreate, toUpdate, toDelete } = calculateVariantChanges(
+            variantDrafts,
+            originalVariants,
+            accentColor,
+          );
+
+          for (const variant of toCreate) {
+            await insertVariantRequest(product.Id, variant, context.user.Token);
+          }
+
+          for (const variant of toUpdate) {
+            if (typeof variant.Id === "number") {
+              await updateVariantRequest(
+                variant.Id,
+                product.Id,
+                variant,
+                context.user.Token,
+              );
+            }
+          }
+
+          for (const variantId of toDelete) {
+            await deleteVariantRequest(variantId, context.user.Token);
+          }
+
+          const refreshed = await getVariantsByProductId(
+            product.Id,
+            context.user.Token,
+          );
+          setOriginalVariants(refreshed);
+          setVariantDrafts(variantsToDrafts(refreshed, accentColor));
+        } catch (variantError) {
+          console.error("Error updating variants:", variantError);
+        }
+      }
+
       context.setStockFlag(!context.stockFlag); // This line is missing in the original code
       context.setCategorySelected({ Id: 0, Name: "", Color: "", Business_Id: 0 } as Category); // This line is missing in the original code
       context.setProductFormState(null);
       setMainImage(null);
       setGalleryImages([]);
+      setVariantDrafts([]);
+      setOriginalVariants([]);
       formLoadedRef.current = false;
       context.setShowNavBarBottom(true); // This line is missing in the original code
       navigate("/main-products/items");
@@ -252,6 +341,8 @@ export const EditProduct: React.FC = () => {
       context.setProductFormState(null);
       setMainImage(null);
       setGalleryImages([]);
+      setVariantDrafts([]);
+      setOriginalVariants([]);
       formLoadedRef.current = false;
       navigate(-1);
     });
@@ -277,6 +368,8 @@ export const EditProduct: React.FC = () => {
             formLoadedRef.current = false;
             setMainImage(null);
             setGalleryImages([]);
+            setVariantDrafts([]);
+            setOriginalVariants([]);
             navigate(-1);
             context.setShowNavBarBottom(true);
           }}
@@ -546,6 +639,25 @@ export const EditProduct: React.FC = () => {
                   />
                 </label>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Variants Section */}
+        <div className="bg-white rounded-lg p-4 form-section-add-product mt-4">
+          <button className="flex justify-between w-full" onClick={() => setVariantsExpanded(!variantsExpanded)}>
+            <span>Variantes</span>
+            <span>{variantsExpanded ? "▲" : "▼"}</span>
+          </button>
+          {variantsExpanded && (
+            <div className="mt-4">
+              <VariantsEditor
+                variants={variantDrafts}
+                onChange={setVariantDrafts}
+                accentColor={accentColor}
+                showSectionHeader={false}
+                containerClassName="bg-transparent border-0 shadow-none p-0"
+              />
             </div>
           )}
         </div>
