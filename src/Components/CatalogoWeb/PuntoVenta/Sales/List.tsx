@@ -1,7 +1,14 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { Item } from "../Model/Item";
 import { AppContext } from "../../Context/AppContext";
-import { CartPos } from "../Model/CarPos";
+import { Variant } from "../Model/Variant";
+import VariantModal from "./VariantModal";
+import { getVariantsByProductId } from "../Products/Petitions";
 
 interface ListProps {
   Products: Item[];
@@ -9,43 +16,131 @@ interface ListProps {
 
 export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
   const [products, setProducts] = useState<Item[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Item | null>(null);
+  const [selectedVariants, setSelectedVariants] = useState<Variant[]>([]);
   const context = useContext(AppContext);
 
   const truncate = (text: string, length: number) => {
     return text.length > length ? text.substring(0, length) + "..." : text;
   };
 
-  const AddItemToCart = (product: Item) => {
-    if (product) {
-      const cartProduct = context.cartPos?.find(
-        (item: CartPos) => item.Id === product.Id
-      );
-      if (cartProduct) {
-        cartProduct.Quantity += Number(context.quantityNextSell);
-        cartProduct.SubTotal =
-          Number(cartProduct.Quantity) * Number(cartProduct.Price.toFixed(2) || 0);
-        context.setStockFlag(!context.stockFlag);
-      } else {
-        context.setCartPos([
-          ...context.cartPos,
+  const addItemToCart = useCallback(
+    (product: Item, variant?: Variant) => {
+      const quantityToAdd = Number(context.quantityNextSell);
+      const variantId = variant?.Id ?? null;
+      const selectedPrice =
+        variant?.PromotionPrice && variant?.PromotionPrice > 0
+          ? variant.PromotionPrice
+          : variant?.Price ?? product.PromotionPrice ?? product.Price ?? 0;
+
+      context.setCartPos((prevCart) => {
+        const existingIndex = prevCart.findIndex(
+          (item) => item.Id === product.Id && (item.Variant_Id ?? null) === variantId
+        );
+
+        if (existingIndex !== -1) {
+          const updatedCart = [...prevCart];
+          const existingItem = updatedCart[existingIndex];
+          const newQuantity = existingItem.Quantity + quantityToAdd;
+
+          updatedCart[existingIndex] = {
+            ...existingItem,
+            Quantity: newQuantity,
+            SubTotal: selectedPrice * newQuantity,
+          };
+
+          return updatedCart;
+        }
+
+        return [
+          ...prevCart,
           {
-            Id: product.Id,
-            Name: product.Name,
-            Price: product.Price ?? 0,
-            Barcode: product.Barcode ?? undefined,
-            Quantity: Number(context.quantityNextSell),
-            SubTotal: product.Price ?? 0,
             Image: product.Image || product.Images?.[0] || "",
-            Cost: product.CostPerItem ?? 0,
+            Id: product.Id,
+            Name: variant ? `${product.Name} - ${variant.Description}` : product.Name,
+            Price: selectedPrice,
+            Barcode: variant?.Barcode ?? product.Barcode ?? undefined,
+            Quantity: quantityToAdd,
+            SubTotal: selectedPrice * quantityToAdd,
+            Cost: variant?.CostPerItem ?? product.CostPerItem ?? 0,
+            Category_Id: product.Category_Id ?? undefined,
+            Stock: variant?.Stock ?? product.Stock ?? undefined,
+            IsLabeled: product.IsLabeled ?? undefined,
+            Volume: product.Volume ?? undefined,
+            PromotionPrice: variant?.PromotionPrice ?? product.PromotionPrice ?? undefined,
+            Variant_Id: variantId,
           },
-        ]);
+        ];
+      });
+    },
+    [context.quantityNextSell]
+  );
+
+  const fetchProductVariants = useCallback(
+    async (product: Item) => {
+      if (!product.Id) return product;
+
+      try {
+        const variants = await getVariantsByProductId(product.Id, context.user.Token);
+        return { ...product, Variants: variants } as Item;
+      } catch (error) {
+        return product;
       }
-      navigator.vibrate(100);
-      context.setStockFlag(!context.stockFlag);
-    } else {
-      console.log("Producto no encontrado");
-    }
-  };
+    },
+    [context.user.Token]
+  );
+
+  const handleAddItem = useCallback(
+    async (product: Item) => {
+      if (product.Variants && product.Variants.length > 0) {
+        setSelectedProduct(product);
+        setSelectedVariants([]);
+        return;
+      }
+
+      const productWithVariants = await fetchProductVariants(product);
+      if (productWithVariants.Variants && productWithVariants.Variants.length > 0) {
+        setSelectedProduct(productWithVariants);
+        setSelectedVariants([]);
+        return;
+      }
+
+      addItemToCart(product);
+      navigator.vibrate?.(50);
+    },
+    [addItemToCart, fetchProductVariants]
+  );
+
+  const handleConfirmVariants = useCallback(
+    (variantsSelected: Variant[]) => {
+      if (!selectedProduct) return;
+      const variantsToAdd = variantsSelected.length > 0 ? variantsSelected : selectedVariants;
+      variantsToAdd.forEach((variant) => addItemToCart(selectedProduct, variant));
+      navigator.vibrate?.(50);
+      setSelectedProduct(null);
+      setSelectedVariants([]);
+    },
+    [addItemToCart, selectedProduct, selectedVariants]
+  );
+
+  const toggleVariant = useCallback((variant: Variant) => {
+    setSelectedVariants((prev) => {
+      const exists = prev.some(
+        (v) => (v.Id ?? v.Description) === (variant.Id ?? variant.Description)
+      );
+      if (exists) {
+        return prev.filter(
+          (v) => (v.Id ?? v.Description) !== (variant.Id ?? variant.Description)
+        );
+      }
+      return [...prev, variant];
+    });
+  }, []);
+
+  const closeVariantModal = useCallback(() => {
+    setSelectedProduct(null);
+    setSelectedVariants([]);
+  }, []);
 
   useEffect(() => {
     setProducts(
@@ -60,7 +155,7 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
     return (
       <div
         className="flex items-center p-2  bg-gray-100 rounded-lg border border-gray-300 hover:bg-gray-200 cursor-pointer transition-all"
-        onClick={() => AddItemToCart(product)}
+        onClick={() => handleAddItem(product)}
         key={product.Id}
       >
         {/* Imagen del producto */}
@@ -107,6 +202,15 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
         ? products.slice(0, 10)
         : products
       ).map((product) => renderProduct(product))}
+
+      <VariantModal
+        isOpen={Boolean(selectedProduct)}
+        product={selectedProduct}
+        onClose={closeVariantModal}
+        onConfirm={handleConfirmVariants}
+        selectedVariants={selectedVariants}
+        onToggleVariant={toggleVariant}
+      />
     </div>
   );
   

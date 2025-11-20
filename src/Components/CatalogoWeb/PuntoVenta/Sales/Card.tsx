@@ -4,13 +4,15 @@ import React, {
   useEffect,
   useCallback,
   useMemo,
-  useRef
+  useRef,
 } from "react";
 import { FixedSizeGrid } from "react-window";
 import { Item } from "../Model/Item";
 import "./Css/ProductList.css";
 import { AppContext } from "../../Context/AppContext";
-import { useNavigate } from "react-router-dom";
+import { Variant } from "../Model/Variant";
+import VariantModal from "./VariantModal";
+import { getVariantsByProductId } from "../Products/Petitions";
 
 interface CardProps {
   product: Item;
@@ -81,7 +83,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
   const [gridWidth, setGridWidth] = useState(window.innerWidth);
   const rowHeight = 250;
   const maxRowsVisible = 3;
-  const navigate = useNavigate();
+  const [selectedProduct, setSelectedProduct] = useState<Item | null>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -112,50 +114,103 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
     [products]
   );
 
-  const handleAddItem = useCallback(
-    (product: Item) => {
+  const addItemToCart = useCallback(
+    (product: Item, variant?: Variant) => {
+      const quantityToAdd = Number(context.quantityNextSell);
+      const variantId = variant?.Id ?? null;
+      const selectedPrice =
+        variant?.PromotionPrice && variant?.PromotionPrice > 0
+          ? variant.PromotionPrice
+          : variant?.Price ?? product.PromotionPrice ?? product.Price ?? 0;
+
       context.setCartPos((prevCart) => {
-        const updatedCart = prevCart.map((item) =>
-          item.Id === product.Id
-            ? {
-                ...item,
-                Quantity: item.Quantity + Number(context.quantityNextSell),
-                SubTotal:
-                  (item.Price ?? 0) *
-                  (item.Quantity + Number(context.quantityNextSell)),
-              }
-            : item
+        const existingIndex = prevCart.findIndex(
+          (item) => item.Id === product.Id && (item.Variant_Id ?? null) === variantId
         );
 
-        const exists = prevCart.some((item) => item.Id === product.Id);
-        return exists
-          ? updatedCart
-          : [
-              ...prevCart,
-              {
-                Image: product.Image || product.Images?.[0] || "",
-                Id: product.Id,
-                Name: product.Name,
-                Price: product.Price ?? 0,
-                Barcode: product.Barcode ?? undefined,
-                Quantity: Number(context.quantityNextSell),
-                SubTotal:
-                  (product.Price ?? 0) * Number(context.quantityNextSell),
-                Cost: product.CostPerItem ?? 0,
-                Category_Id: product.Category_Id ?? undefined,
-                Stock: product.Stock ?? undefined,
-                IsLabeled: product.IsLabeled ?? undefined,
-                Volume: product.Volume ?? undefined,
-                PromotionPrice: product.PromotionPrice ?? undefined,
-              },
-            ];
-      });
+        if (existingIndex !== -1) {
+          const updatedCart = [...prevCart];
+          const existingItem = updatedCart[existingIndex];
+          const newQuantity = existingItem.Quantity + quantityToAdd;
 
-      navigator.vibrate?.(50); // Reducir el tiempo de vibración
-      //context.setStockFlag((prev) => !prev);
+          updatedCart[existingIndex] = {
+            ...existingItem,
+            Quantity: newQuantity,
+            SubTotal: selectedPrice * newQuantity,
+          };
+
+          return updatedCart;
+        }
+
+        return [
+          ...prevCart,
+          {
+            Image: product.Image || product.Images?.[0] || "",
+            Id: product.Id,
+            Name: variant ? `${product.Name} - ${variant.Description}` : product.Name,
+            Price: selectedPrice,
+            Barcode: variant?.Barcode ?? product.Barcode ?? undefined,
+            Quantity: quantityToAdd,
+            SubTotal: selectedPrice * quantityToAdd,
+            Cost: variant?.CostPerItem ?? product.CostPerItem ?? 0,
+            Category_Id: product.Category_Id ?? undefined,
+            Stock: variant?.Stock ?? product.Stock ?? undefined,
+            IsLabeled: product.IsLabeled ?? undefined,
+            Volume: product.Volume ?? undefined,
+            PromotionPrice:
+              variant?.PromotionPrice ?? product.PromotionPrice ?? undefined,
+            Variant_Id: variantId,
+          },
+        ];
+      });
     },
     [context.quantityNextSell]
   );
+
+  const fetchProductVariants = useCallback(
+    async (product: Item) => {
+      if (!product.Id) return product;
+
+      try {
+        const variants = await getVariantsByProductId(product.Id, context.user.Token);
+        return { ...product, Variants: variants } as Item;
+      } catch (error) {
+        return product;
+      }
+    },
+    [context.user.Token]
+  );
+
+  const handleAddItem = useCallback(
+    async (product: Item) => {
+      if (product.Variants && product.Variants.length > 0) {
+        setSelectedProduct(product);
+        return;
+      }
+
+      const productWithVariants = await fetchProductVariants(product);
+      if (productWithVariants.Variants && productWithVariants.Variants.length > 0) {
+        setSelectedProduct(productWithVariants);
+        return;
+      }
+
+      addItemToCart(product);
+      navigator.vibrate?.(50);
+    },
+    [addItemToCart, fetchProductVariants]
+  );
+
+  const handleConfirmVariants = useCallback(
+    (variantsSelected: Variant[]) => {
+      if (!selectedProduct) return;
+      variantsSelected.forEach((variant) => addItemToCart(selectedProduct, variant));
+      navigator.vibrate?.(50);
+      setSelectedProduct(null);
+    },
+    [addItemToCart, selectedProduct]
+  );
+
+  const handleCloseModal = useCallback(() => setSelectedProduct(null), []);
 
   const rowCount = Math.ceil(memoizedProducts.length / columns);
   const gridHeight = rowHeight * maxRowsVisible;
@@ -192,6 +247,13 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
           );
         }}
       </FixedSizeGrid>
+
+      <VariantModal
+        isOpen={Boolean(selectedProduct)}
+        product={selectedProduct}
+        onClose={handleCloseModal}
+        onConfirm={handleConfirmVariants}
+      />
     </div>
   );
 };
