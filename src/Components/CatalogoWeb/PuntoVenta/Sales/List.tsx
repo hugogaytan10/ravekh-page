@@ -7,7 +7,7 @@ import React, {
 import { Item } from "../Model/Item";
 import { AppContext } from "../../Context/AppContext";
 import { Variant } from "../Model/Variant";
-//import VariantModal from "./VariantModal";
+import { useVariantSelection } from "./Hook/useVariantSelection";
 import { getVariantsByProductId } from "../Products/Petitions";
 import { VariantModal } from "./VariantModal";
 
@@ -17,8 +17,6 @@ interface ListProps {
 
 export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
   const [products, setProducts] = useState<Item[]>([]);
-  const [selectedProduct, setSelectedProduct] = useState<Item | null>(null);
-  const [selectedVariants, setSelectedVariants] = useState<Variant[]>([]);
   const context = useContext(AppContext);
 
   const truncate = (text: string, length: number) => {
@@ -77,71 +75,19 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
     [context.quantityNextSell]
   );
 
-  const fetchProductVariants = useCallback(
-    async (product: Item) => {
-      if (!product.Id) return product;
-
-      try {
-        const variants = await getVariantsByProductId(product.Id, context.user.Token);
-        return { ...product, Variants: variants } as Item;
-      } catch (error) {
-        return product;
-      }
-    },
-    [context.user.Token]
-  );
+  const {
+    handleProductSelection,
+    modalState,
+    isFetchingVariants
+  } = useVariantSelection({
+    onCartUpdated: () => navigator.vibrate?.(50),
+  });
 
   const handleAddItem = useCallback(
-    async (product: Item) => {
-      if (product.Variants && product.Variants.length > 0) {
-        setSelectedProduct(product);
-        setSelectedVariants([]);
-        return;
-      }
-
-      const productWithVariants = await fetchProductVariants(product);
-      if (productWithVariants.Variants && productWithVariants.Variants.length > 0) {
-        setSelectedProduct(productWithVariants);
-        setSelectedVariants([]);
-        return;
-      }
-
-      addItemToCart(product);
-      navigator.vibrate?.(50);
-    },
-    [addItemToCart, fetchProductVariants]
+    (product: Item) => handleProductSelection(product),
+    [handleProductSelection]
   );
 
-  const handleConfirmVariants = useCallback(
-    (variantsSelected: Variant[]) => {
-      if (!selectedProduct) return;
-      const variantsToAdd = variantsSelected.length > 0 ? variantsSelected : selectedVariants;
-      variantsToAdd.forEach((variant) => addItemToCart(selectedProduct, variant));
-      navigator.vibrate?.(50);
-      setSelectedProduct(null);
-      setSelectedVariants([]);
-    },
-    [addItemToCart, selectedProduct, selectedVariants]
-  );
-
-  const toggleVariant = useCallback((variant: Variant) => {
-    setSelectedVariants((prev) => {
-      const exists = prev.some(
-        (v) => (v.Id ?? v.Description) === (variant.Id ?? variant.Description)
-      );
-      if (exists) {
-        return prev.filter(
-          (v) => (v.Id ?? v.Description) !== (variant.Id ?? variant.Description)
-        );
-      }
-      return [...prev, variant];
-    });
-  }, []);
-
-  const closeVariantModal = useCallback(() => {
-    setSelectedProduct(null);
-    setSelectedVariants([]);
-  }, []);
 
   useEffect(() => {
     setProducts(
@@ -204,14 +150,8 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
         : products
       ).map((product) => renderProduct(product))}
 
-      <VariantModal
-        isOpen={Boolean(selectedProduct)}
-        product={selectedProduct}
-        onClose={closeVariantModal}
-        onConfirm={handleConfirmVariants}
-        selectedVariants={selectedVariants}
-        onToggleVariant={toggleVariant}
-      />
+      <VariantModal modalState={modalState} isLoading={isFetchingVariants} />
+
     </div>
   );
   
