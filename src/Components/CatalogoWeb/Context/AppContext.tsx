@@ -125,11 +125,17 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   };
 
   //funcion para eliminar un producto del carrito
-  const removeProductFromCart = (id: string) => {
+  const removeProductFromCart = (id: string, variantId: number | null = null) => {
     const storedCart = localStorage.getItem("cart");
     const currentCart: CartPos[] = storedCart ? JSON.parse(storedCart) : cart;
 
-    const newCart = currentCart.filter((product: CartPos) => product.Id !== parseInt(id));
+    const targetId = parseInt(id);
+    const targetVariant = variantId ?? null;
+
+    const newCart = currentCart.filter(
+      (product: CartPos) =>
+        !(product.Id === targetId && (product.Variant_Id ?? null) === targetVariant),
+    );
 
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));

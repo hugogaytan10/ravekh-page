@@ -56,20 +56,23 @@ export const CartList: React.FC<CartListProps> = ({ onTotalChange }) => {
   
   
 
-  const handleDeleteItem = (id: string) => {
-    const updatedCart = context.cartPos.filter((item: CartPos) => item.Id !== Number(id));
+  const handleDeleteItem = (id: string, variantId?: number | null) => {
+    const targetVariant = variantId ?? null;
+    const updatedCart = context.cartPos.filter(
+      (item: CartPos) => !(item.Id === Number(id) && (item.Variant_Id ?? null) === targetVariant),
+    );
     context.setCartPos(updatedCart);
   };
 
   const renderCartItems = () =>
     context.cartPos.map((item: CartPos) => (
-      <div key={item.Id} className='flex flex-row '>
+      <div key={`${item.Id}-${item.Variant_Id ?? "base"}`} className='flex flex-row '>
         <p className="item-quantity">{item.Quantity}x</p>
         <p className="item-name">{item.Name}</p>
         <p className="item-price">
           ${Number((item.Quantity * item.Price).toFixed(2))}
         </p>
-        <button className="delete-button" onClick={() => handleDeleteItem(item.Id!.toString())}>
+        <button className="delete-button" onClick={() => handleDeleteItem(item.Id!.toString(), item.Variant_Id ?? null)}>
           <Trash height={30} width={30} fill={context.store.Color} />
         </button>
       </div>
