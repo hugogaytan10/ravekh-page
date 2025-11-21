@@ -11,7 +11,8 @@ import { Item } from "../Model/Item";
 import "./Css/ProductList.css";
 import { AppContext } from "../../Context/AppContext";
 import { Variant } from "../Model/Variant";
-import VariantModal from "./VariantModal";
+//import VariantModal from "./VariantModal";
+import { VariantModal } from "../Sales/VariantModal";
 import { getVariantsByProductId } from "../Products/Petitions";
 
 interface CardProps {

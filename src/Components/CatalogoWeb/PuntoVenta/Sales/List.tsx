@@ -7,8 +7,9 @@ import React, {
 import { Item } from "../Model/Item";
 import { AppContext } from "../../Context/AppContext";
 import { Variant } from "../Model/Variant";
-import VariantModal from "./VariantModal";
+//import VariantModal from "./VariantModal";
 import { getVariantsByProductId } from "../Products/Petitions";
+import { VariantModal } from "./VariantModal";
 
 interface ListProps {
   Products: Item[];
