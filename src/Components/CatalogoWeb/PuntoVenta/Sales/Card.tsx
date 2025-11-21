@@ -1,19 +1,14 @@
 import React, {
-  useContext,
   useState,
   useEffect,
   useCallback,
   useMemo,
-  useRef,
 } from "react";
 import { FixedSizeGrid } from "react-window";
 import { Item } from "../Model/Item";
 import "./Css/ProductList.css";
-import { AppContext } from "../../Context/AppContext";
-import { Variant } from "../Model/Variant";
-//import VariantModal from "./VariantModal";
 import { VariantModal } from "../Sales/VariantModal";
-import { getVariantsByProductId } from "../Products/Petitions";
+import { useVariantSelection } from "./Hook/useVariantSelection";
 
 interface CardProps {
   product: Item;
@@ -74,17 +69,18 @@ const Card: React.FC<CardProps> = React.memo(({ product, handleAddItem }) => {
   );
 });
 
-interface ProductListProps {
-  products: Item[];
-}
+  interface ProductListProps {
+    products: Item[];
+  }
 
-export const ProductList: React.FC<ProductListProps> = ({ products }) => {
-  const context = useContext(AppContext);
-  const [columns, setColumns] = useState(3);
-  const [gridWidth, setGridWidth] = useState(window.innerWidth);
-  const rowHeight = 250;
-  const maxRowsVisible = 3;
-  const [selectedProduct, setSelectedProduct] = useState<Item | null>(null);
+  export const ProductList: React.FC<ProductListProps> = ({ products }) => {
+    const [columns, setColumns] = useState(3);
+    const [gridWidth, setGridWidth] = useState(window.innerWidth);
+    const rowHeight = 250;
+    const maxRowsVisible = 3;
+    const { handleProductSelection, modalState, isFetchingVariants } = useVariantSelection({
+      onCartUpdated: () => navigator.vibrate?.(50),
+    });
 
   useEffect(() => {
     const handleResize = () => {
@@ -115,103 +111,12 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
     [products]
   );
 
-  const addItemToCart = useCallback(
-    (product: Item, variant?: Variant) => {
-      const quantityToAdd = Number(context.quantityNextSell);
-      const variantId = variant?.Id ?? null;
-      const selectedPrice =
-        variant?.PromotionPrice && variant?.PromotionPrice > 0
-          ? variant.PromotionPrice
-          : variant?.Price ?? product.PromotionPrice ?? product.Price ?? 0;
-
-      context.setCartPos((prevCart) => {
-        const existingIndex = prevCart.findIndex(
-          (item) => item.Id === product.Id && (item.Variant_Id ?? null) === variantId
-        );
-
-        if (existingIndex !== -1) {
-          const updatedCart = [...prevCart];
-          const existingItem = updatedCart[existingIndex];
-          const newQuantity = existingItem.Quantity + quantityToAdd;
-
-          updatedCart[existingIndex] = {
-            ...existingItem,
-            Quantity: newQuantity,
-            SubTotal: selectedPrice * newQuantity,
-          };
-
-          return updatedCart;
-        }
-
-        return [
-          ...prevCart,
-          {
-            Image: product.Image || product.Images?.[0] || "",
-            Id: product.Id,
-            Name: variant ? `${product.Name} - ${variant.Description}` : product.Name,
-            Price: selectedPrice,
-            Barcode: variant?.Barcode ?? product.Barcode ?? undefined,
-            Quantity: quantityToAdd,
-            SubTotal: selectedPrice * quantityToAdd,
-            Cost: variant?.CostPerItem ?? product.CostPerItem ?? 0,
-            Category_Id: product.Category_Id ?? undefined,
-            Stock: variant?.Stock ?? product.Stock ?? undefined,
-            IsLabeled: product.IsLabeled ?? undefined,
-            Volume: product.Volume ?? undefined,
-            PromotionPrice:
-              variant?.PromotionPrice ?? product.PromotionPrice ?? undefined,
-            Variant_Id: variantId,
-          },
-        ];
-      });
-    },
-    [context.quantityNextSell]
-  );
-
-  const fetchProductVariants = useCallback(
-    async (product: Item) => {
-      if (!product.Id) return product;
-
-      try {
-        const variants = await getVariantsByProductId(product.Id, context.user.Token);
-        return { ...product, Variants: variants } as Item;
-      } catch (error) {
-        return product;
-      }
-    },
-    [context.user.Token]
-  );
-
-  const handleAddItem = useCallback(
-    async (product: Item) => {
-      if (product.Variants && product.Variants.length > 0) {
-        setSelectedProduct(product);
-        return;
-      }
-
-      const productWithVariants = await fetchProductVariants(product);
-      if (productWithVariants.Variants && productWithVariants.Variants.length > 0) {
-        setSelectedProduct(productWithVariants);
-        return;
-      }
-
-      addItemToCart(product);
-      navigator.vibrate?.(50);
-    },
-    [addItemToCart, fetchProductVariants]
-  );
-
-  const handleConfirmVariants = useCallback(
-    (variantsSelected: Variant[]) => {
-      if (!selectedProduct) return;
-      variantsSelected.forEach((variant) => addItemToCart(selectedProduct, variant));
-      navigator.vibrate?.(50);
-      setSelectedProduct(null);
-    },
-    [addItemToCart, selectedProduct]
-  );
-
-  const handleCloseModal = useCallback(() => setSelectedProduct(null), []);
+    const handleAddItem = useCallback(
+      async (product: Item) => {
+        await handleProductSelection(product);
+      },
+      [handleProductSelection]
+    );
 
   const rowCount = Math.ceil(memoizedProducts.length / columns);
   const gridHeight = rowHeight * maxRowsVisible;
@@ -243,18 +148,13 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
               style={{ ...style, padding: "5px", marginBottom: "10px" }}
               className="grid-item"
             >
-              <Card product={product} handleAddItem={handleAddItem} />
-            </div>
-          );
-        }}
-      </FixedSizeGrid>
+                <Card product={product} handleAddItem={handleAddItem} />
+              </div>
+            );
+          }}
+        </FixedSizeGrid>
 
-      <VariantModal
-        isOpen={Boolean(selectedProduct)}
-        product={selectedProduct}
-        onClose={handleCloseModal}
-        onConfirm={handleConfirmVariants}
-      />
-    </div>
-  );
-};
+        <VariantModal modalState={modalState} isLoading={isFetchingVariants} />
+      </div>
+    );
+  };

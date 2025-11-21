@@ -1,11 +1,10 @@
-/*import { useCallback, useContext, useMemo, useState } from 'react';
+import { useCallback, useContext, useMemo, useState } from 'react';
 import { AppContext } from '../../../Context/AppContext';
 import { Item } from '../../Model/Item';
 import { Variant } from '../../Model/Variant';
 import { CartPos } from '../../Model/CarPos';
 import { getVariantsByProductId } from '../../Products/Petitions';
-import { VariantOption } from '../VariantModal';
-//import { VariantOption } from '../Sales/VariantModal';
+import { VariantModalState, VariantOption } from '../variantTypes';
 
 const buildVariantOptions = (variants: Variant[]): VariantOption[] =>
   variants.map((variant, index) => ({
@@ -213,7 +212,7 @@ export const useVariantSelection = ({
     variantOptions,
   ]);
 
-  const modalState = useMemo(
+  const modalState: VariantModalState = useMemo(
     () => ({
       visible: modalVisible,
       product: currentProduct,
@@ -244,4 +243,3 @@ export const useVariantSelection = ({
     isFetchingVariants,
   };
 };
-*/

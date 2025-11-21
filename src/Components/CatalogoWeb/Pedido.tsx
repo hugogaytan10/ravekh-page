@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { AppContext } from "./Context/AppContext";
-import { Producto } from "./Modelo/Producto";
+import { CartPos } from "./PuntoVenta/Model/CarPos";
 import { FiTruck, FiCreditCard, FiPhone } from "react-icons/fi"; // Importando iconos
 import { Order } from "./Modelo/Order";
 import { OrderDetails } from "./Modelo/OrderDetails";
@@ -50,14 +50,8 @@ export const Pedido: React.FC = () => {
     // Retornamos el color modificado en formato hexadecimal
     return `#${newR}${newG}${newB}`;
   }
-  const totalArticulos = cart.reduce(
-    (total, item) => total + (item.Quantity || 1),
-    0
-  );
-  const totalPrecio = cart.reduce(
-    (total, item) => total + item.Price * (item.Quantity || 1),
-    0
-  );
+  const totalArticulos = cart.reduce((total, item) => total + (item.Quantity || 1), 0);
+  const totalPrecio = cart.reduce((total, item) => total + item.Price * (item.Quantity || 1), 0);
   const saveOrder = async () => {
     // Concatenar la dirección si es entrega a domicilio
     const fullAddress =
@@ -75,7 +69,7 @@ export const Pedido: React.FC = () => {
     };
     //array de detalles de orden
     const orderDetails: OrderDetails[] = cart.map((producto) => ({
-      Product_Id: producto.Id,
+      Product_Id: producto.Id!,
       Quantity: producto.Quantity || 1,
     }));
 
@@ -240,7 +234,7 @@ export const Pedido: React.FC = () => {
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-semibold mb-4 text-gray-800">Su pedido</h2>
             <div className="divide-y divide-gray-200">
-              {cart.map((producto: Producto) => (
+                {cart.map((producto: CartPos) => (
                 <div
                   key={producto.Id}
                   className="py-4 flex items-center justify-between"

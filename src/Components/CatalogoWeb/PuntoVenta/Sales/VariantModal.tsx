@@ -1,109 +1,39 @@
-import React, { useEffect, useMemo, useState } from "react";
-import { Item } from "../Model/Item";
-import { Variant } from "../Model/Variant";
-
-export type VariantOption = Variant & { __internalId: number };
+import React from "react";
+import { VariantModalState, VariantOption } from "./variantTypes";
 
 interface VariantModalProps {
-  isOpen: boolean;
-  product: Item | null;
-  onClose: () => void;
-  onConfirm: (
-    selected: Array<{
-      variant: VariantOption;
-      quantity: number;
-    }>
-  ) => void;
+  modalState: VariantModalState;
+  isLoading: boolean;
 }
 
 export const VariantModal: React.FC<VariantModalProps> = ({
-  isOpen,
-  product,
-  onClose,
-  onConfirm,
+  modalState,
+  isLoading,
 }) => {
-  const [variants, setVariants] = useState<VariantOption[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
-  const [quantities, setQuantities] = useState<Map<number, number>>(new Map());
-
-  // Convertir variantes a VariantOption con __internalId
-  useEffect(() => {
-    if (product?.Variants) {
-      const prepared = product.Variants.map((v, i) => ({
-        ...v,
-        __internalId: i,
-      }));
-      setVariants(prepared);
-    }
-  }, [product]);
-
-  // Reset cuando se abre el modal
-  useEffect(() => {
-    if (isOpen) {
-      setSelectedIds(new Set());
-      setQuantities(new Map());
-    }
-  }, [isOpen]);
-
-  const toggleVariant = (internalId: number) => {
-    setSelectedIds((prev) => {
-      const next = new Set(prev);
-      next.has(internalId) ? next.delete(internalId) : next.add(internalId);
-      return next;
-    });
-
-    setQuantities((prev) => {
-      const next = new Map(prev);
-      if (!next.has(internalId)) next.set(internalId, 1);
-      return next;
-    });
-  };
-
-  const adjustQuantity = (internalId: number, delta: number) => {
-    setQuantities((prev) => {
-      const next = new Map(prev);
-      const current = next.get(internalId) ?? 1;
-      const updated = Math.max(1, current + delta);
-      next.set(internalId, updated);
-      return next;
-    });
-  };
-
-  const handleConfirm = () => {
-    const result = variants
-      .filter((v) => selectedIds.has(v.__internalId))
-      .map((v) => ({
-        variant: v,
-        quantity: quantities.get(v.__internalId) || 1,
-      }));
-
-    onConfirm(result);
-  };
-
-  if (!isOpen || !product) return null;
+  if (!modalState.visible || !modalState.product) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
       <div className="w-full max-w-xl max-h-[90vh] bg-white rounded-xl shadow-xl flex flex-col overflow-hidden">
-        
+
         <header className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
           <h2 className="text-lg font-bold text-gray-900">Selecciona variantes</h2>
-          <button onClick={onClose} className="text-xl">✕</button>
+          <button onClick={modalState.closeModal} className="text-xl">✕</button>
         </header>
 
         <div className="px-5 py-3">
-          <p className="text-base font-semibold text-gray-800">{product.Name}</p>
+          <p className="text-base font-semibold text-gray-800">{modalState.product.Name}</p>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5">
-          {variants.map((variant) => {
-            const selected = selectedIds.has(variant.__internalId);
-            const qty = quantities.get(variant.__internalId) ?? 1;
+          {modalState.variants.map((variant: VariantOption) => {
+            const selected = modalState.selectedVariantIds.has(variant.__internalId);
+            const qty = modalState.selectedVariantQuantities.get(variant.__internalId) ?? 1;
 
             const price =
               variant.PromotionPrice && variant.PromotionPrice > 0
                 ? variant.PromotionPrice
-                : variant.Price ?? product.Price ?? 0;
+                : variant.Price ?? modalState.product.Price ?? 0;
 
             return (
               <div
@@ -113,7 +43,7 @@ export const VariantModal: React.FC<VariantModalProps> = ({
                 }`}
               >
                 <button
-                  onClick={() => toggleVariant(variant.__internalId)}
+                  onClick={() => modalState.toggleVariantSelection(variant.__internalId)}
                   className="w-full flex justify-between items-center"
                 >
                   <div>
@@ -145,17 +75,17 @@ export const VariantModal: React.FC<VariantModalProps> = ({
                 {selected && (
                   <div className="flex items-center gap-3 mt-3">
                     <button
-                      onClick={() => adjustQuantity(variant.__internalId, -1)}
+                      onClick={() => modalState.adjustVariantQuantity(variant.__internalId, -1)}
                       className="w-8 h-8 flex items-center justify-center bg-purple-600 text-white rounded-lg disabled:bg-gray-300"
                       disabled={qty <= 1}
                     >
                       −
                     </button>
 
-                    <span className="text-lg font-bold">{qty}</span>
+                      <span className="text-lg font-bold">{qty}</span>
 
                     <button
-                      onClick={() => adjustQuantity(variant.__internalId, +1)}
+                      onClick={() => modalState.adjustVariantQuantity(variant.__internalId, +1)}
                       className="w-8 h-8 flex items-center justify-center bg-purple-600 text-white rounded-lg"
                     >
                       +
@@ -169,11 +99,11 @@ export const VariantModal: React.FC<VariantModalProps> = ({
 
         <footer className="border-t border-gray-200 p-5">
           <button
-            onClick={handleConfirm}
-            disabled={selectedIds.size === 0}
+            onClick={modalState.confirmSelection}
+            disabled={modalState.selectedVariantIds.size === 0 || isLoading}
             className="w-full bg-purple-600 text-white font-bold py-3 rounded-full disabled:opacity-40"
           >
-            Agregar al carrito
+            {isLoading ? "Cargando variantes..." : "Agregar al carrito"}
           </button>
         </footer>
       </div>

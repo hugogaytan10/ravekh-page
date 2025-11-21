@@ -12,8 +12,8 @@ import { Table } from "../PuntoVenta/Model/Table";
 import { Tax } from "../PuntoVenta/Model/Tax";
 import { ProductFormState } from "../PuntoVenta/Model/ProductFormState";
 export type AppContextState = {
-    cart: Producto[];
-    setCart: Dispatch<Producto[]>;
+    cart: CartPos[];
+    setCart: Dispatch<CartPos[]>;
     phoneNumber: string | null;
     setPhoneNumber: Dispatch<string | null>;
     addProductToCart: (product: Producto) => void;

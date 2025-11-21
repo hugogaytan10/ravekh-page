@@ -2,9 +2,10 @@ export type CartPos = {
     Id?: number;
     Store_Id?: number;
     Name: string;
-    Category_Id?: string;
+    Category_Id?: string | number;
     Price: number;
     Image: string;
+    Images?: string[];
     Stock?: number;
     Cost?: number;
     Unit? : string;
