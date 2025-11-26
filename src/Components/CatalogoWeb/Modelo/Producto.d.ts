@@ -18,4 +18,9 @@ export type Producto = {
     Volume: number;
     PhoneNumber?: string;
     Quantity?: number;
+    Images?: string[];
+    Variants?: import("../PuntoVenta/Model/Variant").Variant[];
+    VariantsCount?: number;
+    Variant_Id?: number | null;
+    VariantDescription?: string;
 }

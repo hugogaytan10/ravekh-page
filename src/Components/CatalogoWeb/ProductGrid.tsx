@@ -8,7 +8,7 @@ interface ProductGridProps {
   telefono: string | null;
   color: string | null;
   adjustColor: (hex: string) => string;
-  onAdd: (product: Producto) => void;
+  onAdd: (product: Producto) => void | Promise<void>;
   formatPrice: (value: number) => string;
 }
 
@@ -76,7 +76,10 @@ const ProductCard = memo(
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay, duration: 0.5 }}
       >
-        <NavLink to={`/catalogo/producto/${product.Id}/${telefono ?? ""}`}>
+        <NavLink
+          to={`/catalogo/producto/${product.Id}/${telefono ?? ""}`}
+          className="relative block"
+        >
           <img
             src={product.Image || (product.Images && product.Images[0]) || ""}
             alt={product.Name}
@@ -84,6 +87,33 @@ const ProductCard = memo(
             loading="lazy"
             decoding="async"
           />
+          {(() => {
+            const inlineVariants = Array.isArray(product.Variants)
+              ? product.Variants.filter(Boolean)
+              : [];
+            const variantCount =
+              inlineVariants.length ||
+              (typeof (product as any).VariantsCount === "number"
+                ? (product as any).VariantsCount
+                : 0);
+
+            if (!variantCount) return null;
+
+            const variantLabel = `${variantCount} ${
+              variantCount === 1 ? "Variante" : "Variantes"
+            }`;
+
+            return (
+              <div className="absolute top-2 left-2 group select-none">
+                <span className="bg-gray-800/90 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-sm group-hover:hidden">
+                  {variantCount}
+                </span>
+                <span className="bg-gray-800/90 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-sm hidden group-hover:inline-flex whitespace-nowrap">
+                  {variantLabel}
+                </span>
+              </div>
+            );
+          })()}
         </NavLink>
         <div className="relative flex flex-col flex-grow px-4 py-2">
           <h2 className="text-lg font-semibold text-gray-800 text-center">

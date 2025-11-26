@@ -3,9 +3,11 @@ import { useParams } from "react-router-dom";
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import { AppContext } from "./Context/AppContext";
 import { Producto } from "./Modelo/Producto";
-import { getProductById } from "./Petitions";
+import { getProductById, getVariantsByProductIdPublic } from "./Petitions";
 import logoWhasa from "../../assets/logo-whatsapp.svg";
 import { ProductCarousel } from "./ProductsCarousel";
+import { Variant } from "./PuntoVenta/Model/Variant";
+import { VariantSelectionModal } from "./VariantSelectionModal";
 
 type Params = {
   idProducto?: string;
@@ -35,8 +37,23 @@ export const DetalleProducto: React.FC = () => {
   const [producto, setProducto] = useState<Producto | null>(null);
   const [count, setCount] = useState<number>(1);
   const [limit, setLimit] = useState<number | null>(null);
-  const { color, setColor, addProductToCart, phoneNumber, setPhoneNumber, idBussiness, setIdBussiness } =
-    useContext(AppContext);
+  const [variants, setVariants] = useState<Variant[]>([]);
+  const [showVariantModal, setShowVariantModal] = useState(false);
+  const [loadingVariants, setLoadingVariants] = useState(false);
+  const context = useContext(AppContext);
+  const { color, setColor, addProductToCart, phoneNumber, setPhoneNumber, idBussiness, setIdBussiness, cart } =
+    context;
+  const cartVariantQuantities = useMemo(() => {
+    const map: Record<number, number> = {};
+
+    cart.forEach((item) => {
+      if (item.Variant_Id != null && item.Quantity != null) {
+        map[item.Variant_Id] = (map[item.Variant_Id] ?? 0) + item.Quantity;
+      }
+    });
+
+    return map;
+  }, [cart]);
 
   useEffect(() => {
     // color desde localStorage si no hay en contexto
@@ -72,6 +89,24 @@ export const DetalleProducto: React.FC = () => {
       setProducto(data);
       setLimit(typeof data?.Stock === "number" ? data.Stock : null);
       setCount(1); // reset cantidad al cambiar de producto
+
+      const inlineVariants = Array.isArray((data as any)?.Variants)
+        ? ((data as any).Variants as Variant[])
+        : [];
+
+      setVariants(inlineVariants);
+
+      if (inlineVariants.length === 0) {
+        setLoadingVariants(true);
+        getVariantsByProductIdPublic(id)
+          .then((variantData) => {
+            if (!mounted) return;
+            setVariants(Array.isArray(variantData) ? variantData : []);
+          })
+          .finally(() => {
+            if (mounted) setLoadingVariants(false);
+          });
+      }
     });
     return () => {
       mounted = false;
@@ -94,9 +129,41 @@ export const DetalleProducto: React.FC = () => {
     producto.ForSale === 1 &&
     (limit === null || limit > 0);
 
+  const addButtonLabel = variants.length > 0 ? "Seleccionar variante" : "Añadir al carrito";
+
   const handleAddCart = () => {
     if (!producto) return;
-    addProductToCart({ ...producto, Quantity: count });
+
+    if (variants.length > 0) {
+      setShowVariantModal(true);
+      return;
+    }
+
+    addProductToCart({ ...producto, Quantity: count, Variant_Id: null });
+  };
+
+  const handleConfirmVariant = (selections: { variant: Variant; quantity: number }[]) => {
+    if (!producto) return;
+
+    selections.forEach(({ variant, quantity }) => {
+      const basePrice = variant.PromotionPrice ?? variant.Price ?? producto.Price;
+
+      addProductToCart({
+        ...producto,
+        Price: basePrice ?? 0,
+        PromotionPrice: variant.PromotionPrice ?? producto.PromotionPrice,
+        Variant_Id: variant.Id ?? null,
+        VariantDescription: variant.Description,
+        Stock: variant.Stock ?? producto.Stock,
+        Quantity: quantity,
+      });
+    });
+
+    setShowVariantModal(false);
+  };
+
+  const handleCloseVariantModal = () => {
+    setShowVariantModal(false);
   };
 
   if (!producto) {
@@ -194,10 +261,21 @@ export const DetalleProducto: React.FC = () => {
               }}
               className="text-white w-full md:w-3/4 py-3 px-6 rounded-full shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Añadir al carrito
+              {loadingVariants && variants.length === 0
+                ? "Buscando variantes..."
+                : addButtonLabel}
             </button>
           </div>
         </div>
+
+        <VariantSelectionModal
+          product={producto}
+          variants={variants}
+          isOpen={showVariantModal}
+          onClose={handleCloseVariantModal}
+          onConfirm={handleConfirmVariant}
+          existingVariantQuantities={cartVariantQuantities}
+        />
 
         {/* WhatsApp */}
         <div className="bg-green-500 hover:bg-green-600 rounded-full p-2 fixed right-2 bottom-4 shadow-lg transition-all">

@@ -7,13 +7,19 @@ import React, {
   useState,
 } from "react";
 import { useParams } from "react-router-dom";
-import { getBusinessById, getProductsByBusinessWithStock } from "./Petitions";
+import {
+  getBusinessById,
+  getProductsByBusinessWithStock,
+  getVariantsByProductIdPublic,
+} from "./Petitions";
 import { Producto } from "./Modelo/Producto";
 import { AppContext } from "./Context/AppContext";
 import logoWhasa from "../../assets/logo-whatsapp.svg";
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import defaultImage from "../../assets/ravekh.png";
 import { ProductGrid } from "./ProductGrid";
+import { Variant } from "./PuntoVenta/Model/Variant";
+import { VariantSelectionModal } from "./VariantSelectionModal";
 
 interface MainCatalogoProps {
   idBusiness?: string;
@@ -28,9 +34,24 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [plan, setPlan] = useState<string | null>(null);
   const [notPay, setNotPay] = useState<boolean>(false);
   const [notPayMessage, setNotPayMessage] = useState<string | null>(null);
+  const [variantProduct, setVariantProduct] = useState<Producto | null>(null);
+  const [variantOptions, setVariantOptions] = useState<Variant[]>([]);
+  const [variantModalOpen, setVariantModalOpen] = useState(false);
+  const [variantLoading, setVariantLoading] = useState(false);
 
   const context = useContext(AppContext);
   const addProductToCart = context.addProductToCart;
+  const cartVariantQuantities = useMemo(() => {
+    const map: Record<number, number> = {};
+
+    context.cart.forEach((item) => {
+      if (item.Variant_Id != null && item.Quantity != null) {
+        map[item.Variant_Id] = (map[item.Variant_Id] ?? 0) + item.Quantity;
+      }
+    });
+
+    return map;
+  }, [context.cart]);
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
   // 1) useEffect principal: primero saca "plan" del negocio y luego productos
@@ -224,12 +245,72 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     [currencyFormatter]
   );
 
+  const openVariantModal = useCallback((product: Producto, variants: Variant[]) => {
+    setVariantProduct(product);
+    setVariantOptions(variants);
+    setVariantModalOpen(true);
+  }, []);
+
+  const fetchVariantsForProduct = useCallback(async (product: Producto) => {
+    setVariantLoading(true);
+    const fetchedVariants = await getVariantsByProductIdPublic(product.Id);
+    setVariantLoading(false);
+    return fetchedVariants;
+  }, []);
+
   const handleAddToCart = useCallback(
-    (product: Producto) => {
-      addProductToCart(product);
+    async (product: Producto) => {
+      const inlineVariants = Array.isArray(product.Variants)
+        ? (product.Variants.filter(Boolean) as Variant[])
+        : [];
+
+      if (inlineVariants.length > 0) {
+        openVariantModal(product, inlineVariants);
+        return;
+      }
+
+      const fetchedVariants = await fetchVariantsForProduct(product);
+
+      if (fetchedVariants.length > 0) {
+        openVariantModal(product, fetchedVariants);
+        return;
+      }
+
+      addProductToCart({ ...product, Variant_Id: null });
     },
-    [addProductToCart]
+    [addProductToCart, fetchVariantsForProduct, openVariantModal]
   );
+
+  const handleConfirmVariant = useCallback(
+    (selections: { variant: Variant; quantity: number }[]) => {
+      if (!variantProduct) return;
+
+      selections.forEach(({ variant, quantity }) => {
+        const basePrice = variant.PromotionPrice ?? variant.Price ?? variantProduct.Price;
+
+        addProductToCart({
+          ...variantProduct,
+          Price: basePrice ?? 0,
+          PromotionPrice: variant.PromotionPrice ?? variantProduct.PromotionPrice,
+          Variant_Id: variant.Id ?? null,
+          VariantDescription: variant.Description,
+          Stock: variant.Stock ?? variantProduct.Stock,
+          Quantity: quantity,
+        });
+      });
+
+      setVariantModalOpen(false);
+      setVariantProduct(null);
+      setVariantOptions([]);
+    },
+    [addProductToCart, variantProduct]
+  );
+
+  const handleCloseVariantModal = useCallback(() => {
+    setVariantModalOpen(false);
+    setVariantProduct(null);
+    setVariantOptions([]);
+  }, []);
 
   if (notPay) {
     return (
@@ -309,6 +390,21 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
               <img src={logoWhasa} alt="WS" className="h-12 w-12" />
             </a>
           </div>
+
+          {variantLoading && (
+            <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 text-white text-lg font-semibold">
+              Cargando variantes...
+            </div>
+          )}
+
+          <VariantSelectionModal
+            product={variantProduct}
+            variants={variantOptions}
+            isOpen={variantModalOpen}
+            onClose={handleCloseVariantModal}
+            onConfirm={handleConfirmVariant}
+            existingVariantQuantities={cartVariantQuantities}
+          />
         </div>
       </>
     </HelmetProvider>
