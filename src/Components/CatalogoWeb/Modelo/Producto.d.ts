@@ -20,7 +20,7 @@ export type Producto = {
     Quantity?: number;
     Images?: string[];
     Variants?: import("../PuntoVenta/Model/Variant").Variant[];
-    VariantsCount?: number;
+    VariantsCount?: number|string|null;
     Variant_Id?: number | null;
     VariantDescription?: string;
 }

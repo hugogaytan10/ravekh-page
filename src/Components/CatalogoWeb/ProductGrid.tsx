@@ -69,6 +69,7 @@ const ProductCard = memo(
     const hoverColor = useMemo(() => adjustColor(accentColor), [accentColor, adjustColor]);
     const buttonColor = added ? "#16a34a" : accentColor;
 
+    console.log("Rendering variant number:", product.VariantsCount, "Added:", added);
     return (
       <motion.div
         className="border rounded-lg shadow-md bg-white flex flex-col h-full transform transition-transform hover:scale-105 hover:shadow-lg"
@@ -91,16 +92,12 @@ const ProductCard = memo(
             const inlineVariants = Array.isArray(product.Variants)
               ? product.Variants.filter(Boolean)
               : [];
-            const variantCount =
-              inlineVariants.length ||
-              (typeof (product as any).VariantsCount === "number"
-                ? (product as any).VariantsCount
-                : 0);
+            const variantCount = product.VariantsCount;
 
-            if (!variantCount) return null;
+            if (!variantCount || variantCount == 0) return null;
 
             const variantLabel = `${variantCount} ${
-              variantCount === 1 ? "Variante" : "Variantes"
+              variantCount === "1" ? "Variante" : "Variantes"
             }`;
 
             return (
