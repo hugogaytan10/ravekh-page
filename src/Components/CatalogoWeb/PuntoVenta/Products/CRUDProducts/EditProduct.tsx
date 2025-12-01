@@ -1,7 +1,16 @@
 import React, { useState, useEffect, useContext, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
-import { getProduct, updateProduct, deleteProduct } from "../Petitions";
+import {
+  getProduct,
+  updateProduct,
+  deleteProduct,
+  getVariantsByProductId,
+  insertVariant as insertVariantRequest,
+  updateVariant as updateVariantRequest,
+  deleteVariant as deleteVariantRequest,
+} from "../Petitions";
+import { uploadImage } from "../../Cloudinary/Cloudinary";
 import { PickerColor } from "../../CustomizeApp/PickerColor";
 import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
 import { ChevronGo } from "../../../../../assets/POS/ChevronGo";
@@ -12,6 +21,14 @@ import { ThemeLight } from "../../Theme/Theme";
 import { DeleteProductModal } from "./DeleteProductModal";
 import { Category } from "../../Model/Category";
 import { Item } from "../../Model/Item";
+import { Variant } from "../../Model/Variant";
+import VariantsEditor from "./VariantsEditor";
+import { VariantDraft } from "./variantTypes";
+import {
+  variantsToDrafts,
+  syncDraftColors,
+  calculateVariantChanges,
+} from "./variantUtils";
 
 export const EditProduct: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -30,14 +47,20 @@ export const EditProduct: React.FC = () => {
   const [description, setDescription] = useState<string>("");
   const [unitType, setUnitType] = useState<string>("Unidad");
   const [colorSelected, setColorSelected] = useState<string>("");
-  const [image, setImage] = useState<string | null>(null);
+  const [mainImage, setMainImage] = useState<string | null>(null);
+  const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [isAvailableForSale, setIsAvailableForSale] = useState<boolean>(true);
   const [isDisplayedInStore, setIsDisplayedInStore] = useState<boolean>(true);
   const [isVisibleColorPicker, setIsVisibleColorPicker] = useState<boolean>(false);
   const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [variantsExpanded, setVariantsExpanded] = useState(false);
   const [showModalDelete, setShowModalDelete] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  const [available, setAvailable] = useState<boolean>(true);
+  const [variantDrafts, setVariantDrafts] = useState<VariantDraft[]>([]);
+  const [originalVariants, setOriginalVariants] = useState<Variant[]>([]);
   const formLoadedRef = useRef(false);
+  const accentColor = colorSelected || context.store.Color || ThemeLight.secondaryColor;
 
   useEffect(() => {
     if (!productId || formLoadedRef.current) {
@@ -59,9 +82,12 @@ export const EditProduct: React.FC = () => {
       setDescription(draft.description);
       setUnitType(draft.unitType);
       setColorSelected(draft.colorSelected || context.store.Color || ThemeLight.secondaryColor);
-      setImage(draft.image);
+      setGalleryImages(draft.galleryImages || []);
+      setAvailable(draft.available);
       setIsAvailableForSale(draft.isAvailableForSale);
       setIsDisplayedInStore(draft.isDisplayedInStore);
+      setVariantDrafts(draft.variantDrafts || []);
+      setOriginalVariants(draft.variantOriginals || []);
       formLoadedRef.current = true;
     }
   }, [context.productFormState, context.store.Color, productId]);
@@ -105,13 +131,39 @@ export const EditProduct: React.FC = () => {
               : ""
           );
           setDescription(response.Description || "");
-          setColorSelected(response.Color || context.store.Color || ThemeLight.secondaryColor);
-          setImage(response.Image || null);
+          const highlightColor =
+            response.Color || context.store.Color || ThemeLight.secondaryColor;
+          setColorSelected(highlightColor);
+          const imagesFromResponse = Array.isArray(response.Images)
+            ? response.Images
+            : response.Image
+            ? [response.Image]
+            : [];
+          setMainImage(imagesFromResponse[0] || null);
+          setGalleryImages(imagesFromResponse.slice(1));
           setIsAvailableForSale(response.ForSale ?? true);
           setIsDisplayedInStore(response.ShowInStore ?? true);
+          setAvailable(response.Available ?? true);
+          const token = context.user?.Token;
+          if (token) {
+            getVariantsByProductId(currentId, token)
+              .then((variants) => {
+                setOriginalVariants(variants);
+                setVariantDrafts(variantsToDrafts(variants, highlightColor));
+              })
+              .catch((error) => {
+                console.error("Error loading product variants:", error);
+                setOriginalVariants([]);
+                setVariantDrafts([]);
+              });
+          } else {
+            setOriginalVariants([]);
+            setVariantDrafts([]);
+          }
           context.setCategorySelected({
             Id: response.Category_Id || 0,
             Name: response.Category_Name || "",
+            Color: response.Color || "",
           } as Category);
         }
         formLoadedRef.current = true;
@@ -143,9 +195,12 @@ export const EditProduct: React.FC = () => {
       description,
       unitType,
       colorSelected,
-      image,
+      galleryImages,
       isAvailableForSale,
       isDisplayedInStore,
+      available,
+      variantDrafts,
+      variantOriginals: originalVariants,
     });
   }, [
     productId,
@@ -160,11 +215,18 @@ export const EditProduct: React.FC = () => {
     description,
     unitType,
     colorSelected,
-    image,
+    galleryImages,
     isAvailableForSale,
     isDisplayedInStore,
+    available,
+    variantDrafts,
+    originalVariants,
     context.setProductFormState,
   ]);
+
+  useEffect(() => {
+    setVariantDrafts((prev) => syncDraftColors(prev, accentColor));
+  }, [accentColor]);
 
   const handleSave = async () => {
     if (isSaving) {
@@ -175,30 +237,93 @@ export const EditProduct: React.FC = () => {
       setIsSaving(true);
       context.setIsShowSplash(true);
 
+      const businessId = context.user?.Business_Id;
+      if (!businessId) {
+        throw new Error("El negocio no está disponible para actualizar productos");
+      }
+
+      const imagesToUpload = [mainImage, ...galleryImages].filter(
+        (value): value is string => Boolean(value)
+      );
+      const uploadedImages = await Promise.all(
+        imagesToUpload.map(async (imageSource) => {
+          if (imageSource.startsWith("http")) {
+            return imageSource;
+          }
+          const uploadedUrl = await uploadImage(imageSource);
+          return uploadedUrl || "";
+        })
+      );
+      const sanitizedImages = uploadedImages.filter((url) => url);
+
       const product: Item = {
-        Id: productId ? parseInt(productId) : undefined,
+        Id: productId ? parseInt(productId, 10) : undefined,
+        Business_Id: businessId,
         Name: productName,
         Price: price ? parseFloat(price) : null,
         CostPerItem: cost ? parseFloat(cost) : null,
         Stock: stock ? parseFloat(stock) : null,
         ForSale: isAvailableForSale,
         ShowInStore: isDisplayedInStore,
-        Image: image || "",
+        Available: available,
         Barcode: barcode.length > 0 ? barcode : null,
         Description: description,
         Color: colorSelected,
-        Business_Id: context.user.Business_Id,
         PromotionPrice: promoPrice !== "" ? parseFloat(promoPrice) : null,
-        Category_Id: context.categorySelected.Id ? context.categorySelected.Id + "" : null,
+        Category_Id: context.categorySelected.Id || undefined,
         MinStock: minStock !== "" ? parseInt(minStock, 10) : null,
         OptStock: optStock !== "" ? parseInt(optStock, 10) : null,
+        Images: sanitizedImages.length > 0 ? sanitizedImages : undefined,
+        Volume: unitType !== "Unidad",
       };
-      console.log(product);
 
       await updateProduct(product, context.user.Token); // This line is missing in the original code
+
+      if (product.Id && context.user?.Token) {
+        try {
+          const { toCreate, toUpdate, toDelete } = calculateVariantChanges(
+            variantDrafts,
+            originalVariants,
+            accentColor,
+          );
+
+          for (const variant of toCreate) {
+            await insertVariantRequest(product.Id, variant, context.user.Token);
+          }
+
+          for (const variant of toUpdate) {
+            if (typeof variant.Id === "number") {
+              await updateVariantRequest(
+                variant.Id,
+                product.Id,
+                variant,
+                context.user.Token,
+              );
+            }
+          }
+
+          for (const variantId of toDelete) {
+            await deleteVariantRequest(variantId, context.user.Token);
+          }
+
+          const refreshed = await getVariantsByProductId(
+            product.Id,
+            context.user.Token,
+          );
+          setOriginalVariants(refreshed);
+          setVariantDrafts(variantsToDrafts(refreshed, accentColor));
+        } catch (variantError) {
+          console.error("Error updating variants:", variantError);
+        }
+      }
+
       context.setStockFlag(!context.stockFlag); // This line is missing in the original code
       context.setCategorySelected({ Id: 0, Name: "", Color: "", Business_Id: 0 } as Category); // This line is missing in the original code
       context.setProductFormState(null);
+      setMainImage(null);
+      setGalleryImages([]);
+      setVariantDrafts([]);
+      setOriginalVariants([]);
       formLoadedRef.current = false;
       context.setShowNavBarBottom(true); // This line is missing in the original code
       navigate("/main-products/items");
@@ -214,6 +339,10 @@ export const EditProduct: React.FC = () => {
     deleteProduct(parseInt(productId!), context.user.Token).then(() => {
       context.setStockFlag(!context.stockFlag);
       context.setProductFormState(null);
+      setMainImage(null);
+      setGalleryImages([]);
+      setVariantDrafts([]);
+      setOriginalVariants([]);
       formLoadedRef.current = false;
       navigate(-1);
     });
@@ -237,6 +366,10 @@ export const EditProduct: React.FC = () => {
           onClick={() => {
             context.setProductFormState(null);
             formLoadedRef.current = false;
+            setMainImage(null);
+            setGalleryImages([]);
+            setVariantDrafts([]);
+            setOriginalVariants([]);
             navigate(-1);
             context.setShowNavBarBottom(true);
           }}
@@ -270,7 +403,7 @@ export const EditProduct: React.FC = () => {
               overflow: "hidden",
             }}
           >
-            {image && <img src={image} alt="Product" className="h-full w-full object-cover" />}
+            {mainImage && <img src={mainImage} alt="Product" className="h-full w-full object-cover" />}
             <div className="absolute bottom-0 left-0 w-full h-16 bg-black bg-opacity-40 text-white flex flex-col items-center justify-center">
               <span className="text-sm font-semibold w-full text-center">{productName}</span>
               <span className="text-base font-bold">${price || "0.00"}</span>
@@ -284,12 +417,111 @@ export const EditProduct: React.FC = () => {
             type="file"
             accept="image/*"
             className="hidden"
-            onChange={(e) => {
+            onChange={async (e) => {
               if (e.target.files && e.target.files[0]) {
                 const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = () => setImage(reader.result as string);
-                reader.readAsDataURL(file);
+                try {
+                  const previousMain = mainImage;
+                  const dataUrl = await new Promise<string>((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result as string);
+                    reader.onerror = () => reject(reader.error);
+                    reader.readAsDataURL(file);
+                  });
+                  if (
+                    previousMain &&
+                    !galleryImages.some((imageValue) => imageValue === previousMain)
+                  ) {
+                    setGalleryImages((prev) => [...prev, previousMain]);
+                  }
+                  setMainImage(dataUrl);
+                  e.target.value = "";
+                } catch (error) {
+                  console.error("Error al actualizar la imagen principal:", error);
+                }
+              }
+            }}
+          />
+        </div>
+
+        {/* Imágenes adicionales */}
+        <div className="w-full mb-6">
+          {galleryImages.length > 0 && (
+            <div className="flex flex-wrap gap-3 mb-3">
+              {galleryImages.map((imageUrl, index) => (
+                <div key={`${imageUrl}-${index}`} className="relative">
+                  <img
+                    src={imageUrl}
+                    alt={`Producto adicional ${index + 1}`}
+                    className="w-20 h-20 object-cover rounded"
+                  />
+                  <div className="absolute inset-0 flex flex-col justify-between p-1">
+                    <button
+                      type="button"
+                      className="text-xs bg-black/60 text-white rounded px-1"
+                      onClick={() => {
+                        const selectedImage = galleryImages[index];
+                        if (!selectedImage) {
+                          return;
+                        }
+                        const remaining = galleryImages.filter((_, i) => i !== index);
+                        if (mainImage) {
+                          remaining.push(mainImage);
+                        }
+                        setGalleryImages(remaining);
+                        setMainImage(selectedImage);
+                      }}
+                    >
+                      Principal
+                    </button>
+                    <button
+                      type="button"
+                      className="text-xs bg-red-600 text-white rounded px-1 self-end"
+                      onClick={() => {
+                        setGalleryImages((prev) => prev.filter((_, i) => i !== index));
+                      }}
+                    >
+                      Quitar
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+          <label
+            className="inline-flex items-center gap-2 px-3 py-2 rounded bg-gray-200 text-sm cursor-pointer"
+            htmlFor="galleryUpload"
+          >
+            <ImageIcon />
+            Agregar imágenes adicionales
+          </label>
+          <input
+            id="galleryUpload"
+            type="file"
+            accept="image/*"
+            multiple
+            className="hidden"
+            onChange={async (e) => {
+              if (!e.target.files || e.target.files.length === 0) {
+                return;
+              }
+              try {
+                const files = Array.from(e.target.files);
+                const images = await Promise.all(
+                  files.map(
+                    (file) =>
+                      new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result as string);
+                        reader.onerror = () => reject(reader.error);
+                        reader.readAsDataURL(file);
+                      })
+                  )
+                );
+                setGalleryImages((prev) => [...prev, ...images]);
+                e.target.value = "";
+              } catch (error) {
+                console.error("Error al cargar imágenes adicionales:", error);
               }
             }}
           />
@@ -407,6 +639,25 @@ export const EditProduct: React.FC = () => {
                   />
                 </label>
               </div>
+            </div>
+          )}
+        </div>
+
+        {/* Variants Section */}
+        <div className="bg-white rounded-lg p-4 form-section-add-product mt-4">
+          <button className="flex justify-between w-full" onClick={() => setVariantsExpanded(!variantsExpanded)}>
+            <span>Variantes</span>
+            <span>{variantsExpanded ? "▲" : "▼"}</span>
+          </button>
+          {variantsExpanded && (
+            <div className="mt-4">
+              <VariantsEditor
+                variants={variantDrafts}
+                onChange={setVariantDrafts}
+                accentColor={accentColor}
+                showSectionHeader={false}
+                containerClassName="bg-transparent border-0 shadow-none p-0"
+              />
             </div>
           )}
         </div>

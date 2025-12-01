@@ -1,3 +1,6 @@
+import { Variant } from "../Model/Variant";
+import { VariantDraft } from "../Products/CRUDProducts/variantTypes";
+
 export type ProductFormMode = "add" | "edit";
 
 export interface ProductFormState {
@@ -14,7 +17,11 @@ export interface ProductFormState {
   description: string;
   unitType: string;
   colorSelected: string;
-  image: string | null;
+
+  galleryImages: string[];
   isAvailableForSale: boolean;
   isDisplayedInStore: boolean;
+  available: boolean;
+  variantDrafts?: VariantDraft[];
+  variantOriginals?: Variant[];
 }

@@ -47,7 +47,7 @@ export const Scanner: React.FC = () => {
             Barcode: product.Barcode || "",
             Quantity: Number(context.quantityNextSell),
             SubTotal: product.Price || 0,
-            Image: product.Image,
+            Image: product.Image || product.Images?.[0] || "",
           },
         ]);
       }
@@ -85,10 +85,13 @@ export const Scanner: React.FC = () => {
   };
   
 
-  const handleDeleteItem = (id: number) => {
+  const handleDeleteItem = (id: number, variantId?: number | null) => {
     setIsListLoading(true);
-    const updatedCart = context.cart.filter((item) => item.Id !== id);
-    context.setCart(updatedCart);
+    const targetVariant = variantId ?? null;
+    const updatedCart = context.cartPos.filter(
+      (item) => !(item.Id === id && (item.Variant_Id ?? null) === targetVariant),
+    );
+    context.setCartPos(updatedCart);
     setIsListLoading(false);
   };
 
@@ -159,7 +162,7 @@ export const Scanner: React.FC = () => {
           ) : context.cartPos.length > 0 ? (
             context.cartPos.map((item) => (
               <div
-                key={item.Id}
+                key={`${item.Id}-${item.Variant_Id ?? "base"}`}
                 className="flex items-center justify-between p-2 border-b"
               >
                 <span className="text-sm font-medium">
@@ -169,7 +172,7 @@ export const Scanner: React.FC = () => {
                   ${item.SubTotal.toFixed(2)}
                 </span>
                 <button
-                  onClick={() => handleDeleteItem(item.Id || 0)}
+                  onClick={() => handleDeleteItem(item.Id || 0, item.Variant_Id ?? null)}
                   className="text-red-500"
                 >
                   <Trash width={25} height={25} fill={context.store.Color ? context.store.Color : ThemeLight.btnBackground}/>

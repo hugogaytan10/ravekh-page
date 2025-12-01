@@ -18,7 +18,7 @@ export const PickerColor: React.FC<PickerColorProps> = ({
     { color: "#FFE70F", name: "Amarillo" },
     { color: "#F94F4F", name: "Naranja" },
     { color: "#FF0000", name: "Rojo" },
-    { color: "#FF00F5", name: "Rosa" },
+    { color: "#F9d6d5", name: "Rosa" },
     { color: "#1F5EFF", name: "Azul" },
     { color: "#6D01D1", name: "Morado" },
     { color: "#737373", name: "Gris" },

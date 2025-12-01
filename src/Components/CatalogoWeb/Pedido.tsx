@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useState } from "react";
 import { AppContext } from "./Context/AppContext";
-import { Producto } from "./Modelo/Producto";
+import { CartPos } from "./PuntoVenta/Model/CarPos";
 import { FiTruck, FiCreditCard, FiPhone } from "react-icons/fi"; // Importando iconos
 import { Order } from "./Modelo/Order";
 import { OrderDetails } from "./Modelo/OrderDetails";
@@ -18,7 +18,7 @@ export const Pedido: React.FC = () => {
   const [deliveryMethod, setDeliveryMethod] = useState<string>("domicilio");
   const [paymentMethod, setPaymentMethod] = useState<string>("transferencia");
   const [showModal, setShowModal] = useState<boolean>(false); // Estado para mostrar el modal de confirmación
-  const [deleteProduct, setDeleteProduct] = useState<number>(0); // Estado para guardar el id del producto a eliminar
+  const [deleteProduct, setDeleteProduct] = useState<{ id: number; variantId: number | null } | null>(null); // Estado para guardar el producto a eliminar
 
 
   // Campos de dirección
@@ -50,14 +50,8 @@ export const Pedido: React.FC = () => {
     // Retornamos el color modificado en formato hexadecimal
     return `#${newR}${newG}${newB}`;
   }
-  const totalArticulos = cart.reduce(
-    (total, item) => total + (item.Quantity || 1),
-    0
-  );
-  const totalPrecio = cart.reduce(
-    (total, item) => total + item.Price * (item.Quantity || 1),
-    0
-  );
+  const totalArticulos = cart.reduce((total, item) => total + (item.Quantity || 1), 0);
+  const totalPrecio = cart.reduce((total, item) => total + item.Price * (item.Quantity || 1), 0);
   const saveOrder = async () => {
     // Concatenar la dirección si es entrega a domicilio
     const fullAddress =
@@ -75,7 +69,7 @@ export const Pedido: React.FC = () => {
     };
     //array de detalles de orden
     const orderDetails: OrderDetails[] = cart.map((producto) => ({
-      Product_Id: producto.Id,
+      Product_Id: producto.Id!,
       Quantity: producto.Quantity || 1,
     }));
 
@@ -173,7 +167,9 @@ export const Pedido: React.FC = () => {
                         ${cart
           .map(
             (producto) =>
-              `${producto.Name} x ${producto.Quantity || 1} $${(producto.Quantity || 1) * producto.Price}`
+              `${producto.Name}${
+                producto.VariantDescription ? ` (${producto.VariantDescription})` : ""
+              } x ${producto.Quantity || 1} $${(producto.Quantity || 1) * producto.Price}`
           )
           .join("\n")}
                         Total: $${totalPrecio.toFixed(2)}
@@ -198,9 +194,9 @@ export const Pedido: React.FC = () => {
     }
   };
 
-  const incrementQuantity = (productId: number) => {
+  const incrementQuantity = (product: CartPos) => {
     const updatedCart = cart.map(item => {
-      if (item.Id === productId) {
+      if (item.Id === product.Id && (item.Variant_Id ?? null) === (product.Variant_Id ?? null)) {
         return { ...item, Quantity: item.Quantity! + 1 };
       }
       return item;
@@ -209,18 +205,20 @@ export const Pedido: React.FC = () => {
     localStorage.setItem('cart', JSON.stringify(updatedCart));
   };
 
-  const decrementQuantity = (productId: number) => {
-    const updatedCart = cart.map(item => {
-      if (item.Id === productId) {
-        if (item.Quantity! > 1) {
-          return { ...item, Quantity: item.Quantity! - 1 }; // Reduce la cantidad
-        } else {
-          setShowModalProduct(true); // Muestra el modal de confirmación
-          setDeleteProduct(productId); // Guarda el id del producto a eliminar
+  const decrementQuantity = (product: CartPos) => {
+    const updatedCart = cart
+      .map(item => {
+        if (item.Id === product.Id && (item.Variant_Id ?? null) === (product.Variant_Id ?? null)) {
+          if (item.Quantity! > 1) {
+            return { ...item, Quantity: item.Quantity! - 1 }; // Reduce la cantidad
+          } else {
+            setShowModalProduct(true); // Muestra el modal de confirmación
+            setDeleteProduct({ id: product.Id!, variantId: product.Variant_Id ?? null }); // Guarda el producto a eliminar
+          }
         }
-      }
-      return item;
-    }).filter(item => item !== null); // Filtra los productos eliminados
+        return item;
+      })
+      .filter(item => item !== null); // Filtra los productos eliminados
 
     setCart(updatedCart);
     localStorage.setItem("cart", JSON.stringify(updatedCart));
@@ -240,18 +238,21 @@ export const Pedido: React.FC = () => {
           <div className="bg-white p-6 rounded-lg shadow-lg">
             <h2 className="text-2xl font-semibold mb-4 text-gray-800">Su pedido</h2>
             <div className="divide-y divide-gray-200">
-              {cart.map((producto: Producto) => (
+                {cart.map((producto: CartPos) => (
                 <div
-                  key={producto.Id}
+                  key={`${producto.Id}-${producto.Variant_Id ?? "base"}`}
                   className="py-4 flex items-center justify-between"
                 >
                   <img
-                    src={producto.Image}
+                    src={producto.Image || (producto.Images && producto.Images[0]) || ""}
                     alt={producto.Name}
                     className="w-16 h-16 object-cover rounded-lg mr-4"
                   />
                   <div className="flex flex-col flex-grow">
                     <span className="font-medium text-gray-800">{producto.Name}</span>
+                    {producto.VariantDescription && (
+                      <span className="text-sm text-gray-500">{producto.VariantDescription}</span>
+                    )}
                     <span className="text-gray-500">${producto.Price} x {producto.Quantity || 1}</span>
                   </div>
 
@@ -262,19 +263,19 @@ export const Pedido: React.FC = () => {
                     <div className="flex items-center space-x-4 mt-2">
                       {producto.Quantity! > 1 ? (
                         <button
-                          onClick={() => decrementQuantity(producto.Id)}
+                          onClick={() => decrementQuantity(producto)}
                           className="text-red-600 text-lg"
                         >
                           -
                         </button>
                       ) : (
-                        <button onClick={() => decrementQuantity(producto.Id)}>
+                        <button onClick={() => decrementQuantity(producto)}>
                           <img src={trash} alt="Eliminar" className="text-red-600" />
                         </button>
                       )}
                       <span className="text-gray-800">{producto.Quantity}</span>
                       <button
-                        onClick={() => incrementQuantity(producto.Id)}
+                        onClick={() => incrementQuantity(producto)}
                         className="text-green-600 text-lg"
                       >
                         +
@@ -552,7 +553,9 @@ export const Pedido: React.FC = () => {
                   <button
                     onClick={() => {
                       setShowModalProduct(false);
-                      context.removeProductFromCart(deleteProduct.toString());
+                      if (deleteProduct) {
+                        context.removeProductFromCart(deleteProduct.id.toString(), deleteProduct.variantId ?? null);
+                      }
                     }}
                     className="bg-red-600 text-white py-2 px-6 rounded-full shadow-md hover:bg-red-700 transition-all duration-300 ease-in-out"
                   >

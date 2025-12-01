@@ -18,7 +18,9 @@ type AppContextProps = {
 export const AppContext = createContext({} as AppContextState);
 
 const AppProvider: React.FC<AppContextProps> = ({ children }) => {
-  const [cart, setCart] = useState<Producto[]>([]);
+  const [cartPos, setCartPos] = useState<CartPos[]>([]);
+  const cart = cartPos;
+  const setCart = setCartPos;
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
   const [idBussiness, setIdBussiness] = useState<string>("0");
   const [color, setColor] = useState<string>("");
@@ -28,7 +30,6 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   const [tables, setTables] = useState<Table[]>([]);
   const [selectedTable, setSelectedTable] = useState<string>('');
   const [showNavBar, setShowNavBar] = useState<boolean>(false); // Control de navegación
-  const [cartPos, setCartPos] = useState<CartPos[]>([]); // Añadir este estado para manejar el carrito
   const [stockFlag, setStockFlag] = useState<boolean>(false); // Añadir este estado para manejar el stock
   const [filterProduct, setFilterProduct] = useState<FilterProduct>({} as FilterProduct);
   const [quantityNextSell, setQuantityNextSell] = useState<string>('1');
@@ -86,38 +87,79 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
 
   //funcion para agregar un producto al carrito
   const addProductToCart = (product: Producto) => {
-    if (!product.Quantity) {
-      product.Quantity = 1;
-    }
-    //verificar si hay algo en local storage
-    const storedCart = localStorage.getItem("cart");
-    let currentCart = storedCart ? JSON.parse(storedCart) : cart;
+    const quantity = product.Quantity ?? 1;
+    const unitPrice = product.Price ?? 0;
+    const mappedProduct: CartPos = {
+      Id: product.Id,
+      Name: product.Name,
+      Price: product.Price,
+      Quantity: quantity,
+      SubTotal: Number((unitPrice * quantity).toFixed(2)),
+      Image: product.Image || product.Images?.[0] || "",
+      Images: product.Images,
+      Barcode: product.Barcode,
+      PromotionPrice: product.PromotionPrice,
+      Category_Id: product.Category_Id,
+      Stock: product.Stock,
+      Variant_Id: product.Variant_Id ?? null,
+      VariantDescription: product.VariantDescription,
+    };
 
-    //verificar si el producto ya esta en el carrito
-    const exist = currentCart.find((item: Producto) => item.Id === product.Id);
-    let newCart;
-    if (exist) {
-      newCart = currentCart.map((item: Producto) =>
-        item.Id === product.Id
-          ? { ...exist, Quantity: exist.Quantity! + product.Quantity! }
-          : item
-      );
-    } else {
-      newCart = [...currentCart, { ...product }];
+    const storedCart = localStorage.getItem("cart");
+    const currentCart: CartPos[] = storedCart ? JSON.parse(storedCart) : cart;
+
+    const exist = currentCart.find(
+      (item: CartPos) =>
+        item.Id === mappedProduct.Id && (item.Variant_Id ?? null) === (mappedProduct.Variant_Id ?? null),
+    );
+
+    const stockLimit = mappedProduct.Stock;
+    const existingQuantity = exist?.Quantity ?? 0;
+    const remainingStock = stockLimit != null ? Math.max(stockLimit - existingQuantity, 0) : null;
+    const allowedQuantity =
+      remainingStock != null ? Math.min(quantity, remainingStock) : quantity;
+
+    if (allowedQuantity <= 0) {
+      return;
     }
+
+    const newCart = exist
+      ? currentCart.map((item: CartPos) =>
+          item.Id === mappedProduct.Id && (item.Variant_Id ?? null) === (mappedProduct.Variant_Id ?? null)
+            ? {
+                ...exist,
+                Quantity: (exist.Quantity || 0) + allowedQuantity,
+                SubTotal: Number(
+                  ((exist.SubTotal || 0) + allowedQuantity * unitPrice).toFixed(2),
+                ),
+              }
+            : item,
+        )
+      : [
+          ...currentCart,
+          {
+            ...mappedProduct,
+            Quantity: allowedQuantity,
+            SubTotal: Number((allowedQuantity * unitPrice).toFixed(2)),
+          },
+        ];
 
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));
   };
 
   //funcion para eliminar un producto del carrito
-  const removeProductFromCart = (id: string) => {
-    //verificar si hay algo en local storage
+  const removeProductFromCart = (id: string, variantId: number | null = null) => {
     const storedCart = localStorage.getItem("cart");
-    let currentCart = storedCart ? JSON.parse(storedCart) : cart;
+    const currentCart: CartPos[] = storedCart ? JSON.parse(storedCart) : cart;
 
-    //filtrar el producto a eliminar
-    const newCart = currentCart.filter((product: Producto) => product.Id !== parseInt(id));
+    const targetId = parseInt(id);
+    const targetVariant = variantId ?? null;
+
+    const newCart = currentCart.filter(
+      (product: CartPos) =>
+        !(product.Id === targetId && (product.Variant_Id ?? null) === targetVariant),
+    );
 
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));

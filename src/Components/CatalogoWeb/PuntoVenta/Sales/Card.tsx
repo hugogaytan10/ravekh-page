@@ -1,16 +1,14 @@
 import React, {
-  useContext,
   useState,
   useEffect,
   useCallback,
   useMemo,
-  useRef
 } from "react";
 import { FixedSizeGrid } from "react-window";
 import { Item } from "../Model/Item";
 import "./Css/ProductList.css";
-import { AppContext } from "../../Context/AppContext";
-import { useNavigate } from "react-router-dom";
+import { VariantModal } from "../Sales/VariantModal";
+import { useVariantSelection } from "./Hook/useVariantSelection";
 
 interface CardProps {
   product: Item;
@@ -71,17 +69,18 @@ const Card: React.FC<CardProps> = React.memo(({ product, handleAddItem }) => {
   );
 });
 
-interface ProductListProps {
-  products: Item[];
-}
+  interface ProductListProps {
+    products: Item[];
+  }
 
-export const ProductList: React.FC<ProductListProps> = ({ products }) => {
-  const context = useContext(AppContext);
-  const [columns, setColumns] = useState(3);
-  const [gridWidth, setGridWidth] = useState(window.innerWidth);
-  const rowHeight = 250;
-  const maxRowsVisible = 3;
-  const navigate = useNavigate();
+  export const ProductList: React.FC<ProductListProps> = ({ products }) => {
+    const [columns, setColumns] = useState(3);
+    const [gridWidth, setGridWidth] = useState(window.innerWidth);
+    const rowHeight = 250;
+    const maxRowsVisible = 3;
+    const { handleProductSelection, modalState, isFetchingVariants } = useVariantSelection({
+      onCartUpdated: () => navigator.vibrate?.(50),
+    });
 
   useEffect(() => {
     const handleResize = () => {
@@ -103,52 +102,21 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const memoizedProducts = useMemo(() => products, [products]);
-
-  const handleAddItem = useCallback(
-    (product: Item) => {
-      context.setCartPos((prevCart) => {
-        const updatedCart = prevCart.map((item) =>
-          item.Id === product.Id
-            ? {
-                ...item,
-                Quantity: item.Quantity + Number(context.quantityNextSell),
-                SubTotal:
-                  (item.Price ?? 0) *
-                  (item.Quantity + Number(context.quantityNextSell)),
-              }
-            : item
-        );
-
-        const exists = prevCart.some((item) => item.Id === product.Id);
-        return exists
-          ? updatedCart
-          : [
-              ...prevCart,
-              {
-                Image: product.Image,
-                Id: product.Id,
-                Name: product.Name,
-                Price: product.Price ?? 0,
-                Barcode: product.Barcode ?? undefined,
-                Quantity: Number(context.quantityNextSell),
-                SubTotal:
-                  (product.Price ?? 0) * Number(context.quantityNextSell),
-                Cost: product.CostPerItem ?? 0,
-                Category_Id: product.Category_Id ?? undefined,
-                Stock: product.Stock ?? undefined,
-                IsLabeled: product.IsLabeled ?? undefined,
-                Volume: product.Volume ?? undefined,
-                PromotionPrice: product.PromotionPrice ?? undefined,
-              },
-            ];
-      });
-
-      navigator.vibrate?.(50); // Reducir el tiempo de vibración
-      //context.setStockFlag((prev) => !prev);
-    },
-    [context.quantityNextSell]
+  const memoizedProducts = useMemo(
+    () =>
+      products.map((product) => ({
+        ...product,
+        Image: product.Image || product.Images?.[0] || "",
+      })),
+    [products]
   );
+
+    const handleAddItem = useCallback(
+      async (product: Item) => {
+        await handleProductSelection(product);
+      },
+      [handleProductSelection]
+    );
 
   const rowCount = Math.ceil(memoizedProducts.length / columns);
   const gridHeight = rowHeight * maxRowsVisible;
@@ -180,11 +148,13 @@ export const ProductList: React.FC<ProductListProps> = ({ products }) => {
               style={{ ...style, padding: "5px", marginBottom: "10px" }}
               className="grid-item"
             >
-              <Card product={product} handleAddItem={handleAddItem} />
-            </div>
-          );
-        }}
-      </FixedSizeGrid>
-    </div>
-  );
-};
+                <Card product={product} handleAddItem={handleAddItem} />
+              </div>
+            );
+          }}
+        </FixedSizeGrid>
+
+        <VariantModal modalState={modalState} isLoading={isFetchingVariants} />
+      </div>
+    );
+  };

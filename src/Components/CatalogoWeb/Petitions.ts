@@ -1,6 +1,7 @@
 import { URL } from "./Const/Const";
 import { Order } from "../CatalogoWeb/Modelo/Order";
 import { OrderDetails } from "../CatalogoWeb/Modelo/OrderDetails";
+import { Variant } from "./PuntoVenta/Model/Variant";
 
 export const getProductsByBusiness = async (idBusiness: string) => {
     try {
@@ -121,6 +122,16 @@ export const getProductsByCategoryIdAndDisponibilty = async (idCategory: string)
     }catch(error){
         console.log(error);
         return null;
+    }
+}
+
+export const getVariantsByProductIdPublic = async (productId: number | string) => {
+    try {
+        const response = await fetch(`${URL}variants/product/${productId}`);
+        const data = await response.json();
+        return Array.isArray(data) ? (data as Variant[]) : [];
+    } catch (error) {
+        return [];
     }
 }
 

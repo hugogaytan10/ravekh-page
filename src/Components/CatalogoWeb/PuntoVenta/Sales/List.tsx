@@ -1,7 +1,15 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, {
+  useCallback,
+  useContext,
+  useEffect,
+  useState,
+} from "react";
 import { Item } from "../Model/Item";
 import { AppContext } from "../../Context/AppContext";
-import { CartPos } from "../Model/CarPos";
+import { Variant } from "../Model/Variant";
+import { useVariantSelection } from "./Hook/useVariantSelection";
+import { getVariantsByProductId } from "../Products/Petitions";
+import { VariantModal } from "./VariantModal";
 
 interface ListProps {
   Products: Item[];
@@ -15,54 +23,93 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
     return text.length > length ? text.substring(0, length) + "..." : text;
   };
 
-  const AddItemToCart = (product: Item) => {
-    if (product) {
-      const cartProduct = context.cartPos?.find(
-        (item: CartPos) => item.Id === product.Id
-      );
-      if (cartProduct) {
-        cartProduct.Quantity += Number(context.quantityNextSell);
-        cartProduct.SubTotal =
-          Number(cartProduct.Quantity) * Number(cartProduct.Price.toFixed(2) || 0);
-        context.setStockFlag(!context.stockFlag);
-      } else {
-        context.setCartPos([
-          ...context.cartPos,
+  const addItemToCart = useCallback(
+    (product: Item, variant?: Variant) => {
+      const quantityToAdd = Number(context.quantityNextSell);
+      const variantId = variant?.Id ?? null;
+      const selectedPrice =
+        variant?.PromotionPrice && variant?.PromotionPrice > 0
+          ? variant.PromotionPrice
+          : variant?.Price ?? product.PromotionPrice ?? product.Price ?? 0;
+
+      context.setCartPos((prevCart) => {
+        const existingIndex = prevCart.findIndex(
+          (item) => item.Id === product.Id && (item.Variant_Id ?? null) === variantId
+        );
+
+        if (existingIndex !== -1) {
+          const updatedCart = [...prevCart];
+          const existingItem = updatedCart[existingIndex];
+          const newQuantity = existingItem.Quantity + quantityToAdd;
+
+          updatedCart[existingIndex] = {
+            ...existingItem,
+            Quantity: newQuantity,
+            SubTotal: selectedPrice * newQuantity,
+          };
+
+          return updatedCart;
+        }
+
+        return [
+          ...prevCart,
           {
+            Image: product.Image || product.Images?.[0] || "",
             Id: product.Id,
-            Name: product.Name,
-            Price: product.Price ?? 0,
-            Barcode: product.Barcode ?? undefined,
-            Quantity: Number(context.quantityNextSell),
-            SubTotal: product.Price ?? 0,
-            Image: product.Image,
-            Cost: product.CostPerItem ?? 0,
+            Name: variant ? `${product.Name} - ${variant.Description}` : product.Name,
+            Price: selectedPrice,
+            Barcode: variant?.Barcode ?? product.Barcode ?? undefined,
+            Quantity: quantityToAdd,
+            SubTotal: selectedPrice * quantityToAdd,
+            Cost: variant?.CostPerItem ?? product.CostPerItem ?? 0,
+            Category_Id: product.Category_Id ?? undefined,
+            Stock: variant?.Stock ?? product.Stock ?? undefined,
+            IsLabeled: product.IsLabeled ?? undefined,
+            Volume: product.Volume ?? undefined,
+            PromotionPrice: variant?.PromotionPrice ?? product.PromotionPrice ?? undefined,
+            Variant_Id: variantId,
           },
-        ]);
-      }
-      navigator.vibrate(100);
-      context.setStockFlag(!context.stockFlag);
-    } else {
-      console.log("Producto no encontrado");
-    }
-  };
+        ];
+      });
+    },
+    [context.quantityNextSell]
+  );
+
+  const {
+    handleProductSelection,
+    modalState,
+    isFetchingVariants
+  } = useVariantSelection({
+    onCartUpdated: () => navigator.vibrate?.(50),
+  });
+
+  const handleAddItem = useCallback(
+    (product: Item) => handleProductSelection(product),
+    [handleProductSelection]
+  );
+
 
   useEffect(() => {
-    setProducts(Products);
+    setProducts(
+      Products.map((product) => ({
+        ...product,
+        Image: product.Image || product.Images?.[0] || "",
+      }))
+    );
   }, [Products]);
 
   const renderProduct = (product: Item) => {
     return (
       <div
         className="flex items-center p-2  bg-gray-100 rounded-lg border border-gray-300 hover:bg-gray-200 cursor-pointer transition-all"
-        onClick={() => AddItemToCart(product)}
+        onClick={() => handleAddItem(product)}
         key={product.Id}
       >
         {/* Imagen del producto */}
-        {product.Image ? (
+        {product.Image || product.Images?.[0] ? (
           <div className="w-16 h-16 flex-shrink-0">
             <img
-              src={product.Image}
+              src={product.Image || product.Images?.[0] || ""}
               alt={product.Name}
               className="w-full h-full object-cover rounded-lg"
             />
@@ -102,6 +149,9 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
         ? products.slice(0, 10)
         : products
       ).map((product) => renderProduct(product))}
+
+      <VariantModal modalState={modalState} isLoading={isFetchingVariants} />
+
     </div>
   );
   

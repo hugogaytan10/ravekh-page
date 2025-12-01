@@ -12,7 +12,8 @@ interface Product {
   Name: string;
   Category_Id?: string | null;
   Price: number | null;
-  Image: string;
+  Image?: string;
+  Images?: string[];
   Stock?: number | null;
   Cost?: number;
   IsLabeled?: boolean;
@@ -59,10 +60,14 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
             response = response.slice(0, 10);
           }
           setProducts(
-            response.map((product: Product) => ({
-              ...product,
-              Name: truncate(product.Name, 16),
-            }))
+            response.map((product: Product) => {
+              const mainImage = product.Image || product.Images?.[0] || "";
+              return {
+                ...product,
+                Image: mainImage,
+                Name: truncate(product.Name, 16),
+              };
+            })
           );
         }
         setLoading(false); // Desactivar el estado de carga cuando los datos estén listos
@@ -149,9 +154,9 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
         }}
         disabled={isHelper}
       >
-        {item.Image ? (
+        {(item.Image || item.Images?.[0]) ? (
           <img
-            src={item.Image}
+            src={item.Image || item.Images?.[0] || ""}
             alt={item.Name}
             className="w-24 h-full object-cover rounded mr-4"
           />
