@@ -338,6 +338,11 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
           />
           <meta property="og:type" content="website" />
           <meta
+            name="theme-color"
+            content={context.idBussiness === '115' ? "#000000" : color || "#6D01D1"}
+          />
+          <title>{context.nombre || "Catálogo de Productos"}</title>
+          <meta
             property="og:title"
             content={context.nombre || "Catálogo de Productos"}
           />
