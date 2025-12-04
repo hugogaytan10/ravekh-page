@@ -7,7 +7,6 @@ export type Producto = {
     ExpDate: string | null;
     ForSale: number;
     Id: number;
-    Image: string;
     MinStock: number | null;
     Name: string;
     OptStock: number | null;

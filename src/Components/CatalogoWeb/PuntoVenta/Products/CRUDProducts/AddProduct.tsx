@@ -68,7 +68,6 @@ export const AddProduct: React.FC = () => {
       setDescription(draft.description);
       setUnitType(draft.unitType);
       setColorSelected(draft.colorSelected || context.store.Color || ThemeLight.secondaryColor);
-      setMainImage(draft.mainImage);
       setGalleryImages(draft.galleryImages || []);
       setIsAvailableForSale(draft.isAvailableForSale);
       setIsDisplayedInStore(draft.isDisplayedInStore);
@@ -173,7 +172,6 @@ export const AddProduct: React.FC = () => {
         MinStock: minStock !== "" ? parseInt(minStock, 10) : null,
         OptStock: optStock !== "" ? parseInt(optStock, 10) : null,
         Images: sanitizedImages.length > 0 ? sanitizedImages : undefined,
-        Image: sanitizedImages[0] || undefined,
       };
 
       const variantsPayload = draftsToVariants(variantDrafts, colorSelected);
