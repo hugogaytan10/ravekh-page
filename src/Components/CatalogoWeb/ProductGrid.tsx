@@ -197,3 +197,31 @@ export const ProductGrid: React.FC<ProductGridProps> = memo(
 ProductGrid.displayName = "ProductGrid";
 
 export default ProductGrid;
+
+const ProductCardSkeleton: React.FC = () => {
+  return (
+    <div className="border rounded-lg shadow-md bg-white flex flex-col h-full animate-pulse">
+      <div className="h-48 w-full bg-gray-200 rounded-t-lg" />
+      <div className="flex-1 px-4 py-2 space-y-3">
+        <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto" />
+        <div className="flex justify-center gap-2 mt-2">
+          <div className="h-5 w-16 bg-gray-200 rounded" />
+          <div className="h-5 w-12 bg-gray-200 rounded" />
+        </div>
+      </div>
+      <div className="p-4 mt-auto">
+        <div className="h-9 bg-gray-200 rounded-full" />
+      </div>
+    </div>
+  );
+};
+
+export const ProductGridSkeleton: React.FC<{ items?: number }> = ({ items = 10 }) => {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+      {Array.from({ length: items }).map((_, index) => (
+        <ProductCardSkeleton key={index} />
+      ))}
+    </div>
+  );
+};
