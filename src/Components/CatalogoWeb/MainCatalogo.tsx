@@ -17,7 +17,7 @@ import { AppContext } from "./Context/AppContext";
 import logoWhasa from "../../assets/logo-whatsapp.svg";
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import defaultImage from "../../assets/ravekh.png";
-import { ProductGrid } from "./ProductGrid";
+import { ProductGrid, ProductGridSkeleton } from "./ProductGrid";
 import { Variant } from "./PuntoVenta/Model/Variant";
 import { VariantSelectionModal } from "./VariantSelectionModal";
 
@@ -38,6 +38,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [variantOptions, setVariantOptions] = useState<Variant[]>([]);
   const [variantModalOpen, setVariantModalOpen] = useState(false);
   const [variantLoading, setVariantLoading] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
 
   const context = useContext(AppContext);
   const addProductToCart = context.addProductToCart;
@@ -57,6 +58,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   // 1) useEffect principal: primero saca "plan" del negocio y luego productos
   useEffect(() => {
     (async () => {
+    try {
       // Redirección especial si es "26"
       if (idBusiness === "26") {
         window.location.href = "https://mrcongelados.com/";
@@ -68,6 +70,8 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
         setNotPayMessage("No tienes acceso a este catálogo por falta de pago.");
         return;
       }
+
+      setLoadingProducts(true);
 
       // Asegurar que el contexto tenga el ID del negocio
       if (idBusiness) {
@@ -118,6 +122,13 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       } else {
         setProductos([]);
       }
+    } catch (error) {
+      console.error("Error cargando catálogo:", error);
+      setProductos([]);
+    } finally {
+      // 👇 siempre apagamos el loading
+      setLoadingProducts(false);
+    }
 
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -362,7 +373,10 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
         </Helmet>
 
         <div className="p-4 min-h-screen w-full max-w-screen-xl mx-auto py-20 mt-8">
-          {productos.length === 0 ? (
+          {loadingProducts ? (
+            // 👇 Skeleton mientras cargan los productos
+            <ProductGridSkeleton items={10} />
+          ) :productos.length === 0 ? (
             <div className="text-center mt-10">
               <h2 className="text-2xl font-semibold text-gray-700">
                 No hay productos disponibles

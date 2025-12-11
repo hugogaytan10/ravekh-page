@@ -166,13 +166,64 @@ export const DetalleProducto: React.FC = () => {
     setShowVariantModal(false);
   };
 
-  if (!producto) {
+    const DetalleProductoSkeleton: React.FC = () => {
     return (
       <div className="px-6 py-20 min-h-screen bg-gray-100">
-        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8 text-center">
-          <p className="text-gray-600">Cargando producto…</p>
+        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8 animate-pulse">
+          {/* Carrusel / imagen principal */}
+          <div className="w-full h-72 bg-gray-200 rounded-md" />
+
+          {/* Título */}
+          <div className="mt-6 h-8 bg-gray-200 rounded w-3/4" />
+
+          {/* Precio y badge "nuevo" */}
+          <div className="flex justify-between items-center mt-4">
+            <div className="flex items-center gap-4">
+              <div className="h-7 w-24 bg-gray-200 rounded" />
+              <div className="h-8 w-16 bg-gray-200 rounded" />
+            </div>
+            <div className="h-4 w-24 bg-gray-200 rounded" />
+          </div>
+
+          {/* Descripción */}
+          <div className="mt-6 space-y-2">
+            <div className="h-5 w-32 bg-gray-200 rounded" />
+            <div className="h-4 w-full bg-gray-200 rounded" />
+            <div className="h-4 w-5/6 bg-gray-200 rounded" />
+            <div className="h-4 w-2/3 bg-gray-200 rounded" />
+          </div>
+
+          {/* Controles de cantidad */}
+          <div className="flex justify-center items-center gap-6 mt-8">
+            <div className="w-10 h-10 bg-gray-200 rounded-full" />
+            <div className="w-10 h-6 bg-gray-200 rounded" />
+            <div className="w-10 h-10 bg-gray-200 rounded-full" />
+          </div>
+
+          {/* Botón "Añadir al carrito" */}
+          <div className="mt-10">
+            <div className="w-full md:w-3/4 h-11 bg-gray-200 rounded-full mx-auto" />
+          </div>
+        </div>
+
+        {/* Botón flotante de WhatsApp (placeholder) */}
+        <div className="bg-gray-300 rounded-full p-2 fixed right-2 bottom-4 shadow-lg">
+          <div className="w-10 h-10 bg-gray-200 rounded-full" />
         </div>
       </div>
+    );
+  };
+
+  if (!producto) {
+    return (
+      <HelmetProvider>
+        <Helmet>
+          <meta name="theme-color" content={color || "#6D01D1"} />
+          <title>Cargando producto...</title>
+        </Helmet>
+
+          <DetalleProductoSkeleton />
+      </HelmetProvider>
     );
   }
 
