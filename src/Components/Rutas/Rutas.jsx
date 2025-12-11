@@ -123,6 +123,11 @@ import { getCategoriesByBusinesssId } from "../CatalogoWeb/Petitions";
 // deeplink para la agenda
 import { DeepLinkRedirect } from "../AgendaT/DeepLinkRedict";
 import { MainCategoria } from "../CatalogoWeb/Categoria";
+import { LoginCupones } from "../Cupones/LoginCupones";
+import { RegisterCupones } from "../Cupones/RegisterCupones";
+import { CuponesHome } from "../Cupones/CuponesHome";
+import { CuponesList } from "../Cupones/CuponesList";
+import { CuponesSettings } from "../Cupones/CuponesSettings";
 
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
@@ -449,8 +454,7 @@ export const Rutas = () => {
       "/finish",
       "/add-product",
       "/select-caterory-sales",
-      "/add-category-sales",
-      "/MainFinances",
+      "/add-category-sales", 
       "/main-products",
       "/add-product-products",
       "/select-category-product",
@@ -598,6 +602,15 @@ export const Rutas = () => {
                   className="text-base"
                 >
                   Punto de Venta
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/cupones"
+                  onClick={handleMenuClick}
+                  className="text-base"
+                >
+                  Cupones
                 </NavLink>
               </li>
               <li>
@@ -758,6 +771,11 @@ export const Rutas = () => {
             element={<DetalleProducto />}
           />
           <Route path="/catalogo/pedido" element={<Pedido />} />
+          <Route path="/cupones" element={<LoginCupones />} />
+          <Route path="/cupones/registro" element={<RegisterCupones />} />
+          <Route path="/cupones/home" element={<CuponesHome />} />
+          <Route path="/cupones/cupones" element={<CuponesList />} />
+          <Route path="/cupones/ajustes" element={<CuponesSettings />} />
           {/* RUTAS PARA EL PUNTO DE VENTA */}
           <Route path="/login-punto-venta" element={<AuthPage />} />
           <Route path="/MainSales" element={<MainSales />} />
