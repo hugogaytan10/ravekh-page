@@ -423,6 +423,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
             onClose={handleCloseVariantModal}
             onConfirm={handleConfirmVariant}
             existingVariantQuantities={cartVariantQuantities}
+            storeColor={color}
           />
         </div>
       </>
