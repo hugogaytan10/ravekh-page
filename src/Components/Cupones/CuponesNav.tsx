@@ -3,7 +3,9 @@ import { useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import tiendita from "../../assets/Cupones/tiendita.png";
 import cuenta from "../../assets/Cupones/cuenta.png";
-const cardRed = "#b81b27";
+
+const accentYellow = "#fbbc04";
+const navGray = "#4a4a4a";
 
 type CuponesNavKey = "inicio" | "cupones" | "ajustes";
 
@@ -22,8 +24,8 @@ const CuponesNav: React.FC<CuponesNavProps> = ({ active }) => {
 
   return (
     <div className="px-4 pb-8 pt-4">
-      <div className="mx-auto w-full max-w-[440px]">
-        <div className="relative rounded-full bg-white shadow-[0_10px_30px_rgba(0,0,0,0.18)] px-2 py-2 flex items-center gap-1">
+      <div className="mx-auto w-full max-w-[560px]">
+        <div className="relative rounded-full bg-[#3e3e3e] shadow-[0_10px_24px_rgba(0,0,0,0.28)] px-3 py-3 flex items-center gap-3">
           {navItems.map((item) => {
             const isActive = active === item.key;
 
@@ -32,19 +34,19 @@ const CuponesNav: React.FC<CuponesNavProps> = ({ active }) => {
                 key={item.key}
                 type="button"
                 onClick={() => navigate(item.path)}
-                className={`flex-1 min-h-[60px] flex items-center justify-center gap-2 transition-all duration-200 rounded-full px-3 py-2 ${
-                  isActive ? "bg-[#f5b700] shadow-md" : "bg-white"
+                className={`flex-1 min-h-[72px] flex flex-col items-center justify-center gap-1 transition-all duration-200 rounded-full px-3 py-2 ${
+                  isActive ? "bg-[#fbbc04]" : "bg-transparent"
                 }`}
-                style={{ color: isActive ? cardRed : "#8a6d57" }}
+                style={{ color: isActive ? "#3e3e3e" : "#e3e3e3" }}
               >
                 <span
                   className={`inline-flex h-9 w-9 items-center justify-center rounded-full border ${
-                    isActive ? "bg-white border-transparent" : "bg-[#fff5da] border-[#f5b700]"
+                    isActive ? "bg-white border-transparent" : "border-white/40"
                   }`}
                 >
                   <img src={item.icon} alt={item.label} className="h-6 w-6 object-contain" />
                 </span>
-                <span className="font-semibold text-sm leading-tight">{item.label}</span>
+                <span className="font-semibold text-xs leading-tight text-center">{item.label}</span>
               </button>
             );
           })}

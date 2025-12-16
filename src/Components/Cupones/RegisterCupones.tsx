@@ -1,17 +1,17 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import salchitaquito from "../../assets/Cupones/salchitaquito.png";
-import papitas from "../../assets/Cupones/papitas.png";
+import cuponsito from "../../assets/Cupones/cuponsito.png";
+import bolsita from "../../assets/Cupones/bolsita.png";
 import { setCuponesSession } from "./cuponesSession";
 
-const accentYellow = "#f5b700";
-const deepRed = "#d4252c";
-const cardRed = "#b81b27";
+const accentYellow = "#fbbc04";
+const softGray = "#e6e6e6";
+const textGray = "#5a5a5a";
 
 const RegisterCupones: React.FC = () => {
   const navigate = useNavigate();
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
-    event.currentTarget.style.boxShadow = `0 0 0 3px ${accentYellow}33`;
+    event.currentTarget.style.boxShadow = `0 0 0 4px ${accentYellow}40`;
   };
 
   const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
@@ -19,94 +19,79 @@ const RegisterCupones: React.FC = () => {
   };
 
   return (
-    <div
-      className="min-h-screen flex items-center justify-center px-4 py-10 relative overflow-hidden"
-      style={{ backgroundColor: deepRed }}
-    >
-      <div className="absolute inset-0 pointer-events-none">
-        <div
-          className="absolute top-[-60px] left-[-70px] w-[260px] h-[260px] rounded-full opacity-90"
-          style={{ backgroundColor: accentYellow }}
-        ></div>
-        <div
-          className="absolute bottom-[-80px] right-[-50px] w-[280px] h-[220px] rounded-[120px] opacity-90"
-          style={{ backgroundColor: accentYellow }}
-        ></div>
+    <div className="min-h-screen bg-white flex flex-col items-center">
+      <div className="relative w-full bg-[#ffb300] pt-10 pb-12 rounded-b-[44px] shadow-md overflow-hidden">
+        <div className="absolute inset-0" aria-hidden="true">
+          <div className="absolute left-[-40px] bottom-[-70px] w-[220px] h-[220px] bg-white/18 rounded-full" />
+          <div className="absolute right-[-70px] top-[10px] w-[240px] h-[240px] bg-white/16 rounded-full" />
+        </div>
+        <div className="relative flex justify-center">
+          <img src={cuponsito} alt="Ticket sonriente" className="w-36 drop-shadow-xl" />
+        </div>
       </div>
 
-      <div
-        className="relative w-full max-w-[380px] rounded-[32px] shadow-2xl border-4 text-white overflow-hidden"
-        style={{ backgroundColor: cardRed, borderColor: accentYellow }}
-      >
-        <div className="flex flex-col items-center px-6 pt-10 pb-4 space-y-6">
-          <img src={salchitaquito} alt="Salchitaquito" className="w-24 h-auto drop-shadow-lg" />
-          <div className="text-center space-y-1">
-            <p className="text-lg font-semibold">Registrar</p>
-            <h1 className="text-3xl font-bold">mi cuenta</h1>
-          </div>
+      <div className="w-full max-w-[428px] px-8 flex flex-col items-center text-center text-[#303030]">
+        <div className="mt-8 mb-6">
+          <h1 className="text-3xl font-extrabold tracking-tight">Registrar mi cuenta</h1>
+        </div>
 
-          <div className="w-full space-y-4">
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold tracking-wide">Correo electrónico</label>
-              <input
-                type="email"
-                placeholder="correo@ejemplo.com"
-                className="w-full rounded-xl bg-white text-[#5b1c00] placeholder-[#a25800] px-4 py-3 border-2 focus:outline-none focus:ring-2"
-                style={{ borderColor: accentYellow, boxShadow: `0 0 0 0 ${accentYellow}` }}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold tracking-wide">Crea una contraseña</label>
-              <input
-                type="password"
-                placeholder="••••••••"
-                className="w-full rounded-xl bg-white text-[#5b1c00] placeholder-[#a25800] px-4 py-3 border-2 focus:outline-none focus:ring-2"
-                style={{ borderColor: accentYellow, boxShadow: `0 0 0 0 ${accentYellow}` }}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold tracking-wide">Nombre completo</label>
-              <input
-                type="text"
-                placeholder="Tu nombre"
-                className="w-full rounded-xl bg-white text-[#5b1c00] placeholder-[#a25800] px-4 py-3 border-2 focus:outline-none focus:ring-2"
-                style={{ borderColor: accentYellow, boxShadow: `0 0 0 0 ${accentYellow}` }}
-                onFocus={handleFocus}
-                onBlur={handleBlur}
-              />
-            </div>
-          </div>
+        <div className="w-full space-y-4">
+          <input
+            type="email"
+            placeholder="Correo electronico"
+            className="w-full rounded-2xl px-5 py-3.5 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.08)]"
+            style={{ backgroundColor: softGray, color: textGray, boxShadow: "none" }}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+          />
+          <input
+            type="password"
+            placeholder="crea una contraseña"
+            className="w-full rounded-2xl px-5 py-3.5 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.08)]"
+            style={{ backgroundColor: softGray, color: textGray, boxShadow: "none" }}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+          />
+          <input
+            type="text"
+            placeholder="Nombre completo"
+            className="w-full rounded-2xl px-5 py-3.5 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.08)]"
+            style={{ backgroundColor: softGray, color: textGray, boxShadow: "none" }}
+            onFocus={handleFocus}
+            onBlur={handleBlur}
+          />
+        </div>
 
+        <button
+          type="button"
+          className="mt-7 w-full bg-[#fbbb0d] text-white font-extrabold py-3.5 text-lg rounded-full shadow-[0_10px_24px_rgba(251,188,4,0.35)] hover:brightness-110 transition"
+          onClick={() => {
+            setCuponesSession(true);
+            navigate("/cupones/home");
+          }}
+        >
+          Crear cuenta
+        </button>
+
+        <p className="mt-6 text-sm font-semibold text-[#3f3f3f]">
+          Si ya tienes cuenta,
           <button
             type="button"
-            className="mt-2 w-full rounded-full text-[#9b0f18] font-bold py-3 text-lg shadow-lg hover:brightness-110 transition"
-            style={{ backgroundColor: accentYellow }}
-            onClick={() => {
-              setCuponesSession(true);
-              navigate("/cupones/home");
-            }}
+            className="ml-1 font-bold"
+            style={{ color: accentYellow }}
+            onClick={() => navigate("/cupones")}
           >
-            Crear cuenta
+            inicia sesión
           </button>
+        </p>
+      </div>
 
-          <p className="text-sm text-center">
-            Si ya tienes cuenta,
-            <button
-              type="button"
-              className="font-bold ml-1 underline"
-              style={{ color: accentYellow }}
-              onClick={() => navigate("/cupones")}
-            >
-              inicia sesión
-            </button>
-          </p>
-
-          <img src={papitas} alt="Papitas" className="w-32 h-auto drop-shadow-lg" />
-        </div>
+      <div className="relative w-full mt-14 pb-6 flex justify-center overflow-hidden">
+        <div
+          className="absolute bottom-[-48px] left-0 right-0 h-40 bg-[#fbbb0d] rounded-t-[120px]"
+          aria-hidden="true"
+        />
+        <img src={bolsita} alt="Bolsa amarilla sonriente" className="relative w-36 drop-shadow-xl" />
       </div>
     </div>
   );
