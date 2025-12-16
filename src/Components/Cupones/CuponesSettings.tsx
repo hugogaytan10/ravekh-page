@@ -1,12 +1,29 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import papitas from "../../assets/Cupones/papitas.png";
+import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { CuponesNav } from "./CuponesNav";
 import { hasCuponesSession } from "./cuponesSession";
 
-const accentYellow = "#f5b700";
-const deepRed = "#d4252c";
-const cardRed = "#b81b27";
+const accentYellow = "#fbbc04";
+const textGray = "#414141";
+const buttonGray = "#e3e3e3";
+const arrowGray = "#5a5a5a";
+
+const options = ["Cambiar nombre", "Eliminar cuenta"];
+
+const ArrowIcon: React.FC = () => (
+  <svg
+    viewBox="0 0 24 24"
+    className="h-5 w-5"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2.4"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M9 5l7 7-7 7" />
+  </svg>
+);
 
 const CuponesSettings: React.FC = () => {
   const navigate = useNavigate();
@@ -18,49 +35,38 @@ const CuponesSettings: React.FC = () => {
   }, [navigate]);
 
   return (
-    <div
-      className="min-h-screen flex items-start justify-center px-4 py-10 relative overflow-hidden"
-      style={{ backgroundColor: deepRed }}
-    >
-      <div className="absolute inset-0 pointer-events-none">
-        <div
-          className="absolute top-[-70px] right-[-80px] w-[260px] h-[260px] rounded-full opacity-90"
-          style={{ backgroundColor: accentYellow }}
-        ></div>
-        <div
-          className="absolute bottom-[-100px] left-[-60px] w-[320px] h-[240px] rounded-[140px] opacity-90"
-          style={{ backgroundColor: accentYellow }}
-        ></div>
-      </div>
+    <div className="min-h-screen bg-white relative overflow-hidden flex justify-center px-4 pb-12">
+      <div className="absolute top-[-140px] right-[-160px] w-[340px] h-[340px] bg-[#ffca1f] rounded-full opacity-70" />
+      <div className="absolute bottom-[-180px] left-[-220px] w-[420px] h-[420px] bg-[#ffca1f] rounded-full opacity-70" />
 
-      <div className="relative w-full max-w-[380px] rounded-[32px] overflow-hidden">
-        <div className="flex items-center gap-3 px-2 text-white">
-          <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-            <img src={papitas} alt="Avatar" className="h-10 w-10 object-contain" />
+      <div className="relative w-full max-w-[460px] z-10">
+        <header className="flex items-center gap-3 pt-8 px-1 text-[#414141]" style={{ color: textGray }}>
+          <div className="h-14 w-14 rounded-full bg-[#fff2c2] border-2 border-[#ffd24c] flex items-center justify-center shadow-sm">
+            <img src={cuponsito} alt="Avatar" className="h-10 w-10 object-contain" />
           </div>
           <div>
-            <p className="font-semibold">Hola Hugo</p>
-            <p className="text-sm opacity-90">Buen día</p>
+            <p className="text-sm font-semibold">Hola Hugo</p>
+            <p className="text-sm text-[#6a6a6a]">Buen día</p>
           </div>
-        </div>
+        </header>
 
-        <div className="mt-8 space-y-3">
-          {["Cambiar nombre", "Eliminar cuenta"].map((label) => (
+        <main className="mt-10 space-y-3">
+          {options.map((label) => (
             <button
               key={label}
               type="button"
-              className="w-full flex items-center justify-between px-4 py-4 rounded-2xl text-white text-base font-semibold shadow-lg"
-              style={{ backgroundColor: cardRed }}
+              className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-base font-semibold shadow-[0_10px_24px_rgba(0,0,0,0.08)]"
+              style={{ backgroundColor: buttonGray, color: textGray }}
             >
               <span>{label}</span>
-              <span className="text-xl">›</span>
+              <span className="text-xl" style={{ color: arrowGray }}>
+                <ArrowIcon />
+              </span>
             </button>
           ))}
-        </div>
+        </main>
 
-        <p className="text-center text-white mt-10">Hecho por Ravekh &lt;3</p>
-
-        <div className="mt-6">
+        <div className="mt-12">
           <CuponesNav active="ajustes" />
         </div>
       </div>

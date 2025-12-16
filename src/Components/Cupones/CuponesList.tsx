@@ -1,39 +1,25 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
-import papitas from "../../assets/Cupones/papitas.png";
-import hamburguesita from "../../assets/Cupones/hamburguesita.png";
-import salchitaquito from "../../assets/Cupones/salchitaquito.png";
 import { CuponesNav } from "./CuponesNav";
 import { hasCuponesSession } from "./cuponesSession";
 
-const accentYellow = "#f5b700";
-const deepRed = "#d4252c";
-const cardRed = "#b81b27";
+const accentYellow = "#fbbc04";
+const cardRed = "#c7222c";
+const textGray = "#414141";
 
 const coupons = [
-  {
-    title: "Hamburguesa clásica",
-    description: "10% de descuento en tu siguiente compra",
-    icon: hamburguesita,
-    code: "HAMB10",
-    remaining: "Válido por 5 días",
-  },
-  {
-    title: "Papas a la francesa",
-    description: "Llévate unas papitas gratis",
-    icon: papitas,
-    code: "PAPITASFREE",
-    remaining: "Válido hoy",
-  },
-  {
-    title: "Salchitaquitos",
-    description: "2x1 en salchitaquitos",
-    icon: salchitaquito,
-    code: "SALCHI2X1",
-    remaining: "Válido por 3 días",
-  },
+  { title: "Próxima recompensa", description: "10% de descuento en hamburguesa clasica" },
+  { title: "Próxima recompensa", description: "10% de descuento en papas fritas" },
+  { title: "Próxima recompensa", description: "2x1 en salchitacos" },
 ];
+
+const TicketIcon: React.FC = () => (
+  <svg viewBox="0 0 24 24" className="h-10 w-10 text-white" fill="none" stroke="currentColor" strokeWidth="1.8">
+    <rect x="4" y="5" width="16" height="14" rx="2.5" />
+    <path d="M12 5v14M4 10h3m10 0h3m-16 4h3m10 0h3" />
+  </svg>
+);
 
 const CuponesList: React.FC = () => {
   const navigate = useNavigate();
@@ -45,85 +31,42 @@ const CuponesList: React.FC = () => {
   }, [navigate]);
 
   return (
-    <div
-      className="min-h-screen flex items-start justify-center px-4 py-10 relative"
-      style={{ backgroundColor: deepRed }}
-    >
-      <div className="absolute inset-0 pointer-events-none">
-        <div
-          className="absolute top-[-80px] right-[-120px] w-[320px] h-[260px] rounded-[160px] opacity-90"
-          style={{ backgroundColor: accentYellow }}
-        ></div>
-        <div
-          className="absolute bottom-[-140px] left-[-120px] w-[380px] h-[260px] rounded-[140px] opacity-90"
-          style={{ backgroundColor: accentYellow }}
-        ></div>
-      </div>
+    <div className="min-h-screen bg-white relative overflow-hidden flex justify-center px-4 pb-12">
+      <div className="absolute top-[-140px] right-[-160px] w-[340px] h-[340px] bg-[#ffca1f] rounded-full opacity-70" />
+      <div className="absolute bottom-[-160px] left-[-180px] w-[360px] h-[360px] bg-[#ffca1f] rounded-full opacity-70" />
 
-      <div className="relative w-full max-w-[380px] rounded-[32px]">
-        <header className="flex items-center justify-between px-1 text-white">
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-white/20 rounded-2xl flex items-center justify-center">
-              <img src={cuponsito} alt="Cupones" className="h-9 w-9 object-contain" />
-            </div>
-            <div>
-              <p className="text-lg font-bold">Mis cupones</p>
-              <p className="text-sm opacity-90">Revisa tus recompensas</p>
-            </div>
+      <div className="relative w-full max-w-[460px] z-10">
+        <header className="flex items-center gap-3 pt-8 px-1 text-[#414141]" style={{ color: textGray }}>
+          <div className="h-14 w-14 rounded-full bg-[#fff2c2] border-2 border-[#ffd24c] flex items-center justify-center shadow-sm">
+            <img src={cuponsito} alt="Avatar" className="h-10 w-10 object-contain" />
           </div>
-          <button
-            type="button"
-            className="rounded-full px-4 py-2 text-sm font-semibold"
-            style={{ backgroundColor: accentYellow, color: cardRed }}
-          >
-            + Añadir
-          </button>
+          <div>
+            <p className="text-sm font-semibold">Hola Hugo</p>
+            <p className="text-sm text-[#6a6a6a]">Buen día</p>
+          </div>
         </header>
 
-        <div className="mt-6 space-y-4">
-          {coupons.map((coupon) => (
-            <div
-              key={coupon.code}
-              className="rounded-2xl px-4 py-4 shadow-lg text-white flex gap-3"
-              style={{ backgroundColor: cardRed }}
-            >
-              <div
-                className="h-14 w-14 rounded-xl flex items-center justify-center"
-                style={{ backgroundColor: accentYellow }}
-              >
-                <img src={coupon.icon} alt={coupon.title} className="h-10 w-10 object-contain" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <p className="text-base font-bold leading-tight">{coupon.title}</p>
-                    <p className="text-sm leading-tight opacity-95">{coupon.description}</p>
-                  </div>
-                  <span
-                    className="text-xs font-semibold px-3 py-1 rounded-full"
-                    style={{ backgroundColor: "#ffedd3", color: cardRed }}
-                  >
-                    {coupon.remaining}
-                  </span>
-                </div>
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-sm font-semibold" style={{ color: accentYellow }}>
-                    Código: {coupon.code}
-                  </span>
-                  <button
-                    type="button"
-                    className="px-3 py-1 text-xs font-semibold rounded-full"
-                    style={{ backgroundColor: "#ffedd3", color: cardRed }}
-                  >
-                    Usar cupón
-                  </button>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
+        <main className="mt-8 relative space-y-5">
+          <div className="pointer-events-none absolute inset-x-[-32px] top-[130px] h-[120px] rounded-[38px] opacity-80 blur-[1px]" style={{ backgroundColor: accentYellow }} />
 
-        <div className="mt-8">
+          {coupons.map((coupon, index) => (
+            <section
+              key={coupon.description}
+              className="relative rounded-2xl px-5 py-4 shadow-[0_12px_24px_rgba(0,0,0,0.18)] text-white bg-[#c0202b] flex items-center gap-4"
+              style={{ zIndex: 1 + index }}
+            >
+              <div className="h-16 w-16 rounded-xl border-2 border-white/80 flex items-center justify-center">
+                <TicketIcon />
+              </div>
+              <div>
+                <p className="text-base font-extrabold">{coupon.title}</p>
+                <p className="text-sm leading-snug">{coupon.description}</p>
+              </div>
+            </section>
+          ))}
+        </main>
+
+        <div className="mt-10">
           <CuponesNav active="cupones" />
         </div>
       </div>
