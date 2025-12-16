@@ -88,37 +88,61 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   //funcion para agregar un producto al carrito
   const addProductToCart = (product: Producto) => {
     const quantity = product.Quantity ?? 1;
+    const unitPrice = product.Price ?? 0;
     const mappedProduct: CartPos = {
       Id: product.Id,
       Name: product.Name,
       Price: product.Price,
       Quantity: quantity,
-      SubTotal: Number((product.Price * quantity).toFixed(2)),
+      SubTotal: Number((unitPrice * quantity).toFixed(2)),
       Image: product.Image || product.Images?.[0] || "",
       Images: product.Images,
       Barcode: product.Barcode,
       PromotionPrice: product.PromotionPrice,
       Category_Id: product.Category_Id,
       Stock: product.Stock,
+      Variant_Id: product.Variant_Id ?? null,
+      VariantDescription: product.VariantDescription,
     };
 
     const storedCart = localStorage.getItem("cart");
     const currentCart: CartPos[] = storedCart ? JSON.parse(storedCart) : cart;
 
-    const exist = currentCart.find((item: CartPos) => item.Id === mappedProduct.Id);
+    const exist = currentCart.find(
+      (item: CartPos) =>
+        item.Id === mappedProduct.Id && (item.Variant_Id ?? null) === (mappedProduct.Variant_Id ?? null),
+    );
+
+    const stockLimit = mappedProduct.Stock;
+    const existingQuantity = exist?.Quantity ?? 0;
+    const remainingStock = stockLimit != null ? Math.max(stockLimit - existingQuantity, 0) : null;
+    const allowedQuantity =
+      remainingStock != null ? Math.min(quantity, remainingStock) : quantity;
+
+    if (allowedQuantity <= 0) {
+      return;
+    }
+
     const newCart = exist
       ? currentCart.map((item: CartPos) =>
-          item.Id === mappedProduct.Id
+          item.Id === mappedProduct.Id && (item.Variant_Id ?? null) === (mappedProduct.Variant_Id ?? null)
             ? {
                 ...exist,
-                Quantity: (exist.Quantity || 0) + mappedProduct.Quantity,
+                Quantity: (exist.Quantity || 0) + allowedQuantity,
                 SubTotal: Number(
-                  ((exist.SubTotal || 0) + mappedProduct.SubTotal).toFixed(2),
+                  ((exist.SubTotal || 0) + allowedQuantity * unitPrice).toFixed(2),
                 ),
               }
             : item,
         )
-      : [...currentCart, mappedProduct];
+      : [
+          ...currentCart,
+          {
+            ...mappedProduct,
+            Quantity: allowedQuantity,
+            SubTotal: Number((allowedQuantity * unitPrice).toFixed(2)),
+          },
+        ];
 
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));

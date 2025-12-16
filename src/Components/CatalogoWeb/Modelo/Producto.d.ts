@@ -7,7 +7,6 @@ export type Producto = {
     ExpDate: string | null;
     ForSale: number;
     Id: number;
-    Image: string;
     MinStock: number | null;
     Name: string;
     OptStock: number | null;
@@ -18,4 +17,9 @@ export type Producto = {
     Volume: number;
     PhoneNumber?: string;
     Quantity?: number;
+    Images?: string[];
+    Variants?: import("../PuntoVenta/Model/Variant").Variant[];
+    VariantsCount?: number|string|null;
+    Variant_Id?: number | null;
+    VariantDescription?: string;
 }

@@ -14,7 +14,6 @@ export type Item = {
     ShowInStore: boolean;
     Available: boolean;
     Images?: string[];
-    Image?: string;
     PromotionPrice?: number | null;
     ExpDate?: string | null;
     MinStock?: number | null;

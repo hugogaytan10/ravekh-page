@@ -167,7 +167,9 @@ export const Pedido: React.FC = () => {
                         ${cart
           .map(
             (producto) =>
-              `${producto.Name} x ${producto.Quantity || 1} $${(producto.Quantity || 1) * producto.Price}`
+              `${producto.Name}${
+                producto.VariantDescription ? ` (${producto.VariantDescription})` : ""
+              } x ${producto.Quantity || 1} $${(producto.Quantity || 1) * producto.Price}`
           )
           .join("\n")}
                         Total: $${totalPrecio.toFixed(2)}
@@ -248,6 +250,9 @@ export const Pedido: React.FC = () => {
                   />
                   <div className="flex flex-col flex-grow">
                     <span className="font-medium text-gray-800">{producto.Name}</span>
+                    {producto.VariantDescription && (
+                      <span className="text-sm text-gray-500">{producto.VariantDescription}</span>
+                    )}
                     <span className="text-gray-500">${producto.Price} x {producto.Quantity || 1}</span>
                   </div>
 

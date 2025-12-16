@@ -8,7 +8,7 @@ interface ProductGridProps {
   telefono: string | null;
   color: string | null;
   adjustColor: (hex: string) => string;
-  onAdd: (product: Producto) => void;
+  onAdd: (product: Producto) => void | Promise<void>;
   formatPrice: (value: number) => string;
 }
 
@@ -69,6 +69,7 @@ const ProductCard = memo(
     const hoverColor = useMemo(() => adjustColor(accentColor), [accentColor, adjustColor]);
     const buttonColor = added ? "#16a34a" : accentColor;
 
+    console.log("Rendering variant number:", product.VariantsCount, "Added:", added);
     return (
       <motion.div
         className="border rounded-lg shadow-md bg-white flex flex-col h-full transform transition-transform hover:scale-105 hover:shadow-lg"
@@ -76,7 +77,10 @@ const ProductCard = memo(
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay, duration: 0.5 }}
       >
-        <NavLink to={`/catalogo/producto/${product.Id}/${telefono ?? ""}`}>
+        <NavLink
+          to={`/catalogo/producto/${product.Id}/${telefono ?? ""}`}
+          className="relative block"
+        >
           <img
             src={product.Image || (product.Images && product.Images[0]) || ""}
             alt={product.Name}
@@ -84,6 +88,29 @@ const ProductCard = memo(
             loading="lazy"
             decoding="async"
           />
+          {(() => {
+            const inlineVariants = Array.isArray(product.Variants)
+              ? product.Variants.filter(Boolean)
+              : [];
+            const variantCount = product.VariantsCount;
+
+            if (!variantCount || variantCount == 0) return null;
+
+            const variantLabel = `${variantCount} ${
+              variantCount === "1" ? "Variante" : "Variantes"
+            }`;
+
+            return (
+              <div className="absolute top-2 left-2 group select-none">
+                <span className="bg-gray-800/90 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-sm group-hover:hidden">
+                  {variantCount}
+                </span>
+                <span className="bg-gray-800/90 text-white text-xs font-semibold px-2 py-1 rounded-full shadow-sm hidden group-hover:inline-flex whitespace-nowrap">
+                  {variantLabel}
+                </span>
+              </div>
+            );
+          })()}
         </NavLink>
         <div className="relative flex flex-col flex-grow px-4 py-2">
           <h2 className="text-lg font-semibold text-gray-800 text-center">
@@ -170,3 +197,31 @@ export const ProductGrid: React.FC<ProductGridProps> = memo(
 ProductGrid.displayName = "ProductGrid";
 
 export default ProductGrid;
+
+const ProductCardSkeleton: React.FC = () => {
+  return (
+    <div className="border rounded-lg shadow-md bg-white flex flex-col h-full animate-pulse">
+      <div className="h-48 w-full bg-gray-200 rounded-t-lg" />
+      <div className="flex-1 px-4 py-2 space-y-3">
+        <div className="h-4 bg-gray-200 rounded w-3/4 mx-auto" />
+        <div className="flex justify-center gap-2 mt-2">
+          <div className="h-5 w-16 bg-gray-200 rounded" />
+          <div className="h-5 w-12 bg-gray-200 rounded" />
+        </div>
+      </div>
+      <div className="p-4 mt-auto">
+        <div className="h-9 bg-gray-200 rounded-full" />
+      </div>
+    </div>
+  );
+};
+
+export const ProductGridSkeleton: React.FC<{ items?: number }> = ({ items = 10 }) => {
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-5 gap-6">
+      {Array.from({ length: items }).map((_, index) => (
+        <ProductCardSkeleton key={index} />
+      ))}
+    </div>
+  );
+};
