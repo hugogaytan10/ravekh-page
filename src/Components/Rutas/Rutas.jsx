@@ -128,6 +128,8 @@ import { RegisterCupones } from "../Cupones/RegisterCupones";
 import { CuponesHome } from "../Cupones/CuponesHome";
 import { CuponesList } from "../Cupones/CuponesList";
 import { CuponesSettings } from "../Cupones/CuponesSettings";
+import { CuponesChangeName } from "../Cupones/CuponesChangeName";
+import { CuponesVisits } from "../Cupones/CuponesVisits";
 
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
@@ -819,6 +821,8 @@ export const Rutas = () => {
           <Route path="/cupones/home" element={<CuponesHome />} />
           <Route path="/cupones/cupones" element={<CuponesList />} />
           <Route path="/cupones/ajustes" element={<CuponesSettings />} />
+          <Route path="/cupones/cambiar-nombre" element={<CuponesChangeName />} />
+          <Route path="/cupones/visitas" element={<CuponesVisits />} />
           {/* RUTAS PARA EL PUNTO DE VENTA */}
           <Route path="/login-punto-venta" element={<AuthPage />} />
           <Route path="/MainSales" element={<MainSales />} />
