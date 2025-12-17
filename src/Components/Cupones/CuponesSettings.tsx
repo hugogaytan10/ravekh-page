@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { CuponesNav } from "./CuponesNav";
@@ -8,8 +8,18 @@ const accentYellow = "#fbbc04";
 const textGray = "#414141";
 const buttonGray = "#e3e3e3";
 const arrowGray = "#5a5a5a";
+const accentRed = "#c0202b";
 
-const options = ["Cambiar nombre", "Eliminar cuenta"];
+const options = [
+  {
+    label: "Cambiar nombre",
+    action: "change-name",
+  },
+  {
+    label: "Eliminar cuenta",
+    action: "delete-account",
+  },
+];
 
 const ArrowIcon: React.FC = () => (
   <svg
@@ -27,12 +37,25 @@ const ArrowIcon: React.FC = () => (
 
 const CuponesSettings: React.FC = () => {
   const navigate = useNavigate();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   useEffect(() => {
     if (!hasCuponesSession()) {
       navigate("/cupones", { replace: true });
     }
   }, [navigate]);
+
+  const handleOptionClick = (action: string) => {
+    if (action === "change-name") {
+      navigate("/cupones/cambiar-nombre");
+    }
+
+    if (action === "delete-account") {
+      setShowDeleteModal(true);
+    }
+  };
+
+  const closeModal = () => setShowDeleteModal(false);
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden flex justify-center px-4 pb-12">
@@ -51,14 +74,15 @@ const CuponesSettings: React.FC = () => {
         </header>
 
         <main className="mt-10 space-y-3">
-          {options.map((label) => (
+          {options.map((option) => (
             <button
-              key={label}
+              key={option.label}
               type="button"
               className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-base font-semibold shadow-[0_10px_24px_rgba(0,0,0,0.08)]"
               style={{ backgroundColor: buttonGray, color: textGray }}
+              onClick={() => handleOptionClick(option.action)}
             >
-              <span>{label}</span>
+              <span>{option.label}</span>
               <span className="text-xl" style={{ color: arrowGray }}>
                 <ArrowIcon />
               </span>
@@ -70,6 +94,47 @@ const CuponesSettings: React.FC = () => {
           <CuponesNav active="ajustes" />
         </div>
       </div>
+
+      {showDeleteModal && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center px-4 pb-6">
+          <div
+            className="absolute inset-0 bg-black/40"
+            aria-hidden="true"
+            onClick={closeModal}
+          />
+          <div
+            className="relative w-full max-w-[480px] rounded-3xl shadow-[0_18px_38px_rgba(0,0,0,0.24)]"
+            style={{ backgroundColor: accentYellow }}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Confirmar eliminación"
+          >
+            <div className="px-6 pt-6 pb-8 text-center space-y-6">
+              <p className="text-white text-base font-semibold">
+                Esta acción es irreversible, ¿estás seguro?
+              </p>
+
+              <div className="space-y-3">
+                <button
+                  type="button"
+                  className="w-full rounded-full py-3 text-white text-lg font-extrabold shadow-[0_12px_20px_rgba(192,32,43,0.35)]"
+                  style={{ backgroundColor: accentRed }}
+                >
+                  Eliminar
+                </button>
+                <button
+                  type="button"
+                  onClick={closeModal}
+                  className="w-full rounded-full py-3 text-lg font-extrabold"
+                  style={{ color: "#ffffff", backgroundColor: "transparent" }}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

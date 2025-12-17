@@ -88,6 +88,7 @@ const CuponesHome: React.FC = () => {
               type="button"
               className="flex flex-col items-center justify-center rounded-xl px-2 py-3 shadow-[0_10px_20px_rgba(0,0,0,0.14)]"
               style={{ backgroundColor: mutedRose, color: textDark }}
+              onClick={() => navigate("/cupones/visitas")}
             >
               <img src={cuponsito} alt="Mis visitas" className="h-12 w-12 object-contain" />
               <span className="mt-2 font-bold text-sm">Mis visitas</span>
@@ -96,6 +97,7 @@ const CuponesHome: React.FC = () => {
               type="button"
               className="flex flex-col items-center justify-center rounded-xl px-2 py-3 shadow-[0_10px_20px_rgba(0,0,0,0.14)]"
               style={{ backgroundColor: mutedRose, color: textDark }}
+              onClick={() => navigate("/cupones/cupones")}
             >
               <img src={cuponsito} alt="Mis cupones" className="h-12 w-12 object-contain" />
               <span className="mt-2 font-bold text-sm">Mis cupones</span>
