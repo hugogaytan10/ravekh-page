@@ -19,6 +19,7 @@ export const Pedido: React.FC = () => {
   const [paymentMethod, setPaymentMethod] = useState<string>("transferencia");
   const [showModal, setShowModal] = useState<boolean>(false); // Estado para mostrar el modal de confirmación
   const [deleteProduct, setDeleteProduct] = useState<{ id: number; variantId: number | null } | null>(null); // Estado para guardar el producto a eliminar
+  const [quantityWarnings, setQuantityWarnings] = useState<Record<string, string | null>>({});
 
 
   // Campos de dirección
@@ -195,17 +196,32 @@ export const Pedido: React.FC = () => {
   };
 
   const incrementQuantity = (product: CartPos) => {
+    const maxStock = product.Stock;
+    let hasChanged = false;
+    const key = getProductKey(product);
+
     const updatedCart = cart.map(item => {
       if (item.Id === product.Id && (item.Variant_Id ?? null) === (product.Variant_Id ?? null)) {
-        return { ...item, Quantity: item.Quantity! + 1 };
+        const currentQuantity = item.Quantity ?? 1;
+        const nextQuantity = maxStock != null ? Math.min(currentQuantity + 1, maxStock) : currentQuantity + 1;
+
+        if (nextQuantity !== currentQuantity) {
+          hasChanged = true;
+          return { ...item, Quantity: nextQuantity };
+        }
       }
       return item;
     });
-    setCart(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
+
+    if (hasChanged) {
+      setCart(updatedCart);
+      localStorage.setItem('cart', JSON.stringify(updatedCart));
+      setQuantityWarnings((prev) => ({ ...prev, [key]: null }));
+    }
   };
 
   const decrementQuantity = (product: CartPos) => {
+    const key = getProductKey(product);
     const updatedCart = cart
       .map(item => {
         if (item.Id === product.Id && (item.Variant_Id ?? null) === (product.Variant_Id ?? null)) {
@@ -222,6 +238,37 @@ export const Pedido: React.FC = () => {
 
     setCart(updatedCart);
     localStorage.setItem("cart", JSON.stringify(updatedCart));
+    setQuantityWarnings((prev) => ({ ...prev, [key]: null }));
+  };
+
+  const getProductKey = (product: CartPos) => `${product.Id}-${product.Variant_Id ?? "base"}`;
+
+  const handleManualQuantityChange = (product: CartPos, value: string) => {
+    const key = getProductKey(product);
+    const maxStock = product.Stock;
+
+    let parsed = Math.floor(Number(value));
+    if (Number.isNaN(parsed)) parsed = 1;
+    parsed = Math.max(parsed, maxStock === 0 ? 0 : 1);
+
+    let warning: string | null = null;
+    let nextQuantity = parsed;
+
+    if (maxStock != null && parsed > maxStock) {
+      nextQuantity = maxStock;
+      warning = "Has alcanzado el límite de stock disponible.";
+    }
+
+    const updatedCart = cart.map(item => {
+      if (item.Id === product.Id && (item.Variant_Id ?? null) === (product.Variant_Id ?? null)) {
+        return { ...item, Quantity: nextQuantity };
+      }
+      return item;
+    });
+
+    setCart(updatedCart);
+    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    setQuantityWarnings((prev) => ({ ...prev, [key]: warning }));
   };
 
   return (
@@ -273,7 +320,17 @@ export const Pedido: React.FC = () => {
                           <img src={trash} alt="Eliminar" className="text-red-600" />
                         </button>
                       )}
-                      <span className="text-gray-800">{producto.Quantity}</span>
+                      <input
+                        type="number"
+                        min={producto.Stock === 0 ? 0 : 1}
+                        max={producto.Stock ?? undefined}
+                        value={producto.Quantity ?? 1}
+                        onChange={(e) => handleManualQuantityChange(producto, e.target.value)}
+                        className="w-16 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                        aria-label={`Cantidad para ${producto.Name}${
+                          producto.VariantDescription ? ` (${producto.VariantDescription})` : ""
+                        }`}
+                      />
                       <button
                         onClick={() => incrementQuantity(producto)}
                         className="text-green-600 text-lg"
@@ -281,6 +338,11 @@ export const Pedido: React.FC = () => {
                         +
                       </button>
                     </div>
+                    {quantityWarnings[getProductKey(producto)] && (
+                      <p className="text-xs text-red-600 mt-1 max-w-[10rem] text-right">
+                        {quantityWarnings[getProductKey(producto)]}
+                      </p>
+                    )}
                   </div>
 
 

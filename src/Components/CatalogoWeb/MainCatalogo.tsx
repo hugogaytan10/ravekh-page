@@ -19,8 +19,7 @@ import { Helmet, HelmetProvider } from "react-helmet-async";
 import defaultImage from "../../assets/ravekh.png";
 import { ProductGrid, ProductGridSkeleton } from "./ProductGrid";
 import { Variant } from "./PuntoVenta/Model/Variant";
-import { VariantSelectionModal } from "./VariantSelectionModal";
-
+import { VariantSelectionModal, getBaseVariantKey } from "./VariantSelectionModal";
 interface MainCatalogoProps {
   idBusiness?: string;
 }
@@ -46,9 +45,12 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     const map: Record<number, number> = {};
 
     context.cart.forEach((item) => {
-      if (item.Variant_Id != null && item.Quantity != null) {
-        map[item.Variant_Id] = (map[item.Variant_Id] ?? 0) + item.Quantity;
-      }
+      if (item.Quantity == null) return;
+
+      const variantKey =
+        item.Variant_Id != null ? item.Variant_Id : getBaseVariantKey(item.Id);
+
+      map[variantKey] = (map[variantKey] ?? 0) + item.Quantity;
     });
 
     return map;
@@ -393,6 +395,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
               adjustColor={adjustColor}
               onAdd={handleAddToCart}
               formatPrice={formatPrice}
+              existingQuantities={cartVariantQuantities}
             />
           )}
 
