@@ -12,6 +12,9 @@ interface VariantSelectionModalProps {
   storeColor?: string | null;
 }
 
+export const getBaseVariantKey = (productId?: number) =>
+  productId != null ? -(productId + 1000000) : -1000000;
+
 const formatPrice = (variant: Variant, fallbackPrice?: number) => {
   const price = variant.PromotionPrice ?? variant.Price ?? fallbackPrice ?? 0;
   return price.toFixed(2);
@@ -27,6 +30,7 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
   storeColor,
 }) => {
   const [quantities, setQuantities] = useState<Record<number, number>>({});
+  const [stockWarnings, setStockWarnings] = useState<Record<number, string | null>>({});
 
   const accentColor = product?.Color || storeColor || "#6d28d9";
 
@@ -40,7 +44,7 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
   >(() => {
     if (!product) return null;
 
-    const key = product.Id != null ? -(product.Id + 1000000) : -1000000;
+    const key = getBaseVariantKey(product.Id);
 
     return {
       key,
@@ -82,7 +86,7 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
       }
 
       const inCart = entry.isBase
-        ? 0
+        ? currentCartQuantities[variantId] ?? 0
         : currentCartQuantities[entry.variant.Id ?? -1] ?? 0;
       acc[variantId] = Math.max(variantStock - inCart, 0);
       return acc;
@@ -107,6 +111,7 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
 
         return initial;
       });
+      setStockWarnings({});
     }
   }, [isOpen, variantEntries, remainingStock]);
 
@@ -131,6 +136,25 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
         [variantKey]: next,
       };
     });
+    setStockWarnings((prev) => ({ ...prev, [variantKey]: null }));
+  };
+
+  const handleQuantityInput = (variantKey: number, value: string) => {
+    const limit = remainingStock[variantKey];
+    let parsed = Math.floor(Number(value));
+    if (Number.isNaN(parsed)) parsed = 0;
+    parsed = Math.max(parsed, 0);
+
+    let warning: string | null = null;
+    let next = parsed;
+
+    if (limit != null && parsed > limit) {
+      next = limit;
+      warning = "Has alcanzado el límite de stock disponible.";
+    }
+
+    setQuantities((prev) => ({ ...prev, [variantKey]: next }));
+    setStockWarnings((prev) => ({ ...prev, [variantKey]: warning }));
   };
 
   const handleConfirm = () => {
@@ -194,30 +218,41 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
                     )}
                     <p className="text-sm text-gray-900 mt-1">${priceLabel}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleQuantityChange(entry.key, -1)}
-                      className="w-9 h-9 flex items-center justify-center bg-gray-200 text-gray-800 rounded-lg disabled:opacity-50"
-                      disabled={quantity <= 0}
-                      aria-label={`Reducir cantidad de ${entry.variant.Description}`}
-                    >
-                      −
-                    </button>
-                    <span className="min-w-[1.5rem] text-center font-semibold">{quantity}</span>
-                    <button
-                      onClick={() => handleQuantityChange(entry.key, 1)}
-                      className="w-9 h-9 flex items-center justify-center text-white rounded-lg disabled:opacity-50"
-                      style={{ backgroundColor: accentColor }}
-                      disabled={isOutOfStock || (available != null && quantity >= available)}
-                      aria-label={`Aumentar cantidad de ${entry.variant.Description}`}
-                    >
-                      +
-                    </button>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => handleQuantityChange(entry.key, -1)}
+                    className="w-9 h-9 flex items-center justify-center bg-gray-200 text-gray-800 rounded-lg disabled:opacity-50"
+                    disabled={quantity <= 0}
+                    aria-label={`Reducir cantidad de ${entry.variant.Description}`}
+                  >
+                    −
+                  </button>
+                  <input
+                    type="number"
+                    min={0}
+                    max={available ?? undefined}
+                    value={quantity}
+                    onChange={(e) => handleQuantityInput(entry.key, e.target.value)}
+                    className="w-16 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    aria-label={`Cantidad para ${entry.variant.Description}`}
+                  />
+                  <button
+                    onClick={() => handleQuantityChange(entry.key, 1)}
+                    className="w-9 h-9 flex items-center justify-center text-white rounded-lg disabled:opacity-50"
+                    style={{ backgroundColor: accentColor }}
+                    disabled={isOutOfStock || (available != null && quantity >= available)}
+                    aria-label={`Aumentar cantidad de ${entry.variant.Description}`}
+                  >
+                    +
+                  </button>
                 </div>
+                {stockWarnings[entry.key] && (
+                  <p className="text-xs text-red-600 mt-1 text-right">{stockWarnings[entry.key]}</p>
+                )}
               </div>
-            );
-          })}
+            </div>
+          );
+        })}
         </div>
 
         <div className="border-t border-gray-200 p-5">

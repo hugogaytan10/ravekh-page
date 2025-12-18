@@ -40,6 +40,7 @@ export const DetalleProducto: React.FC = () => {
   const [variants, setVariants] = useState<Variant[]>([]);
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [loadingVariants, setLoadingVariants] = useState(false);
+  const [stockWarning, setStockWarning] = useState<string | null>(null);
   const context = useContext(AppContext);
   const { color, setColor, addProductToCart, phoneNumber, setPhoneNumber, idBussiness, setIdBussiness, cart } =
     context;
@@ -89,6 +90,7 @@ export const DetalleProducto: React.FC = () => {
       setProducto(data);
       setLimit(typeof data?.Stock === "number" ? data.Stock : null);
       setCount(1); // reset cantidad al cambiar de producto
+      setStockWarning(null);
 
       const inlineVariants = Array.isArray((data as any)?.Variants)
         ? ((data as any).Variants as Variant[])
@@ -140,6 +142,23 @@ export const DetalleProducto: React.FC = () => {
     }
 
     addProductToCart({ ...producto, Quantity: count, Variant_Id: null });
+  };
+
+  const handleCountInput = (value: string) => {
+    let parsed = Math.floor(Number(value));
+    if (Number.isNaN(parsed)) parsed = 1;
+    parsed = Math.max(parsed, limit === 0 ? 0 : 1);
+
+    let warning: string | null = null;
+    let next = parsed;
+
+    if (limit != null && parsed > limit) {
+      next = limit;
+      warning = "Has alcanzado el límite de stock disponible.";
+    }
+
+    setCount(next);
+    setStockWarning(warning);
   };
 
   const handleConfirmVariant = (selections: { variant: Variant; quantity: number }[]) => {
@@ -275,17 +294,35 @@ export const DetalleProducto: React.FC = () => {
           <div className="flex justify-center items-center gap-6 mt-6">
             <button
               className="bg-gray-200 text-gray-900 w-10 h-10 rounded-full hover:bg-gray-300 transition disabled:opacity-50"
-              onClick={() => setCount((c) => Math.max(1, c - 1))}
+              onClick={() => {
+                setCount((c) => Math.max(1, c - 1));
+                setStockWarning(null);
+              }}
               disabled={count <= 1}
             >
               -
             </button>
-            <span className="text-2xl font-semibold">{count}</span>
+            <input
+              type="number"
+              min={limit === 0 ? 0 : 1}
+              max={limit ?? undefined}
+              value={count}
+              onChange={(e) => handleCountInput(e.target.value)}
+              className="w-20 text-center border border-gray-300 rounded-md text-2xl font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500"
+              aria-label="Cantidad a agregar"
+            />
             <button
               className="bg-gray-200 text-gray-900 w-10 h-10 rounded-full hover:bg-gray-300 transition disabled:opacity-50"
               onClick={() => {
-                if (limit == null) return setCount((c) => c + 1);
-                if (count < limit) setCount((c) => c + 1);
+                if (limit == null) {
+                  setCount((c) => c + 1);
+                  setStockWarning(null);
+                  return;
+                }
+                if (count < limit) {
+                  setCount((c) => c + 1);
+                  setStockWarning(null);
+                }
               }}
               disabled={limit !== null && count >= limit}
               title={limit !== null ? `Disponible: ${limit}` : undefined}
@@ -293,6 +330,9 @@ export const DetalleProducto: React.FC = () => {
               +
             </button>
           </div>
+          {stockWarning && (
+            <p className="text-sm text-red-600 text-center mt-2">{stockWarning}</p>
+          )}
 
           {/* Añadir al carrito */}
           <div className="flex justify-center mt-10">

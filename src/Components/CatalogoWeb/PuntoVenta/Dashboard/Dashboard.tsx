@@ -147,7 +147,8 @@ export const Dashboard: React.FC = () => {
           title="Balance"
           value={state.balanceComparison.total.thisMonthBalance.toString()}
           trend={state.balanceComparison.total.percentageChange > 0 ? "up" : "down"}
-          percentage={state.balanceComparison.total.percentageChange.toString() + "%" || "0%"}
+          //percentage={state.balanceComparison.total.percentageChange.toString() + "%" || "0%"}
+          percentage={`${state.balanceComparison?.total?.percentageChange ?? 0}%`}
           icon={<Change />}
           bgColor="#C9EFEA"
           navigation={""}
@@ -161,14 +162,16 @@ export const Dashboard: React.FC = () => {
           title="Clientes nuevos"
           value={state.newCustomers.totalToday.toString()}
           trend={state.newCustomers.percentageChange > 0 ? "up" : "down"}
-          percentage={state.newCustomers.percentageChange.toString() + "%"}
+          //percentage={state.newCustomers.percentageChange.toString() + "%"}
+          percentage={`${state.newCustomers?.percentageChange ?? 0}%`}
           icon={<ReloadIcon />}
           bgColor="#FFDED2"
           navigation=""
         />
       ),
     },
-  ], [state.averagePurchase, state.incomeComparison]);
+  ], [state.averagePurchase, state.incomeComparison, state.balanceComparison, state.newCustomers, context.user.Business_Id]);
+
 
   // Fetch data with Promise.all for better optimization
   useEffect(() => {
@@ -181,6 +184,8 @@ export const Dashboard: React.FC = () => {
           getMostSoldProductsByMonth(context.user.Business_Id + "", (new Date().getMonth() + 1).toString(), context.user.Token),
           getNewCustomers(context.user.Business_Id + "", context.user.Token)
         ]);
+
+//        console.log(balanceComparison.total.percentageChange );
 
         dispatch({ type: "SET_DATA", payload: { averagePurchase, incomeComparison, balanceComparison, dataTable, newCustomers } });
       } catch (error) {
