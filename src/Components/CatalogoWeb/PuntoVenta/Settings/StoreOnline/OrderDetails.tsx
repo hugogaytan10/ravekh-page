@@ -136,7 +136,7 @@ export const OrderDetailScreen: React.FC = () => {
         ))}
       </section>
 
-      <footer className="flex justify-between mt-6 mb-6 p-4">
+      <footer className={`flex justify-between mt-6 mb-6 p-4 ${order.Status=== "CANCELADO" || order.Status === "ENTREGADO" ? "hidden" : "block"}`}>
         <button
           onClick={handleAcceptOrder}
           className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
