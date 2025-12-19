@@ -16,7 +16,10 @@ export const MainCategoria: React.FC = () => {
     const [telefono, setTelefono] = useState<string | null>(null);
     const context = useContext(AppContext);
     const [notPay, setNotPay] = useState(false);
-    const [idBusiness, setIdBusiness] = useState<string | null>(null);
+    const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
+    const catalogoId =
+        (context.idBussiness !== "0" ? context.idBussiness : localStorage.getItem("idBusiness")) ?? "";
+
 
     useEffect(() => {
         /*context.setIdBussiness(idBusiness);
@@ -32,9 +35,14 @@ export const MainCategoria: React.FC = () => {
         //rescatamos el id del negocio del local storage
       
         if (idCategoria) {
-            getProductsByCategoryIdAndDisponibilty(idCategoria).then((data) => {
-                setProductos(data);
-            });
+            setLoadingProducts(true);
+            getProductsByCategoryIdAndDisponibilty(idCategoria)
+                .then((data) => {
+                    setProductos(Array.isArray(data) ? data : []);
+                })
+                .finally(() => {
+                    setLoadingProducts(false);
+                });
         }
         if (!context.phoneNumber) {
             const storedPhoneNumber = localStorage.getItem("telefono");
@@ -81,6 +89,22 @@ export const MainCategoria: React.FC = () => {
         }
     }, [productos]);
 
+    const renderSkeleton = () => {
+        return (
+            <div className="p-2 rounded-md mb-20">
+                <div className="bg-gray-200 animate-pulse h-10 w-full mb-4"></div>
+                <div className="flex flex-wrap gap-4">
+                    {[...Array(8)].map((_, index) => (
+                        <div
+                            key={index}
+                            className="bg-gray-200 animate-pulse h-24 w-full md:w-2/5 lg:w-3/12 rounded-md"
+                        ></div>
+                    ))}
+                </div>
+            </div>
+        );
+    };
+
     if(notPay) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen">
@@ -98,8 +122,9 @@ export const MainCategoria: React.FC = () => {
                 </Helmet>
                 <div className="p-4 min-h-screen w-full max-w-screen-xl mx-auto py-20 mt-11">
                     {/* Mostrar mensaje si no hay productos */}
-                    {
-                    productos &&
+                    {loadingProducts ? (
+                        renderSkeleton()
+                    ) : productos &&
                     productos.length === 0 ? (
                         <div className="text-center mt-10">
                             <h2 className="text-2xl font-semibold text-gray-700">
@@ -109,6 +134,15 @@ export const MainCategoria: React.FC = () => {
                                 Por favor, vuelve a intentarlo más tarde o explora otras
                                 categorías.
                             </p>
+                            {catalogoId && (
+                                <NavLink
+                                    to={catalogoId ? `/catalogo/${catalogoId}` : "/"}
+                                    className="inline-flex mt-6 px-6 py-2 rounded-full text-white font-medium shadow-md"
+                                    style={{ backgroundColor: context.color || "#F64301" }}
+                                >
+                                    Ver todo
+                                </NavLink>
+                            )}
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">

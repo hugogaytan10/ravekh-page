@@ -579,9 +579,11 @@ export const Rutas = () => {
       };
     }, [navigate, context]);
   */
+  const isCategoriaRoute = location.pathname.startsWith("/categoria/");
   const showCategoryList = location.pathname === "/" ||
     location.pathname.startsWith("/catalogo/") ||
-    location.pathname.startsWith("/categoria/");
+    isCategoriaRoute;
+  const catalogoId = idBusiness || context.idBussiness;
   return (
     <div className="drawer ">
       <input id="my-drawer-3" type="checkbox" className="drawer-toggle" />
@@ -715,6 +717,24 @@ export const Rutas = () => {
                 ref={slideRef}
               >
                 <div className="flex flex-nowrap gap-2 px-4">
+                  {isCategoriaRoute && catalogoId && catalogoId !== "0" && (
+                    <button
+                      style={{
+                        "--c-base": color,
+                        "--c-hover": hoverColor,
+                      }}
+                      className={`px-4 py-2 ${
+                        idBusiness === "115" ? "text-black" : "text-white"
+                      } 
+                      rounded-lg shadow-sm transition duration-300 
+                      bg-[color:var(--c-base)] 
+                      hover:bg-[color:var(--c-hover)]`}
+                    >
+                      <NavLink to={`/catalogo/${catalogoId}`} className="whitespace-nowrap">
+                        Ver todo
+                      </NavLink>
+                    </button>
+                  )}
                   {categories.map((category) => (
                     <button
                       key={category.Id}
