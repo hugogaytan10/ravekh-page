@@ -279,7 +279,7 @@ export const Pedido: React.FC = () => {
         </Helmet>
         <div className="py-20 px-4 lg:px-0 max-w-lg md:max-w-2xl lg:w-3/4 mx-auto">
           {/* Resumen del pedido */}
-          <h1 className="text-3xl font-bold mb-6 text-center text-gray-800">
+          <h1 className="text-3xl font-bold mt-12 mb-6 text-center text-gray-800">
             Preparemos su pedido
           </h1>
           <div className="bg-white p-6 rounded-lg shadow-lg">

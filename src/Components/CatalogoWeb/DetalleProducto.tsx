@@ -291,7 +291,7 @@ export const DetalleProducto: React.FC = () => {
           )}
 
           {/* Cantidad */}
-          <div className="flex justify-center items-center gap-6 mt-6">
+          <div className={`flex justify-center items-center gap-6 mt-6 ${variants.length > 0 ? "hidden" : "block"}`}>
             <button
               className="bg-gray-200 text-gray-900 w-10 h-10 rounded-full hover:bg-gray-300 transition disabled:opacity-50"
               onClick={() => {
@@ -308,7 +308,7 @@ export const DetalleProducto: React.FC = () => {
               max={limit ?? undefined}
               value={count}
               onChange={(e) => handleCountInput(e.target.value)}
-              className="w-20 text-center border border-gray-300 rounded-md text-2xl font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className={`w-20 text-center border border-gray-300 rounded-md text-2xl font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500`}
               aria-label="Cantidad a agregar"
             />
             <button
