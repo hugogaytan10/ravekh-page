@@ -17,7 +17,7 @@ export const loginToServer = async (email: string, password: any) => {
 }
 
 export const signUpToServer = async (name: string, email: string, password: string) => {
-    const response = await fetch(`${URL}/signup`, {
+    const response = await fetch(`${URL}signup`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json'
