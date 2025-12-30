@@ -190,24 +190,26 @@ export const Rutas = () => {
 
 
   useEffect(() => {
-    if (listItemsRefCatalogo.current && slideDownRefPOS.current) {
-      gsap.set(slideDownRefPOS.current, { y: "-90%", display: "block", overflow: "hidden", });
-
-      menuTogglePOS.current = new TimelineMax({
-        paused: true,
-        reversed: true,
-      })
-        .to(slideDownRefPOS.current, 1, { y: "0%", ease: "power1.out" })
-        .staggerFrom(
-          Array.from(listItemsRefCatalogo.current.children), // Convertir a array para seguridad
-          0.25,
-          {
-            y: "-30",
-            ease: "power1.out",
-          },
-          0.1
-        );
+    if (!listItemsRefCatalogo.current || !slideDownRefPOS.current) {
+      return;
     }
+
+    gsap.set(slideDownRefPOS.current, { y: "-90%", display: "block", overflow: "hidden" });
+
+    menuTogglePOS.current = new TimelineMax({
+      paused: true,
+      reversed: true,
+    })
+      .to(slideDownRefPOS.current, 1, { y: "0%", ease: "power1.out" })
+      .staggerFrom(
+        Array.from(listItemsRefCatalogo.current.children), // Convertir a array para seguridad
+        0.25,
+        {
+          y: "-30",
+          ease: "power1.out",
+        },
+        0.1
+      );
   }, []);
 
 
@@ -219,7 +221,7 @@ export const Rutas = () => {
         context.setCart(JSON.parse(localCart));
       }
     }
-    if (slideDownRef.current && listItemsRef.current) {
+    if (slideDownRef.current && listItemsRef.current && menuIconRef.current) {
       gsap.set(slideDownRef.current, { y: "-100%", display: "block", overflow: "hidden", });
 
       menuToggle.current = new TimelineMax({ paused: true, reversed: true })
@@ -237,7 +239,7 @@ export const Rutas = () => {
     }
 
 
-    if (slideDownRefCatalogo) {
+    if (slideDownRefCatalogo.current && listItemsRefCatalogo.current && catalogoIconRef.current) {
       //togle para el catalogo
       gsap.set(slideDownRefCatalogo.current, { y: "-100%", display: "block", overflow: "hidden", });
 
@@ -278,7 +280,7 @@ export const Rutas = () => {
     }
 
     // Asegurar que las categorías están cargadas antes de iniciar la animación
-    if (categories.length > 0) {
+    if (categories.length > 0 && slideDownRef.current && listItemsRef.current && menuIconRef.current) {
       gsap.set(slideDownRef.current, { y: "-100%", display: "block" });
 
       menuToggle.current = new TimelineMax({ paused: true, reversed: true })

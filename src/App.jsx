@@ -18,7 +18,7 @@ window.addEventListener("scroll", function () {
     } else {
       element.classList.remove("visible");
     }
-  }
+  } 
 
 });
 */
@@ -29,7 +29,7 @@ const AppContent = () => {
     // El tiempo total de la animación es de 2.4 segundos
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 800);
+    }, 2800);
     return () => clearTimeout(timer);
   }, []);
   return (
