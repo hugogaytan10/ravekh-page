@@ -243,13 +243,13 @@ export const AuthPage: React.FC = () => {
               Olvidaste tu contraseña?
             </a>
             <button className="btn-login mt-2">Iniciar Sesión</button>
-            <button
+            {/*<button
               className="btn-crear-cuenta mt-3"
               id="signUp-Mobile"
               ref={signUpMobileButtonRef}
             >
               Crear Cuenta
-            </button>
+            </button>*/}
           </form>
         </div>
         <div className="overlay-container">
@@ -271,13 +271,13 @@ export const AuthPage: React.FC = () => {
             <div className="overlay-panel overlay-right">
               <h2>Hola, Bienvenido</h2>
               <p className="mt-2">Ingresa tus datos y comienza a comprar</p>
-              <button
+              {/*<button
                 className="ghost btn-login mt-2"
                 id="signUp"
                 ref={signUpButtonRef}
               >
                 Crear Cuenta
-              </button>
+              </button>*/}
             </div>
           </div>
         </div>
