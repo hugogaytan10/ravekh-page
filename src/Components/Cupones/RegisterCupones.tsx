@@ -36,7 +36,7 @@ const RegisterCupones: React.FC = () => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          Role: "ADMINISTRADOR",
+          Role: "CLIENTE",
           Name: name,
           Email: email,
           Password: password,
