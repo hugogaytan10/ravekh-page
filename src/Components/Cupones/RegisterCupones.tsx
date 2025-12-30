@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import bolsita from "../../assets/Cupones/bolsita.png";
+import { URL } from "../CatalogoWeb/Const/Const";
 import { setCuponesSession } from "./cuponesSession";
 
 const accentYellow = "#fbbc04";
@@ -10,12 +11,50 @@ const textGray = "#5a5a5a";
 
 const RegisterCupones: React.FC = () => {
   const navigate = useNavigate();
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     event.currentTarget.style.boxShadow = `0 0 0 4px ${accentYellow}40`;
   };
 
   const handleBlur = (event: React.FocusEvent<HTMLInputElement>) => {
     event.currentTarget.style.boxShadow = "none";
+  };
+
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+    setErrorMessage("");
+
+    try {
+      const response = await fetch(`${URL}employee`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          Role: "ADMINISTRADOR",
+          Name: name,
+          Email: email,
+          Password: password,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("No se pudo registrar la cuenta.");
+      }
+
+      setCuponesSession(true);
+      navigate("/cupones/home");
+    } catch (error) {
+      console.error("Error registrando cuenta:", error);
+      setErrorMessage("No se pudo registrar la cuenta. Intenta nuevamente.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -43,6 +82,8 @@ const RegisterCupones: React.FC = () => {
             style={{ backgroundColor: softGray, color: textGray, boxShadow: "none" }}
             onFocus={handleFocus}
             onBlur={handleBlur}
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
           />
           <input
             type="password"
@@ -51,6 +92,8 @@ const RegisterCupones: React.FC = () => {
             style={{ backgroundColor: softGray, color: textGray, boxShadow: "none" }}
             onFocus={handleFocus}
             onBlur={handleBlur}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
           />
           <input
             type="text"
@@ -59,18 +102,22 @@ const RegisterCupones: React.FC = () => {
             style={{ backgroundColor: softGray, color: textGray, boxShadow: "none" }}
             onFocus={handleFocus}
             onBlur={handleBlur}
+            value={name}
+            onChange={(event) => setName(event.target.value)}
           />
         </div>
 
+        {errorMessage ? (
+          <p className="mt-4 text-sm font-semibold text-red-500">{errorMessage}</p>
+        ) : null}
+
         <button
           type="button"
-          className="mt-7 w-full bg-[#fbbb0d] text-white font-extrabold py-3.5 text-lg rounded-full shadow-[0_10px_24px_rgba(251,188,4,0.35)] hover:brightness-110 transition"
-          onClick={() => {
-            setCuponesSession(true);
-            navigate("/cupones/home");
-          }}
+          className="mt-7 w-full bg-[#fbbb0d] text-white font-extrabold py-3.5 text-lg rounded-full shadow-[0_10px_24px_rgba(251,188,4,0.35)] hover:brightness-110 transition disabled:opacity-70"
+          onClick={handleSubmit}
+          disabled={isSubmitting}
         >
-          Crear cuenta
+          {isSubmitting ? "Creando cuenta..." : "Crear cuenta"}
         </button>
 
         <p className="mt-6 text-sm font-semibold text-[#3f3f3f]">
