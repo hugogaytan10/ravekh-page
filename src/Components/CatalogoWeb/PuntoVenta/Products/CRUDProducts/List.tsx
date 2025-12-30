@@ -106,7 +106,7 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
     setImportErrors([]);
 
     try {
-      const XLSX = await import(
+      const XLSX = await import( 
         "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm"
       );
 

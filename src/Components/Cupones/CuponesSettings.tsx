@@ -9,7 +9,11 @@ const textGray = "#414141";
 const buttonGray = "#e3e3e3";
 const arrowGray = "#5a5a5a";
 
-const options = ["Cambiar nombre", "Eliminar cuenta"];
+const options = [
+  { label: "Panel de administración", path: "/cupones/admin" },
+  { label: "Cambiar nombre" },
+  { label: "Eliminar cuenta" },
+];
 
 const ArrowIcon: React.FC = () => (
   <svg
@@ -51,14 +55,19 @@ const CuponesSettings: React.FC = () => {
         </header>
 
         <main className="mt-10 space-y-3">
-          {options.map((label) => (
+          {options.map((option) => (
             <button
-              key={label}
+              key={option.label}
               type="button"
               className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-base font-semibold shadow-[0_10px_24px_rgba(0,0,0,0.08)]"
               style={{ backgroundColor: buttonGray, color: textGray }}
+              onClick={() => {
+                if (option.path) {
+                  navigate(option.path);
+                }
+              }}
             >
-              <span>{label}</span>
+              <span>{option.label}</span>
               <span className="text-xl" style={{ color: arrowGray }}>
                 <ArrowIcon />
               </span>
