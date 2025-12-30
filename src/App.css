@@ -1,6 +1,16 @@
 html {
     scroll-behavior: smooth;
   }
+
+.app-shell {
+    position: relative;
+  }
+
+.loading-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+  }
   
 .snap-mandatory {
     scroll-snap-type: y mandatory;
@@ -33,4 +43,3 @@ html {
     visibility: visible;
     transform: translate(0, 0);
 }
-
