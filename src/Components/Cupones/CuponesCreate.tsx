@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { CuponesNav } from "./CuponesNav";
+import { createCoupon } from "./couponsApi";
 import { hasCuponesSession } from "./cuponesSession";
 
 const accentYellow = "#fbbc04";
@@ -10,6 +11,7 @@ const mutedRose = "#f3b7b7";
 const textDark = "#303030";
 
 const QR_SIZE = 21;
+const BUSINESS_ID = 1;
 
 const createSeed = (value: string) => {
   let hash = 0;
@@ -46,6 +48,8 @@ const CuponesCreate: React.FC = () => {
   const [validUntil, setValidUntil] = useState("");
   const [limitUsers, setLimitUsers] = useState(50);
   const [description, setDescription] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     if (!hasCuponesSession()) {
@@ -54,6 +58,35 @@ const CuponesCreate: React.FC = () => {
   }, [navigate]);
 
   const qrMatrix = useMemo(() => generateQrMatrix(qrValue, QR_SIZE), [qrValue]);
+  const isFormValid = Boolean(validUntil && description.trim());
+
+  const handleSave = async () => {
+    if (!isFormValid) {
+      setErrorMessage("Completa la fecha de vigencia y la descripción.");
+      return;
+    }
+
+    setErrorMessage("");
+    setIsSaving(true);
+
+    const payload = {
+      Business_Id: BUSINESS_ID,
+      QR: qrValue,
+      Description: description.trim(),
+      Valid: `${validUntil}T00:00:00`,
+      LimitUsers: limitUsers,
+    };
+
+    try {
+      await createCoupon(payload);
+      navigate("/cupones/admin/confirmado");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Ocurrió un error al guardar.";
+      setErrorMessage(message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden flex justify-center px-4 pb-12">
@@ -203,9 +236,12 @@ const CuponesCreate: React.FC = () => {
               type="button"
               className="mt-4 w-full rounded-full px-4 py-3 text-sm font-bold shadow-[0_8px_18px_rgba(0,0,0,0.18)]"
               style={{ backgroundColor: accentYellow, color: "#3e3e3e" }}
+              onClick={handleSave}
+              disabled={isSaving}
             >
-              Guardar cupón
+              {isSaving ? "Guardando..." : "Guardar cupón"}
             </button>
+            {errorMessage && <p className="mt-3 text-xs text-white/90">{errorMessage}</p>}
           </section>
         </main>
 

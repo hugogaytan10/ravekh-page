@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { CuponesNav } from "./CuponesNav";
-import { hasCuponesSession } from "./cuponesSession";
+import { hasCuponesSession, setCuponesSession } from "./cuponesSession";
 
 const accentYellow = "#fbbc04";
 const textGray = "#414141";
@@ -73,6 +73,20 @@ const CuponesSettings: React.FC = () => {
               </span>
             </button>
           ))}
+          <button
+            type="button"
+            className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-base font-semibold shadow-[0_10px_24px_rgba(0,0,0,0.08)]"
+            style={{ backgroundColor: accentYellow, color: textGray }}
+            onClick={() => {
+              setCuponesSession(false);
+              navigate("/cupones", { replace: true });
+            }}
+          >
+            <span>Cerrar sesión</span>
+            <span className="text-xl" style={{ color: arrowGray }}>
+              <ArrowIcon />
+            </span>
+          </button>
         </main>
 
         <div className="mt-12">
