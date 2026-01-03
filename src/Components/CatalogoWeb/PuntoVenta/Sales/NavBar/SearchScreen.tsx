@@ -5,6 +5,9 @@ import { getProductsByBusiness } from "../../../Petitions";
 import { useNavigate } from "react-router-dom";
 import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
 import { getProduct } from "../Petitions";
+import { Settings } from "../../../../../assets/POS/Settings";
+import { ExpandableModalScanner } from "../Cart/ExpandableModalScanner";
+import { CartPos } from "../../Model/CarPos";
 
 export const SearchScreen: React.FC = () => {
   const context = useContext(AppContext);
@@ -12,7 +15,15 @@ export const SearchScreen: React.FC = () => {
   const [filteredProducts, setFilteredProducts] = useState<Item[]>([]);
   const [products, setProducts] = useState<Item[]>([]); // Lista de productos desde el servidor
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isVisible, setIsVisible] = useState(false);
+  const [totalItems, setTotalItems] = useState(0);
+  const [totalPrice, setTotalPrice] = useState(0.0);
   const navigate = useNavigate();
+  const handleNavigate = () => {
+    if (context.cartPos.length > 0) {
+      navigate("/MainCart");
+    }
+  };
 
   // Función para cargar productos desde el servidor
   const loadProducts = async () => {
@@ -48,6 +59,31 @@ export const SearchScreen: React.FC = () => {
     );
     setFilteredProducts(filtered);
   };
+
+  const updateTotals = () => {
+      let totalQuantity = 0;
+      let totalAmount = 0.0;
+    
+      context.cartPos.forEach((item: CartPos) => {
+        totalQuantity += item.Quantity;
+        totalAmount += item.Quantity * item.Price;
+      });
+    
+      setTotalItems(totalQuantity);
+    
+      if (context.tax) {
+        const taxAmount = context.tax.IsPercent
+          ? totalAmount * (context.tax.Value / 100)
+          : context.tax.Value || 0;
+        const totalWithTax = totalAmount + taxAmount;
+        setTotalPrice(totalWithTax);
+        context.setTicketDetail({...context.ticketDetail, totalWithTaxes: totalWithTax, total: totalAmount})
+      } else {
+        setTotalPrice(totalAmount);
+        context.setTicketDetail({...context.ticketDetail, totalWithTaxes: totalAmount, total: totalAmount})
+  
+      }
+    };
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
@@ -109,6 +145,30 @@ export const SearchScreen: React.FC = () => {
               )
             )}
           </ul>
+        )}
+      </div>
+      <div className="h-20 bg-white px-4 border-t w-full">
+        {/* Barra inferior */}
+        <div className="bottom-nav">
+          <button
+            className={`icon-button `}
+            //tendra un background dependiendo el color de context.store.Color
+  
+            onClick={() => setIsVisible(!isVisible)}
+          >
+            <Settings fillColor={`${context.store.Color ? context.store.Color : "#6D01D1"}`} />
+          </button>
+          <button className={`order-button-cart`}   style={{ backgroundColor: context.store.Color || "#6D01D1" }} onClick={handleNavigate}>
+            {totalItems} Items = ${totalPrice.toFixed(2)}
+          </button>
+        </div>
+  
+        {/* Modal para configuración */}
+        {isVisible && (
+          <ExpandableModalScanner
+            isVisible={isVisible}
+            setIsVisible={setIsVisible}
+          />
         )}
       </div>
     </div>
