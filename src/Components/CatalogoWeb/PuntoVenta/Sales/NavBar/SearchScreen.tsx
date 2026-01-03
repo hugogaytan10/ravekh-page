@@ -60,6 +60,39 @@ export const SearchScreen: React.FC = () => {
     setFilteredProducts(filtered);
   };
 
+  const handleAddProduct = (product: Item) => {
+    const quantityToAdd = Number(context.quantityNextSell) || 1;
+    const existingIndex = context.cartPos.findIndex(
+      (item: CartPos) => item.Id === product.Id
+    );
+    let updatedCart = [...context.cartPos];
+
+    if (existingIndex >= 0) {
+      const existingItem = updatedCart[existingIndex];
+      const updatedQuantity = existingItem.Quantity + quantityToAdd;
+      updatedCart[existingIndex] = {
+        ...existingItem,
+        Quantity: updatedQuantity,
+        SubTotal: updatedQuantity * (existingItem.Price || 0),
+      };
+    } else {
+      updatedCart = [
+        ...updatedCart,
+        {
+          Id: product.Id,
+          Name: product.Name,
+          Price: product.Price || 0,
+          Barcode: product.Barcode || "",
+          Quantity: quantityToAdd,
+          SubTotal: (product.Price || 0) * quantityToAdd,
+          Image: product.Image || product.Images?.[0] || "",
+        },
+      ];
+    }
+
+    context.setCartPos(updatedCart);
+  };
+
   const updateTotals = () => {
       let totalQuantity = 0;
       let totalAmount = 0.0;
@@ -84,6 +117,10 @@ export const SearchScreen: React.FC = () => {
   
       }
     };
+
+  useEffect(() => {
+    updateTotals();
+  }, [context.cartPos, context.tax]);
 
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
@@ -130,7 +167,8 @@ export const SearchScreen: React.FC = () => {
               (product) => (
                 <li
                   key={product.Id}
-                  className="flex justify-between items-center p-2 border-b border-gray-200"
+                  className="flex justify-between items-center p-2 border-b border-gray-200 cursor-pointer hover:bg-gray-50"
+                  onClick={() => handleAddProduct(product)}
                 >
                   <div>
                     <p className="font-medium text-gray-800">{product.Name}</p>
