@@ -123,6 +123,7 @@ import { getCategoriesByBusinesssId } from "../CatalogoWeb/Petitions";
 // deeplink para la agenda
 import { DeepLinkRedirect } from "../AgendaT/DeepLinkRedict";
 import { MainCategoria } from "../CatalogoWeb/Categoria";
+import { CatalogSearchInput } from "../CatalogoWeb/CatalogSearchInput";
 
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
@@ -582,6 +583,8 @@ export const Rutas = () => {
     }, [navigate, context]);
   */
   const isCategoriaRoute = location.pathname.startsWith("/categoria/");
+  const isMainCatalogoRoute = /^\/catalogo\/[^/]+$/.test(location.pathname);
+  const showCatalogSearch = isMainCatalogoRoute || isCategoriaRoute;
   const showCategoryList = location.pathname === "/" ||
     location.pathname.startsWith("/catalogo/") ||
     isCategoriaRoute;
@@ -665,7 +668,7 @@ export const Rutas = () => {
             style={{ backgroundColor: color }}
           >
             {/* Primera fila: menú, flecha, título, carrito */}
-            <div className="w-full flex items-center justify-between mt-5">
+            <div className="w-full flex items-center justify-between gap-2 mt-5">
               {/* Icono del menú */}
               <div
                 ref={catalogoIconRef}
@@ -695,6 +698,15 @@ export const Rutas = () => {
                   {nombre}
                 </h2>
               </div>
+
+              {showCatalogSearch && (
+                <CatalogSearchInput
+                  value={context.searchQuery}
+                  onChange={context.setSearchQuery}
+                  containerClassName="max-w-xs mr-1"
+                  inputClassName="max-w-xs"
+                />
+              )}
 
               {/* Ícono del carrito */}
               <NavLink to={"/catalogo/pedido"}>

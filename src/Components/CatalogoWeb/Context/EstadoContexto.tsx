@@ -70,4 +70,6 @@ export type AppContextState = {
     setShowNavBarBottom: Dispatch<SetStateAction<boolean>>;
     productFormState: ProductFormState | null;
     setProductFormState: Dispatch<SetStateAction<ProductFormState | null>>;
+    searchQuery: string;
+    setSearchQuery: Dispatch<SetStateAction<string>>;
 }

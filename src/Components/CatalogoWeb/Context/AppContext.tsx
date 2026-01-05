@@ -63,6 +63,7 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   const [checkout, setCheckout] = useState<boolean>(false);
   const [showNavBarBottom, setShowNavBarBottom] = useState<boolean>(false);
   const [productFormState, setProductFormState] = useState<ProductFormState | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
     // Función para actualizar una mesa
     const updateTable = (tableId: string, updates: Partial<Table>) => {
@@ -229,6 +230,8 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
       setShowNavBarBottom,
       productFormState,
       setProductFormState,
+      searchQuery,
+      setSearchQuery,
     };
   }, [
     cart,
@@ -286,7 +289,9 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
     showNavBarBottom,
     setShowNavBarBottom,
     productFormState,
-    setProductFormState
+    setProductFormState,
+    searchQuery,
+    setSearchQuery
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

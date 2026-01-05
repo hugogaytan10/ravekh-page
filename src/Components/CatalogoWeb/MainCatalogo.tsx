@@ -170,12 +170,26 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     arrowIcon?.classList.add("hidden");
   }, [context]);
 
+  const filteredProducts = useMemo(() => {
+    const normalizedQuery = context.searchQuery.trim().toLowerCase();
+
+    if (!normalizedQuery) {
+      return productos;
+    }
+
+    return productos.filter(
+      (product) =>
+        product.Name.toLowerCase().includes(normalizedQuery) ||
+        (product.Barcode && product.Barcode.includes(context.searchQuery))
+    );
+  }, [context.searchQuery, productos]);
+
   const sanitizedProducts = useMemo(
     () =>
-      productos.filter((producto) =>
+      filteredProducts.filter((producto) =>
         Boolean(producto.Image || (producto.Images && producto.Images[0]))
       ),
-    [productos]
+    [filteredProducts]
   );
 
   const sanitizedLength = sanitizedProducts.length;

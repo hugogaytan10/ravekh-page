@@ -1,5 +1,5 @@
 
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useState } from "react";
 import { NavLink, useParams } from "react-router-dom";
 import { getProductsByBusiness, getProductsByCategoryId, getProductsByCategoryIdAndDisponibilty } from "./Petitions";
 import { Producto } from "./Modelo/Producto";
@@ -89,6 +89,20 @@ export const MainCategoria: React.FC = () => {
         }
     }, [productos]);
 
+    const filteredProducts = useMemo(() => {
+        const normalizedQuery = context.searchQuery.trim().toLowerCase();
+
+        if (!normalizedQuery) {
+            return productos;
+        }
+
+        return productos.filter(
+            (product) =>
+                product.Name.toLowerCase().includes(normalizedQuery) ||
+                (product.Barcode && product.Barcode.includes(context.searchQuery))
+        );
+    }, [context.searchQuery, productos]);
+
     const renderSkeleton = () => {
         return (
             <div className="p-2 rounded-md mb-20">
@@ -124,8 +138,8 @@ export const MainCategoria: React.FC = () => {
                     {/* Mostrar mensaje si no hay productos */}
                     {loadingProducts ? (
                         renderSkeleton()
-                    ) : productos &&
-                    productos.length === 0 ? (
+                    ) : filteredProducts &&
+                    filteredProducts.length === 0 ? (
                         <div className="text-center mt-10">
                             <h2 className="text-2xl font-semibold text-gray-700">
                                 No hay productos disponibles
@@ -146,8 +160,8 @@ export const MainCategoria: React.FC = () => {
                         </div>
                     ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                            {Array.isArray(productos) &&
-                                productos.map((producto, index) => {
+                            {Array.isArray(filteredProducts) &&
+                                filteredProducts.map((producto, index) => {
                                     const mainImage = producto.Image || (producto.Images && producto.Images[0]);
                                     if (!mainImage) {
                                         return null;
