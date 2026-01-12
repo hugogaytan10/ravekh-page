@@ -80,6 +80,10 @@ export const MainSales: React.FC = () => {
     () => <ProductList products={filteredProducts} />,
     [filteredProducts]
   );
+  /*const MemoizedProductList = useMemo(
+    () => <ProductList products={filteredProducts} onAddProduct={handleAddProduct} />,
+    [filteredProducts, handleAddProduct]
+  );*/
 
   return (
     <div className="main-sales">
@@ -95,26 +99,22 @@ export const MainSales: React.FC = () => {
 
       {/* Contenido principal */}
       <div className="sales-container overflow-y-auto">
-        {filteredProducts.length > 0 ? (
-          view ? (
-            MemoizedProductList
-          ) : (
-            <div className="p-2">
-              <button
-                className="w-full flex flex-col justify-center items-center text-indigo-900 font-semibold bg-blue-100 border-2 border-dashed border-blue-500 rounded-lg  h-[100px] cursor-pointer transition-all duration-200 hover:bg-blue-200"
-                onClick={handleAddProduct}
-              >
-                <PlusIcon width={30} height={30} color="#007bff" />
-                <span>Agregar Producto</span>
-              </button>
-              <List Products={filteredProducts} />
-            </div>
-          )
+        {/* ✅ SIEMPRE mostrar primero la card de agregar */}
+        {view ? (
+          MemoizedProductList
         ) : (
-          <button className="add-product" onClick={handleAddProduct}>
-            <PlusIcon width={30} height={30} />
-            <span>Agregar Productos</span>
-          </button>
+          <div className="p-2">
+            {/* aquí sí puedes dejar tu botón arriba porque es vista lista */}
+            <button
+              className="w-full flex flex-col justify-center items-center text-indigo-900 font-semibold bg-blue-100 border-2 border-dashed border-blue-500 rounded-lg h-[100px] cursor-pointer transition-all duration-200 hover:bg-blue-200"
+              onClick={handleAddProduct}
+            >
+              <PlusIcon width={30} height={30} color="#007bff" />
+              <span>Agregar Producto</span>
+            </button>
+
+            <List Products={filteredProducts} />
+          </div>
         )}
 
         {/* Footer */}

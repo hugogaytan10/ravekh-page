@@ -26,6 +26,7 @@ import { RavekhPos } from "../RavekhPos/RavekhPos";
 
 // Importaciones para el punto de venta - Login
 import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
+import { InitialCustomizeApp } from "../CatalogoWeb/PuntoVenta/Login/CustomizeApp";
 
 // Importaciones para el punto de venta - Sales
 import { MainSales } from "../CatalogoWeb/PuntoVenta/Sales/MainSales";
@@ -400,6 +401,7 @@ export const Rutas = () => {
       "/orders",
       "/order-details/:orderId",
       "/update-store-info",
+      "/catalog-config",
       "/address-store",
       "/name-store",
       "/phone-store",
@@ -837,6 +839,7 @@ export const Rutas = () => {
           <Route path="/catalogo/pedido" element={<Pedido />} />
           {/* RUTAS PARA EL PUNTO DE VENTA */}
           <Route path="/login-punto-venta" element={<AuthPage />} />
+          <Route path="/create-store" element={<InitialCustomizeApp />} />
           <Route path="/MainSales" element={<MainSales />} />
           <Route path="/MainCart" element={<MainCart />} />
           <Route path="/categoria/:idCategoria" element={<MainCategoria />} />

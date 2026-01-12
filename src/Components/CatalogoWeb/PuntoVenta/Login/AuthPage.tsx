@@ -80,16 +80,20 @@ export const AuthPage: React.FC = () => {
     const email = e.target[1].value;
     const password = e.target[2].value;
     if (name && email && password) {
-      const dataSignUp = await signUpToServer(name, email, password);
-      if (dataSignUp) {
+      //const dataSignUp = await signUpToServer(name, email, password);
+      //if (dataSignUp) {
         //si todo fue cvalido guardar el correo y contraseña en el localstorage
         //como un objeto user
-        localStorage.setItem("user", JSON.stringify({ email, password }));
-        context.setUser(dataSignUp);
+
+        context.setUser({ Name: name, Email: email, Password: password });
+        localStorage.setItem(
+          "user",
+          JSON.stringify({ name, email, password })
+        );
         /*console.log("data inicio: ", dataSignUp);
         console.log("setUser: ", context.user);*/
-        navigate("/");
-      }
+        navigate("/create-store");
+      //}
     }
   };
 
@@ -243,13 +247,13 @@ export const AuthPage: React.FC = () => {
               Olvidaste tu contraseña?
             </a>
             <button className="btn-login mt-2">Iniciar Sesión</button>
-            {/*<button
+            <button
               className="btn-crear-cuenta mt-3"
               id="signUp-Mobile"
               ref={signUpMobileButtonRef}
             >
               Crear Cuenta
-            </button>*/}
+            </button>
           </form>
         </div>
         <div className="overlay-container">
@@ -271,13 +275,13 @@ export const AuthPage: React.FC = () => {
             <div className="overlay-panel overlay-right">
               <h2>Hola, Bienvenido</h2>
               <p className="mt-2">Ingresa tus datos y comienza a comprar</p>
-              {/*<button
+              <button
                 className="ghost btn-login mt-2"
                 id="signUp"
                 ref={signUpButtonRef}
               >
                 Crear Cuenta
-              </button>*/}
+              </button>
             </div>
           </div>
         </div>
