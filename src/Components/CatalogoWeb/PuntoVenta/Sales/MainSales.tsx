@@ -77,13 +77,14 @@ export const MainSales: React.FC = () => {
 
   /** Memoiza `ProductList` para evitar re-renders innecesarios */
   const MemoizedProductList = useMemo(
-    () => <ProductList products={filteredProducts} />,
-    [filteredProducts]
-  );
-  /*const MemoizedProductList = useMemo(
-    () => <ProductList products={filteredProducts} onAddProduct={handleAddProduct} />,
+    () => (
+      <ProductList
+        products={filteredProducts}
+        onAddProduct={handleAddProduct}
+      />
+    ),
     [filteredProducts, handleAddProduct]
-  );*/
+  );
 
   return (
     <div className="main-sales">
