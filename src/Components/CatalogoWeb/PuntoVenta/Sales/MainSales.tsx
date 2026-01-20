@@ -24,6 +24,7 @@ export const MainSales: React.FC = () => {
   const [view, setView] = useState(true);
   const [showModalPremium, setShowModalPremium] = useState(false);
   const [loader, setLoader] = useState(false);
+  const skeletonCards = useMemo(() => Array.from({ length: 8 }), []);
 
   /** Muestra la barra de navegación al cambiar de página */
   useEffect(() => {
@@ -100,8 +101,28 @@ export const MainSales: React.FC = () => {
 
       {/* Contenido principal */}
       <div className="sales-container overflow-y-auto">
-        {/* ✅ SIEMPRE mostrar primero la card de agregar */}
-        {view ? (
+        {loader ? (
+          view ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 p-3">
+              {skeletonCards.map((_, index) => (
+                <div
+                  key={`sales-skeleton-card-${index}`}
+                  className="h-[250px] rounded-lg bg-gray-200 animate-pulse"
+                ></div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-2 space-y-3">
+              {skeletonCards.map((_, index) => (
+                <div
+                  key={`sales-skeleton-row-${index}`}
+                  className="h-20 rounded-lg bg-gray-200 animate-pulse"
+                ></div>
+              ))}
+            </div>
+          )
+        ) : view ? (
+          /* ✅ SIEMPRE mostrar primero la card de agregar */
           MemoizedProductList
         ) : (
           <div className="p-2">
