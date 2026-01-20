@@ -57,7 +57,7 @@ export const EditClient = () => {
   const handleDelete = () => {
     deleteCustomer(id || "", user?.Token);
     setShowModal(false);
-    navigate(-1);
+    navigate("/clients");
   };
 
   return (
