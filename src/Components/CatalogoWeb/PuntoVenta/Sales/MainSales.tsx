@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext, useMemo } from "react";
+import React, { useEffect, useState, useContext, useMemo, useCallback } from "react";
 import { SalesBar } from "./NavBar/SalesBar";
 import { ProductList } from "../Sales/Card";
 import { List } from "./List";
@@ -36,18 +36,33 @@ export const MainSales: React.FC = () => {
 
   /** Obtiene los productos y datos de negocio */
   useEffect(() => {
+    if (!context.user?.Business_Id || !context.user?.Token) {
+      setLoader(false);
+      return;
+    }
+
     setLoader(true);
-    getProduct(context.user.Business_Id, context.user.Token).then((data: any) => {
-      if (data?.length > 0) {
-        const filteredData = [...data[0], ...data[1]].filter(Boolean);
-        setProducts(filteredData);
-        setFilteredProducts(filteredData);
-      }
-    }).finally(() => setLoader(false));
+    getProduct(context.user.Business_Id, context.user.Token)
+      .then((data: any) => {
+        if (data?.length > 0) {
+          const filteredData = [...data[0], ...data[1]].filter(Boolean);
+          const normalized = filteredData.map((product: Item) => ({
+            ...product,
+            Image: product.Image || product.Images?.[0] || "",
+          }));
+          setProducts(normalized);
+          setFilteredProducts(normalized);
+        }
+      })
+      .finally(() => setLoader(false));
   }, [context.user.Business_Id, context.user.Token]);
 
   /** Obtiene la información de impuestos y negocio */
   useEffect(() => {
+    if (!context.user?.Business_Id || !context.user?.Token) {
+      return;
+    }
+
     getBusinessInformation(context.user.Business_Id.toString(), context.user.Token)
       .then((data: any) => data && context.setStore(data));
 
@@ -67,14 +82,14 @@ export const MainSales: React.FC = () => {
   }, [context.cartPos]);
 
   /** Manejo de agregar productos */
-  const handleAddProduct = () => {
+  const handleAddProduct = useCallback(() => {
     if (context.store.Plan === "GRATUITO" && products.length >= 10) {
       setShowModalPremium(true);
     } else {
       context.setShowNavBarBottom(false);
       navigate("/add-product");
     }
-  };
+  }, [context.store.Plan, context.setShowNavBarBottom, navigate, products.length]);
 
   /** Memoiza `ProductList` para evitar re-renders innecesarios */
   const MemoizedProductList = useMemo(
@@ -82,9 +97,10 @@ export const MainSales: React.FC = () => {
       <ProductList
         products={filteredProducts}
         onAddProduct={handleAddProduct}
+        storeColor={context.store.Color}
       />
     ),
-    [filteredProducts, handleAddProduct]
+    [filteredProducts, handleAddProduct, context.store.Color]
   );
 
   return (

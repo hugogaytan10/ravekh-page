@@ -15,10 +15,12 @@ export const SearchScreen: React.FC = () => {
   const [filteredProducts, setFilteredProducts] = useState<Item[]>([]);
   const [products, setProducts] = useState<Item[]>([]); // Lista de productos desde el servidor
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [isVisible, setIsVisible] = useState(false);
   const [totalItems, setTotalItems] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0.0);
   const navigate = useNavigate();
+  const historyKey = "pos_search_history";
   const handleNavigate = () => {
     if (context.cartPos.length > 0) {
       navigate("/MainCart");
@@ -49,6 +51,37 @@ export const SearchScreen: React.FC = () => {
     loadProducts();
   }, [context.user.Business_Id, context.user.Token]);
 
+  useEffect(() => {
+    const storedHistory = localStorage.getItem(historyKey);
+    if (storedHistory) {
+      try {
+        const parsed = JSON.parse(storedHistory);
+        if (Array.isArray(parsed)) {
+          setSearchHistory(parsed);
+        }
+      } catch (error) {
+        console.error("Error loading search history:", error);
+      }
+    }
+  }, []);
+
+  const saveSearchHistory = (query: string) => {
+    const trimmed = query.trim();
+    if (!trimmed) {
+      return;
+    }
+    setSearchHistory((prev) => {
+      const next = [trimmed, ...prev.filter((item) => item !== trimmed)].slice(0, 8);
+      localStorage.setItem(historyKey, JSON.stringify(next));
+      return next;
+    });
+  };
+
+  const clearSearchHistory = () => {
+    localStorage.removeItem(historyKey);
+    setSearchHistory([]);
+  };
+
   // Función para manejar la búsqueda
   const handleSearch = (query: string) => {
     setSearchQuery(query);
@@ -61,6 +94,9 @@ export const SearchScreen: React.FC = () => {
   };
 
   const handleAddProduct = (product: Item) => {
+    if (searchQuery) {
+      saveSearchHistory(searchQuery);
+    }
     const quantityToAdd = Number(context.quantityNextSell) || 1;
     const existingIndex = context.cartPos.findIndex(
       (item: CartPos) => item.Id === product.Id
@@ -152,6 +188,11 @@ export const SearchScreen: React.FC = () => {
           className="bg-white w-full max-w-md p-2 border border-gray-300 rounded-md"
           value={searchQuery}
           onChange={(e) => handleSearch(e.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              saveSearchHistory(searchQuery);
+            }
+          }}
         />
       </div>
 
@@ -159,6 +200,31 @@ export const SearchScreen: React.FC = () => {
       <div className="flex-grow flex flex-col items-center mt-4 px-4">
         {isLoading ? (
           <p className="text-gray-500">Cargando productos...</p>
+        ) : !searchQuery && searchHistory.length > 0 ? (
+          <div className="w-full max-w-md">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-sm font-semibold text-gray-700">Búsquedas recientes</p>
+              <button
+                type="button"
+                className="text-xs text-gray-500 hover:text-gray-700"
+                onClick={clearSearchHistory}
+              >
+                Limpiar
+              </button>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {searchHistory.map((item) => (
+                <button
+                  key={item}
+                  type="button"
+                  className="px-3 py-1 rounded-full bg-gray-200 text-sm text-gray-700"
+                  onClick={() => handleSearch(item)}
+                >
+                  {item}
+                </button>
+              ))}
+            </div>
+          </div>
         ) : filteredProducts.length === 0 && searchQuery ? (
           <p className="text-gray-500">No se encontraron resultados</p>
         ) : (
