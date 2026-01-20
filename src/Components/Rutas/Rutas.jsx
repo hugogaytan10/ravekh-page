@@ -125,6 +125,8 @@ import { getCategoriesByBusinesssId } from "../CatalogoWeb/Petitions";
 import { DeepLinkRedirect } from "../AgendaT/DeepLinkRedict";
 import { MainCategoria } from "../CatalogoWeb/Categoria";
 import { CatalogSearchInput } from "../CatalogoWeb/CatalogSearchInput";
+import { CatalogSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/CatalogSettings";
+import { EditEmployee } from "../CatalogoWeb/PuntoVenta/Employees/EditEmployee";
 
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
@@ -540,7 +542,7 @@ export const Rutas = () => {
       "/register",
       "/dashboard",
       "/settings-p",
-      "/employees/:id",
+      "/edit-employee/:id",
       "/mainfinances"
     ];
 
@@ -875,6 +877,7 @@ export const Rutas = () => {
           <Route path="/best-selling/:period/:businessId" element={<BestSelling />} />
           <Route path="/best-category-selling/:period/:businessId" element={<BestCategorySelling />} />
           <Route path="/more" element={<MainSettings />} />
+          <Route path="/catalog-config" element={<CatalogSettings />} />
           <Route path="/box-cutting" element={<BoxCutting />} />
           <Route path="/cutting-by-employee/:employeeId" element={<CuttingByEmployee />} />
           <Route path="/pricing" element={<AnimatedSlider />} />
@@ -900,6 +903,7 @@ export const Rutas = () => {
           <Route path="/orders-by-customer/:customerId/:period" element={<OrdersByCustomer />} />
           <Route path="/edit-customer/:id" element={<EditClient />} />
           <Route path="/employees" element={<Employees />} />
+          <Route path="/edit-employee/:id" element={<EditEmployee />} />
           <Route path="/new-employee" element={<NewEmployee />} />
           <Route path="/client-select" element={<ClientSelect />} />
           <Route path="/dashboard" element={<Dashboard />} />

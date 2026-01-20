@@ -56,20 +56,20 @@ export const SettingsP: React.FC<{ navigation: any }> = ({ navigation }) => {
         )}
 
         {/* Información del negocio */}
-        {/*{context.user.Role === "ADMINISTRADOR" && (
+        {context.user.Role === "ADMINISTRADOR" && (
           <button
             className="flex items-center justify-between w-full p-4 bg-white border border-gray-200 rounded-lg mb-2 shadow-sm"
             onClick={() => navigate("/catalog-config")}
           >
             <div className="flex items-center">
-              <Store width={30} height={30} fill={iconColor} />
+              <Settings width={30} height={30} fill={iconColor} />
               <span className="ml-4 text-base font-semibold text-gray-800">
                 configuración catalogo
               </span>
             </div>
             <ChevronGo width={30} height={30} />
           </button>
-        )}*/}
+        )}
 
         {/* Hardware
         <button

@@ -80,7 +80,7 @@ export const Client = () => {
           className="p-2 rounded-full hover:bg-blue-700"
           onClick={() => {
             setShowNavBarBottom(true);
-            navigate(-1);
+            navigate("/more");
           }}
         >
           <ChevronBack />
