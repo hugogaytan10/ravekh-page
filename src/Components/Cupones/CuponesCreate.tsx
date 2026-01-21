@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { CuponesNav } from "./CuponesNav";
 import { createCoupon } from "./couponsApi";
-import { hasCuponesSession } from "./cuponesSession";
+import { getCuponesUserName, hasCuponesSession } from "./cuponesSession";
 
 const accentYellow = "#fbbc04";
 const cardRed = "#c0202b";
@@ -44,6 +44,7 @@ const randomQrValue = () => {
 
 const CuponesCreate: React.FC = () => {
   const navigate = useNavigate();
+  const userName = getCuponesUserName();
   const [qrValue, setQrValue] = useState(() => randomQrValue());
   const [validUntil, setValidUntil] = useState("");
   const [limitUsers, setLimitUsers] = useState(50);
@@ -99,7 +100,7 @@ const CuponesCreate: React.FC = () => {
             <img src={cuponsito} alt="Avatar" className="h-10 w-10 object-contain" />
           </div>
           <div>
-            <p className="text-sm font-semibold">Hola Hugo</p>
+            <p className="text-sm font-semibold">Hola{userName ? ` ${userName}` : ""}</p>
             <p className="text-sm text-[#6a6a6a]">Crear cupón</p>
           </div>
         </header>

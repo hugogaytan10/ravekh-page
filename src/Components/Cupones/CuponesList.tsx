@@ -2,7 +2,7 @@ import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { CuponesNav } from "./CuponesNav";
-import { hasCuponesSession } from "./cuponesSession";
+import { getCuponesUserName, hasCuponesSession } from "./cuponesSession";
 
 const accentYellow = "#fbbc04";
 const cardRed = "#c7222c";
@@ -23,6 +23,7 @@ const TicketIcon: React.FC = () => (
 
 const CuponesList: React.FC = () => {
   const navigate = useNavigate();
+  const userName = getCuponesUserName();
 
   useEffect(() => {
     if (!hasCuponesSession()) {
@@ -41,7 +42,7 @@ const CuponesList: React.FC = () => {
             <img src={cuponsito} alt="Avatar" className="h-10 w-10 object-contain" />
           </div>
           <div>
-            <p className="text-sm font-semibold">Hola Hugo</p>
+            <p className="text-sm font-semibold">Hola{userName ? ` ${userName}` : ""}</p>
             <p className="text-sm text-[#6a6a6a]">Buen día</p>
           </div>
         </header>
