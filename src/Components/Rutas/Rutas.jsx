@@ -123,6 +123,16 @@ import { getCategoriesByBusinesssId } from "../CatalogoWeb/Petitions";
 // deeplink para la agenda
 import { DeepLinkRedirect } from "../AgendaT/DeepLinkRedict";
 import { MainCategoria } from "../CatalogoWeb/Categoria";
+import { LoginCupones } from "../Cupones/LoginCupones";
+import { RegisterCupones } from "../Cupones/RegisterCupones";
+import { CuponesHome } from "../Cupones/CuponesHome";
+import { CuponesList } from "../Cupones/CuponesList";
+import { CuponesSettings } from "../Cupones/CuponesSettings";
+import { CuponesAdmin } from "../Cupones/CuponesAdmin";
+import { CuponesCreate } from "../Cupones/CuponesCreate";
+import { CuponesEdit } from "../Cupones/CuponesEdit";
+import { CuponesScan } from "../Cupones/CuponesScan";
+import { CuponesSuccess } from "../Cupones/CuponesSuccess";
 
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
@@ -156,6 +166,38 @@ export const Rutas = () => {
   // Nueva referencia para el POS
   const slideDownRefPOS = useRef(null); // Referencia para el contenedor del menú
   const menuTogglePOS = useRef(null); // Referencia para la animación del menú
+
+  const adjustColorLightness = (hex, delta) => {
+    if (!hex) return "#6D01D1";
+
+    let c = hex.replace("#", "");
+    if (c.length === 3) c = c.split("").map(ch => ch + ch).join("");
+
+    const r = parseInt(c.substring(0, 2), 16) / 255;
+    const g = parseInt(c.substring(2, 4), 16) / 255;
+    const b = parseInt(c.substring(4, 6), 16) / 255;
+
+    const max = Math.max(r, g, b);
+    const min = Math.min(r, g, b);
+    let h = 0, s = 0, l = (max + min) / 2;
+
+    if (max !== min) {
+      const d = max - min;
+      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+
+      switch (max) {
+        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+        case g: h = (b - r) / d + 2; break;
+        case b: h = (r - g) / d + 4; break;
+      }
+      h /= 6;
+    }
+
+    l = Math.min(1, Math.max(0, l + delta));
+
+    return `hsl(${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%)`;
+  };
+
 
   useEffect(() => {
     if (listItemsRefCatalogo.current && slideDownRefPOS.current) {
@@ -397,6 +439,12 @@ export const Rutas = () => {
     });
   }, [location.pathname]);
 
+  const hoverColor = useMemo(
+  () => adjustColorLightness(color, 0.20), // +10% luz (similar a un purple-600)
+  [color]
+);
+
+
   useEffect(() => {
     const protectedRoutes = [
       "/mainsales",
@@ -449,8 +497,7 @@ export const Rutas = () => {
       "/finish",
       "/add-product",
       "/select-caterory-sales",
-      "/add-category-sales",
-      "/MainFinances",
+      "/add-category-sales", 
       "/main-products",
       "/add-product-products",
       "/select-category-product",
@@ -602,6 +649,15 @@ export const Rutas = () => {
               </li>
               <li>
                 <NavLink
+                  to="/cupones"
+                  onClick={handleMenuClick}
+                  className="text-base"
+                >
+                  Cupones
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
                   to="/politica"
                   onClick={handleMenuClick}
                   className="text-base "
@@ -680,11 +736,16 @@ export const Rutas = () => {
                   {categories.map((category) => (
                     <button
                       key={category.Id}
+                      style={{
+                        "--c-base": color,
+                        "--c-hover": hoverColor,
+                      }}
                       className={`px-4 py-2 ${
-            idBusiness === "115"
-              ? " text-black"
-              : " text-white"
-          } rounded-lg shadow-sm transition duration-300 hover:bg-purple-600`}
+                        idBusiness === "115" ? "text-black" : "text-white"
+                      } 
+                      rounded-lg shadow-sm transition duration-300 
+                      bg-[color:var(--c-base)] 
+                      hover:bg-[color:var(--c-hover)]`}
                     >
                       <NavLink to={`/categoria/${category.Id}`} className="whitespace-nowrap">
                         {category.Name}
@@ -758,6 +819,16 @@ export const Rutas = () => {
             element={<DetalleProducto />}
           />
           <Route path="/catalogo/pedido" element={<Pedido />} />
+          <Route path="/cupones" element={<LoginCupones />} />
+          <Route path="/cupones/registro" element={<RegisterCupones />} />
+          <Route path="/cupones/home" element={<CuponesHome />} />
+          <Route path="/cupones/cupones" element={<CuponesList />} />
+          <Route path="/cupones/ajustes" element={<CuponesSettings />} />
+          <Route path="/cupones/admin" element={<CuponesAdmin />} />
+          <Route path="/cupones/admin/crear" element={<CuponesCreate />} />
+          <Route path="/cupones/admin/editar" element={<CuponesEdit />} />
+          <Route path="/cupones/admin/escanear" element={<CuponesScan />} />
+          <Route path="/cupones/admin/confirmado" element={<CuponesSuccess />} />
           {/* RUTAS PARA EL PUNTO DE VENTA */}
           <Route path="/login-punto-venta" element={<AuthPage />} />
           <Route path="/MainSales" element={<MainSales />} />
