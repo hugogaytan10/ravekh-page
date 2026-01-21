@@ -7,7 +7,29 @@ import { OrderDetails } from "./Modelo/OrderDetails";
 import { insertOrder, sendNotification, getIdentifier } from "./Petitions";
 import trash from '../../assets/trash.svg';
 import { Helmet, HelmetProvider } from "react-helmet-async";
+import { URL } from "./Const/Const";
 
+type ShippingOptions = {
+  ContactInformation: boolean;
+  ShippingMetod: boolean;
+  Street: boolean;
+  ZipCode: boolean;
+  City: boolean;
+  State: boolean;
+  References: boolean;
+  PaymentMetod: boolean;
+};
+
+const defaultShippingOptions: ShippingOptions = {
+  ContactInformation: true,
+  ShippingMetod: true,
+  Street: true,
+  ZipCode: true,
+  City: true,
+  State: true,
+  References: true,
+  PaymentMetod: true,
+};
 
 export const Pedido: React.FC = () => {
   const { cart, phoneNumber: storePhoneNumber, idBussiness, setCart, color, setColor } = useContext(AppContext); // Número de la tienda
@@ -20,8 +42,9 @@ export const Pedido: React.FC = () => {
   const [showModal, setShowModal] = useState<boolean>(false); // Estado para mostrar el modal de confirmación
   const [deleteProduct, setDeleteProduct] = useState<{ id: number; variantId: number | null } | null>(null); // Estado para guardar el producto a eliminar
   const [quantityWarnings, setQuantityWarnings] = useState<Record<string, string | null>>({});
-
-
+  const [shippingOptions, setShippingOptions] = useState<ShippingOptions>(defaultShippingOptions);
+  const [loadingShippingOptions, setLoadingShippingOptions] = useState<boolean>(true);
+  console.log("Info tienda o negocio:", idBussiness);
   // Campos de dirección
   const [calle, setCalle] = useState<string>("");
   const [codigoPostal, setCodigoPostal] = useState<string>("");
@@ -53,37 +76,40 @@ export const Pedido: React.FC = () => {
   }
   const totalArticulos = cart.reduce((total, item) => total + (item.Quantity || 1), 0);
   const totalPrecio = cart.reduce((total, item) => total + item.Price * (item.Quantity || 1), 0);
+  const buildAddress = () => {
+    if (deliveryMethod !== "domicilio") return "Recoger en tienda";
+
+    const parts: string[] = [];
+
+    if (shippingOptions.Street && calle.trim()) parts.push(`Calle: ${calle}`);
+    if (shippingOptions.ZipCode && codigoPostal.trim()) parts.push(`Código Postal: ${codigoPostal}`);
+    if (shippingOptions.City && municipio.trim()) parts.push(`Municipio: ${municipio}`);
+    if (shippingOptions.State && estado.trim()) parts.push(`Estado: ${estado}`);
+    if (shippingOptions.References && referencia.trim()) parts.push(`Referencia: ${referencia}`);
+
+    return parts.length ? parts.join(", ") : "Entrega a domicilio";
+  };
+
   const saveOrder = async () => {
-    // Concatenar la dirección si es entrega a domicilio
-    const fullAddress =
-      deliveryMethod === "domicilio"
-        ? `Calle: ${calle}, Código Postal: ${codigoPostal}, Municipio: ${municipio}, Estado: ${estado}, Referencia: ${referencia}`
-        : "Recoger en tienda";
+    const fullAddress = buildAddress();
 
     const order: Order = {
-      Name: nombre,
+      Name: shippingOptions.ContactInformation ? nombre : "", // si no piden contacto, manda vacío
       Business_Id: Number(idBussiness),
       Delivery: deliveryMethod === "domicilio" ? 1 : 0,
-      PaymentMethod: paymentMethod,
+      PaymentMethod: shippingOptions.PaymentMetod ? paymentMethod : "", // si no piden pago, manda vacío
       Address: fullAddress,
-      PhoneNumber: clientPhoneNumber,
+      PhoneNumber: shippingOptions.ContactInformation ? clientPhoneNumber : "",
     };
-    //array de detalles de orden
+
     const orderDetails: OrderDetails[] = cart.map((producto) => ({
       Product_Id: producto.Id!,
       Quantity: producto.Quantity || 1,
     }));
 
-    insertOrder(order, orderDetails).then((data) => {
-      console.log(data);
-    });
-    // const identifier = await getIdentifier(idBussiness);
-    // sendNotification(identifier
-    // ).then((data) => {
-    //   console.log(data);
-    // });
+    insertOrder(order, orderDetails).then((data) => console.log(data));
+  };
 
-  }
 
   useEffect(() => {
     if (cart.length === 0) {
@@ -96,6 +122,64 @@ export const Pedido: React.FC = () => {
       }
     }
   }, [cart, setCart]);
+
+  useEffect(() => {
+    const loadShippingOptions = async () => {
+      if (!idBussiness) return;
+
+      setLoadingShippingOptions(true);
+      try {
+        const res = await fetch(`${URL}shippingoptions/business/${idBussiness}`, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            // Si tu API requiere token aquí, descomenta:
+            // token: context.user?.Token,
+          },
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+
+        // Soporta: data puede venir como objeto o array [obj]
+        const row = Array.isArray(data) ? data[0] : data;
+
+        // Si no hay registro, usa defaults (evita crash)
+        if (!row) {
+          setShippingOptions(defaultShippingOptions);
+          return;
+        }
+
+        const parsed: ShippingOptions = {
+          ContactInformation: Number(row.ContactInformation) === 1,
+          ShippingMetod: Number(row.ShippingMetod) === 1,
+          Street: Number(row.Street) === 1,
+          ZipCode: Number(row.ZipCode) === 1,
+          City: Number(row.City) === 1,
+          State: Number(row.State) === 1,
+          References: Number(row.References) === 1,
+          PaymentMetod: Number(row.PaymentMetod) === 1,
+        };
+
+        setShippingOptions(parsed);
+
+        // Opcional: si deshabilitan método de envío/pago, deja valores default pero NO muestres UI
+        // (no hace falta cambiar estados, pero si quieres forzar un valor fijo, aquí puedes)
+        // if (!parsed.ShippingMetod) setDeliveryMethod("domicilio");
+        // if (!parsed.PaymentMetod) setPaymentMethod("transferencia");
+      } catch (e) {
+        console.error("Error cargando shipping options:", e);
+        // fallback
+        setShippingOptions(defaultShippingOptions);
+      } finally {
+        setLoadingShippingOptions(false);
+      }
+    };
+
+    loadShippingOptions();
+  }, [idBussiness]);
+
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -126,7 +210,7 @@ export const Pedido: React.FC = () => {
     const arrowIcon = document.getElementById("backCatalogo");
     arrowIcon?.classList.remove("hidden");
   }, []);
-
+ 
   // Función para validar los campos
   const validate = () => {
     const newErrors: {
@@ -135,26 +219,26 @@ export const Pedido: React.FC = () => {
       clientPhoneNumber?: string;
     } = {};
 
-    if (!nombre.trim()) {
-      newErrors.nombre = "El nombre es obligatorio.";
+    if (shippingOptions.ContactInformation) {
+      if (!nombre.trim()) newErrors.nombre = "El nombre es obligatorio.";
+
+      if (!clientPhoneNumber.trim()) {
+        newErrors.clientPhoneNumber = "El teléfono es obligatorio.";
+      } else if (!/^\d{7,15}$/.test(clientPhoneNumber)) {
+        newErrors.clientPhoneNumber =
+          "El teléfono debe contener solo números y tener entre 7 y 15 dígitos.";
+      }
     }
 
+    // Email sigue siendo opcional, pero si viene lo validas:
     if (email && !/^\S+@\S+\.\S+$/.test(email)) {
       newErrors.email = "El email no es válido.";
     }
 
-    if (!clientPhoneNumber.trim()) {
-      newErrors.clientPhoneNumber = "El teléfono es obligatorio.";
-    } else if (!/^\d{7,15}$/.test(clientPhoneNumber)) {
-      newErrors.clientPhoneNumber =
-        "El teléfono debe contener solo números y tener entre 7 y 15 dígitos.";
-    }
-
     setErrors(newErrors);
-
-    // Retornar true si no hay errores
     return Object.keys(newErrors).length === 0;
   };
+
 
   // Función para manejar el envío del formulario
   const handleSubmit = (e: React.FormEvent) => {
@@ -164,8 +248,30 @@ export const Pedido: React.FC = () => {
       //tomamos el numero de la tienda y mandamos un mensaje de whatsapp
       //diciendo 'Hola he hecho un pedido con los siguientes productos...'
       saveOrder();
+
+      const addressText =
+        deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled
+          ? `Dirección: ${buildAddress()}`
+          : "";
+
+      const contactText = shippingOptions.ContactInformation
+        ? `Nombre: ${nombre}
+      Email: ${email || "No proporcionado"}
+      Teléfono: ${clientPhoneNumber}`
+        : "";
+
+      const paymentText = shippingOptions.PaymentMetod
+        ? `Método de pago: ${paymentMethod}`
+        : "";
+
+      const shippingText = shippingOptions.ShippingMetod
+        ? `Método de entrega: ${
+            deliveryMethod === "domicilio" ? "Entrega a domicilio" : "Recoger en tienda"
+          }`
+        : "";
+
       const mensaje = `Hola, he hecho un pedido con los siguientes productos:
-                        ${cart
+        ${cart
           .map(
             (producto) =>
               `${producto.Name}${
@@ -173,16 +279,11 @@ export const Pedido: React.FC = () => {
               } x ${producto.Quantity || 1} $${(producto.Quantity || 1) * producto.Price}`
           )
           .join("\n")}
-                        Total: $${totalPrecio.toFixed(2)}
-                        Método de entrega: ${deliveryMethod === "domicilio"
-          ? "Entrega a domicilio"
-          : "Recoger en tienda"
-        }
-                        Método de pago: ${paymentMethod}
-                        Nombre: ${nombre}
-                        Email: ${email || "No proporcionado"}
-                        Teléfono: ${clientPhoneNumber}
-                        ${deliveryMethod === "domicilio" ? `Dirección: ${calle}, C.P. ${codigoPostal},  ${municipio}, ${estado}\nReferencias: ${referencia}` : ""}`;
+        Total: $${totalPrecio.toFixed(2)}
+        ${shippingText}
+        ${paymentText}
+        ${contactText}
+        ${addressText}`.trim();
 
       const url = `https://wa.me/${storePhoneNumber}?text=${encodeURIComponent(
         mensaje
@@ -270,6 +371,31 @@ export const Pedido: React.FC = () => {
     localStorage.setItem('cart', JSON.stringify(updatedCart));
     setQuantityWarnings((prev) => ({ ...prev, [key]: warning }));
   };
+
+  const hasAnyAddressFieldEnabled =
+    shippingOptions.Street ||
+    shippingOptions.ZipCode ||
+    shippingOptions.City ||
+    shippingOptions.State ||
+    shippingOptions.References;
+
+  if (loadingShippingOptions) {
+    return (
+      <HelmetProvider>
+        <>
+          <Helmet>
+            <meta name="theme-color" content={color || "#6D01D1"} />
+          </Helmet>
+          <div className="min-h-screen flex items-center justify-center px-4">
+            <div className="bg-white shadow-lg rounded-xl p-6 text-center">
+              <p className="text-gray-700 font-semibold">Cargando formulario…</p>
+              <p className="text-gray-500 text-sm mt-1">Preparando campos del negocio</p>
+            </div>
+          </div>
+        </>
+      </HelmetProvider>
+    );
+  }
 
   return (
     <HelmetProvider>
@@ -374,6 +500,7 @@ export const Pedido: React.FC = () => {
 
           {/* Formulario para el nombre y contacto */}
           <form onSubmit={handleSubmit}>
+            {shippingOptions.ContactInformation && (
             <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
               <h2 className="text-2xl font-semibold mb-4 text-gray-800">
                 Información de contacto
@@ -430,9 +557,10 @@ export const Pedido: React.FC = () => {
                   )}
                 </div>
               </div>
-            </div>
-
-            {/* Método de entrega */}
+            </div>)}
+          {/* Método de entrega */}
+          {shippingOptions.ShippingMetod && (
+            
             <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
               <h2 className="text-2xl font-semibold mb-4 text-gray-800">
                 Método de entrega
@@ -452,89 +580,105 @@ export const Pedido: React.FC = () => {
                 <option value="recoger">Recoger en tienda</option>
               </select>
             </div>
+          )}
 
-            {deliveryMethod === "domicilio" && (
+            {deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled && (
               <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
                 <h2 className="text-2xl font-semibold mb-4 text-gray-800">
                   Dirección de entrega
                 </h2>
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="flex flex-col">
-                    <label className="text-gray-700">Calle</label>
-                    <input
-                      type="text"
-                      value={calle}
-                      onChange={(e) => setCalle(e.target.value)}
-                      className="bg-white w-full p-3 border border-gray-300 rounded-lg"
-                      placeholder="Introduce tu calle"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-gray-700">Código Postal</label>
-                    <input
-                      type="text"
-                      value={codigoPostal}
-                      onChange={(e) => setCodigoPostal(e.target.value)}
-                      className="bg-white w-full p-3 border border-gray-300 rounded-lg"
-                      placeholder="Código Postal"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-gray-700">Municipio</label>
-                    <input
-                      type="text"
-                      value={municipio}
-                      onChange={(e) => setMunicipio(e.target.value)}
-                      className="bg-white w-full p-3 border border-gray-300 rounded-lg"
-                      placeholder="Municipio"
-                    />
-                  </div>
-                  <div className="flex flex-col">
-                    <label className="text-gray-700">Estado</label>
-                    <input
-                      type="text"
-                      value={estado}
-                      onChange={(e) => setEstado(e.target.value)}
-                      className="bg-white w-full p-3 border border-gray-300 rounded-lg"
-                      placeholder="Estado"
-                    />
-                  </div>
-                  <div className="md:col-span-2 flex flex-col">
-                    <label className="text-gray-700">Referencia (opcional)</label>
-                    <input
-                      type="text"
-                      value={referencia}
-                      onChange={(e) => setReferencia(e.target.value)}
-                      className="bg-white w-full p-3 border border-gray-300 rounded-lg"
-                      placeholder="Introduce una referencia (opcional)"
-                    />
-                  </div>
+                  {shippingOptions.Street && (
+                    <div className="flex flex-col">
+                      <label className="text-gray-700">Calle</label>
+                      <input
+                        type="text"
+                        value={calle}
+                        onChange={(e) => setCalle(e.target.value)}
+                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        placeholder="Introduce tu calle"
+                      />
+                    </div>
+                  )}
+
+                  {shippingOptions.ZipCode && (
+                    <div className="flex flex-col">
+                      <label className="text-gray-700">Código Postal</label>
+                      <input
+                        type="text"
+                        value={codigoPostal}
+                        onChange={(e) => setCodigoPostal(e.target.value)}
+                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        placeholder="Código Postal"
+                      />
+                    </div>
+                  )}
+
+                  {shippingOptions.City && (
+                    <div className="flex flex-col">
+                      <label className="text-gray-700">Municipio</label>
+                      <input
+                        type="text"
+                        value={municipio}
+                        onChange={(e) => setMunicipio(e.target.value)}
+                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        placeholder="Municipio"
+                      />
+                    </div>
+                  )}
+
+                  {shippingOptions.State && (
+                    <div className="flex flex-col">
+                      <label className="text-gray-700">Estado</label>
+                      <input
+                        type="text"
+                        value={estado}
+                        onChange={(e) => setEstado(e.target.value)}
+                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        placeholder="Estado"
+                      />
+                    </div>
+                  )}
+
+                  {shippingOptions.References && (
+                    <div className="md:col-span-2 flex flex-col">
+                      <label className="text-gray-700">Referencia (opcional)</label>
+                      <input
+                        type="text"
+                        value={referencia}
+                        onChange={(e) => setReferencia(e.target.value)}
+                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        placeholder="Introduce una referencia (opcional)"
+                      />
+                    </div>
+                  )}
                 </div>
               </div>
             )}
 
             {/* Método de pago */}
-            <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-                Método de pago
-              </h2>
-              <div className="flex items-center mb-4">
-                <FiCreditCard className="text-gray-600 mr-2" size={24} />
-                <label className="text-gray-700">
-                  Seleccione un método de pago
-                </label>
+            {shippingOptions.PaymentMetod && (
+              <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
+                <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+                  Método de pago
+                </h2>
+                <div className="flex items-center mb-4">
+                  <FiCreditCard className="text-gray-600 mr-2" size={24} />
+                  <label className="text-gray-700">Seleccione un método de pago</label>
+                </div>
+                <select
+                  value={paymentMethod}
+                  onChange={(e) => setPaymentMethod(e.target.value)}
+                  className="bg-white w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
+                >
+                  <option value="transferencia">Transferencia bancaria</option>
+                  <option value="dinero">Dinero en efectivo</option>
+                  <option value="tarjeta">Tarjeta de crédito o débito</option>
+                  <option value="enlace">Enlace de pago</option>
+                </select>
               </div>
-              <select
-                value={paymentMethod}
-                onChange={(e) => setPaymentMethod(e.target.value)}
-                className="bg-white w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
-              >
-                <option value="transferencia">Transferencia bancaria</option>
-                <option value="dinero">Dinero en efectivo</option>
-                <option value="tarjeta">Tarjeta de crédito o débito</option>
-                <option value="enlace">Enlace de pago</option>
-              </select>
-            </div>
+            )}
 
             {/* Botón para continuar */}
             <div className="flex justify-center mt-8">

@@ -2,6 +2,7 @@ import React, { useContext, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
 import { ThemeLight } from "../../Theme/Theme";
+import { URL } from "../../Const/Const";
 //import { AppContext } from "../../Context/AppContext";
 //import { URL } from "../Const/Const";
 //import { ThemeLight } from "../Theme/Theme";
@@ -87,7 +88,7 @@ export const CatalogSettings: React.FC = () => {
         PaymentMetod: options.PaymentMetod ? 1 : 0,
       };
 
-      await fetch(`${URL}shipping_options`, {
+      await fetch(`${URL}shippingoptions/${context.user.Business_Id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
