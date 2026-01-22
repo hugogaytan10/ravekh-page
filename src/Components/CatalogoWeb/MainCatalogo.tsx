@@ -27,7 +27,8 @@ interface MainCatalogoProps {
 export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const { idBusiness } = useParams<{ idBusiness: string }>();
   const [productos, setProductos] = useState<Producto[]>([]);
-  const [visibleCount, setVisibleCount] = useState<number>(10); // Mostrar 10 inicialmente
+  const [page, setPage] = useState(1);
+  const [hasNext, setHasNext] = useState(true);
   const [telefono, setTelefono] = useState<string | null>(null);
   const [color, setColor] = useState<string | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
@@ -38,6 +39,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [variantModalOpen, setVariantModalOpen] = useState(false);
   const [variantLoading, setVariantLoading] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const context = useContext(AppContext);
   const addProductToCart = context.addProductToCart;
@@ -56,85 +58,6 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     return map;
   }, [context.cart]);
   const loadMoreRef = useRef<HTMLDivElement>(null);
-
-  // 1) useEffect principal: primero saca "plan" del negocio y luego productos
-  useEffect(() => {
-    (async () => {
-    try {
-      // Redirección especial si es "26"
-      if (idBusiness === "26") {
-        window.location.href = "https://mrcongelados.com/";
-        return;
-      }
-
-      if (idBusiness == "92") {
-        setNotPay(true);
-        setNotPayMessage("No tienes acceso a este catálogo por falta de pago.");
-        return;
-      }
-
-      setLoadingProducts(true);
-
-      // Asegurar que el contexto tenga el ID del negocio
-      if (idBusiness) {
-        context.setIdBussiness(idBusiness);
-        //guradamos el id del negocio en el local storage
-        localStorage.setItem("idBusiness", idBusiness);
-      }
-
-      // Limpieza de carrito si no coincide el negocio
-      const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
-      const isDifferentBusiness = storedCart.some(
-        (item: Producto) => item.Business_Id.toString() !== idBusiness
-      );
-      if (isDifferentBusiness || storedCart.length === 0) {
-        localStorage.removeItem("cart");
-        context.clearCart();
-      }
-
-      // 1.1) Obtener datos del negocio
-      const dataBusiness = await getBusinessById(idBusiness || "0");
-      if (dataBusiness) {
-        setColor(dataBusiness.Color || null);
-        context.setColor(dataBusiness.Color || null);
-        localStorage.setItem("color", dataBusiness.Color || "");
-
-        context.setNombre(dataBusiness.Name || null);
-        localStorage.setItem("nombre", dataBusiness.Name || "");
-
-        setPlan(dataBusiness.Plan);
-
-        context.setPhoneNumber(dataBusiness.PhoneNumber || null);
-        localStorage.setItem("telefono", dataBusiness.PhoneNumber || "");
-
-
-      }
-
-      // 1.2) Obtener productos con el plan real
-      const dataProducts = await getProductsByBusinessWithStock(
-        idBusiness || "1",
-        dataBusiness?.Plan || ""
-      );
-
-      if (dataProducts.length > 0) {
-        setProductos(dataProducts);
-        setTelefono(dataProducts[0].PhoneNumber || null);
-        context.setPhoneNumber(dataProducts[0].PhoneNumber || null);
-        localStorage.setItem("telefono", dataProducts[0].PhoneNumber || "");
-      } else {
-        setProductos([]);
-      }
-    } catch (error) {
-      console.error("Error cargando catálogo:", error);
-      setProductos([]);
-    } finally {
-      // 👇 siempre apagamos el loading
-      setLoadingProducts(false);
-    }
-
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [idBusiness]);
 
   // 2) Efecto para inicializar/ocultar elementos y cargar color/teléfono/nombre del localStorage si no están en contexto
   useEffect(() => {
@@ -192,15 +115,6 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     [filteredProducts]
   );
 
-  const sanitizedLength = sanitizedProducts.length;
-
-  const visibleProducts = useMemo(
-    () => sanitizedProducts.slice(0, visibleCount),
-    [sanitizedProducts, visibleCount]
-  );
-
-  const hasMoreProducts = visibleCount < sanitizedLength;
-
   // 3) Función para ajustar color en hover
   const adjustColor = useCallback((hex: string) => {
     const r = parseInt(hex.slice(1, 3), 16);
@@ -211,51 +125,6 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     const newB = Math.max(0, b - 100).toString(16).padStart(2, "0");
     return `#${newR}${newG}${newB}`;
   }, []);
-
-  // 4) Función para cargar más productos
-  const loadMore = useCallback(() => {
-    setVisibleCount((prev) => {
-      if (prev >= sanitizedLength) {
-        return prev;
-      }
-      return Math.min(prev + 10, sanitizedLength);
-    });
-  }, [sanitizedLength]);
-
-  useEffect(() => {
-    const initialCount = sanitizedLength === 0 ? 0 : Math.min(10, sanitizedLength);
-    setVisibleCount(initialCount);
-  }, [sanitizedLength]);
-
-  // 5) Intersection Observer para cargar más productos cuando se visualiza el "sentinela"
-  useEffect(() => {
-    if (!hasMoreProducts) {
-      return;
-    }
-
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          loadMore();
-        }
-      },
-      {
-        rootMargin: "200px", // Se dispara cuando está a 200px de la vista
-      }
-    );
-
-    const currentRef = loadMoreRef.current;
-
-    if (currentRef) {
-      observer.observe(currentRef);
-    }
-
-    return () => {
-      if (currentRef) {
-        observer.unobserve(currentRef);
-      }
-    };
-  }, [hasMoreProducts, loadMore]);
 
   const currencyFormatter = useMemo(
     () =>
@@ -352,6 +221,165 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     );
   }
 
+  const fetchProductsPage = useCallback(
+    async (pageToFetch: number, mode: "reset" | "append") => {
+      if (!idBusiness) return;
+      if (mode === "append" && (loadingMore || !hasNext)) return;
+
+      try {
+        if (mode === "reset") setLoadingProducts(true);
+        else setLoadingMore(true);
+
+        const resp = await getProductsByBusinessWithStock(
+          idBusiness,
+          plan || "",
+          pageToFetch
+        );
+
+        const newProducts: Producto[] = Array.isArray(resp?.data) ? resp.data : [];
+        const pagination = resp?.pagination;
+
+        setHasNext(Boolean(pagination?.hasNext));
+
+        setProductos((prev) => {
+          if (mode === "reset") return newProducts;
+          const map = new Map<number, Producto>();
+          prev.forEach((p) => map.set(p.Id, p));
+          newProducts.forEach((p) => map.set(p.Id, p));
+          return Array.from(map.values());
+        });
+
+        setPage(pageToFetch);
+
+        if (newProducts.length > 0) {
+          const phone = (newProducts[0] as any).PhoneNumber;
+          if (phone) {
+            setTelefono(phone);
+            context.setPhoneNumber(phone);
+            localStorage.setItem("telefono", phone);
+          }
+        }
+      } catch (e) {
+        console.error("Error paginando productos:", e);
+        if (mode === "reset") setProductos([]);
+        setHasNext(false);
+      } finally {
+        if (mode === "reset") setLoadingProducts(false);
+        else setLoadingMore(false);
+      }
+    },
+    [idBusiness, plan, loadingMore, hasNext, context]
+  );
+
+  useEffect(() => {
+    (async () => {
+      try {
+        if (idBusiness === "26") {
+          window.location.href = "https://mrcongelados.com/";
+          return;
+        }
+
+        if (idBusiness == "92") {
+          setNotPay(true);
+          setNotPayMessage("No tienes acceso a este catálogo por falta de pago.");
+          return;
+        }
+
+        setLoadingProducts(true);
+
+        if (idBusiness) {
+          context.setIdBussiness(idBusiness);
+          localStorage.setItem("idBusiness", idBusiness);
+        }
+
+        const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
+        const isDifferentBusiness = storedCart.some(
+          (item: Producto) => item.Business_Id.toString() !== idBusiness
+        );
+        if (isDifferentBusiness || storedCart.length === 0) {
+          localStorage.removeItem("cart");
+          context.clearCart();
+        }
+
+        // 1) negocio
+        const dataBusiness = await getBusinessById(idBusiness || "0");
+        if (dataBusiness) {
+          setColor(dataBusiness.Color || null);
+          context.setColor(dataBusiness.Color || null);
+          localStorage.setItem("color", dataBusiness.Color || "");
+
+          context.setNombre(dataBusiness.Name || null);
+          localStorage.setItem("nombre", dataBusiness.Name || "");
+
+          setPlan(dataBusiness.Plan);
+
+          context.setPhoneNumber(dataBusiness.PhoneNumber || null);
+          localStorage.setItem("telefono", dataBusiness.PhoneNumber || "");
+        }
+
+        // 2) reset pagination + fetch page 1
+        setProductos([]);
+        setPage(1);
+        setHasNext(true);
+
+        // importante: como setPlan es async, usa el plan directo del negocio aquí:
+        const resp = await getProductsByBusinessWithStock(
+          idBusiness || "1",
+          dataBusiness?.Plan || "",
+          1
+        );
+
+        const firstPageProducts: Producto[] = Array.isArray(resp?.data) ? resp.data : [];
+        setProductos(firstPageProducts);
+        setHasNext(Boolean(resp?.pagination?.hasNext));
+        setPage(1);
+
+        if (firstPageProducts.length > 0) {
+          const phone = (firstPageProducts[0] as any).PhoneNumber;
+          if (phone) {
+            setTelefono(phone);
+            context.setPhoneNumber(phone);
+            localStorage.setItem("telefono", phone);
+          }
+        }
+      } catch (error) {
+        console.error("Error cargando catálogo:", error);
+        setProductos([]);
+        setHasNext(false);
+      } finally {
+        setLoadingProducts(false);
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [idBusiness]);
+
+  const loadNextPage = useCallback(() => {
+    if (!hasNext || loadingMore || loadingProducts) return;
+    const next = page + 1;
+    void fetchProductsPage(next, "append");
+  }, [hasNext, loadingMore, loadingProducts, page, fetchProductsPage]);
+
+  useEffect(() => {
+    if (!hasNext) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting) {
+          loadNextPage();
+        }
+      },
+      { rootMargin: "200px" }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) observer.observe(currentRef);
+
+    return () => {
+      if (currentRef) observer.unobserve(currentRef);
+    };
+  }, [hasNext, loadNextPage]);
+
+
   // 6) Render
   return (
     <HelmetProvider>
@@ -403,7 +431,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
             </div>
           ) : (
             <ProductGrid
-              products={visibleProducts}
+              products={sanitizedProducts}
               telefono={telefono}
               color={color}
               adjustColor={adjustColor}
@@ -413,9 +441,14 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
             />
           )}
 
-          {/* Sentinela para disparar el Intersection Observer */}
-          {hasMoreProducts && (
+          {hasNext && (
             <div ref={loadMoreRef} className="h-10"></div>
+          )}
+
+          {loadingMore && (
+            <div className="text-center py-4 text-gray-500">
+              Cargando más productos...
+            </div>
           )}
 
           {/* Botón de WhatsApp */}

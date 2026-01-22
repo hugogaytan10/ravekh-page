@@ -16,9 +16,9 @@ export const getProductsByBusiness = async (idBusiness: string) => {
     }
 }
 
-export const getProductsByBusinessWithStock = async (idBusiness: string, limit: string) => {
+export const getProductsByBusinessWithStock = async (idBusiness: string, limit: string, page: number) => {
     try {
-        const response = await fetch(`${URL}products/showstore/stockgtzero/${idBusiness}/1`, {
+        const response = await fetch(`${URL}products/showstore/stockgtzero/${idBusiness}/1?page=${page}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
