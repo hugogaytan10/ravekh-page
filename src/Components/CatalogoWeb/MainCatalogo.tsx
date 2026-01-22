@@ -84,11 +84,19 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
 
       // Limpieza de carrito si no coincide el negocio
       const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
-      const isDifferentBusiness = storedCart.some(
-        (item: Producto) => item.Business_Id.toString() !== idBusiness
-      );
+      const storedCartBusinessId = localStorage.getItem("cartBusinessId");
+      const hasDifferentItemBusiness = storedCart.some((item: Producto) => {
+        if (item.Business_Id == null) return false;
+        return item.Business_Id.toString() !== idBusiness;
+      });
+      const hasDifferentStoredBusiness =
+        storedCartBusinessId != null &&
+        idBusiness != null &&
+        storedCartBusinessId !== idBusiness;
+      const isDifferentBusiness = hasDifferentItemBusiness || hasDifferentStoredBusiness;
       if (isDifferentBusiness || storedCart.length === 0) {
         localStorage.removeItem("cart");
+        localStorage.removeItem("cartBusinessId");
         context.clearCart();
       }
 

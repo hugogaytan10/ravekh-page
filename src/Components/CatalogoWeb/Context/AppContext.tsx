@@ -92,6 +92,7 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
     const unitPrice = product.Price ?? 0;
     const mappedProduct: CartPos = {
       Id: product.Id,
+      Business_Id: product.Business_Id,
       Name: product.Name,
       Price: product.Price,
       Quantity: quantity,
@@ -147,6 +148,9 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
 
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));
+    if (product.Business_Id != null) {
+      localStorage.setItem("cartBusinessId", product.Business_Id.toString());
+    }
   };
 
   //funcion para eliminar un producto del carrito
@@ -164,12 +168,16 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
 
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));
+    if (newCart.length === 0) {
+      localStorage.removeItem("cartBusinessId");
+    }
   };
 
   //funcion para limpiar el carrito
   const clearCart = () => {
     setCart([]);
     localStorage.removeItem("cart");
+    localStorage.removeItem("cartBusinessId");
   };
 
   const value = useMemo(() => {
