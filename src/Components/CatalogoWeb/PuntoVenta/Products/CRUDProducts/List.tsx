@@ -106,7 +106,7 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
     setImportErrors([]);
 
     try {
-      const XLSX = await import( 
+      const XLSX = await import(
         "https://cdn.jsdelivr.net/npm/xlsx@0.18.5/+esm"
       );
 
@@ -149,8 +149,36 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
       };
 
       const toNumberOrNull = (value: any) => {
+        if (value === null || value === undefined) return null;
+        if (typeof value === "string" && value.trim() === "") return null;
         const parsed = Number(value);
         return Number.isFinite(parsed) ? parsed : null;
+      };
+
+      const toNumberOrUndefined = (value: any) => {
+        const parsed = Number(value);
+        return Number.isFinite(parsed) ? parsed : undefined;
+      };
+
+      const pick = (row: Record<string, any>, ...keys: string[]) => {
+        const entries = Object.entries(row ?? {});
+        const normalizedKeys = keys.map((key) => key.toLowerCase());
+
+        for (const [index, key] of keys.entries()) {
+          const value = row?.[key];
+          if (value !== null && value !== undefined && value !== "") return value;
+
+          const match = entries.find(
+            ([entryKey, entryValue]) =>
+              entryKey.toLowerCase() === normalizedKeys[index] &&
+              entryValue !== null &&
+              entryValue !== undefined &&
+              entryValue !== ""
+          );
+          if (match) return match[1];
+        }
+
+        return undefined;
       };
 
       const normalizedRows = await Promise.all(
@@ -158,18 +186,20 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
           const images = parseImages(row.Images || row.Image || row.image);
           const color = String(row.Color ?? row.color ?? "").trim() || "#000000";
 
+          const toTrimmedString = (value: any) => String(value ?? "").trim();
+
           const normalizedRow = {
             Barcode: row.Barcode ?? row.barcode ?? "",
             Business_Id: context.user.Business_Id,
-            Category: row.Category ?? row.category ?? "",
-            Subcategory: row.Subcategory ?? row.subcategory ?? "",
-            Name: row.Name ?? row.name ?? "",
+            Category: pick(row, "Category") ?? "",
+            Subcategory: pick(row, "Subcategory") ?? "",
+            Name: pick(row, "Name") ?? "",
             Color: color,
-            Price: toNumberOrNull(row.Price ?? row.price),
-            CostPerItem: toNumberOrNull(
+            Price: toNumberOrUndefined(pick(row, "Price")),
+            CostPerItem: toNumberOrUndefined(
               row.CostPerItem ?? row.costperitem ?? row.Cost ?? row.cost
             ),
-            Stock: toNumberOrNull(row.Stock ?? row.stock),
+            Stock: toNumberOrUndefined(row.Stock ?? row.stock),
             Description: row.Description ?? row.description ?? "",
             Volume: toBoolean(row.Volume ?? row.volume),
             ForSale: toBoolean(row.ForSale ?? row.forsale ?? row["For Sale"]),
@@ -178,12 +208,54 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
             ),
             Available: toBoolean(row.Available ?? row.available),
             Images: images,
-            PromotionPrice: toNumberOrNull(
+            PromotionPrice: toNumberOrUndefined(
               row.PromotionPrice ?? row.promotionprice
             ),
-            ExpDate: row.ExpDate ?? row.expdate ?? row["Exp Date"] ?? "",
-            MinStock: toNumberOrNull(row.MinStock ?? row.minstock),
-            OptStock: toNumberOrNull(row.OptStock ?? row.optstock),
+            ExpDate: pick(row, "ExpDate", "Exp Date") ?? "",
+            MinStock: toNumberOrUndefined(row.MinStock ?? row.minstock),
+            OptStock: toNumberOrUndefined(row.OptStock ?? row.optstock),
+            VariantDescription: toTrimmedString(
+              pick(row, "VariantDescription", "Variant Description")
+            ),
+            VariantBarcode: toTrimmedString(
+              pick(row, "VariantBarcode", "Variant Barcode")
+            ),
+            VariantColor: toTrimmedString(
+              pick(row, "VariantColor", "Variant Color")
+            ),
+            VariantPrice: toNumberOrNull(
+              pick(row, "VariantPrice", "Variant Price")
+            ),
+            VariantPromotionPrice: toNumberOrNull(
+              row.VariantPromotionPrice ??
+              row.variantpromotionprice ??
+              row["Variant Promotion Price"]
+            ),
+            VariantCostPerItem: toNumberOrNull(
+              row.VariantCostPerItem ??
+              row.variantcostperitem ??
+              row["Variant Cost Per Item"] ??
+              row.VariantCost ??
+              row.variantcost
+            ),
+            VariantStock: toNumberOrNull(
+              row.VariantStock ?? row.variantstock ?? row["Variant Stock"]
+            ),
+            VariantExpDate:
+              row.VariantExpDate ??
+              row.variantexpdate ??
+              row["Variant Exp Date"] ??
+              "",
+            VariantMinStock: toNumberOrNull(
+              row.VariantMinStock ??
+              row.variantminstock ??
+              row["Variant Min Stock"]
+            ),
+            VariantOptStock: toNumberOrNull(
+              row.VariantOptStock ??
+              row.variantoptstock ??
+              row["Variant Opt Stock"]
+            ),
           } as Record<string, any>;
 
           normalizedRow.color = normalizedRow.Color; // soporte por si el backend espera minúsculas
@@ -191,6 +263,34 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
           return normalizedRow;
         })
       );
+
+      const hasVariantData = (normalizedRow: Record<string, any>) =>
+        [
+          normalizedRow.VariantBarcode,
+          normalizedRow.VariantColor,
+          normalizedRow.VariantPrice,
+          normalizedRow.VariantPromotionPrice,
+          normalizedRow.VariantCostPerItem,
+          normalizedRow.VariantStock,
+          normalizedRow.VariantExpDate,
+          normalizedRow.VariantMinStock,
+          normalizedRow.VariantOptStock,
+        ].some(
+          (value) => value !== null && value !== undefined && String(value) !== ""
+        );
+
+      const localErrors = normalizedRows.flatMap((normalizedRow, index) =>
+        hasVariantData(normalizedRow) &&
+          String(normalizedRow.VariantDescription ?? "") === ""
+          ? [`Fila ${index + 2}: Falta VariantDescription para la variante.`]
+          : []
+      );
+
+      if (localErrors.length > 0) {
+        setImportMessage("Corrige el Excel: hay errores en variantes.");
+        setImportErrors(localErrors);
+        return;
+      }
 
       const response = await fetch(
         `${URL}products/import/${context.user.Business_Id}`,
