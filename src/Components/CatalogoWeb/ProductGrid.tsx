@@ -69,6 +69,8 @@ const ProductCard = memo(
     );
     const variantCountValue = Number(product.VariantsCount ?? inlineVariants.length) || 0;
     const hasVariants = variantCountValue > 0;
+    const showQuickView =
+      Boolean(onQuickView) && (hasVariants || product.VariantsCount == null);
 
     const stockByVariant = useMemo(() => existingQuantities || {}, [existingQuantities]);
     const baseKey = useMemo(() => getBaseVariantKey(product.Id), [product.Id]);
@@ -223,7 +225,7 @@ const ProductCard = memo(
               </div>
             </>
           )}
-          {hasVariants && (
+          {showQuickView && (
             <button
               type="button"
               onClick={handleQuickView}

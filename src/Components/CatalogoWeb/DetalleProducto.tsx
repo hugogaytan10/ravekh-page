@@ -7,7 +7,6 @@ import { getProductById, getVariantsByProductIdPublic } from "./Petitions";
 import logoWhasa from "../../assets/logo-whatsapp.svg";
 import { ProductCarousel } from "./ProductsCarousel";
 import { Variant } from "./PuntoVenta/Model/Variant";
-import { VariantSelectionModal } from "./VariantSelectionModal";
 
 type Params = {
   idProducto?: string;
@@ -24,31 +23,19 @@ export const DetalleProducto: React.FC = () => {
   const { idProducto, telefono } = useParams<Params>();
   const [producto, setProducto] = useState<Producto | null>(null);
   const [count, setCount] = useState<number>(1);
-  const [limit, setLimit] = useState<number | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
-  const [showVariantModal, setShowVariantModal] = useState(false);
   const [loadingVariants, setLoadingVariants] = useState(false);
   const [stockWarning, setStockWarning] = useState<string | null>(null);
-  const [buyNowPending, setBuyNowPending] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [addedPulse, setAddedPulse] = useState(false);
+  const [variantsOpen, setVariantsOpen] = useState(true);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const pulseTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const context = useContext(AppContext);
   const navigate = useNavigate();
-  const { color, setColor, addProductToCart, phoneNumber, setPhoneNumber, idBussiness, setIdBussiness, cart } =
+  const { color, setColor, addProductToCart, phoneNumber, setPhoneNumber, idBussiness, setIdBussiness } =
     context;
-  const cartVariantQuantities = useMemo(() => {
-    const map: Record<number, number> = {};
-
-    cart.forEach((item) => {
-      if (item.Variant_Id != null && item.Quantity != null) {
-        map[item.Variant_Id] = (map[item.Variant_Id] ?? 0) + item.Quantity;
-      }
-    });
-
-    return map;
-  }, [cart]);
 
   useEffect(() => {
     // color desde localStorage si no hay en contexto
@@ -82,9 +69,10 @@ export const DetalleProducto: React.FC = () => {
     getProductById(id).then((data) => {
       if (!mounted) return;
       setProducto(data);
-      setLimit(typeof data?.Stock === "number" ? data.Stock : null);
       setCount(1); // reset cantidad al cambiar de producto
       setStockWarning(null);
+      setSelectedVariantId(null);
+      setVariantsOpen(true);
 
       const inlineVariants = Array.isArray((data as any)?.Variants)
         ? ((data as any).Variants as Variant[])
@@ -119,13 +107,30 @@ export const DetalleProducto: React.FC = () => {
     return Array.from(new Set(base.filter(Boolean)));
   }, [producto]);
 
+  const activeVariant = useMemo(
+    () => variants.find((variant) => variant.Id === selectedVariantId) ?? null,
+    [selectedVariantId, variants]
+  );
+  const activeStock =
+    activeVariant?.Stock ?? (producto?.Stock ?? null);
+  const activePrice =
+    activeVariant?.PromotionPrice ??
+    activeVariant?.Price ??
+    producto?.PromotionPrice ??
+    producto?.Price ??
+    0;
+  const activeOriginalPrice =
+    activeVariant?.PromotionPrice
+      ? activeVariant?.Price
+      : producto?.PromotionPrice
+        ? producto?.Price
+        : null;
+
   const canAdd =
     !!producto &&
     producto.Available === 1 &&
     producto.ForSale === 1 &&
-    (limit === null || limit > 0);
-
-  const addButtonLabel = variants.length > 0 ? "Seleccionar variante" : "Añadir al carrito";
+    (activeStock === null || activeStock > 0);
 
   const triggerToast = () => {
     setShowToast(true);
@@ -145,28 +150,38 @@ export const DetalleProducto: React.FC = () => {
 
   const handleAddCart = () => {
     if (!producto) return;
-    setBuyNowPending(false);
+    const variant = activeVariant;
+    const itemPrice =
+      variant?.PromotionPrice ?? variant?.Price ?? producto.PromotionPrice ?? producto.Price ?? 0;
 
-    if (variants.length > 0) {
-      setShowVariantModal(true);
-      return;
-    }
-
-    addProductToCart({ ...producto, Quantity: count, Variant_Id: null });
+    addProductToCart({
+      ...producto,
+      Price: itemPrice,
+      PromotionPrice: variant?.PromotionPrice ?? producto.PromotionPrice,
+      Variant_Id: variant?.Id ?? null,
+      VariantDescription: variant?.Description,
+      Stock: variant?.Stock ?? producto.Stock,
+      Quantity: count,
+    });
     triggerToast();
     triggerPulse();
   };
 
   const handleBuyNow = () => {
     if (!producto) return;
-    setBuyNowPending(true);
+    const variant = activeVariant;
+    const itemPrice =
+      variant?.PromotionPrice ?? variant?.Price ?? producto.PromotionPrice ?? producto.Price ?? 0;
 
-    if (variants.length > 0) {
-      setShowVariantModal(true);
-      return;
-    }
-
-    addProductToCart({ ...producto, Quantity: count, Variant_Id: null });
+    addProductToCart({
+      ...producto,
+      Price: itemPrice,
+      PromotionPrice: variant?.PromotionPrice ?? producto.PromotionPrice,
+      Variant_Id: variant?.Id ?? null,
+      VariantDescription: variant?.Description,
+      Stock: variant?.Stock ?? producto.Stock,
+      Quantity: count,
+    });
     triggerToast();
     triggerPulse();
     navigate("/catalogo/pedido");
@@ -175,13 +190,13 @@ export const DetalleProducto: React.FC = () => {
   const handleCountInput = (value: string) => {
     let parsed = Math.floor(Number(value));
     if (Number.isNaN(parsed)) parsed = 1;
-    parsed = Math.max(parsed, limit === 0 ? 0 : 1);
+    parsed = Math.max(parsed, activeStock === 0 ? 0 : 1);
 
     let warning: string | null = null;
     let next = parsed;
 
-    if (limit != null && parsed > limit) {
-      next = limit;
+    if (activeStock != null && parsed > activeStock) {
+      next = activeStock;
       warning = "Has alcanzado el límite de stock disponible.";
     }
 
@@ -189,36 +204,6 @@ export const DetalleProducto: React.FC = () => {
     setStockWarning(warning);
   };
 
-  const handleConfirmVariant = (selections: { variant: Variant; quantity: number }[]) => {
-    if (!producto) return;
-
-    selections.forEach(({ variant, quantity }) => {
-      const basePrice = variant.PromotionPrice ?? variant.Price ?? producto.Price;
-
-      addProductToCart({
-        ...producto,
-        Price: basePrice ?? 0,
-        PromotionPrice: variant.PromotionPrice ?? producto.PromotionPrice,
-        Variant_Id: variant.Id ?? null,
-        VariantDescription: variant.Description,
-        Stock: variant.Stock ?? producto.Stock,
-        Quantity: quantity,
-      });
-    });
-
-    setShowVariantModal(false);
-    triggerToast();
-    triggerPulse();
-    if (buyNowPending) {
-      setBuyNowPending(false);
-      navigate("/catalogo/pedido");
-    }
-  };
-
-  const handleCloseVariantModal = () => {
-    setShowVariantModal(false);
-    setBuyNowPending(false);
-  };
 
   useEffect(() => {
     return () => {
@@ -292,11 +277,11 @@ export const DetalleProducto: React.FC = () => {
               </h1>
               <div className="flex items-end gap-3 mt-2">
                 <div className="text-2xl font-semibold text-[var(--text-primary)]">
-                  {currency.format(Number(producto.PromotionPrice ?? producto.Price ?? 0))}
+                  {currency.format(Number(activePrice))}
                 </div>
-                {producto.PromotionPrice && (
+                {activeOriginalPrice != null && (
                   <span className="text-sm text-[var(--text-muted)] line-through">
-                    {currency.format(Number(producto.Price ?? 0))}
+                    {currency.format(Number(activeOriginalPrice))}
                   </span>
                 )}
               </div>
@@ -309,24 +294,69 @@ export const DetalleProducto: React.FC = () => {
           )}
 
           {variants.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowVariantModal(true)}
-              className="mt-6 w-full flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-3 text-left"
-            >
-              <div>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">
-                  Variantes
-                </p>
-                <p className="text-xs text-[var(--text-muted)]">
-                  {variants.length} opciones disponibles
-                </p>
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => setVariantsOpen((prev) => !prev)}
+                className="w-full flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-3 text-left"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">
+                    Variantes
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {variants.length} opciones disponibles
+                  </p>
+                </div>
+                <span
+                  className={`text-[var(--text-secondary)] transition-transform ${
+                    variantsOpen ? "rotate-180" : ""
+                  }`}
+                >
+                  ▾
+                </span>
+              </button>
+              <div
+                className={`overflow-hidden transition-all duration-200 ease-out ${
+                  variantsOpen
+                    ? "max-h-[600px] opacity-100 translate-y-0"
+                    : "max-h-0 opacity-0 -translate-y-2"
+                }`}
+              >
+                <div className="pt-4 flex flex-wrap gap-2">
+                  {variants.map((variant) => {
+                    const selected = selectedVariantId === variant.Id;
+                    const isOutOfStock =
+                      variant.Stock != null && variant.Stock <= 0;
+
+                    return (
+                      <button
+                        key={variant.Id ?? variant.Description}
+                        type="button"
+                        onClick={() => {
+                          setSelectedVariantId((prev) =>
+                            prev === variant.Id ? null : variant.Id ?? null
+                          );
+                          setCount(1);
+                          setStockWarning(null);
+                        }}
+                        disabled={isOutOfStock}
+                        className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
+                          selected
+                            ? "bg-[var(--action-primary)] text-[var(--text-inverse)] border-[var(--action-primary)]"
+                            : "bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-default)]"
+                        } ${isOutOfStock ? "opacity-50" : ""}`}
+                      >
+                        {variant.Description}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-              <span className="text-[var(--text-secondary)]">▾</span>
-            </button>
+            </div>
           )}
 
-          <div className={`mt-6 flex items-center justify-between ${variants.length > 0 ? "hidden" : ""}`}>
+          <div className="mt-6 flex items-center justify-between">
             <button
               className="w-11 h-11 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg disabled:opacity-40"
               onClick={() => {
@@ -339,8 +369,8 @@ export const DetalleProducto: React.FC = () => {
             </button>
             <input
               type="number"
-              min={limit === 0 ? 0 : 1}
-              max={limit ?? undefined}
+              min={activeStock === 0 ? 0 : 1}
+              max={activeStock ?? undefined}
               value={count}
               onChange={(e) => handleCountInput(e.target.value)}
               className="w-16 text-center text-lg font-semibold text-[var(--text-primary)] bg-transparent focus:outline-none"
@@ -349,18 +379,18 @@ export const DetalleProducto: React.FC = () => {
             <button
               className="w-11 h-11 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg disabled:opacity-40"
               onClick={() => {
-                if (limit == null) {
+                if (activeStock == null) {
                   setCount((c) => c + 1);
                   setStockWarning(null);
                   return;
                 }
-                if (count < limit) {
+                if (count < activeStock) {
                   setCount((c) => c + 1);
                   setStockWarning(null);
                 }
               }}
-              disabled={limit !== null && count >= limit}
-              title={limit !== null ? `Disponible: ${limit}` : undefined}
+              disabled={activeStock !== null && count >= activeStock}
+              title={activeStock !== null ? `Disponible: ${activeStock}` : undefined}
             >
               +
             </button>
@@ -377,11 +407,7 @@ export const DetalleProducto: React.FC = () => {
               disabled={!canAdd}
               className="w-full rounded-full bg-[var(--action-primary)] text-[var(--text-inverse)] py-3 text-sm font-semibold shadow-sm transition-transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loadingVariants && variants.length === 0
-                ? "Buscando variantes..."
-                : addButtonLabel === "Añadir al carrito"
-                  ? "Comprar ahora"
-                  : addButtonLabel}
+              {loadingVariants && variants.length === 0 ? "Buscando variantes..." : "Comprar ahora"}
             </button>
             <button
               type="button"
@@ -396,15 +422,6 @@ export const DetalleProducto: React.FC = () => {
           </div>
           </div>
         </div>
-
-        <VariantSelectionModal
-          product={producto}
-          variants={variants}
-          isOpen={showVariantModal}
-          onClose={handleCloseVariantModal}
-          onConfirm={handleConfirmVariant}
-          existingVariantQuantities={cartVariantQuantities}
-        />
 
         <div className="bg-green-500 hover:bg-green-600 rounded-full p-2 fixed right-2 bottom-4 shadow-lg transition-all">
           <a
