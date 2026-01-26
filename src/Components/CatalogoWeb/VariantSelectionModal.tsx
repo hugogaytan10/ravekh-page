@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { Producto } from "./Modelo/Producto";
 import { Variant } from "./PuntoVenta/Model/Variant";
 
@@ -32,6 +33,7 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
   const sliderRef = useRef<HTMLDivElement | null>(null);
   const sheetRef = useRef<HTMLDivElement | null>(null);
   const scrollRestoreRef = useRef(0);
+  const navigate = useNavigate();
 
   const baseVariant = useMemo<
     | {
@@ -180,9 +182,15 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
     }
   };
 
+  const handleBuyNow = () => {
+    handleConfirm();
+    navigate("/catalogo/pedido");
+  };
+
   const displayEntries = variants.length > 0
     ? variantEntries.filter((entry) => !entry.isBase)
     : variantEntries;
+  const canConfirm = hasSelection || Boolean(baseVariant);
 
   const images = useMemo(() => {
     if (!product) return [];
@@ -205,9 +213,9 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
   if (!isOpen || !product) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50">
-      <div className="w-full max-w-xl">
-        <div className="flex justify-center pt-6">
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/50 md:items-center md:p-6">
+      <div className="w-full max-w-xl md:max-w-5xl">
+        <div className="flex justify-center pt-6 md:hidden">
           <button
             onClick={onClose}
             className="h-12 w-12 rounded-full bg-[var(--bg-surface)] text-[var(--text-primary)] flex items-center justify-center shadow-sm"
@@ -219,206 +227,220 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
 
         <div
           ref={sheetRef}
-          className="mt-4 max-h-[88vh] overflow-y-auto bg-[var(--bg-surface)] rounded-t-[32px] pb-6 shadow-xl"
+          className="mt-4 max-h-[88vh] overflow-y-auto bg-[var(--bg-surface)] rounded-t-[32px] pb-6 shadow-xl md:mt-0 md:rounded-2xl md:pb-8"
         >
-          <div className="px-6 pt-6">
-            <h2 className="text-xl font-semibold text-center text-[var(--text-primary)]">
-              {product.Name}
-            </h2>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="hidden md:flex absolute right-6 top-6 h-10 w-10 items-center justify-center rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+            aria-label="Cerrar vista rápida"
+          >
+            ×
+          </button>
 
-          <div className="px-6 pt-4">
-            <div className="w-full overflow-hidden rounded-2xl bg-[var(--bg-subtle)]">
-              {primaryImage ? (
-                <div className="aspect-[4/5] w-full">
-                  <div
-                    ref={sliderRef}
-                    onScroll={handleSliderScroll}
-                    className="h-full flex snap-x snap-mandatory overflow-x-auto scroll-smooth"
-                  >
-                    {images.map((src, index) => (
-                      <div key={src + index} className="min-w-full h-full snap-center">
-                        <img
-                          src={src}
-                          alt={`${product.Name} ${index + 1}`}
-                          className="h-full w-full object-cover"
-                        />
+          <div className="px-6 pt-6 md:px-8 md:pt-8">
+            <div className="md:grid md:grid-cols-[1.1fr,1fr] md:gap-10 md:items-start">
+              <div>
+                <div className="w-full overflow-hidden rounded-2xl bg-[var(--bg-subtle)]">
+                  {primaryImage ? (
+                    <div className="aspect-[4/5] w-full">
+                      <div
+                        ref={sliderRef}
+                        onScroll={handleSliderScroll}
+                        className="h-full flex snap-x snap-mandatory overflow-x-auto scroll-smooth"
+                      >
+                        {images.map((src, index) => (
+                          <div key={src + index} className="min-w-full h-full snap-center">
+                            <img
+                              src={src}
+                              alt={`${product.Name} ${index + 1}`}
+                              className="h-full w-full object-cover"
+                            />
+                          </div>
+                        ))}
                       </div>
+                    </div>
+                  ) : (
+                    <div className="aspect-[4/5] w-full" />
+                  )}
+                </div>
+
+                {showDots && (
+                  <div className="flex items-center gap-2 pt-4">
+                    {images.map((_, index) => (
+                      <span
+                        key={index}
+                        className={`h-3 w-3 rounded-full ${
+                          index === activeIndex
+                            ? "bg-[var(--text-primary)]"
+                            : "bg-[var(--border-default)]"
+                        }`}
+                      />
                     ))}
                   </div>
-                </div>
-              ) : (
-                <div className="aspect-[4/5] w-full" />
-              )}
-            </div>
-          </div>
-
-          {showDots && (
-            <div className="flex items-center gap-2 px-6 pt-4">
-              {images.map((_, index) => (
-                <span
-                  key={index}
-                  className={`h-3 w-3 rounded-full ${
-                    index === activeIndex
-                      ? "bg-[var(--text-primary)]"
-                      : "bg-[var(--border-default)]"
-                  }`}
-                />
-              ))}
-            </div>
-          )}
-
-          <div className="px-6 pt-4">
-            {product.PromotionPrice ? (
-              <div className="flex items-end gap-3">
-                <span className="text-base text-[var(--text-muted)] line-through">
-                  ${formatAmount(product.Price)}
-                </span>
-                <span className="text-2xl font-semibold text-[var(--text-primary)]">
-                  ${formatAmount(product.PromotionPrice)}
-                </span>
+                )}
               </div>
-            ) : (
-              <div className="text-2xl font-semibold text-[var(--text-primary)]">
-                ${formatAmount(product.Price)}
-              </div>
-            )}
-          </div>
 
-          <div className="px-6 pt-6">
-            <button
-              type="button"
-              onClick={() => {
-                scrollRestoreRef.current = sheetRef.current?.scrollTop ?? 0;
-                setVariantsOpen((prev) => !prev);
-                requestAnimationFrame(() => {
-                  if (sheetRef.current) {
-                    sheetRef.current.scrollTop = scrollRestoreRef.current;
-                  }
-                });
-              }}
-              className="w-full flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-3 text-left"
-              aria-expanded={variantsOpen}
-            >
-              <div>
-                <p className="text-sm font-semibold text-[var(--text-primary)]">Variantes</p>
-                <p className="text-xs text-[var(--text-muted)]">Selecciona una opción</p>
-              </div>
-              <span
-                className={`text-[var(--text-secondary)] transition-transform ${
-                  variantsOpen ? "rotate-180" : ""
-                }`}
-              >
-                ▾
-              </span>
-            </button>
+              <div className="pt-6 md:pt-0">
+                <h2 className="text-2xl font-semibold text-[var(--text-primary)] md:text-left">
+                  {product.Name}
+                </h2>
 
-            <div
-              className={`overflow-hidden transition-all duration-200 ease-out ${
-                variantsOpen ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"
-              }`}
-            >
-              <div className="pt-4">
-                <div className="flex flex-wrap gap-2">
-                  {displayEntries.length === 0 && (
-                    <span className="text-sm text-[var(--text-muted)]">
-                      No hay variantes disponibles.
-                    </span>
-                  )}
-                  {displayEntries.map((entry) => {
-                    const quantity = quantities[entry.key] ?? 0;
-                    const selected = quantity > 0;
-                    const available = remainingStock[entry.key];
-                    const isOutOfStock =
-                      available !== undefined && available !== null && available <= 0;
-
-                    return (
-                      <button
-                        key={entry.key}
-                        type="button"
-                        onClick={() =>
-                          handleQuantityChange(entry.key, selected ? -quantity : 1)
-                        }
-                        disabled={isOutOfStock}
-                        className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
-                          selected
-                            ? "bg-[var(--action-primary)] text-white border-[var(--action-primary)]"
-                            : "bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-default)]"
-                        } ${isOutOfStock ? "opacity-50" : ""}`}
-                      >
-                        {entry.variant.Description}
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <div className="mt-6">
-                  <p className="text-sm font-semibold text-[var(--text-primary)] mb-3">
-                    Cantidad
-                  </p>
-                  {displayEntries.filter((entry) => (quantities[entry.key] ?? 0) > 0)
-                    .length === 0 ? (
-                    <p className="text-sm text-[var(--text-muted)]">
-                      Selecciona una variante para definir cantidad.
-                    </p>
+                <div className="pt-3">
+                  {product.PromotionPrice ? (
+                    <div className="flex items-end gap-3">
+                      <span className="text-base text-[var(--text-muted)] line-through">
+                        ${formatAmount(product.Price)}
+                      </span>
+                      <span className="text-2xl font-semibold text-[var(--text-primary)]">
+                        ${formatAmount(product.PromotionPrice)}
+                      </span>
+                    </div>
                   ) : (
-                    displayEntries
-                      .filter((entry) => (quantities[entry.key] ?? 0) > 0)
-                      .map((entry) => (
-                        <div
-                          key={entry.key}
-                          className="flex items-center justify-between py-2"
-                        >
-                          <span className="text-sm text-[var(--text-primary)]">
-                            {entry.variant.Description}
-                          </span>
-                          <div className="flex items-center gap-3">
-                            <button
-                              onClick={() => handleQuantityChange(entry.key, -1)}
-                              className="w-9 h-9 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg disabled:opacity-40"
-                              disabled={(quantities[entry.key] ?? 0) <= 1}
-                              aria-label={`Reducir cantidad de ${entry.variant.Description}`}
-                            >
-                              −
-                            </button>
-                            <span className="text-sm font-semibold text-[var(--text-primary)]">
-                              {quantities[entry.key] ?? 0}
-                            </span>
-                            <button
-                              onClick={() => handleQuantityChange(entry.key, 1)}
-                              className="w-9 h-9 rounded-full bg-[var(--action-primary)] text-white text-lg disabled:opacity-40"
-                              disabled={
-                                remainingStock[entry.key] != null &&
-                                (quantities[entry.key] ?? 0) >=
-                                  (remainingStock[entry.key] ?? 0)
-                              }
-                              aria-label={`Aumentar cantidad de ${entry.variant.Description}`}
-                            >
-                              +
-                            </button>
-                          </div>
-                        </div>
-                      ))
+                    <div className="text-2xl font-semibold text-[var(--text-primary)]">
+                      ${formatAmount(product.Price)}
+                    </div>
                   )}
+                </div>
+
+                <div className="pt-6">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      scrollRestoreRef.current = sheetRef.current?.scrollTop ?? 0;
+                      setVariantsOpen((prev) => !prev);
+                      requestAnimationFrame(() => {
+                        if (sheetRef.current) {
+                          sheetRef.current.scrollTop = scrollRestoreRef.current;
+                        }
+                      });
+                    }}
+                    className="w-full flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-3 text-left"
+                    aria-expanded={variantsOpen}
+                  >
+                    <div>
+                      <p className="text-sm font-semibold text-[var(--text-primary)]">Variantes</p>
+                      <p className="text-xs text-[var(--text-muted)]">Selecciona una opción</p>
+                    </div>
+                    <span
+                      className={`text-[var(--text-secondary)] transition-transform ${
+                        variantsOpen ? "rotate-180" : ""
+                      }`}
+                    >
+                      ▾
+                    </span>
+                  </button>
+
+                  <div
+                    className={`overflow-hidden transition-all duration-200 ease-out ${
+                      variantsOpen ? "max-h-[800px] opacity-100" : "max-h-0 opacity-0"
+                    }`}
+                  >
+                    <div className="pt-4">
+                      <div className="flex flex-wrap gap-2">
+                        {displayEntries.length === 0 && (
+                          <span className="text-sm text-[var(--text-muted)]">
+                            No hay variantes disponibles.
+                          </span>
+                        )}
+                        {displayEntries.map((entry) => {
+                          const quantity = quantities[entry.key] ?? 0;
+                          const selected = quantity > 0;
+                          const available = remainingStock[entry.key];
+                          const isOutOfStock =
+                            available !== undefined && available !== null && available <= 0;
+
+                          return (
+                            <button
+                              key={entry.key}
+                              type="button"
+                              onClick={() =>
+                                handleQuantityChange(entry.key, selected ? -quantity : 1)
+                              }
+                              disabled={isOutOfStock}
+                              className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
+                                selected
+                                  ? "bg-[var(--action-primary)] text-white border-[var(--action-primary)]"
+                                  : "bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-default)]"
+                              } ${isOutOfStock ? "opacity-50" : ""}`}
+                            >
+                              {entry.variant.Description}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <div className="mt-6">
+                        <p className="text-sm font-semibold text-[var(--text-primary)] mb-3">
+                          Cantidad
+                        </p>
+                        {displayEntries.filter((entry) => (quantities[entry.key] ?? 0) > 0)
+                          .length === 0 ? (
+                          <p className="text-sm text-[var(--text-muted)]">
+                            Selecciona una variante para definir cantidad.
+                          </p>
+                        ) : (
+                          displayEntries
+                            .filter((entry) => (quantities[entry.key] ?? 0) > 0)
+                            .map((entry) => (
+                              <div
+                                key={entry.key}
+                                className="flex items-center justify-between py-2"
+                              >
+                                <span className="text-sm text-[var(--text-primary)]">
+                                  {entry.variant.Description}
+                                </span>
+                                <div className="flex items-center gap-3">
+                                  <button
+                                    onClick={() => handleQuantityChange(entry.key, -1)}
+                                    className="w-9 h-9 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg disabled:opacity-40"
+                                    disabled={(quantities[entry.key] ?? 0) <= 1}
+                                    aria-label={`Reducir cantidad de ${entry.variant.Description}`}
+                                  >
+                                    −
+                                  </button>
+                                  <span className="text-sm font-semibold text-[var(--text-primary)]">
+                                    {quantities[entry.key] ?? 0}
+                                  </span>
+                                  <button
+                                    onClick={() => handleQuantityChange(entry.key, 1)}
+                                    className="w-9 h-9 rounded-full bg-[var(--action-primary)] text-white text-lg disabled:opacity-40"
+                                    disabled={
+                                      remainingStock[entry.key] != null &&
+                                      (quantities[entry.key] ?? 0) >=
+                                        (remainingStock[entry.key] ?? 0)
+                                    }
+                                    aria-label={`Aumentar cantidad de ${entry.variant.Description}`}
+                                  >
+                                    +
+                                  </button>
+                                </div>
+                              </div>
+                            ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="pt-6 flex flex-col gap-3 md:flex-row">
+                    <button
+                      onClick={handleBuyNow}
+                      className="w-full rounded-full py-3 text-sm font-semibold text-[var(--text-inverse)] bg-[var(--action-primary)] disabled:opacity-40"
+                      disabled={!canConfirm}
+                    >
+                      Comprar ahora
+                    </button>
+                    <button
+                      onClick={handleConfirm}
+                      className="w-full rounded-full py-3 text-sm font-semibold bg-[var(--action-disabled)] text-[var(--text-inverse)] disabled:opacity-40"
+                      disabled={!canConfirm}
+                    >
+                      Agregar al carrito
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-
-          <div className="px-6 pt-6 flex flex-col gap-3">
-            <button
-              onClick={handleConfirm}
-              className="w-full rounded-full py-3 text-sm font-semibold text-white bg-[var(--action-primary)] disabled:opacity-40"
-              disabled={!hasSelection}
-            >
-              Agregar al carrito
-            </button>
-            <button
-              onClick={onClose}
-              className="w-full rounded-full py-3 text-sm font-semibold bg-[var(--action-disabled)] text-white"
-            >
-              Cerrar
-            </button>
           </div>
         </div>
       </div>

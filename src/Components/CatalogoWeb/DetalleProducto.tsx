@@ -280,24 +280,27 @@ export const DetalleProducto: React.FC = () => {
       </Helmet>
 
       <div className="px-4 pt-28 pb-24 min-h-screen bg-[var(--bg-primary)]">
-        <div className="max-w-xl mx-auto">
-          <ProductCarousel images={images} alt={producto.Name} />
-
-          <div className="mt-6">
-            <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
-              {producto.Name}
-            </h1>
-            <div className="flex items-end gap-3 mt-2">
-              <div className="text-2xl font-semibold text-[var(--text-primary)]">
-                {currency.format(Number(producto.PromotionPrice ?? producto.Price ?? 0))}
-              </div>
-              {producto.PromotionPrice && (
-                <span className="text-sm text-[var(--text-muted)] line-through">
-                  {currency.format(Number(producto.Price ?? 0))}
-                </span>
-              )}
-            </div>
+        <div className="max-w-5xl mx-auto md:flex md:gap-10">
+          <div className="md:w-1/2">
+            <ProductCarousel images={images} alt={producto.Name} />
           </div>
+
+          <div className="md:w-1/2">
+            <div className="mt-6 md:mt-0">
+              <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
+                {producto.Name}
+              </h1>
+              <div className="flex items-end gap-3 mt-2">
+                <div className="text-2xl font-semibold text-[var(--text-primary)]">
+                  {currency.format(Number(producto.PromotionPrice ?? producto.Price ?? 0))}
+                </div>
+                {producto.PromotionPrice && (
+                  <span className="text-sm text-[var(--text-muted)] line-through">
+                    {currency.format(Number(producto.Price ?? 0))}
+                  </span>
+                )}
+              </div>
+            </div>
 
           {producto.Description && (
             <div className="mt-4 text-[var(--text-secondary)] text-sm leading-relaxed">
@@ -368,11 +371,11 @@ export const DetalleProducto: React.FC = () => {
             </p>
           )}
 
-          <div className="mt-8 space-y-3">
+          <div className="mt-8 space-y-3 md:flex md:items-center md:gap-4 md:space-y-0">
             <button
               onClick={handleBuyNow}
               disabled={!canAdd}
-              className="w-full rounded-full bg-[var(--action-primary)] text-white py-3 text-sm font-semibold shadow-sm transition-transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-full bg-[var(--action-primary)] text-[var(--text-inverse)] py-3 text-sm font-semibold shadow-sm transition-transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loadingVariants && variants.length === 0
                 ? "Buscando variantes..."
@@ -384,12 +387,13 @@ export const DetalleProducto: React.FC = () => {
               type="button"
               onClick={handleAddCart}
               disabled={!canAdd}
-              className={`w-full rounded-full bg-[var(--action-disabled)] text-white py-3 text-sm font-semibold transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`w-full rounded-full bg-[var(--action-disabled)] text-[var(--text-inverse)] py-3 text-sm font-semibold transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
                 addedPulse ? "scale-[1.02] ring-2 ring-[var(--action-primary)]" : ""
               }`}
             >
               {addedPulse ? "Agregado" : "Agregar al carrito"}
             </button>
+          </div>
           </div>
         </div>
 

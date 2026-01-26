@@ -519,102 +519,128 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
         <Helmet>
           <meta name="theme-color" content={color || "#6D01D1"} />
         </Helmet>
-        <div className="pt-28 pb-24 px-4 max-w-xl mx-auto min-h-screen bg-[var(--bg-primary)]">
+        <div
+          className={`pt-28 ${isCartView ? "pb-32" : "pb-24"} px-4 ${
+            isCartView ? "max-w-6xl" : "max-w-xl"
+          } mx-auto min-h-screen bg-[var(--bg-primary)]`}
+        >
           {/* Resumen del pedido */}
           <h1 className="text-2xl font-semibold mt-6 mb-6 text-center text-[var(--text-primary)]">
             {pageTitle}
           </h1>
 
           {isCartView && (
-            <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm">
-              <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">Tu carrito</h2>
-              <div className="divide-y divide-[var(--border-default)]">
-                {cart.map((producto: CartPos) => {
-                  const hasPromo =
-                    producto.PromotionPrice != null &&
-                    producto.PromotionPrice > 0 &&
-                    producto.PromotionPrice < producto.Price;
-                  const unitPrice = hasPromo ? producto.PromotionPrice : producto.Price;
-                  const totalLine = (unitPrice * (producto.Quantity || 1)).toFixed(2);
+            <div className="md:flex md:items-start md:gap-10">
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold mb-6 text-[var(--text-primary)]">Tu carrito</h2>
+                <div className="space-y-6">
+                  {cart.map((producto: CartPos) => {
+                    const hasPromo =
+                      producto.PromotionPrice != null &&
+                      producto.PromotionPrice > 0 &&
+                      producto.PromotionPrice < producto.Price;
+                    const unitPrice = hasPromo ? producto.PromotionPrice : producto.Price;
+                    const totalLine = (unitPrice * (producto.Quantity || 1)).toFixed(2);
 
-                  return (
-                    <div
-                      key={`${producto.Id}-${producto.Variant_Id ?? "base"}`}
-                      className="py-4 flex items-center gap-4"
-                    >
-                      <img
-                        src={producto.Image || (producto.Images && producto.Images[0]) || ""}
-                        alt={producto.Name}
-                        className="w-20 h-20 object-cover rounded-[var(--radius-md)]"
-                      />
-                      <div className="flex-1">
-                        <p className="text-base font-semibold text-[var(--text-primary)]">
-                          {producto.Name}
-                          {producto.VariantDescription ? `, ${producto.VariantDescription}` : ""}
-                        </p>
-                        <div className="mt-1 flex items-center gap-3">
-                          {hasPromo && (
-                            <span className="text-sm text-[var(--text-muted)] line-through">
-                              ${producto.Price.toFixed(2)}
-                            </span>
-                          )}
-                          <span className="text-lg font-semibold text-[var(--text-primary)]">
-                            ${unitPrice.toFixed(2)}
-                          </span>
-                        </div>
-                        <div className="mt-3 flex items-center gap-5">
-                          {producto.Quantity! > 1 ? (
-                            <button
-                              onClick={() => decrementQuantity(producto)}
-                              className="w-10 h-10 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg"
-                            >
-                              −
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => decrementQuantity(producto)}
-                              className="w-10 h-10 rounded-full bg-[var(--bg-subtle)] flex items-center justify-center"
-                            >
-                              <img src={trash} alt="Eliminar" className="w-5 h-5" />
-                            </button>
-                          )}
-                          <span className="text-base font-semibold text-[var(--text-primary)]">
-                            {producto.Quantity ?? 1}
-                          </span>
-                          <button
-                            onClick={() => incrementQuantity(producto)}
-                            className="w-10 h-10 rounded-full bg-[var(--action-primary)] text-white text-lg"
-                          >
-                            +
-                          </button>
-                        </div>
-                        {quantityWarnings[getProductKey(producto)] && (
-                          <p className="text-xs text-[var(--state-error)] mt-2">
-                            {quantityWarnings[getProductKey(producto)]}
+                    return (
+                      <div
+                        key={`${producto.Id}-${producto.Variant_Id ?? "base"}`}
+                        className="p-6 rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface)] shadow-sm flex items-center gap-6"
+                      >
+                        <img
+                          src={producto.Image || (producto.Images && producto.Images[0]) || ""}
+                          alt={producto.Name}
+                          className="w-28 h-28 object-cover rounded-[var(--radius-md)]"
+                        />
+                        <div className="flex-1">
+                          <p className="text-base font-semibold text-[var(--text-primary)]">
+                            {producto.Name}
+                            {producto.VariantDescription ? `, ${producto.VariantDescription}` : ""}
                           </p>
-                        )}
+                          <div className="mt-2 flex items-center gap-3">
+                            {hasPromo && (
+                              <span className="text-sm text-[var(--text-muted)] line-through">
+                                ${producto.Price.toFixed(2)}
+                              </span>
+                            )}
+                            <span className="text-lg font-semibold text-[var(--text-primary)]">
+                              ${unitPrice.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className="mt-4 flex items-center gap-5">
+                            {producto.Quantity! > 1 ? (
+                              <button
+                                onClick={() => decrementQuantity(producto)}
+                                className="w-10 h-10 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg"
+                              >
+                                −
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => decrementQuantity(producto)}
+                                className="w-10 h-10 rounded-full bg-[var(--bg-subtle)] flex items-center justify-center"
+                              >
+                                <img src={trash} alt="Eliminar" className="w-5 h-5" />
+                              </button>
+                            )}
+                            <span className="text-base font-semibold text-[var(--text-primary)]">
+                              {producto.Quantity ?? 1}
+                            </span>
+                            <button
+                              onClick={() => incrementQuantity(producto)}
+                              className="w-10 h-10 rounded-full bg-[var(--action-primary)] text-[var(--text-inverse)] text-lg"
+                            >
+                              +
+                            </button>
+                          </div>
+                          {quantityWarnings[getProductKey(producto)] && (
+                            <p className="text-xs text-[var(--state-error)] mt-2">
+                              {quantityWarnings[getProductKey(producto)]}
+                            </p>
+                          )}
+                        </div>
+                        <div className="ml-auto text-right">
+                          <span className="text-sm text-[var(--text-muted)]">Total</span>
+                          <p className="text-base font-semibold text-[var(--text-primary)]">
+                            ${totalLine}
+                          </p>
+                        </div>
                       </div>
-                      <div className="ml-auto text-right">
-                        <span className="text-sm text-[var(--text-muted)]">Total</span>
-                        <p className="text-base font-semibold text-[var(--text-primary)]">
-                          ${totalLine}
-                        </p>
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
               </div>
 
-              <div className="mt-6 rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-subtle)]/40 p-4">
-                <div className="flex items-center justify-between text-sm font-semibold text-[var(--text-primary)]">
-                  <span>Total de artículos</span>
-                  <span>{totalArticulos}</span>
+              <div className="mt-6 md:mt-0 md:w-80 md:sticky md:top-28 self-start">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5 shadow-sm">
+                  <div className="flex items-center justify-between text-sm font-semibold text-[var(--text-primary)]">
+                    <span>Total de artículos</span>
+                    <span>{totalArticulos}</span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-sm font-semibold">
+                    <span className="text-[var(--text-primary)]">Total</span>
+                    <span className="text-[var(--state-error)]">
+                      ${totalPrecio.toFixed(2)}
+                    </span>
+                  </div>
                 </div>
-                <div className="mt-3 flex items-center justify-between text-sm font-semibold">
-                  <span className="text-[var(--text-primary)]">Total</span>
-                  <span className="text-[var(--state-error)]">
-                    ${totalPrecio.toFixed(2)}
-                  </span>
+
+                <div className="mt-6 sticky bottom-4 z-10">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/catalogo/pedido-info")}
+                    className="w-full rounded-full bg-[var(--action-primary)] text-[var(--text-inverse)] py-4 text-lg font-semibold shadow-lg"
+                    disabled={cart.length === 0}
+                  >
+                    Pagar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate(-1)}
+                    className="mt-4 w-full rounded-full bg-[var(--action-disabled)] text-[var(--text-inverse)] py-4 text-lg font-semibold"
+                  >
+                    Seguir comprando
+                  </button>
                 </div>
               </div>
             </div>
@@ -631,25 +657,6 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                 </span>
               </div>
             )}
-          {isCartView && (
-            <div className="mt-10 flex flex-col gap-4">
-              <button
-                type="button"
-                onClick={() => navigate("/catalogo/pedido-info")}
-                className="w-full rounded-full bg-[var(--action-primary)] text-white py-4 text-lg font-semibold shadow-sm"
-                disabled={cart.length === 0}
-              >
-                Pagar
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate(-1)}
-                className="w-full rounded-full bg-[var(--action-disabled)] text-white py-4 text-lg font-semibold"
-              >
-                Seguir comprando
-              </button>
-            </div>
-          )}
 
           {/* Formulario para el nombre y contacto */}
           {!isCartView && (
