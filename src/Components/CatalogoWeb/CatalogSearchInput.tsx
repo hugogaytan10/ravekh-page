@@ -6,24 +6,43 @@ type CatalogSearchInputProps = {
   placeholder?: string;
   containerClassName?: string;
   inputClassName?: string;
+  leftSlot?: React.ReactNode;
+  rightSlot?: React.ReactNode;
 };
 
 export const CatalogSearchInput: React.FC<CatalogSearchInputProps> = ({
   value,
   onChange,
-  placeholder = "Buscar por nombre o código de barras",
+  placeholder = "Busca un producto",
   containerClassName,
   inputClassName,
+  leftSlot,
+  rightSlot,
 }) => {
+  const leftPadding = leftSlot ? "pl-11" : "pl-4";
+  const rightPadding = rightSlot ? "pr-11" : "pr-4";
+
   return (
-    <div className={`px-2 ${containerClassName ?? ""}`.trim()}>
-      <input
-        type="text"
-        placeholder={placeholder}
-        className={`bg-white w-full max-w-md p-2 border border-gray-300 rounded-md text-sm ${inputClassName ?? ""}`.trim()}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-      />
+    <div className={`w-full ${containerClassName ?? ""}`.trim()}>
+      <div className="relative w-full">
+        {leftSlot && (
+          <div className="absolute inset-y-0 left-3 flex items-center text-[var(--text-secondary)]">
+            {leftSlot}
+          </div>
+        )}
+        <input
+          type="text"
+          placeholder={placeholder}
+          className={`w-full ${leftPadding} ${rightPadding} py-3 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] bg-[var(--bg-subtle)] border border-[var(--border-default)] rounded-[var(--radius-md)] focus:outline-none focus:ring-2 focus:ring-[var(--border-default)] ${inputClassName ?? ""}`.trim()}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+        />
+        {rightSlot && (
+          <div className="absolute inset-y-0 right-3 flex items-center text-[var(--text-secondary)]">
+            {rightSlot}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,7 +8,7 @@
 @import "~slick-carousel/slick/slick.css";
 @import "~slick-carousel/slick/slick-theme.css";
 * {
-    font-family: 'Poppins', sans-serif;
+    font-family: var(--font-heading), sans-serif;
     margin: 0;
     padding: 0;
     box-sizing: border-box;
@@ -16,13 +16,69 @@
    
 }
 
+:root {
+    --font-heading: "Inter";
+    --font-weight-medium: 500;
+    --bg-primary: #F9FAFB;
+    --bg-surface: #FFFFFF;
+    --bg-subtle: #F1F5F9;
+    --text-primary: #111827;
+    --text-secondary: #6B7280;
+    --text-muted: #9CA3AF;
+    --text-inverse: var(--bg-surface);
+    --border-default: #E5E7EB;
+    --border-subtle: #F1F5F9;
+    --action-primary: #111827;
+    --action-primary-hover: #374151;
+    --action-disabled: #D1D5DB;
+    --state-success: #16A34A;
+    --state-warning: #F59E0B;
+    --state-error: #DC2626;
+    --state-info: #2563EB;
+    --accent-primary: #000000;
+    --accent-soft: rgba(109, 1, 209, 0.08);
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --icon-filter: none;
+}
+
+:root[data-theme="dark"] {
+    --bg-primary: #0B0F19;
+    --bg-surface: #111827;
+    --bg-subtle: #1F2937;
+    --text-primary: #F9FAFB;
+    --text-secondary: #9CA3AF;
+    --text-muted: #6B7280;
+    --text-inverse: var(--bg-surface);
+    --border-default: #BCC1C7;
+    --border-subtle: #111827;
+    --action-primary: #E5E7EB;
+    --action-primary-hover: #F9FAFB;
+    --action-disabled: #374151;
+    --state-success: #22C55E;
+    --state-warning: #FBBF24;
+    --state-error: #EF4444;
+    --state-info: #3B82F6;
+    --accent-primary: #E5E5E5;
+    --accent-soft: rgba(139, 92, 246, 0.12);
+    --icon-filter: invert(1);
+}
+
 body {
-    background-color: #ffffff;
-    color: black;
+    background-color: var(--bg-primary);
+    color: var(--text-primary);
     
+}
+
+.theme-icon {
+    filter: var(--icon-filter);
 }
 
 ::-webkit-scrollbar {
     display: none; /* Chrome, Edge */
 }
-

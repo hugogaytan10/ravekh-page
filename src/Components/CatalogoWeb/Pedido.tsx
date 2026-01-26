@@ -60,22 +60,15 @@ export const Pedido: React.FC = () => {
     clientPhoneNumber?: string;
   }>({});
 
-  function adjustColor(hex) {
-    // Convertimos el color hexadecimal a RGB
-    const r = parseInt(hex.slice(1, 3), 16); // Rojo
-    const g = parseInt(hex.slice(3, 5), 16); // Verde
-    const b = parseInt(hex.slice(5, 7), 16); // Azul
-
-    // Aplicamos las restas al componente rojo, verde y azul para hacer el color más oscuro
-    const newR = Math.max(0, r - 100).toString(16).padStart(2, '0');
-    const newG = Math.max(0, g - 100).toString(16).padStart(2, '0');
-    const newB = Math.max(0, b - 100).toString(16).padStart(2, '0');
-
-    // Retornamos el color modificado en formato hexadecimal
-    return `#${newR}${newG}${newB}`;
-  }
   const totalArticulos = cart.reduce((total, item) => total + (item.Quantity || 1), 0);
-  const totalPrecio = cart.reduce((total, item) => total + item.Price * (item.Quantity || 1), 0);
+  const totalPrecio = cart.reduce((total, item) => {
+    const hasPromo =
+      item.PromotionPrice != null &&
+      item.PromotionPrice > 0 &&
+      item.PromotionPrice < item.Price;
+    const unitPrice = hasPromo ? item.PromotionPrice : item.Price;
+    return total + unitPrice * (item.Quantity || 1);
+  }, 0);
   const buildAddress = () => {
     if (deliveryMethod !== "domicilio") return "Recoger en tienda";
 
@@ -112,6 +105,13 @@ export const Pedido: React.FC = () => {
 
 
   useEffect(() => {
+    const storedBusinessId = localStorage.getItem("cartBusinessId");
+    if (storedBusinessId && idBussiness && storedBusinessId !== idBussiness) {
+      localStorage.removeItem("cart");
+      localStorage.removeItem("cartBusinessId");
+      setCart([]);
+      return;
+    }
     if (cart.length === 0) {
       const storedCart = localStorage.getItem("cart");
       if (storedCart) {
@@ -121,7 +121,7 @@ export const Pedido: React.FC = () => {
         }
       }
     }
-  }, [cart, setCart]);
+  }, [cart.length, idBussiness, setCart]);
 
   useEffect(() => {
     const loadShippingOptions = async () => {
@@ -316,7 +316,10 @@ export const Pedido: React.FC = () => {
 
     if (hasChanged) {
       setCart(updatedCart);
-      localStorage.setItem('cart', JSON.stringify(updatedCart));
+      localStorage.setItem("cart", JSON.stringify(updatedCart));
+      if (idBussiness) {
+        localStorage.setItem("cartBusinessId", String(idBussiness));
+      }
       setQuantityWarnings((prev) => ({ ...prev, [key]: null }));
     }
   };
@@ -339,6 +342,9 @@ export const Pedido: React.FC = () => {
 
     setCart(updatedCart);
     localStorage.setItem("cart", JSON.stringify(updatedCart));
+    if (idBussiness) {
+      localStorage.setItem("cartBusinessId", String(idBussiness));
+    }
     setQuantityWarnings((prev) => ({ ...prev, [key]: null }));
   };
 
@@ -368,7 +374,10 @@ export const Pedido: React.FC = () => {
     });
 
     setCart(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    localStorage.setItem("cart", JSON.stringify(updatedCart));
+    if (idBussiness) {
+      localStorage.setItem("cartBusinessId", String(idBussiness));
+    }
     setQuantityWarnings((prev) => ({ ...prev, [key]: warning }));
   };
 
@@ -386,10 +395,10 @@ export const Pedido: React.FC = () => {
           <Helmet>
             <meta name="theme-color" content={color || "#6D01D1"} />
           </Helmet>
-          <div className="min-h-screen flex items-center justify-center px-4">
+          <div className="min-h-screen flex items-center justify-center px-4 bg-[var(--bg-primary)]">
             <div className="bg-white shadow-lg rounded-xl p-6 text-center">
-              <p className="text-gray-700 font-semibold">Cargando formulario…</p>
-              <p className="text-gray-500 text-sm mt-1">Preparando campos del negocio</p>
+              <p className="text-[var(--text-primary)] font-semibold">Cargando formulario…</p>
+              <p className="text-[var(--text-secondary)] text-sm mt-1">Preparando campos del negocio</p>
             </div>
           </div>
         </>
@@ -403,86 +412,101 @@ export const Pedido: React.FC = () => {
         <Helmet>
           <meta name="theme-color" content={color || "#6D01D1"} />
         </Helmet>
-        <div className="py-20 px-4 lg:px-0 max-w-lg md:max-w-2xl lg:w-3/4 mx-auto">
+        <div className="pt-28 pb-24 px-4 max-w-xl mx-auto min-h-screen bg-[var(--bg-primary)]">
           {/* Resumen del pedido */}
-          <h1 className="text-3xl font-bold mt-12 mb-6 text-center text-gray-800">
-            Preparemos su pedido
+          <h1 className="text-2xl font-semibold mt-6 mb-6 text-center text-[var(--text-primary)]">
+            Finaliza el pedido
           </h1>
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-semibold mb-4 text-gray-800">Su pedido</h2>
-            <div className="divide-y divide-gray-200">
-                {cart.map((producto: CartPos) => (
-                <div
-                  key={`${producto.Id}-${producto.Variant_Id ?? "base"}`}
-                  className="py-4 flex items-center justify-between"
-                >
-                  <img
-                    src={producto.Image || (producto.Images && producto.Images[0]) || ""}
-                    alt={producto.Name}
-                    className="w-16 h-16 object-cover rounded-lg mr-4"
-                  />
-                  <div className="flex flex-col flex-grow">
-                    <span className="font-medium text-gray-800">{producto.Name}</span>
-                    {producto.VariantDescription && (
-                      <span className="text-sm text-gray-500">{producto.VariantDescription}</span>
-                    )}
-                    <span className="text-gray-500">${producto.Price} x {producto.Quantity || 1}</span>
-                  </div>
+          <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm">
+            <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">Tu carrito</h2>
+            <div className="divide-y divide-[var(--border-default)]">
+              {cart.map((producto: CartPos) => {
+                const hasPromo =
+                  producto.PromotionPrice != null &&
+                  producto.PromotionPrice > 0 &&
+                  producto.PromotionPrice < producto.Price;
+                const unitPrice = hasPromo ? producto.PromotionPrice : producto.Price;
+                const totalLine = (unitPrice * (producto.Quantity || 1)).toFixed(2);
 
-                  <div className="flex flex-col items-end">
-                    <span className="text-gray-800 font-semibold">
-                      ${(producto.Price * (producto.Quantity || 1)).toFixed(2)}
-                    </span>
-                    <div className="flex items-center space-x-4 mt-2">
-                      {producto.Quantity! > 1 ? (
-                        <button
-                          onClick={() => decrementQuantity(producto)}
-                          className="text-red-600 text-lg"
-                        >
-                          -
-                        </button>
-                      ) : (
-                        <button onClick={() => decrementQuantity(producto)}>
-                          <img src={trash} alt="Eliminar" className="text-red-600" />
-                        </button>
-                      )}
-                      <input
-                        type="number"
-                        min={producto.Stock === 0 ? 0 : 1}
-                        max={producto.Stock ?? undefined}
-                        value={producto.Quantity ?? 1}
-                        onChange={(e) => handleManualQuantityChange(producto, e.target.value)}
-                        className="w-16 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        aria-label={`Cantidad para ${producto.Name}${
-                          producto.VariantDescription ? ` (${producto.VariantDescription})` : ""
-                        }`}
-                      />
-                      <button
-                        onClick={() => incrementQuantity(producto)}
-                        className="text-green-600 text-lg"
-                      >
-                        +
-                      </button>
-                    </div>
-                    {quantityWarnings[getProductKey(producto)] && (
-                      <p className="text-xs text-red-600 mt-1 max-w-[10rem] text-right">
-                        {quantityWarnings[getProductKey(producto)]}
+                return (
+                  <div
+                    key={`${producto.Id}-${producto.Variant_Id ?? "base"}`}
+                    className="py-4 flex items-center gap-4"
+                  >
+                    <img
+                      src={producto.Image || (producto.Images && producto.Images[0]) || ""}
+                      alt={producto.Name}
+                      className="w-20 h-20 object-cover rounded-[var(--radius-md)]"
+                    />
+                    <div className="flex-1">
+                      <p className="text-base font-semibold text-[var(--text-primary)]">
+                        {producto.Name}
+                        {producto.VariantDescription ? `, ${producto.VariantDescription}` : ""}
                       </p>
-                    )}
+                      <div className="mt-1 flex items-center gap-3">
+                        {hasPromo && (
+                          <span className="text-sm text-[var(--text-muted)] line-through">
+                            ${producto.Price.toFixed(2)}
+                          </span>
+                        )}
+                        <span className="text-lg font-semibold text-[var(--text-primary)]">
+                          ${unitPrice.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="mt-3 flex items-center gap-5">
+                        {producto.Quantity! > 1 ? (
+                          <button
+                            onClick={() => decrementQuantity(producto)}
+                            className="w-10 h-10 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg"
+                          >
+                            −
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => decrementQuantity(producto)}
+                            className="w-10 h-10 rounded-full bg-[var(--bg-subtle)] flex items-center justify-center"
+                          >
+                            <img src={trash} alt="Eliminar" className="w-5 h-5" />
+                          </button>
+                        )}
+                        <span className="text-base font-semibold text-[var(--text-primary)]">
+                          {producto.Quantity ?? 1}
+                        </span>
+                        <button
+                          onClick={() => incrementQuantity(producto)}
+                          className="w-10 h-10 rounded-full bg-[var(--action-primary)] text-white text-lg"
+                        >
+                          +
+                        </button>
+                      </div>
+                      {quantityWarnings[getProductKey(producto)] && (
+                        <p className="text-xs text-[var(--state-error)] mt-2">
+                          {quantityWarnings[getProductKey(producto)]}
+                        </p>
+                      )}
+                    </div>
+                    <div className="ml-auto text-right">
+                      <span className="text-sm text-[var(--text-muted)]">Total</span>
+                      <p className="text-base font-semibold text-[var(--text-primary)]">
+                        ${totalLine}
+                      </p>
+                    </div>
                   </div>
-
-
-
-                </div>
-              ))}
+                );
+              })}
             </div>
 
-            <div className="flex justify-between items-center mt-6 text-lg font-semibold text-gray-800">
-              <span>
-                Total artículos ({totalArticulos} artículo
-                {totalArticulos > 1 ? "s" : ""})
-              </span>
-              <span>${totalPrecio.toFixed(2)}</span>
+            <div className="mt-6 rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-subtle)]/40 p-4">
+              <div className="flex items-center justify-between text-sm font-semibold text-[var(--text-primary)]">
+                <span>Total de artículos</span>
+                <span>{totalArticulos}</span>
+              </div>
+              <div className="mt-3 flex items-center justify-between text-sm font-semibold">
+                <span className="text-[var(--text-primary)]">Total</span>
+                <span className="text-[var(--state-error)]">
+                  ${totalPrecio.toFixed(2)}
+                </span>
+              </div>
             </div>
             {cart.length > 0 && (
               <div className="flex justify-center mt-6">
@@ -490,7 +514,7 @@ export const Pedido: React.FC = () => {
                   onClick={() => {
                     setShowModal(true);
                   }}
-                  className="text-red-500 cursor-pointer hover:underline"
+                  className="text-[var(--state-error)] cursor-pointer hover:underline text-sm"
                 >
                   Limpiar Carrito
                 </span>
@@ -501,57 +525,57 @@ export const Pedido: React.FC = () => {
           {/* Formulario para el nombre y contacto */}
           <form onSubmit={handleSubmit}>
             {shippingOptions.ContactInformation && (
-            <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+            <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
+              <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">
                 Información de contacto
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col">
-                  <label className="text-gray-700">Nombre completo</label>
+                  <label className="text-sm text-[var(--text-secondary)]">Nombre completo</label>
                   <input
                     type="text"
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
-                    className={`bg-white w-full p-3 border ${errors.nombre ? "border-red-500" : "border-gray-300"
-                      } rounded-lg focus:outline-none focus:border-gray-500`}
+                    className={`bg-[var(--bg-subtle)] w-full p-3 border ${errors.nombre ? "border-[var(--state-error)]" : "border-[var(--border-default)]"
+                      } rounded-[var(--radius-md)] focus:outline-none`}
                     placeholder="Introduce tu nombre"
                   />
                   {errors.nombre && (
-                    <span className="text-red-500 text-sm mt-1">
+                    <span className="text-[var(--state-error)] text-sm mt-1">
                       {errors.nombre}
                     </span>
                   )}
                 </div>
                 <div className="flex flex-col">
-                  <label className="text-gray-700">Email (opcional)</label>
+                  <label className="text-sm text-[var(--text-secondary)]">Email (opcional)</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className={`bg-white w-full p-3 border ${errors.email ? "border-red-500" : "border-gray-300"
-                      } rounded-lg focus:outline-none focus:border-gray-500`}
+                    className={`bg-[var(--bg-subtle)] w-full p-3 border ${errors.email ? "border-[var(--state-error)]" : "border-[var(--border-default)]"
+                      } rounded-[var(--radius-md)] focus:outline-none`}
                     placeholder="Introduce tu email"
                   />
                   {errors.email && (
-                    <span className="text-red-500 text-sm mt-1">
+                    <span className="text-[var(--state-error)] text-sm mt-1">
                       {errors.email}
                     </span>
                   )}
                 </div>
                 <div className="md:col-span-2 flex flex-col">
-                  <label className="text-gray-700">Teléfono móvil</label>
+                  <label className="text-sm text-[var(--text-secondary)]">Teléfono móvil</label>
                   <input
                     type="text"
                     value={clientPhoneNumber}
                     onChange={(e) => setClientPhoneNumber(e.target.value)}
-                    className={`bg-white w-full p-3 border ${errors.clientPhoneNumber
-                      ? "border-red-500"
-                      : "border-gray-300"
-                      } rounded-lg focus:outline-none focus:border-gray-500`}
+                    className={`bg-[var(--bg-subtle)] w-full p-3 border ${errors.clientPhoneNumber
+                      ? "border-[var(--state-error)]"
+                      : "border-[var(--border-default)]"
+                      } rounded-[var(--radius-md)] focus:outline-none`}
                     placeholder="Introduce tu teléfono"
                   />
                   {errors.clientPhoneNumber && (
-                    <span className="text-red-500 text-sm mt-1">
+                    <span className="text-[var(--state-error)] text-sm mt-1">
                       {errors.clientPhoneNumber}
                     </span>
                   )}
@@ -561,20 +585,20 @@ export const Pedido: React.FC = () => {
           {/* Método de entrega */}
           {shippingOptions.ShippingMetod && (
             
-            <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+            <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
+              <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">
                 Método de entrega
               </h2>
               <div className="flex items-center mb-4">
-                <FiTruck className="text-gray-600 mr-2" size={24} />
-                <label className="text-gray-700">
+                <FiTruck className="text-[var(--text-muted)] mr-2" size={20} />
+                <label className="text-sm text-[var(--text-secondary)]">
                   Seleccione el método de entrega
                 </label>
               </div>
               <select
                 value={deliveryMethod}
                 onChange={(e) => setDeliveryMethod(e.target.value)}
-                className="bg-white w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
+                className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)] focus:outline-none"
               >
                 <option value="domicilio">Entrega a domicilio</option>
                 <option value="recoger">Recoger en tienda</option>
@@ -583,20 +607,20 @@ export const Pedido: React.FC = () => {
           )}
 
             {deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled && (
-              <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-                <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+              <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
+                <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">
                   Dirección de entrega
                 </h2>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   {shippingOptions.Street && (
                     <div className="flex flex-col">
-                      <label className="text-gray-700">Calle</label>
+                      <label className="text-sm text-[var(--text-secondary)]">Calle</label>
                       <input
                         type="text"
                         value={calle}
                         onChange={(e) => setCalle(e.target.value)}
-                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
                         placeholder="Introduce tu calle"
                       />
                     </div>
@@ -604,12 +628,12 @@ export const Pedido: React.FC = () => {
 
                   {shippingOptions.ZipCode && (
                     <div className="flex flex-col">
-                      <label className="text-gray-700">Código Postal</label>
+                      <label className="text-sm text-[var(--text-secondary)]">Código Postal</label>
                       <input
                         type="text"
                         value={codigoPostal}
                         onChange={(e) => setCodigoPostal(e.target.value)}
-                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
                         placeholder="Código Postal"
                       />
                     </div>
@@ -617,12 +641,12 @@ export const Pedido: React.FC = () => {
 
                   {shippingOptions.City && (
                     <div className="flex flex-col">
-                      <label className="text-gray-700">Municipio</label>
+                      <label className="text-sm text-[var(--text-secondary)]">Municipio</label>
                       <input
                         type="text"
                         value={municipio}
                         onChange={(e) => setMunicipio(e.target.value)}
-                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
                         placeholder="Municipio"
                       />
                     </div>
@@ -630,12 +654,12 @@ export const Pedido: React.FC = () => {
 
                   {shippingOptions.State && (
                     <div className="flex flex-col">
-                      <label className="text-gray-700">Estado</label>
+                      <label className="text-sm text-[var(--text-secondary)]">Estado</label>
                       <input
                         type="text"
                         value={estado}
                         onChange={(e) => setEstado(e.target.value)}
-                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
                         placeholder="Estado"
                       />
                     </div>
@@ -643,12 +667,12 @@ export const Pedido: React.FC = () => {
 
                   {shippingOptions.References && (
                     <div className="md:col-span-2 flex flex-col">
-                      <label className="text-gray-700">Referencia (opcional)</label>
+                      <label className="text-sm text-[var(--text-secondary)]">Referencia (opcional)</label>
                       <input
                         type="text"
                         value={referencia}
                         onChange={(e) => setReferencia(e.target.value)}
-                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
                         placeholder="Introduce una referencia (opcional)"
                       />
                     </div>
@@ -659,18 +683,18 @@ export const Pedido: React.FC = () => {
 
             {/* Método de pago */}
             {shippingOptions.PaymentMetod && (
-              <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-                <h2 className="text-2xl font-semibold mb-4 text-gray-800">
+              <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
+                <h2 className="text-lg font-semibold mb-4 text-[var(--text-primary)]">
                   Método de pago
                 </h2>
                 <div className="flex items-center mb-4">
-                  <FiCreditCard className="text-gray-600 mr-2" size={24} />
-                  <label className="text-gray-700">Seleccione un método de pago</label>
+                  <FiCreditCard className="text-[var(--text-muted)] mr-2" size={20} />
+                  <label className="text-sm text-[var(--text-secondary)]">Seleccione un método de pago</label>
                 </div>
                 <select
                   value={paymentMethod}
                   onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="bg-white w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
+                  className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)] focus:outline-none"
                 >
                   <option value="transferencia">Transferencia bancaria</option>
                   <option value="dinero">Dinero en efectivo</option>
@@ -684,17 +708,7 @@ export const Pedido: React.FC = () => {
             <div className="flex justify-center mt-8">
               <button
                 type="submit"
-                style={{
-                  backgroundColor: color || '#6D01D1', // Color de fondo dinámico basado en el estado 'color'
-                  transition: 'background-color 0.3s ease-in-out', // Transición suave para el color
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = adjustColor(color || '#6D01D1')) // Oscurece el color en hover
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = color || '#6D01D1') // Vuelve al color original al quitar el hover
-                }
-                className="text-white py-3 px-8 rounded-full shadow-lg"
+                className="text-white py-3 px-8 rounded-full shadow-sm bg-[var(--action-primary)]"
               >
                 PREPARAR EL PEDIDO
               </button>
@@ -704,24 +718,24 @@ export const Pedido: React.FC = () => {
 
           {/* Mostrar el número de la tienda */}
           <div className="mt-6 text-center">
-            <FiPhone className="inline-block text-gray-600 mr-2" size={20} />
-            <p className="text-gray-600 inline-block">
+            <FiPhone className="inline-block text-[var(--text-muted)] mr-2" size={18} />
+            <p className="text-[var(--text-secondary)] text-sm inline-block">
               Contacto de la tienda: {storePhoneNumber}
             </p>
           </div>
           {/* MODAL QUE VIENE DE ABAJO DE LA PANTALLA PARA PREGUNTAR SI ESTA SEGURO QUE QUIERE ELIMINAR EL CARRITO */}
           {cart.length > 0 && (
             <div
-              className={`fixed inset-0 flex items-end justify-center bg-black bg-opacity-50 transition-opacity duration-300 ${showModal ? "opacity-100" : "opacity-0 pointer-events-none"
+              className={`fixed inset-0 flex items-end justify-center bg-black/50 transition-opacity duration-300 ${showModal ? "opacity-100" : "opacity-0 pointer-events-none"
                 }`}
             >
-              <div className="bg-white rounded-t-lg p-6 w-full ">
-                <h2 className="text-xl font-semibold mb-4 text-center">¿Estás seguro?</h2>
-                <p className="mb-6 text-center">¿Quieres eliminar todos los productos del carrito?</p>
-                <div className="flex justify-center space-x-4 ">
+              <div className="bg-[var(--bg-surface)] rounded-t-[var(--radius-lg)] p-6 w-full border border-[var(--border-default)]">
+                <h2 className="text-lg font-semibold mb-2 text-center text-[var(--text-primary)]">¿Estás seguro?</h2>
+                <p className="mb-6 text-center text-sm text-[var(--text-secondary)]">¿Quieres eliminar todos los productos del carrito?</p>
+                <div className="flex justify-center space-x-4">
                   <button
                     onClick={() => setShowModal(false)}
-                    className="bg-gray-300 text-gray-800 py-2 px-6 rounded-full shadow-md hover:bg-gray-400 transition-all duration-300 ease-in-out"
+                    className="bg-[var(--action-disabled)] text-white py-2 px-6 rounded-full shadow-sm"
                   >
                     Cancelar
                   </button>
@@ -730,7 +744,7 @@ export const Pedido: React.FC = () => {
                       context.clearCart();
                       setShowModal(false);
                     }}
-                    className="bg-red-600 text-white py-2 px-6 rounded-full shadow-md hover:bg-red-700 transition-all duration-300 ease-in-out"
+                    className="bg-[var(--state-error)] text-white py-2 px-6 rounded-full shadow-sm"
                   >
                     Eliminar
                   </button>
@@ -743,16 +757,16 @@ export const Pedido: React.FC = () => {
           {/* MODAL QUE VIENE DE ABAJO DE LA PANTALLA PARA PREGUNTAR SI ESTA SEGURO QUE QUIERE ELIMINAR EL producto */}
           {showModalProduct && (
             <div
-              className={`fixed inset-0 flex items-end justify-center bg-black bg-opacity-50 transition-opacity duration-300 ${showModalProduct ? "opacity-100" : "opacity-0 pointer-events-none"
+              className={`fixed inset-0 flex items-end justify-center bg-black/50 transition-opacity duration-300 ${showModalProduct ? "opacity-100" : "opacity-0 pointer-events-none"
                 }`}
             >
-              <div className="bg-white rounded-t-lg p-6 w-full ">
-                <h2 className="text-xl font-semibold mb-4 text-center">¿Estás seguro?</h2>
-                <p className="mb-6 text-center">¿Quieres eliminar el producto del carrito?</p>
-                <div className="flex justify-center space-x-4 ">
+              <div className="bg-[var(--bg-surface)] rounded-t-[var(--radius-lg)] p-6 w-full border border-[var(--border-default)]">
+                <h2 className="text-lg font-semibold mb-2 text-center text-[var(--text-primary)]">¿Estás seguro?</h2>
+                <p className="mb-6 text-center text-sm text-[var(--text-secondary)]">¿Quieres eliminar el producto del carrito?</p>
+                <div className="flex justify-center space-x-4">
                   <button
                     onClick={() => setShowModalProduct(false)}
-                    className="bg-gray-300 text-gray-800 py-2 px-6 rounded-full shadow-md hover:bg-gray-400 transition-all duration-300 ease-in-out"
+                    className="bg-[var(--action-disabled)] text-white py-2 px-6 rounded-full shadow-sm"
                   >
                     Cancelar
                   </button>
@@ -763,7 +777,7 @@ export const Pedido: React.FC = () => {
                         context.removeProductFromCart(deleteProduct.id.toString(), deleteProduct.variantId ?? null);
                       }
                     }}
-                    className="bg-red-600 text-white py-2 px-6 rounded-full shadow-md hover:bg-red-700 transition-all duration-300 ease-in-out"
+                    className="bg-[var(--state-error)] text-white py-2 px-6 rounded-full shadow-sm"
                   >
                     Eliminar
                   </button>

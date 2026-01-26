@@ -19,6 +19,7 @@ import { Pedido } from "../CatalogoWeb/Pedido";
 import { AppContext } from "../CatalogoWeb/Context/AppContext";
 import cart from "../../assets/cart-outline.svg";
 import arrow from "../../assets/arrow-forward-white.svg";
+import searchIcon from "../../assets/POS/SearchIcon.svg";
 import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
 import { PoliticaPrivacidadAgenda } from "../PoliticaPrivacidad/PoliticaPrivacidadAgenda";
 //importaciones para el catalogo web
@@ -160,38 +161,6 @@ export const Rutas = () => {
   // Nueva referencia para el POS
   const slideDownRefPOS = useRef(null); // Referencia para el contenedor del menú
   const menuTogglePOS = useRef(null); // Referencia para la animación del menú
-
-  const adjustColorLightness = (hex, delta) => {
-    if (!hex) return "#6D01D1";
-
-    let c = hex.replace("#", "");
-    if (c.length === 3) c = c.split("").map(ch => ch + ch).join("");
-
-    const r = parseInt(c.substring(0, 2), 16) / 255;
-    const g = parseInt(c.substring(2, 4), 16) / 255;
-    const b = parseInt(c.substring(4, 6), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h = 0, s = 0, l = (max + min) / 2;
-
-    if (max !== min) {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
-      switch (max) {
-        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-        case g: h = (b - r) / d + 2; break;
-        case b: h = (r - g) / d + 4; break;
-      }
-      h /= 6;
-    }
-
-    l = Math.min(1, Math.max(0, l + delta));
-
-    return `hsl(${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%)`;
-  };
-
 
   useEffect(() => {
     if (!listItemsRefCatalogo.current || !slideDownRefPOS.current) {
@@ -436,12 +405,6 @@ export const Rutas = () => {
     });
   }, [location.pathname]);
 
-  const hoverColor = useMemo(
-  () => adjustColorLightness(color, 0.20), // +10% luz (similar a un purple-600)
-  [color]
-);
-
-
   useEffect(() => {
     const protectedRoutes = [
       "/mainsales",
@@ -589,9 +552,7 @@ export const Rutas = () => {
   const isCategoriaRoute = location.pathname.startsWith("/categoria/");
   const isMainCatalogoRoute = /^\/catalogo\/[^/]+$/.test(location.pathname);
   const showCatalogSearch = isMainCatalogoRoute || isCategoriaRoute;
-  const showCategoryList = location.pathname === "/" ||
-    location.pathname.startsWith("/catalogo/") ||
-    isCategoriaRoute;
+  const showCategoryList = isMainCatalogoRoute || isCategoriaRoute;
   const catalogoId = idBusiness || context.idBussiness;
   return (
     <div className="drawer ">
@@ -666,115 +627,92 @@ export const Rutas = () => {
         )}
 
         <div className="drawer-content flex flex-col min-w-full relative hidden" id="menuIconoCatalogo">
-          {/* Contenedor del encabezado del catálogo */}
-          <div
-            className="w-full min-h-16 rounded-b-lg fixed z-40 flex flex-col px-4"
-            style={{ backgroundColor: color }}
-          >
-            {/* Primera fila: menú, flecha, título, carrito */}
-            <div className="w-full flex items-center justify-between gap-2 mt-5">
-              {/* Icono del menú */}
-              <div
-                ref={catalogoIconRef}
-                className="bg-white w-8 h-8 rounded-full flex items-center justify-center"
-                onClick={handleMenuClickCatalogo}
-                id="imgCatalogo"
-              >
-                <img src={menu} alt="menu" className="h-8 w-8" />
-              </div>
-
-              {/* Botón de regreso */}
-              <div
-                onClick={() => window.history.back()}
-                id="backCatalogo"
-                className="w-8 h-8 rounded-full flex items-center justify-center transform rotate-180 hidden"
-                style={{ backgroundColor: color }}
-              >
-                <img src={arrow} alt="arrow" className="w-8 h-8 " />
-              </div>
-
-              {/* Nombre del catálogo */}
-              <div>
-                <h2
-                  className="text-center text-lg font-semibold"
-                  style={{ color: idBusiness === "115" ? "#000000" : "#ffffff" }}
+          <div className="fixed top-0 left-0 right-0 z-40 bg-[var(--bg-primary)]">
+            <div className="max-w-screen-xl mx-auto px-4 pt-6 pb-4">
+              <div className="flex items-center justify-between gap-3">
+                <button
+                  onClick={() => window.history.back()}
+                  id="backCatalogo"
+                  className="w-9 h-9 rounded-full flex items-center justify-center border border-[var(--border-default)] bg-[var(--bg-surface)] hidden"
+                  type="button"
                 >
-                  {nombre}
+                  <img src={arrow} alt="back" className="w-5 h-5 rotate-180 theme-icon" />
+                </button>
+
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                  {nombre || "Nombre de la tienda"}
                 </h2>
-              </div>
 
-              {showCatalogSearch && (
-                <CatalogSearchInput
-                  value={context.searchQuery}
-                  onChange={context.setSearchQuery}
-                  containerClassName="max-w-xs mr-1"
-                  inputClassName="max-w-xs"
-                />
-              )}
-
-              {/* Ícono del carrito */}
-              <NavLink to={"/catalogo/pedido"}>
-                <div className="relative">
-                  <img src={cart} alt="cart" className="w-8 h-8" />
+                <NavLink to={"/catalogo/pedido"} className="relative">
+                  <div className="w-10 h-10 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] flex items-center justify-center">
+                    <img src={cart} alt="cart" className="w-5 h-5 theme-icon" />
+                  </div>
                   {context.cart.length > 0 && (
-                    <span
-                      className="absolute top-0 right-0 bg-gray-50 rounded-full w-4 h-4 flex items-center justify-center text-xs"
-                      style={{ color: color }}
-                    >
+                    <span className="absolute -top-1 -right-1 bg-[var(--text-primary)] text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
                       {context.cart.length}
                     </span>
                   )}
-                </div>
-              </NavLink>
-            </div>
+                </NavLink>
+              </div>
 
-            {/* Segunda fila: lista de categorías (justo debajo del carrito) */}
-            {showCategoryList && (
-              <div
-                className="w-full mt-2 overflow-x-auto whitespace-nowrap scrollbar-hide mb-2"
-                ref={slideRef}
-              >
-                <div className="flex flex-nowrap gap-2 px-4">
-                  {isCategoriaRoute && catalogoId && catalogoId !== "0" && (
-                    <button
-                      style={{
-                        "--c-base": color,
-                        "--c-hover": hoverColor,
-                      }}
-                      className={`px-4 py-2 ${
-                        idBusiness === "115" ? "text-black" : "text-white"
-                      } 
-                      rounded-lg shadow-sm transition duration-300 
-                      bg-[color:var(--c-base)] 
-                      hover:bg-[color:var(--c-hover)]`}
-                    >
-                      <NavLink to={`/catalogo/${catalogoId}`} className="whitespace-nowrap">
-                        Ver todo
+              {showCatalogSearch && (
+                <div className="mt-4 flex items-center gap-3">
+                  <CatalogSearchInput
+                    value={context.searchQuery}
+                    onChange={context.setSearchQuery}
+                    containerClassName="flex-1"
+                    inputClassName="text-sm"
+                    rightSlot={<img src={searchIcon} alt="" className="w-5 h-5 theme-icon" />}
+                  />
+                  <button
+                    type="button"
+                    className="w-12 h-12 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--text-secondary)]"
+                    aria-label="Filtros"
+                  >
+                    <span className="block h-4 w-4 rounded bg-[var(--text-muted)]/40" />
+                  </button>
+                </div>
+              )}
+
+              {showCategoryList && (
+                <div
+                  className="w-full mt-4 overflow-x-auto whitespace-nowrap scrollbar-hide"
+                  ref={slideRef}
+                >
+                  <div className="flex items-center gap-6 pr-4">
+                    {catalogoId && catalogoId !== "0" && (
+                      <NavLink
+                        to={`/catalogo/${catalogoId}`}
+                        className={({ isActive }) =>
+                          `pb-2 text-sm transition-colors ${
+                            isActive
+                              ? "text-[var(--text-primary)] border-b-2 border-[var(--text-primary)]"
+                              : "text-[var(--text-secondary)]"
+                          }`
+                        }
+                      >
+                        Todo
                       </NavLink>
-                    </button>
-                  )}
-                  {categories.map((category) => (
-                    <button
-                      key={category.Id}
-                      style={{
-                        "--c-base": color,
-                        "--c-hover": hoverColor,
-                      }}
-                      className={`px-4 py-2 ${
-                        idBusiness === "115" ? "text-black" : "text-white"
-                      } 
-                      rounded-lg shadow-sm transition duration-300 
-                      bg-[color:var(--c-base)] 
-                      hover:bg-[color:var(--c-hover)]`}
-                    >
-                      <NavLink to={`/categoria/${category.Id}`} className="whitespace-nowrap">
+                    )}
+                    {categories.map((category) => (
+                      <NavLink
+                        key={category.Id}
+                        to={`/categoria/${category.Id}`}
+                        className={({ isActive }) =>
+                          `pb-2 text-sm transition-colors ${
+                            isActive
+                              ? "text-[var(--text-primary)] border-b-2 border-[var(--text-primary)]"
+                              : "text-[var(--text-secondary)]"
+                          }`
+                        }
+                      >
                         {category.Name}
                       </NavLink>
-                    </button>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
 

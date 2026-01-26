@@ -18,7 +18,16 @@ type AppContextProps = {
 export const AppContext = createContext({} as AppContextState);
 
 const AppProvider: React.FC<AppContextProps> = ({ children }) => {
-  const [cartPos, setCartPos] = useState<CartPos[]>([]);
+  const [cartPos, setCartPos] = useState<CartPos[]>(() => {
+    const storedCart = localStorage.getItem("cart");
+    if (!storedCart) return [];
+    try {
+      const parsed = JSON.parse(storedCart);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
   const cart = cartPos;
   const setCart = setCartPos;
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
@@ -92,6 +101,7 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
     const unitPrice = product.Price ?? 0;
     const mappedProduct: CartPos = {
       Id: product.Id,
+      Business_Id: product.Business_Id,
       Name: product.Name,
       Price: product.Price,
       Quantity: quantity,
@@ -147,6 +157,9 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
 
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));
+    if (product.Business_Id != null) {
+      localStorage.setItem("cartBusinessId", String(product.Business_Id));
+    }
   };
 
   //funcion para eliminar un producto del carrito
@@ -170,6 +183,7 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   const clearCart = () => {
     setCart([]);
     localStorage.removeItem("cart");
+    localStorage.removeItem("cartBusinessId");
   };
 
   const value = useMemo(() => {
