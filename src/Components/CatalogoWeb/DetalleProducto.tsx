@@ -1,5 +1,5 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import { AppContext } from "./Context/AppContext";
 import { Producto } from "./Modelo/Producto";
@@ -29,7 +29,13 @@ export const DetalleProducto: React.FC = () => {
   const [showVariantModal, setShowVariantModal] = useState(false);
   const [loadingVariants, setLoadingVariants] = useState(false);
   const [stockWarning, setStockWarning] = useState<string | null>(null);
+  const [buyNowPending, setBuyNowPending] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [addedPulse, setAddedPulse] = useState(false);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const pulseTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const context = useContext(AppContext);
+  const navigate = useNavigate();
   const { color, setColor, addProductToCart, phoneNumber, setPhoneNumber, idBussiness, setIdBussiness, cart } =
     context;
   const cartVariantQuantities = useMemo(() => {
@@ -121,8 +127,25 @@ export const DetalleProducto: React.FC = () => {
 
   const addButtonLabel = variants.length > 0 ? "Seleccionar variante" : "Añadir al carrito";
 
+  const triggerToast = () => {
+    setShowToast(true);
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    toastTimeoutRef.current = setTimeout(() => setShowToast(false), 1800);
+  };
+
+  const triggerPulse = () => {
+    setAddedPulse(true);
+    if (pulseTimeoutRef.current) {
+      clearTimeout(pulseTimeoutRef.current);
+    }
+    pulseTimeoutRef.current = setTimeout(() => setAddedPulse(false), 1200);
+  };
+
   const handleAddCart = () => {
     if (!producto) return;
+    setBuyNowPending(false);
 
     if (variants.length > 0) {
       setShowVariantModal(true);
@@ -130,6 +153,23 @@ export const DetalleProducto: React.FC = () => {
     }
 
     addProductToCart({ ...producto, Quantity: count, Variant_Id: null });
+    triggerToast();
+    triggerPulse();
+  };
+
+  const handleBuyNow = () => {
+    if (!producto) return;
+    setBuyNowPending(true);
+
+    if (variants.length > 0) {
+      setShowVariantModal(true);
+      return;
+    }
+
+    addProductToCart({ ...producto, Quantity: count, Variant_Id: null });
+    triggerToast();
+    triggerPulse();
+    navigate("/catalogo/pedido");
   };
 
   const handleCountInput = (value: string) => {
@@ -167,15 +207,38 @@ export const DetalleProducto: React.FC = () => {
     });
 
     setShowVariantModal(false);
+    triggerToast();
+    triggerPulse();
+    if (buyNowPending) {
+      setBuyNowPending(false);
+      navigate("/catalogo/pedido");
+    }
   };
 
   const handleCloseVariantModal = () => {
     setShowVariantModal(false);
+    setBuyNowPending(false);
   };
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
+    };
+  }, []);
 
     const DetalleProductoSkeleton: React.FC = () => {
     return (
       <div className="px-4 pt-28 pb-24 min-h-screen bg-[var(--bg-primary)]">
+        <div
+          className={`pointer-events-none fixed left-1/2 top-24 z-50 -translate-x-1/2 transition-opacity duration-200 ${
+            showToast ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <div className="rounded-full bg-black/80 px-4 py-2 text-sm font-medium text-white shadow-sm">
+            Agregado al carrito
+          </div>
+        </div>
         <div className="max-w-xl mx-auto animate-pulse space-y-6">
           <div className="w-full aspect-[4/5] bg-[var(--bg-subtle)] rounded-[var(--radius-lg)]" />
           <div className="h-6 bg-[var(--bg-subtle)] rounded w-2/3" />
@@ -307,9 +370,9 @@ export const DetalleProducto: React.FC = () => {
 
           <div className="mt-8 space-y-3">
             <button
-              onClick={handleAddCart}
+              onClick={handleBuyNow}
               disabled={!canAdd}
-              className="w-full rounded-full bg-[var(--action-primary)] text-white py-3 text-sm font-semibold shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full rounded-full bg-[var(--action-primary)] text-white py-3 text-sm font-semibold shadow-sm transition-transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loadingVariants && variants.length === 0
                 ? "Buscando variantes..."
@@ -321,9 +384,11 @@ export const DetalleProducto: React.FC = () => {
               type="button"
               onClick={handleAddCart}
               disabled={!canAdd}
-              className="w-full rounded-full bg-[var(--action-disabled)] text-white py-3 text-sm font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`w-full rounded-full bg-[var(--action-disabled)] text-white py-3 text-sm font-semibold transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
+                addedPulse ? "scale-[1.02] ring-2 ring-[var(--action-primary)]" : ""
+              }`}
             >
-              Agregar al carrito
+              {addedPulse ? "Agregado" : "Agregar al carrito"}
             </button>
           </div>
         </div>

@@ -470,6 +470,9 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
           )}
 
           {/* Botón de WhatsApp */}
+          {
+            /*
+  
           <div className="bg-color-whats rounded-full p-1 fixed right-2 bottom-4">
             <a href={`https://api.whatsapp.com/send?phone=${idBusiness === "115"
               ?"1"
@@ -478,7 +481,10 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
             </a>
           </div>
 
-         
+         */
+          }
+
+          {/* Modal de selección de variantes */}
           <VariantSelectionModal
             product={variantProduct}
             variants={variantOptions}

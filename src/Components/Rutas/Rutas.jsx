@@ -18,8 +18,9 @@ import { DetalleProducto } from "../CatalogoWeb/DetalleProducto";
 import { Pedido } from "../CatalogoWeb/Pedido";
 import { AppContext } from "../CatalogoWeb/Context/AppContext";
 import cart from "../../assets/cart-outline.svg";
-import arrow from "../../assets/arrow-forward-white.svg";
+import arrow from "../../assets/back.svg";
 import searchIcon from "../../assets/POS/SearchIcon.svg";
+import filterIcon from "../../assets/filter-solid.svg";
 import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
 import { PoliticaPrivacidadAgenda } from "../PoliticaPrivacidad/PoliticaPrivacidadAgenda";
 //importaciones para el catalogo web
@@ -134,6 +135,7 @@ export const Rutas = () => {
   //contexto
   const context = useContext(AppContext);
   const location = useLocation(); // Hook de react-router-dom para obtener la ubicación actual
+  const isPedidoInfo = location.pathname === "/catalogo/pedido-info";
 
   //lista de rutas donde NO queremos mostrar el menú
   const hiddenNavBarRoutes = ["/login-punto-venta", "/MainSales"];
@@ -232,6 +234,10 @@ export const Rutas = () => {
           0.1
         );
     }
+  }, [location.pathname]);
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [location.pathname]);
 
   useEffect(() => {
@@ -551,8 +557,11 @@ export const Rutas = () => {
   */
   const isCategoriaRoute = location.pathname.startsWith("/categoria/");
   const isMainCatalogoRoute = /^\/catalogo\/[^/]+$/.test(location.pathname);
-  const showCatalogSearch = isMainCatalogoRoute || isCategoriaRoute;
-  const showCategoryList = isMainCatalogoRoute || isCategoriaRoute;
+  const isPedidoRoute = location.pathname === "/catalogo/pedido";
+  const showCatalogSearch =
+    (isMainCatalogoRoute || isCategoriaRoute) && !isPedidoRoute && !isPedidoInfo;
+  const showCategoryList =
+    (isMainCatalogoRoute || isCategoriaRoute) && !isPedidoRoute && !isPedidoInfo;
   const catalogoId = idBusiness || context.idBussiness;
   return (
     <div className="drawer ">
@@ -629,33 +638,35 @@ export const Rutas = () => {
         <div className="drawer-content flex flex-col min-w-full relative hidden" id="menuIconoCatalogo">
           <div className="fixed top-0 left-0 right-0 z-40 bg-[var(--bg-primary)]">
             <div className="max-w-screen-xl mx-auto px-4 pt-6 pb-4">
-              <div className="flex items-center justify-between gap-3">
+              <div className={`flex items-center gap-3 ${isPedidoInfo ? "justify-start" : "justify-between"}`}>
                 <button
                   onClick={() => window.history.back()}
                   id="backCatalogo"
                   className="w-9 h-9 rounded-full flex items-center justify-center border border-[var(--border-default)] bg-[var(--bg-surface)] hidden"
                   type="button"
                 >
-                  <img src={arrow} alt="back" className="w-5 h-5 rotate-180 theme-icon" />
+                  <img src={arrow} alt="back" className="w-5 h-5 theme-icon" />
                 </button>
 
                 <h2 className="text-lg font-semibold text-[var(--text-primary)]">
                   {nombre || "Nombre de la tienda"}
                 </h2>
 
-                <NavLink to={"/catalogo/pedido"} className="relative">
-                  <div className="w-10 h-10 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] flex items-center justify-center">
-                    <img src={cart} alt="cart" className="w-5 h-5 theme-icon" />
-                  </div>
-                  {context.cart.length > 0 && (
-                    <span className="absolute -top-1 -right-1 bg-[var(--text-primary)] text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
-                      {context.cart.length}
-                    </span>
-                  )}
-                </NavLink>
+                {!isPedidoInfo && (
+                  <NavLink to={"/catalogo/pedido"} className="relative ml-auto">
+                    <div className="w-10 h-10 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] flex items-center justify-center">
+                      <img src={cart} alt="cart" className="w-5 h-5 theme-icon" />
+                    </div>
+                    {context.cart.length > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-[var(--text-primary)] text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
+                        {context.cart.length}
+                      </span>
+                    )}
+                  </NavLink>
+                )}
               </div>
 
-              {showCatalogSearch && (
+              {showCatalogSearch && !isPedidoInfo && (
                 <div className="mt-4 flex items-center gap-3">
                   <CatalogSearchInput
                     value={context.searchQuery}
@@ -669,7 +680,7 @@ export const Rutas = () => {
                     className="w-12 h-12 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--text-secondary)]"
                     aria-label="Filtros"
                   >
-                    <span className="block h-4 w-4 rounded bg-[var(--text-muted)]/40" />
+                    <img src={filterIcon} alt="" className="w-5 h-5 theme-icon" />
                   </button>
                 </div>
               )}
@@ -776,7 +787,8 @@ export const Rutas = () => {
             path="/catalogo/producto/:idProducto/:telefono"
             element={<DetalleProducto />}
           />
-          <Route path="/catalogo/pedido" element={<Pedido />} />
+          <Route path="/catalogo/pedido" element={<Pedido view="cart" />} />
+          <Route path="/catalogo/pedido-info" element={<Pedido view="info" />} />
           {/* RUTAS PARA EL PUNTO DE VENTA */}
           <Route path="/login-punto-venta" element={<AuthPage />} />
           <Route path="/create-store" element={<InitialCustomizeApp />} />
