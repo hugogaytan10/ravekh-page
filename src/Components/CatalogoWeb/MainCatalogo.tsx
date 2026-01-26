@@ -107,12 +107,45 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     );
   }, [context.searchQuery, productos]);
 
+  const priceFilteredProducts = useMemo(() => {
+    const min = context.catalogPriceMin;
+    const max = context.catalogPriceMax;
+    const withRange = filteredProducts.filter((product) => {
+      const price =
+        product.PromotionPrice && product.PromotionPrice > 0
+          ? product.PromotionPrice
+          : product.Price;
+      if (min != null && price < min) return false;
+      if (max != null && price > max) return false;
+      return true;
+    });
+
+    if (context.filterProduct.orderAsc || context.filterProduct.orderDesc) {
+      const sorted = [...withRange].sort((a, b) => {
+        const priceA =
+          a.PromotionPrice && a.PromotionPrice > 0 ? a.PromotionPrice : a.Price;
+        const priceB =
+          b.PromotionPrice && b.PromotionPrice > 0 ? b.PromotionPrice : b.Price;
+        return priceA - priceB;
+      });
+      return context.filterProduct.orderDesc ? sorted.reverse() : sorted;
+    }
+
+    return withRange;
+  }, [
+    filteredProducts,
+    context.catalogPriceMin,
+    context.catalogPriceMax,
+    context.filterProduct.orderAsc,
+    context.filterProduct.orderDesc,
+  ]);
+
   const sanitizedProducts = useMemo(
     () =>
-      filteredProducts.filter((producto) =>
+      priceFilteredProducts.filter((producto) =>
         Boolean(producto.Image || (producto.Images && producto.Images[0]))
       ),
-    [filteredProducts]
+    [priceFilteredProducts]
   );
 
   const currencyFormatter = useMemo(

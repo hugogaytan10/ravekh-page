@@ -158,6 +158,13 @@ export const Rutas = () => {
   const [color, setcolor] = useState("");
   const [nombre, setnombre] = useState("");
   const [idBusiness, setidbusiness] = useState("")
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [filterDraft, setFilterDraft] = useState({
+    orderAsc: false,
+    orderDesc: false,
+    priceMin: null,
+    priceMax: null,
+  });
 
 
   // Nueva referencia para el POS
@@ -563,6 +570,47 @@ export const Rutas = () => {
   const showCategoryList =
     (isMainCatalogoRoute || isCategoriaRoute) && !isPedidoRoute && !isPedidoInfo;
   const catalogoId = idBusiness || context.idBussiness;
+
+  useEffect(() => {
+    if (!isFilterOpen) return;
+    setFilterDraft({
+      orderAsc: Boolean(context.filterProduct?.orderAsc),
+      orderDesc: Boolean(context.filterProduct?.orderDesc),
+      priceMin: context.catalogPriceMin,
+      priceMax: context.catalogPriceMax,
+    });
+  }, [isFilterOpen, context.filterProduct, context.catalogPriceMin, context.catalogPriceMax]);
+
+  const applyFilters = () => {
+    const next = {
+      orderAsc: filterDraft.orderAsc,
+      orderDesc: filterDraft.orderDesc,
+      priceMin: filterDraft.priceMin,
+      priceMax: filterDraft.priceMax,
+    };
+    context.setFilterProduct((prev) => ({
+      ...prev,
+      orderAsc: next.orderAsc,
+      orderDesc: next.orderDesc,
+    }));
+    context.setCatalogPriceMin(next.priceMin);
+    context.setCatalogPriceMax(next.priceMax);
+    localStorage.setItem("catalogFilters", JSON.stringify(next));
+    setIsFilterOpen(false);
+  };
+
+  const resetFilters = () => {
+    const next = { orderAsc: false, orderDesc: false, priceMin: null, priceMax: null };
+    context.setFilterProduct((prev) => ({
+      ...prev,
+      orderAsc: false,
+      orderDesc: false,
+    }));
+    context.setCatalogPriceMin(null);
+    context.setCatalogPriceMax(null);
+    localStorage.setItem("catalogFilters", JSON.stringify(next));
+    setFilterDraft(next);
+  };
   return (
     <div className="drawer ">
       <input id="my-drawer-3" type="checkbox" className="drawer-toggle" />
@@ -677,6 +725,7 @@ export const Rutas = () => {
                   />
                   <button
                     type="button"
+                    onClick={() => setIsFilterOpen(true)}
                     className="w-12 h-12 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--text-secondary)]"
                     aria-label="Filtros"
                   >
@@ -863,6 +912,127 @@ export const Rutas = () => {
           <Route path="/open/servicebybusiness/:business" element={<DeepLinkRedirect />} />
 
         </Routes>
+
+        {isFilterOpen && (
+          <div className="fixed inset-0 z-50 flex">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/30"
+              onClick={() => setIsFilterOpen(false)}
+              aria-label="Cerrar filtros"
+            />
+            <div className="relative h-full w-full max-w-sm bg-[var(--bg-surface)] shadow-xl p-6">
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen(false)}
+                className="text-[var(--text-primary)] text-2xl"
+                aria-label="Cerrar filtros"
+              >
+                ×
+              </button>
+
+              <h2 className="mt-6 text-xl font-semibold text-[var(--text-primary)]">
+                Filtros
+              </h2>
+
+              <div className="mt-6 space-y-4">
+                <label className="flex items-center justify-between text-[var(--text-secondary)]">
+                  <span>Precio de menor a mayor</span>
+                  <input
+                    type="checkbox"
+                    checked={filterDraft.orderAsc}
+                    onChange={(e) =>
+                      setFilterDraft((prev) => ({
+                        ...prev,
+                        orderAsc: e.target.checked,
+                        orderDesc: e.target.checked ? false : prev.orderDesc,
+                      }))
+                    }
+                    className="h-5 w-5 accent-[var(--text-primary)]"
+                  />
+                </label>
+                <label className="flex items-center justify-between text-[var(--text-secondary)]">
+                  <span>Precio de mayor a menor</span>
+                  <input
+                    type="checkbox"
+                    checked={filterDraft.orderDesc}
+                    onChange={(e) =>
+                      setFilterDraft((prev) => ({
+                        ...prev,
+                        orderDesc: e.target.checked,
+                        orderAsc: e.target.checked ? false : prev.orderAsc,
+                      }))
+                    }
+                    className="h-5 w-5 accent-[var(--text-primary)]"
+                  />
+                </label>
+              </div>
+
+              <div className="mt-10">
+                <p className="text-[var(--text-secondary)]">Rango de precios</p>
+                <div className="mt-3 flex items-center justify-between text-[var(--text-muted)] text-sm">
+                  <span>${filterDraft.priceMin ?? 1}</span>
+                  <span>${filterDraft.priceMax ?? 999}</span>
+                </div>
+                <div className="mt-3 space-y-3">
+                  <input
+                    type="range"
+                    min="1"
+                    max="999"
+                    value={filterDraft.priceMin ?? 1}
+                    onChange={(e) => {
+                      const nextMin = Number(e.target.value);
+                      setFilterDraft((prev) => ({
+                        ...prev,
+                        priceMin: nextMin,
+                        priceMax:
+                          prev.priceMax != null && prev.priceMax < nextMin
+                            ? nextMin
+                            : prev.priceMax,
+                      }));
+                    }}
+                    className="w-full accent-[var(--text-primary)]"
+                  />
+                  <input
+                    type="range"
+                    min="1"
+                    max="999"
+                    value={filterDraft.priceMax ?? 999}
+                    onChange={(e) => {
+                      const nextMax = Number(e.target.value);
+                      setFilterDraft((prev) => ({
+                        ...prev,
+                        priceMax: nextMax,
+                        priceMin:
+                          prev.priceMin != null && prev.priceMin > nextMax
+                            ? nextMax
+                            : prev.priceMin,
+                      }));
+                    }}
+                    className="w-full accent-[var(--text-primary)]"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-10 flex gap-3">
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="w-1/2 rounded-full bg-[var(--action-disabled)] text-white py-3 text-sm font-semibold"
+                >
+                  Limpiar
+                </button>
+                <button
+                  type="button"
+                  onClick={applyFilters}
+                  className="w-1/2 rounded-full bg-[var(--action-primary)] text-white py-3 text-sm font-semibold"
+                >
+                  Aplicar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       {context.showNavBarBottom && <NavBottom />}
     </div>
