@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "./Context/AppContext";
 import { CartPos } from "./PuntoVenta/Model/CarPos";
@@ -70,6 +70,17 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     municipio?: string;
     estado?: string;
   }>({});
+  const fieldRefs = {
+    nombre: useRef<HTMLDivElement>(null),
+    email: useRef<HTMLDivElement>(null),
+    clientPhoneNumber: useRef<HTMLDivElement>(null),
+    deliveryMethod: useRef<HTMLDivElement>(null),
+    calle: useRef<HTMLDivElement>(null),
+    codigoPostal: useRef<HTMLDivElement>(null),
+    municipio: useRef<HTMLDivElement>(null),
+    estado: useRef<HTMLDivElement>(null),
+    paymentMethod: useRef<HTMLDivElement>(null),
+  };
 
   const isCartView = view === "cart";
 
@@ -278,6 +289,17 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     }
 
     setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      if (newErrors.nombre || newErrors.email || newErrors.clientPhoneNumber) {
+        setOpenSection("contact");
+      } else if (newErrors.deliveryMethod) {
+        setOpenSection("delivery");
+      } else if (newErrors.calle || newErrors.codigoPostal || newErrors.municipio || newErrors.estado) {
+        setOpenSection("address");
+      } else if (newErrors.paymentMethod) {
+        setOpenSection("payment");
+      }
+    }
     return Object.keys(newErrors).length === 0;
   };
 
@@ -337,6 +359,26 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
       console.log("Formulario inválido, mostrando errores.");
     }
   };
+
+  useEffect(() => {
+    if (isCartView) return;
+    const order = [
+      "nombre",
+      "email",
+      "clientPhoneNumber",
+      "deliveryMethod",
+      "calle",
+      "codigoPostal",
+      "municipio",
+      "estado",
+      "paymentMethod",
+    ] as const;
+    const firstKey = order.find((key) => Boolean(errors[key]));
+    if (!firstKey) return;
+    requestAnimationFrame(() => {
+      fieldRefs[firstKey]?.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [errors, isCartView]);
 
   const incrementQuantity = (product: CartPos) => {
     const maxStock = product.Stock;
@@ -638,7 +680,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                 }`}
               >
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col">
+                <div ref={fieldRefs.nombre} className="flex flex-col">
                   <label className="text-sm text-[var(--text-secondary)]">Nombre completo</label>
                   <input
                     type="text"
@@ -654,7 +696,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                     </span>
                   )}
                 </div>
-                <div className="flex flex-col">
+                <div ref={fieldRefs.email} className="flex flex-col">
                   <label className="text-sm text-[var(--text-secondary)]">Email (opcional)</label>
                   <input
                     type="email"
@@ -670,7 +712,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                     </span>
                   )}
                 </div>
-                <div className="md:col-span-2 flex flex-col">
+                <div ref={fieldRefs.clientPhoneNumber} className="md:col-span-2 flex flex-col">
                   <label className="text-sm text-[var(--text-secondary)]">Teléfono móvil</label>
                   <input
                     type="text"
@@ -717,7 +759,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                     : "max-h-0 opacity-0 -translate-y-2"
                 }`}
               >
-                <div className="mt-4 flex items-center mb-4">
+                <div ref={fieldRefs.deliveryMethod} className="mt-4 flex items-center mb-4">
                   <FiTruck className="text-[var(--text-muted)] mr-2" size={20} />
                   <label className="text-sm text-[var(--text-secondary)]">
                     Seleccione el método de entrega
@@ -768,7 +810,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                 >
                 <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                   {shippingOptions.Street && (
-                    <div className="flex flex-col">
+                    <div ref={fieldRefs.calle} className="flex flex-col">
                       <label className="text-sm text-[var(--text-secondary)]">Calle</label>
                       <input
                         type="text"
@@ -786,7 +828,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                   )}
 
                   {shippingOptions.ZipCode && (
-                    <div className="flex flex-col">
+                    <div ref={fieldRefs.codigoPostal} className="flex flex-col">
                       <label className="text-sm text-[var(--text-secondary)]">Código Postal</label>
                       <input
                         type="text"
@@ -804,7 +846,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                   )}
 
                   {shippingOptions.City && (
-                    <div className="flex flex-col">
+                    <div ref={fieldRefs.municipio} className="flex flex-col">
                       <label className="text-sm text-[var(--text-secondary)]">Municipio</label>
                       <input
                         type="text"
@@ -822,7 +864,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                   )}
 
                   {shippingOptions.State && (
-                    <div className="flex flex-col">
+                    <div ref={fieldRefs.estado} className="flex flex-col">
                       <label className="text-sm text-[var(--text-secondary)]">Estado</label>
                       <input
                         type="text"
@@ -882,7 +924,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                       : "max-h-0 opacity-0 -translate-y-2"
                   }`}
                 >
-                  <div className="mt-4 flex items-center mb-4">
+                  <div ref={fieldRefs.paymentMethod} className="mt-4 flex items-center mb-4">
                     <FiCreditCard className="text-[var(--text-muted)] mr-2" size={20} />
                     <label className="text-sm text-[var(--text-secondary)]">Seleccione un método de pago</label>
                   </div>
