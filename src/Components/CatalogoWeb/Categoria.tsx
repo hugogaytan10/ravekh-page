@@ -1,12 +1,14 @@
 
-import React, { useContext, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { NavLink, useParams } from "react-router-dom";
-import { getProductsByBusiness, getProductsByCategoryId, getProductsByCategoryIdAndDisponibilty } from "./Petitions";
+import { getProductsByCategoryIdAndDisponibilty, getVariantsByProductIdPublic } from "./Petitions";
 import { Producto } from "./Modelo/Producto";
-import { motion } from "framer-motion";
 import { AppContext } from "./Context/AppContext";
 import logoWhasa from "../../assets/logo-whatsapp.svg";
 import { Helmet, HelmetProvider } from "react-helmet-async";
+import { ProductGrid, ProductGridSkeleton } from "./ProductGrid";
+import { Variant } from "./PuntoVenta/Model/Variant";
+import { VariantSelectionModal, getBaseVariantKey } from "./VariantSelectionModal";
 
 export const MainCategoria: React.FC = () => {
     const { idCategoria } = useParams<{
@@ -17,8 +19,27 @@ export const MainCategoria: React.FC = () => {
     const context = useContext(AppContext);
     const [notPay, setNotPay] = useState(false);
     const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
+    const [variantProduct, setVariantProduct] = useState<Producto | null>(null);
+    const [variantOptions, setVariantOptions] = useState<Variant[]>([]);
+    const [variantModalOpen, setVariantModalOpen] = useState(false);
+    const [variantLoading, setVariantLoading] = useState(false);
     const catalogoId =
         (context.idBussiness !== "0" ? context.idBussiness : localStorage.getItem("idBusiness")) ?? "";
+
+    const cartVariantQuantities = useMemo(() => {
+        const map: Record<number, number> = {};
+
+        context.cart.forEach((item) => {
+            if (item.Quantity == null) return;
+
+            const variantKey =
+                item.Variant_Id != null ? item.Variant_Id : getBaseVariantKey(item.Id);
+
+            map[variantKey] = (map[variantKey] ?? 0) + item.Quantity;
+        });
+
+        return map;
+    }, [context.cart]);
 
 
     useEffect(() => {
@@ -103,28 +124,161 @@ export const MainCategoria: React.FC = () => {
         );
     }, [context.searchQuery, productos]);
 
-    const renderSkeleton = () => {
-        return (
-            <div className="p-2 rounded-md mb-20">
-                <div className="bg-gray-200 animate-pulse h-10 w-full mb-4"></div>
-                <div className="flex flex-wrap gap-4">
-                    {[...Array(8)].map((_, index) => (
-                        <div
-                            key={index}
-                            className="bg-gray-200 animate-pulse h-24 w-full md:w-2/5 lg:w-3/12 rounded-md"
-                        ></div>
-                    ))}
-                </div>
-            </div>
-        );
-    };
+    const priceFilteredProducts = useMemo(() => {
+        const min = context.catalogPriceMin;
+        const max = context.catalogPriceMax;
+        const withRange = filteredProducts.filter((product) => {
+            const price =
+                product.PromotionPrice && product.PromotionPrice > 0
+                    ? product.PromotionPrice
+                    : product.Price;
+            if (min != null && price < min) return false;
+            if (max != null && price > max) return false;
+            return true;
+        });
+
+        if (context.filterProduct.orderAsc || context.filterProduct.orderDesc) {
+            const sorted = [...withRange].sort((a, b) => {
+                const priceA =
+                    a.PromotionPrice && a.PromotionPrice > 0 ? a.PromotionPrice : a.Price;
+                const priceB =
+                    b.PromotionPrice && b.PromotionPrice > 0 ? b.PromotionPrice : b.Price;
+                return priceA - priceB;
+            });
+            return context.filterProduct.orderDesc ? sorted.reverse() : sorted;
+        }
+
+        return withRange;
+    }, [
+        filteredProducts,
+        context.catalogPriceMin,
+        context.catalogPriceMax,
+        context.filterProduct.orderAsc,
+        context.filterProduct.orderDesc,
+    ]);
+
+    const sanitizedProducts = useMemo(
+        () =>
+            priceFilteredProducts.filter((producto) =>
+                Boolean(producto.Image || (producto.Images && producto.Images[0]))
+            ),
+        [priceFilteredProducts]
+    );
+
+    const currencyFormatter = useMemo(
+        () =>
+            new Intl.NumberFormat("es-MX", {
+                style: "currency",
+                currency: "MXN",
+                minimumFractionDigits: 2,
+            }),
+        []
+    );
+
+    const formatPrice = useCallback(
+        (value: number) => currencyFormatter.format(value),
+        [currencyFormatter]
+    );
+
+    const openVariantModal = useCallback((product: Producto, variants: Variant[]) => {
+        setVariantProduct(product);
+        setVariantOptions(variants);
+        setVariantModalOpen(true);
+    }, []);
+
+    const fetchVariantsForProduct = useCallback(async (product: Producto) => {
+        setVariantLoading(true);
+        const fetchedVariants = await getVariantsByProductIdPublic(product.Id);
+        setVariantLoading(false);
+        return fetchedVariants;
+    }, []);
+
+    const handleAddToCart = useCallback(
+        async (product: Producto) => {
+            const inlineVariants = Array.isArray(product.Variants)
+                ? (product.Variants.filter(Boolean) as Variant[])
+                : [];
+
+            if (inlineVariants.length > 0) {
+                openVariantModal(product, inlineVariants);
+                return;
+            }
+
+            const fetchedVariants = await fetchVariantsForProduct(product);
+
+            if (fetchedVariants.length > 0) {
+                openVariantModal(product, fetchedVariants);
+                return;
+            }
+
+            context.addProductToCart({ ...product, Variant_Id: null });
+        },
+        [context, fetchVariantsForProduct, openVariantModal]
+    );
+
+    const handleConfirmVariant = useCallback(
+        (selections: { variant: Variant; quantity: number }[]) => {
+            if (!variantProduct) return;
+
+            selections.forEach(({ variant, quantity }) => {
+                const basePrice = variant.PromotionPrice ?? variant.Price ?? variantProduct.Price;
+
+                context.addProductToCart({
+                    ...variantProduct,
+                    Price: basePrice ?? 0,
+                    PromotionPrice: variant.PromotionPrice ?? variantProduct.PromotionPrice,
+                    Variant_Id: variant.Id ?? null,
+                    VariantDescription: variant.Description,
+                    Stock: variant.Stock ?? variantProduct.Stock,
+                    Quantity: quantity,
+                });
+            });
+
+            setVariantModalOpen(false);
+            setVariantProduct(null);
+            setVariantOptions([]);
+        },
+        [context, variantProduct]
+    );
+
+    const handleCloseVariantModal = useCallback(() => {
+        setVariantModalOpen(false);
+        setVariantProduct(null);
+        setVariantOptions([]);
+    }, []);
+
+    const handleQuickView = useCallback(
+        async (product: Producto) => {
+            const inlineVariants = Array.isArray(product.Variants)
+                ? (product.Variants.filter(Boolean) as Variant[])
+                : [];
+
+            if (inlineVariants.length > 0) {
+                openVariantModal(product, inlineVariants);
+                return;
+            }
+
+            const fetchedVariants = await fetchVariantsForProduct(product);
+            if (fetchedVariants.length > 0) {
+                openVariantModal(product, fetchedVariants);
+            }
+        },
+        [fetchVariantsForProduct, openVariantModal]
+    );
+
+    const handleRemoveFromCart = useCallback(
+        (product: Producto) => {
+            context.removeProductFromCart(String(product.Id), null);
+        },
+        [context]
+    );
 
     if(notPay) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-screen">
-                <h1 className="text-2xl font-bold mb-4">Lo sentimos</h1>
-                <p className="text-lg">No puedes comprar en esta tienda.</p>
-                <p className="text-lg">Por favor, contacta a la tienda para más información.</p>
+            <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--bg-primary)]">
+                <h1 className="text-2xl font-bold mb-4 text-[var(--text-primary)]">Lo sentimos</h1>
+                <p className="text-lg text-[var(--text-secondary)]">No puedes comprar en esta tienda.</p>
+                <p className="text-lg text-[var(--text-secondary)]">Por favor, contacta a la tienda para más información.</p>
             </div>
         );
     }
@@ -134,87 +288,37 @@ export const MainCategoria: React.FC = () => {
                 <Helmet>
                     <meta name="theme-color" content="#F64301" />
                 </Helmet>
-                <div className="p-4 min-h-screen w-full max-w-screen-xl mx-auto py-20 mt-11">
-                    {/* Mostrar mensaje si no hay productos */}
+                <div className="px-4 pt-44 pb-12 min-h-screen w-full max-w-screen-xl mx-auto bg-[var(--bg-primary)]">
                     {loadingProducts ? (
-                        renderSkeleton()
-                    ) : filteredProducts &&
-                    filteredProducts.length === 0 ? (
+                        <ProductGridSkeleton items={10} />
+                    ) : sanitizedProducts.length === 0 ? (
                         <div className="text-center mt-10">
-                            <h2 className="text-2xl font-semibold text-gray-700">
+                            <h2 className="text-2xl font-semibold text-[var(--text-primary)]">
                                 No hay productos disponibles
                             </h2>
-                            <p className="text-gray-500 mt-2">
+                            <p className="text-[var(--text-secondary)] mt-2">
                                 Por favor, vuelve a intentarlo más tarde o explora otras
                                 categorías.
                             </p>
                             {catalogoId && (
                                 <NavLink
                                     to={catalogoId ? `/catalogo/${catalogoId}` : "/"}
-                                    className="inline-flex mt-6 px-6 py-2 rounded-full text-white font-medium shadow-md"
-                                    style={{ backgroundColor: context.color || "#F64301" }}
+                                    className="inline-flex mt-6 px-6 py-2 rounded-full text-white font-medium shadow-sm bg-[var(--action-primary)]"
                                 >
                                     Ver todo
                                 </NavLink>
                             )}
                         </div>
                     ) : (
-                        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-                            {Array.isArray(filteredProducts) &&
-                                filteredProducts.map((producto, index) => {
-                                    const mainImage = producto.Image || (producto.Images && producto.Images[0]);
-                                    if (!mainImage) {
-                                        return null;
-                                    }
-                                    return (
-                                            <motion.div
-                                                key={producto.Id}
-                                                className="border rounded-lg shadow-md  bg-white transform transition-transform hover:scale-105 hover:shadow-lg"
-                                                initial={{ opacity: 0, y: 20 }}
-                                                animate={{ opacity: 1, y: 0 }}
-                                                transition={{ delay: index * 0.1, duration: 0.5 }}
-                                            >
-                                                <NavLink
-                                                    to={`/catalogo/producto/${producto.Id}/${telefono}`}
-                                                >
-                                                    <img
-                                                        src={mainImage}
-                                                        alt={producto.Name}
-                                                        className="h-48 w-full object-cover mb-4 rounded-t-lg"
-                                                    />
-                                                </NavLink>
-                                                <h2 className="text-lg font-semibold text-gray-800 text-center">
-                                                    {producto.Name}
-                                                </h2>
-
-                                                {/* Precio normal y promocional en un solo renglón */}
-                                                <div className="flex justify-between items-center mt-2 p-2">
-                                                    {producto.PromotionPrice ? (
-                                                        <>
-                                                            <p className="text-gray-800 text-xl font-semibold">${producto.PromotionPrice}</p>
-                                                            <p className="text-gray-300 line-through font-light">
-                                                                ${producto.Price}
-                                                            </p>
-                                                        </>
-                                                    ) : (
-                                                        <p className="text-gray-800 text-xl font-semibold">${producto.Price}</p>
-                                                    )}
-                                                </div>
-
-                                                {/* Botón centrado */}
-                                                <div className="flex justify-center mt-4 p-2">
-                                                    <button
-                                                        onClick={() => context.addProductToCart(producto)}
-                                                        style={{ backgroundColor: context.color }}
-                                                        className="text-white w-full md:w-3/4 py-1 px-4 rounded-full shadow-md hover:bg-[#990404] transition-colors duration-300 ease-in-out transform hover:scale-105"
-                                                    >
-                                                        Añadir al carrito
-                                                    </button>
-                                                </div>
-                                            </motion.div>
-                                    );
-                                })}
-                        </div>
+                        <ProductGrid
+                            products={sanitizedProducts}
+                            telefono={telefono}
+                            onAdd={handleAddToCart}
+                            formatPrice={formatPrice}
+                            existingQuantities={cartVariantQuantities}
+                            onQuickView={handleQuickView}
+                            onRemove={handleRemoveFromCart}
+                        />
                     )}
 
                     {/* Botón de WhatsApp */}
@@ -223,6 +327,16 @@ export const MainCategoria: React.FC = () => {
                             <img src={logoWhasa} alt="WS" className="h-12 w-12" />
                         </a>
                     </div>
+
+                    <VariantSelectionModal
+                        product={variantProduct}
+                        variants={variantOptions}
+                        isOpen={variantModalOpen}
+                        onClose={handleCloseVariantModal}
+                        onConfirm={handleConfirmVariant}
+                        existingVariantQuantities={cartVariantQuantities}
+                        storeColor={context.color}
+                    />
                 </div>
             </>
         </HelmetProvider>

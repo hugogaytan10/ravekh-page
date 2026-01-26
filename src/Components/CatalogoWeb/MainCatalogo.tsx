@@ -107,24 +107,46 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     );
   }, [context.searchQuery, productos]);
 
+  const priceFilteredProducts = useMemo(() => {
+    const min = context.catalogPriceMin;
+    const max = context.catalogPriceMax;
+    const withRange = filteredProducts.filter((product) => {
+      const price =
+        product.PromotionPrice && product.PromotionPrice > 0
+          ? product.PromotionPrice
+          : product.Price;
+      if (min != null && price < min) return false;
+      if (max != null && price > max) return false;
+      return true;
+    });
+
+    if (context.filterProduct.orderAsc || context.filterProduct.orderDesc) {
+      const sorted = [...withRange].sort((a, b) => {
+        const priceA =
+          a.PromotionPrice && a.PromotionPrice > 0 ? a.PromotionPrice : a.Price;
+        const priceB =
+          b.PromotionPrice && b.PromotionPrice > 0 ? b.PromotionPrice : b.Price;
+        return priceA - priceB;
+      });
+      return context.filterProduct.orderDesc ? sorted.reverse() : sorted;
+    }
+
+    return withRange;
+  }, [
+    filteredProducts,
+    context.catalogPriceMin,
+    context.catalogPriceMax,
+    context.filterProduct.orderAsc,
+    context.filterProduct.orderDesc,
+  ]);
+
   const sanitizedProducts = useMemo(
     () =>
-      filteredProducts.filter((producto) =>
+      priceFilteredProducts.filter((producto) =>
         Boolean(producto.Image || (producto.Images && producto.Images[0]))
       ),
-    [filteredProducts]
+    [priceFilteredProducts]
   );
-
-  // 3) Función para ajustar color en hover
-  const adjustColor = useCallback((hex: string) => {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    const newR = Math.max(0, r - 100).toString(16).padStart(2, "0");
-    const newG = Math.max(0, g - 100).toString(16).padStart(2, "0");
-    const newB = Math.max(0, b - 100).toString(16).padStart(2, "0");
-    return `#${newR}${newG}${newB}`;
-  }, []);
 
   const currencyFormatter = useMemo(
     () =>
@@ -208,13 +230,39 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     setVariantOptions([]);
   }, []);
 
+  const handleQuickView = useCallback(
+    async (product: Producto) => {
+      const inlineVariants = Array.isArray(product.Variants)
+        ? (product.Variants.filter(Boolean) as Variant[])
+        : [];
+
+      if (inlineVariants.length > 0) {
+        openVariantModal(product, inlineVariants);
+        return;
+      }
+
+      const fetchedVariants = await fetchVariantsForProduct(product);
+      if (fetchedVariants.length > 0) {
+        openVariantModal(product, fetchedVariants);
+      }
+    },
+    [fetchVariantsForProduct, openVariantModal]
+  );
+
+  const handleRemoveFromCart = useCallback(
+    (product: Producto) => {
+      context.removeProductFromCart(String(product.Id), null);
+    },
+    [context]
+  );
+
   if (notPay) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen">
-        <h1 className="text-2xl font-bold text-red-600">
+      <div className="flex flex-col items-center justify-center h-screen bg-[var(--bg-primary)]">
+        <h1 className="text-2xl font-bold text-[var(--state-error)]">
           {notPayMessage}
         </h1>
-        <p className="mt-4 text-gray-600">
+        <p className="mt-4 text-[var(--text-secondary)]">
           Por favor, contacta a tu proveedor para más información.
         </p>
       </div>
@@ -291,14 +339,18 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
           context.setIdBussiness(idBusiness);
           localStorage.setItem("idBusiness", idBusiness);
         }
-
-        const storedCart = JSON.parse(localStorage.getItem("cart") || "[]");
-        const isDifferentBusiness = storedCart.some(
-          (item: Producto) => item.Business_Id.toString() !== idBusiness
-        );
-        if (isDifferentBusiness || storedCart.length === 0) {
+        const storedCartRaw = localStorage.getItem("cart");
+        const storedCart: Producto[] = storedCartRaw ? JSON.parse(storedCartRaw) : [];
+        const storedCartBusinessId = localStorage.getItem("cartBusinessId");
+        const isDifferentBusiness =
+          (storedCartBusinessId && storedCartBusinessId !== idBusiness) ||
+          storedCart.some((item) => item?.Business_Id?.toString() !== idBusiness);
+        if (isDifferentBusiness) {
           localStorage.removeItem("cart");
+          localStorage.removeItem("cartBusinessId");
           context.clearCart();
+        } else if (storedCart.length > 0 && idBusiness && !storedCartBusinessId) {
+          localStorage.setItem("cartBusinessId", idBusiness);
         }
 
         // 1) negocio
@@ -328,7 +380,6 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
           dataBusiness?.Plan || "",
           1
         );
-
         const firstPageProducts: Producto[] = Array.isArray(resp?.data) ? resp.data : [];
         setProductos(firstPageProducts);
         setHasNext(Boolean(resp?.pagination?.hasNext));
@@ -416,16 +467,16 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
           <meta property="og:url" content={window.location.href} />
         </Helmet>
 
-        <div className="p-4 min-h-screen w-full max-w-screen-xl mx-auto py-20 mt-8">
+        <div className="px-4 pt-44 pb-12 min-h-screen w-full max-w-screen-xl mx-auto bg-[var(--bg-primary)]">
           {loadingProducts ? (
             // 👇 Skeleton mientras cargan los productos
             <ProductGridSkeleton items={10} />
           ) :productos.length === 0 ? (
             <div className="text-center mt-10">
-              <h2 className="text-2xl font-semibold text-gray-700">
+              <h2 className="text-2xl font-semibold text-[var(--text-primary)]">
                 No hay productos disponibles
               </h2>
-              <p className="text-gray-500 mt-2">
+              <p className="text-[var(--text-secondary)] mt-2">
                 Por favor, vuelve a intentarlo más tarde o explora otras categorías.
               </p>
             </div>
@@ -433,11 +484,11 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
             <ProductGrid
               products={sanitizedProducts}
               telefono={telefono}
-              color={color}
-              adjustColor={adjustColor}
               onAdd={handleAddToCart}
               formatPrice={formatPrice}
               existingQuantities={cartVariantQuantities}
+              onQuickView={handleQuickView}
+              onRemove={handleRemoveFromCart}
             />
           )}
 
@@ -446,12 +497,15 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
           )}
 
           {loadingMore && (
-            <div className="text-center py-4 text-gray-500">
+            <div className="text-center py-4 text-[var(--text-secondary)]">
               Cargando más productos...
             </div>
           )}
 
           {/* Botón de WhatsApp */}
+          {
+            /*
+  
           <div className="bg-color-whats rounded-full p-1 fixed right-2 bottom-4">
             <a href={`https://api.whatsapp.com/send?phone=${idBusiness === "115"
               ?"1"
@@ -460,12 +514,10 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
             </a>
           </div>
 
-          {variantLoading && (
-            <div className="fixed inset-0 z-40 flex items-center justify-center bg-black/40 text-white text-lg font-semibold">
-              Cargando variantes...
-            </div>
-          )}
+         */
+          }
 
+          {/* Modal de selección de variantes */}
           <VariantSelectionModal
             product={variantProduct}
             variants={variantOptions}

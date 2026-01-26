@@ -34,6 +34,10 @@ export type AppContextState = {
     setShowNavBar: Dispatch<SetStateAction<boolean>>;
     filterProduct: FilterProduct;
     setFilterProduct: Dispatch<SetStateAction<FilterProduct>>;
+    catalogPriceMin: number | null;
+    setCatalogPriceMin: Dispatch<SetStateAction<number | null>>;
+    catalogPriceMax: number | null;
+    setCatalogPriceMax: Dispatch<SetStateAction<number | null>>;
     stockFlag: boolean;
     setStockFlag: Dispatch<SetStateAction<boolean>>;
     quantityNextSell: string;
