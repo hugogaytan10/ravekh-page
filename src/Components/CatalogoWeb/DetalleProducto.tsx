@@ -423,7 +423,9 @@ export const DetalleProducto: React.FC = () => {
           </div>
         </div>
 
-        <div className="bg-green-500 hover:bg-green-600 rounded-full p-2 fixed right-2 bottom-4 shadow-lg transition-all">
+      {
+        /*
+          <div className="bg-green-500 hover:bg-green-600 rounded-full p-2 fixed right-2 bottom-4 shadow-lg transition-all">
           <a
             href={`https://api.whatsapp.com/send?phone=52${telefono || phoneNumber || ""}`}
             target="_blank"
@@ -432,6 +434,8 @@ export const DetalleProducto: React.FC = () => {
             <img src={logoWhasa} alt="WhatsApp" className="w-10 h-10" />
           </a>
         </div>
+        */
+      }
       </div>
     </HelmetProvider>
   );

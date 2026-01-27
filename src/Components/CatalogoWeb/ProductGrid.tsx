@@ -178,7 +178,7 @@ const ProductCard = memo(
             />
             <div
               className={`pointer-events-none absolute inset-0 rounded-[var(--radius-md)] transition-colors ${
-                overlayActive ? "bg-black/0" : "bg-black/0 group-hover:bg-black/25"
+                overlayActive ? "bg-black/0" : "bg-black/0 md:group-hover:bg-black/25"
               }`}
             />
           </NavLink>
@@ -188,7 +188,7 @@ const ProductCard = memo(
                 className={`absolute bottom-0 left-0 right-0 px-3 pb-3 transition-all duration-200 ${
                   overlayActive
                     ? "opacity-0 translate-y-2 pointer-events-none"
-                    : "opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 pointer-events-none group-hover:pointer-events-auto"
+                    : "opacity-0 translate-y-2 md:group-hover:opacity-100 md:group-hover:translate-y-0 pointer-events-none md:group-hover:pointer-events-auto"
                 }`}
               >
                 <div className="flex items-end justify-between text-white">
@@ -242,8 +242,8 @@ const ProductCard = memo(
               overlayActive
                 ? "opacity-0 pointer-events-none"
                 : !hasVariants
-                  ? "transition-opacity group-hover:opacity-0"
-                  : "transition-opacity"
+                ? "transition-opacity md:group-hover:opacity-0"
+                : "transition-opacity"
             }
           >
             <h2 className="text-sm font-semibold text-[var(--text-primary)] leading-snug min-h-[2.5rem] max-h-[2.5rem] overflow-hidden">
