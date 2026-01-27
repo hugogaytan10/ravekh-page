@@ -533,7 +533,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
             <div className="md:flex md:items-start md:gap-10">
               <div className="flex-1">
                 <h2 className="text-lg font-semibold mb-6 text-[var(--text-primary)]">Tu carrito</h2>
-                <div className="space-y-6">
+                <div className="divide-y divide-[var(--border-default)]">
                   {cart.map((producto: CartPos) => {
                     const hasPromo =
                       producto.PromotionPrice != null &&
@@ -545,15 +545,15 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                     return (
                       <div
                         key={`${producto.Id}-${producto.Variant_Id ?? "base"}`}
-                        className="p-6 rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface)] shadow-sm flex items-center gap-6"
+                        className="py-6 flex items-center gap-5"
                       >
                         <img
                           src={producto.Image || (producto.Images && producto.Images[0]) || ""}
                           alt={producto.Name}
-                          className="w-28 h-28 object-cover rounded-[var(--radius-md)]"
+                          className="w-24 h-24 object-cover rounded-[var(--radius-md)] bg-[var(--bg-subtle)]"
                         />
-                        <div className="flex-1">
-                          <p className="text-base font-semibold text-[var(--text-primary)]">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-base font-semibold text-[var(--text-primary)] break-words">
                             {producto.Name}
                             {producto.VariantDescription ? `, ${producto.VariantDescription}` : ""}
                           </p>
@@ -567,11 +567,11 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                               ${unitPrice.toFixed(2)}
                             </span>
                           </div>
-                          <div className="mt-4 flex items-center gap-5">
+                          <div className="mt-4 flex items-center gap-4">
                             {producto.Quantity! > 1 ? (
                               <button
                                 onClick={() => decrementQuantity(producto)}
-                                className="w-10 h-10 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg"
+                                className="w-10 h-10 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg flex items-center justify-center"
                               >
                                 −
                               </button>
@@ -588,7 +588,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                             </span>
                             <button
                               onClick={() => incrementQuantity(producto)}
-                              className="w-10 h-10 rounded-full bg-[var(--action-primary)] text-[var(--text-inverse)] text-lg"
+                              className="w-10 h-10 rounded-full bg-[var(--action-primary)] text-[var(--text-inverse)] text-lg flex items-center justify-center"
                             >
                               +
                             </button>
@@ -598,12 +598,6 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                               {quantityWarnings[getProductKey(producto)]}
                             </p>
                           )}
-                        </div>
-                        <div className="ml-auto text-right">
-                          <span className="text-sm text-[var(--text-muted)]">Total</span>
-                          <p className="text-base font-semibold text-[var(--text-primary)]">
-                            ${totalLine}
-                          </p>
                         </div>
                       </div>
                     );

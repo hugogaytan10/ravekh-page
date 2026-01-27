@@ -82,3 +82,45 @@ body {
 ::-webkit-scrollbar {
     display: none; /* Chrome, Edge */
 }
+
+.catalog-range {
+    -webkit-appearance: none;
+    appearance: none;
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--bg-subtle);
+    outline: none;
+}
+
+.catalog-range::-webkit-slider-runnable-track {
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--bg-subtle);
+}
+
+.catalog-range::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--action-primary);
+    border: 2px solid var(--bg-surface);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+    margin-top: -7px;
+}
+
+.catalog-range::-moz-range-track {
+    height: 0.5rem;
+    border-radius: 999px;
+    background: var(--bg-subtle);
+}
+
+.catalog-range::-moz-range-thumb {
+    width: 22px;
+    height: 22px;
+    border-radius: 999px;
+    background: var(--action-primary);
+    border: 2px solid var(--bg-surface);
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}

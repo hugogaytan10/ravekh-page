@@ -431,13 +431,16 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   }, [hasNext, loadNextPage]);
 
 
+  const shareName =
+    context.nombre || localStorage.getItem("nombre") || "Catálogo de Productos";
+
   // 6) Render
   return (
     <HelmetProvider>
       <>
         <Helmet>
           <meta name="theme-color" content={color || "#6D01D1"} />
-          <title>{context.nombre || "Catálogo de Productos"}</title>
+          <title>{shareName}</title>
           <meta
             name="description"
             content="Explora nuestro catálogo de productos y encuentra todo lo que necesitas a precios increíbles. ¡Compra ahora!"
@@ -447,10 +450,10 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
             name="theme-color"
             content={context.idBussiness === '115' ? "#000000" : color || "#6D01D1"}
           />
-          <title>{context.nombre || "Catálogo de Productos"}</title>
+          <title>{shareName}</title>
           <meta
             property="og:title"
-            content={context.nombre || "Catálogo de Productos"}
+            content={shareName}
           />
           <meta
             property="og:description"
@@ -467,7 +470,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
           <meta property="og:url" content={window.location.href} />
         </Helmet>
 
-        <div className="px-4 pt-44 pb-12 min-h-screen w-full max-w-screen-xl mx-auto bg-[var(--bg-primary)]">
+        <div className="px-4 pt-52 pb-12 min-h-screen w-full max-w-screen-xl mx-auto bg-[var(--bg-primary)]">
           {loadingProducts ? (
             // 👇 Skeleton mientras cargan los productos
             <ProductGridSkeleton items={10} />

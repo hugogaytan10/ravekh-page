@@ -165,6 +165,11 @@ export const Rutas = () => {
     priceMin: null,
     priceMax: null,
   });
+  const priceMinDefault = 1;
+  const priceMaxDefault = 999;
+  const clampPrice = (value) => Math.min(priceMaxDefault, Math.max(priceMinDefault, value));
+  const priceMinValue = filterDraft.priceMin ?? priceMinDefault;
+  const priceMaxValue = filterDraft.priceMax ?? priceMaxDefault;
 
 
   // Nueva referencia para el POS
@@ -971,17 +976,64 @@ export const Rutas = () => {
               <div className="mt-10">
                 <p className="text-[var(--text-secondary)]">Rango de precios</p>
                 <div className="mt-3 flex items-center justify-between text-[var(--text-muted)] text-sm">
-                  <span>${filterDraft.priceMin ?? 1}</span>
-                  <span>${filterDraft.priceMax ?? 999}</span>
+                  <span>${priceMinValue}</span>
+                  <span>${priceMaxValue}</span>
                 </div>
-                <div className="mt-3 space-y-3">
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <label className="flex flex-col text-xs text-[var(--text-muted)]">
+                    Mínimo
+                    <input
+                      type="number"
+                      min={priceMinDefault}
+                      max={priceMaxDefault}
+                      inputMode="numeric"
+                      value={priceMinValue}
+                      onChange={(e) => {
+                        const nextMin = clampPrice(Number(e.target.value || priceMinDefault));
+                        setFilterDraft((prev) => ({
+                          ...prev,
+                          priceMin: nextMin,
+                          priceMax:
+                            prev.priceMax != null && prev.priceMax < nextMin
+                              ? nextMin
+                              : prev.priceMax,
+                        }));
+                      }}
+                      className="mt-2 w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                    />
+                  </label>
+                  <label className="flex flex-col text-xs text-[var(--text-muted)]">
+                    Máximo
+                    <input
+                      type="number"
+                      min={priceMinDefault}
+                      max={priceMaxDefault}
+                      inputMode="numeric"
+                      value={priceMaxValue}
+                      onChange={(e) => {
+                        const nextMax = clampPrice(Number(e.target.value || priceMaxDefault));
+                        setFilterDraft((prev) => ({
+                          ...prev,
+                          priceMax: nextMax,
+                          priceMin:
+                            prev.priceMin != null && prev.priceMin > nextMax
+                              ? nextMax
+                              : prev.priceMin,
+                        }));
+                      }}
+                      className="mt-2 w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                    />
+                  </label>
+                </div>
+                <div className="mt-4 space-y-3">
                   <input
                     type="range"
-                    min="1"
-                    max="999"
-                    value={filterDraft.priceMin ?? 1}
+                    min={priceMinDefault}
+                    max={priceMaxDefault}
+                    step="1"
+                    value={priceMinValue}
                     onChange={(e) => {
-                      const nextMin = Number(e.target.value);
+                      const nextMin = clampPrice(Number(e.target.value));
                       setFilterDraft((prev) => ({
                         ...prev,
                         priceMin: nextMin,
@@ -991,15 +1043,17 @@ export const Rutas = () => {
                             : prev.priceMax,
                       }));
                     }}
-                    className="w-full accent-[var(--text-primary)]"
+                    className="w-full catalog-range accent-[var(--text-primary)]"
+                    aria-label="Precio mínimo"
                   />
                   <input
                     type="range"
-                    min="1"
-                    max="999"
-                    value={filterDraft.priceMax ?? 999}
+                    min={priceMinDefault}
+                    max={priceMaxDefault}
+                    step="1"
+                    value={priceMaxValue}
                     onChange={(e) => {
-                      const nextMax = Number(e.target.value);
+                      const nextMax = clampPrice(Number(e.target.value));
                       setFilterDraft((prev) => ({
                         ...prev,
                         priceMax: nextMax,
@@ -1009,7 +1063,8 @@ export const Rutas = () => {
                             : prev.priceMin,
                       }));
                     }}
-                    className="w-full accent-[var(--text-primary)]"
+                    className="w-full catalog-range accent-[var(--text-primary)]"
+                    aria-label="Precio máximo"
                   />
                 </div>
               </div>

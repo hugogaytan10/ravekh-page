@@ -227,7 +227,7 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
 
         <div
           ref={sheetRef}
-          className="mt-4 max-h-[88vh] overflow-y-auto bg-[var(--bg-surface)] rounded-t-[32px] pb-6 shadow-xl md:mt-0 md:rounded-2xl md:pb-8"
+          className="mt-4 max-h-[88vh] overflow-y-auto bg-[var(--bg-surface)] rounded-t-[32px] pb-10 shadow-xl md:mt-0 md:rounded-2xl md:pb-12"
         >
           <button
             type="button"
@@ -238,7 +238,7 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
             ×
           </button>
 
-          <div className="px-6 pt-6 md:px-8 md:pt-8">
+          <div className="px-6 pt-6 pb-4 md:px-8 md:pt-8 md:pb-8">
             <div className="md:grid md:grid-cols-[1.1fr,1fr] md:gap-10 md:items-start">
               <div>
                 <div className="w-full overflow-hidden rounded-2xl bg-[var(--bg-subtle)]">
@@ -383,38 +383,51 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
                           displayEntries
                             .filter((entry) => (quantities[entry.key] ?? 0) > 0)
                             .map((entry) => (
-                              <div
-                                key={entry.key}
-                                className="flex items-center justify-between py-2"
-                              >
-                                <span className="text-sm text-[var(--text-primary)]">
-                                  {entry.variant.Description}
-                                </span>
-                                <div className="flex items-center gap-3">
-                                  <button
-                                    onClick={() => handleQuantityChange(entry.key, -1)}
-                                    className="w-9 h-9 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg disabled:opacity-40"
-                                    disabled={(quantities[entry.key] ?? 0) <= 1}
-                                    aria-label={`Reducir cantidad de ${entry.variant.Description}`}
-                                  >
-                                    −
-                                  </button>
-                                  <span className="text-sm font-semibold text-[var(--text-primary)]">
-                                    {quantities[entry.key] ?? 0}
+                              <div key={entry.key} className="py-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-[var(--text-primary)]">
+                                    {entry.variant.Description}
                                   </span>
-                                  <button
-                                    onClick={() => handleQuantityChange(entry.key, 1)}
-                                    className="w-9 h-9 rounded-full bg-[var(--action-primary)] text-white text-lg disabled:opacity-40"
-                                    disabled={
-                                      remainingStock[entry.key] != null &&
-                                      (quantities[entry.key] ?? 0) >=
-                                        (remainingStock[entry.key] ?? 0)
-                                    }
-                                    aria-label={`Aumentar cantidad de ${entry.variant.Description}`}
-                                  >
-                                    +
-                                  </button>
+                                  <div className="flex items-center gap-3">
+                                    <button
+                                      onClick={() => handleQuantityChange(entry.key, -1)}
+                                      className="w-9 h-9 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg disabled:opacity-40"
+                                      disabled={(quantities[entry.key] ?? 0) <= 1}
+                                      aria-label={`Reducir cantidad de ${entry.variant.Description}`}
+                                    >
+                                      −
+                                    </button>
+                                    <input
+                                      type="number"
+                                      min={0}
+                                      max={remainingStock[entry.key] ?? undefined}
+                                      inputMode="numeric"
+                                      value={quantities[entry.key] ?? 0}
+                                      onChange={(e) =>
+                                        handleQuantityInput(entry.key, e.target.value)
+                                      }
+                                      className="w-14 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-2 py-1 text-center text-sm font-semibold text-[var(--text-primary)]"
+                                      aria-label={`Cantidad de ${entry.variant.Description}`}
+                                    />
+                                    <button
+                                      onClick={() => handleQuantityChange(entry.key, 1)}
+                                      className="w-9 h-9 rounded-full bg-[var(--action-primary)] text-white text-lg disabled:opacity-40"
+                                      disabled={
+                                        remainingStock[entry.key] != null &&
+                                        (quantities[entry.key] ?? 0) >=
+                                          (remainingStock[entry.key] ?? 0)
+                                      }
+                                      aria-label={`Aumentar cantidad de ${entry.variant.Description}`}
+                                    >
+                                      +
+                                    </button>
+                                  </div>
                                 </div>
+                                {stockWarnings[entry.key] && (
+                                  <p className="text-xs text-[var(--state-warning)] mt-1">
+                                    {stockWarnings[entry.key]}
+                                  </p>
+                                )}
                               </div>
                             ))
                         )}
