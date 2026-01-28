@@ -135,7 +135,9 @@ export const Rutas = () => {
   //contexto
   const context = useContext(AppContext);
   const location = useLocation(); // Hook de react-router-dom para obtener la ubicación actual
-  const isPedidoInfo = location.pathname === "/catalogo/pedido-info";
+  const isPedidoInfo =
+    location.pathname === "/catalogo/pedido-info" ||
+    location.pathname === "/catalogo/pedido";
 
   //lista de rutas donde NO queremos mostrar el menú
   const hiddenNavBarRoutes = ["/login-punto-venta", "/MainSales"];
@@ -165,7 +167,7 @@ export const Rutas = () => {
     priceMin: null,
     priceMax: null,
   });
-  const priceMinDefault = 1;
+  const priceMinDefault = 0;
   const priceMaxDefault = 999;
   const clampPrice = (value) => Math.min(priceMaxDefault, Math.max(priceMinDefault, value));
   const priceMinValue = filterDraft.priceMin ?? priceMinDefault;

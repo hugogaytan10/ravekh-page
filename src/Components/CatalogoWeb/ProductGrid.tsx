@@ -14,6 +14,7 @@ interface ProductGridProps {
   existingQuantities?: Record<number, number>;
   onQuickView?: (product: Producto) => void | Promise<void>;
   onRemove?: (product: Producto) => void | Promise<void>;
+  onDecrement?: (product: Producto) => void | Promise<void>;
 }
 
 const EyeIcon = () => (
@@ -41,6 +42,7 @@ const ProductCard = memo(
     existingQuantities,
     onQuickView,
     onRemove,
+    onDecrement,
     delay,
   }: {
     product: Producto;
@@ -50,6 +52,7 @@ const ProductCard = memo(
     existingQuantities?: Record<number, number>;
     onQuickView?: (product: Producto) => void | Promise<void>;
     onRemove?: (product: Producto) => void | Promise<void>;
+    onDecrement?: (product: Producto) => void | Promise<void>;
     delay: number;
   }) => {
     const [added, setAdded] = useState(false);
@@ -146,6 +149,16 @@ const ProductCard = memo(
         onRemove(product);
       },
       [onRemove, product]
+    );
+
+    const handleDecrement = useCallback(
+      (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!onDecrement) return;
+        onDecrement(product);
+      },
+      [onDecrement, product]
     );
 
     const handlePlus = useCallback(
@@ -295,14 +308,25 @@ const ProductCard = memo(
               }`}
             >
               <div className="w-full flex items-center justify-between rounded-full bg-white/90 px-4 py-2 text-black shadow-sm">
-                <button
-                  type="button"
-                  onClick={handleRemove}
-                  className="h-7 w-7 rounded-full bg-black/5 flex items-center justify-center transition-transform duration-150 ease-out active:scale-95"
-                  aria-label={`Eliminar ${product.Name} del carrito`}
-                >
-                  <img src={trashIcon} alt="" className="h-4 w-4" />
-                </button>
+                {quantityInCart > 1 ? (
+                  <button
+                    type="button"
+                    onClick={handleDecrement}
+                    className="h-7 w-7 rounded-full bg-black/5 flex items-center justify-center text-lg transition-transform duration-150 ease-out active:scale-95"
+                    aria-label={`Reducir cantidad de ${product.Name}`}
+                  >
+                    −
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={handleRemove}
+                    className="h-7 w-7 rounded-full bg-black/5 flex items-center justify-center transition-transform duration-150 ease-out active:scale-95"
+                    aria-label={`Eliminar ${product.Name} del carrito`}
+                  >
+                    <img src={trashIcon} alt="" className="h-4 w-4" />
+                  </button>
+                )}
                 <span className="text-sm font-semibold">
                   {quantityInCart || 1}
                 </span>
@@ -339,6 +363,7 @@ export const ProductGrid: React.FC<ProductGridProps> = memo(
     existingQuantities,
     onQuickView,
     onRemove,
+    onDecrement,
   }) => {
     if (products.length === 0) {
       return null;
@@ -356,6 +381,7 @@ export const ProductGrid: React.FC<ProductGridProps> = memo(
             existingQuantities={existingQuantities}
             onQuickView={onQuickView}
             onRemove={onRemove}
+            onDecrement={onDecrement}
             delay={index * 0.08}
           />
         ))}

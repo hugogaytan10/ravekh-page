@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Producto } from "./Modelo/Producto";
 import { Variant } from "./PuntoVenta/Model/Variant";
+import trash from "../../assets/trash.svg";
 
 interface VariantSelectionModalProps {
   product: Producto | null;
@@ -389,14 +390,23 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
                                     {entry.variant.Description}
                                   </span>
                                   <div className="flex items-center gap-3">
-                                    <button
-                                      onClick={() => handleQuantityChange(entry.key, -1)}
-                                      className="w-9 h-9 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg disabled:opacity-40"
-                                      disabled={(quantities[entry.key] ?? 0) <= 1}
-                                      aria-label={`Reducir cantidad de ${entry.variant.Description}`}
-                                    >
-                                      −
-                                    </button>
+                                    {(quantities[entry.key] ?? 0) > 1 ? (
+                                      <button
+                                        onClick={() => handleQuantityChange(entry.key, -1)}
+                                        className="w-9 h-9 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg disabled:opacity-40"
+                                        aria-label={`Reducir cantidad de ${entry.variant.Description}`}
+                                      >
+                                        −
+                                      </button>
+                                    ) : (
+                                      <button
+                                        onClick={() => handleQuantityChange(entry.key, -1)}
+                                        className="w-9 h-9 rounded-full bg-[var(--bg-subtle)] flex items-center justify-center"
+                                        aria-label={`Eliminar ${entry.variant.Description}`}
+                                      >
+                                        <img src={trash} alt="Eliminar" className="w-4 h-4" />
+                                      </button>
+                                    )}
                                     <input
                                       type="number"
                                       min={0}
