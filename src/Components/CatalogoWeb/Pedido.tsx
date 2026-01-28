@@ -129,6 +129,35 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
 
 
   useEffect(() => {
+    let sameOriginReferrer = false;
+    if (document.referrer) {
+      try {
+        sameOriginReferrer = new URL(document.referrer).origin === window.location.origin;
+      } catch {
+        sameOriginReferrer = false;
+      }
+    }
+
+    const shouldInterceptBack = window.history.length <= 1 || !sameOriginReferrer;
+
+    if (!shouldInterceptBack) return;
+
+    const fallbackBusinessId = idBussiness || localStorage.getItem("idBusiness");
+    const fallbackRoute = fallbackBusinessId ? `/catalogo/${fallbackBusinessId}` : "/";
+
+    const handlePopState = () => {
+      navigate(fallbackRoute, { replace: true });
+    };
+
+    window.history.pushState({ preventBack: true }, "", window.location.href);
+    window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      window.removeEventListener("popstate", handlePopState);
+    };
+  }, [idBussiness, navigate]);
+
+  useEffect(() => {
     const storedBusinessId = localStorage.getItem("cartBusinessId");
     if (storedBusinessId && idBussiness && storedBusinessId !== idBussiness) {
       localStorage.removeItem("cart");
