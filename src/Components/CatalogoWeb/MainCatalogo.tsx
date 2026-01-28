@@ -40,6 +40,9 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [variantLoading, setVariantLoading] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
   const [loadingMore, setLoadingMore] = useState(false);
+  const [showToast, setShowToast] = useState(false);
+  const [toastMessage, setToastMessage] = useState("Agregado al carrito");
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
 
   const context = useContext(AppContext);
   const addProductToCart = context.addProductToCart;
@@ -58,6 +61,14 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     return map;
   }, [context.cart]);
   const loadMoreRef = useRef<HTMLDivElement>(null);
+  const triggerToast = useCallback((message = "Agregado al carrito") => {
+    setToastMessage(message);
+    setShowToast(true);
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    toastTimeoutRef.current = setTimeout(() => setShowToast(false), 1800);
+  }, []);
 
   // 2) Efecto para inicializar/ocultar elementos y cargar color/teléfono/nombre del localStorage si no están en contexto
   useEffect(() => {
@@ -92,6 +103,12 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     const arrowIcon = document.getElementById("backCatalogo");
     arrowIcon?.classList.add("hidden");
   }, [context]);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+    };
+  }, []);
 
   const filteredProducts = useMemo(() => {
     const normalizedQuery = context.searchQuery.trim().toLowerCase();
@@ -195,8 +212,9 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       }
 
       addProductToCart({ ...product, Variant_Id: null });
+      triggerToast();
     },
-    [addProductToCart, fetchVariantsForProduct, openVariantModal]
+    [addProductToCart, fetchVariantsForProduct, openVariantModal, triggerToast]
   );
 
   const handleConfirmVariant = useCallback(
@@ -220,8 +238,11 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       setVariantModalOpen(false);
       setVariantProduct(null);
       setVariantOptions([]);
+      if (selections.length > 0) {
+        triggerToast();
+      }
     },
-    [addProductToCart, variantProduct]
+    [addProductToCart, triggerToast, variantProduct]
   );
 
   const handleCloseVariantModal = useCallback(() => {
@@ -252,6 +273,34 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const handleRemoveFromCart = useCallback(
     (product: Producto) => {
       context.removeProductFromCart(String(product.Id), null);
+    },
+    [context]
+  );
+
+  const handleDecrementFromCart = useCallback(
+    (product: Producto) => {
+      const updatedCart = context.cart.reduce((acc, item) => {
+        if (item.Id === product.Id && (item.Variant_Id ?? null) === null) {
+          const current = item.Quantity ?? 1;
+          const next = Math.max(current - 1, 0);
+          if (next <= 0) return acc;
+          const unitPrice = item.Price ?? 0;
+          acc.push({
+            ...item,
+            Quantity: next,
+            SubTotal: Number((unitPrice * next).toFixed(2)),
+          });
+          return acc;
+        }
+        acc.push(item);
+        return acc;
+      }, [] as typeof context.cart);
+
+      context.setCart(updatedCart);
+      localStorage.setItem("cart", JSON.stringify(updatedCart));
+      if (context.idBussiness) {
+        localStorage.setItem("cartBusinessId", String(context.idBussiness));
+      }
     },
     [context]
   );
@@ -471,6 +520,15 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
         </Helmet>
 
         <div className="px-4 pt-52 pb-12 min-h-screen w-full max-w-screen-xl mx-auto bg-[var(--bg-primary)]">
+          <div
+            className={`pointer-events-none fixed left-1/2 top-24 z-50 -translate-x-1/2 transition-opacity duration-200 ${
+              showToast ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            <div className="rounded-full bg-black/80 px-4 py-2 text-sm font-medium text-white shadow-sm">
+              {toastMessage}
+            </div>
+          </div>
           {loadingProducts ? (
             // 👇 Skeleton mientras cargan los productos
             <ProductGridSkeleton items={10} />
@@ -492,6 +550,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
               existingQuantities={cartVariantQuantities}
               onQuickView={handleQuickView}
               onRemove={handleRemoveFromCart}
+              onDecrement={handleDecrementFromCart}
             />
           )}
 

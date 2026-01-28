@@ -540,7 +540,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                       producto.PromotionPrice > 0 &&
                       producto.PromotionPrice < producto.Price;
                     const unitPrice = hasPromo ? producto.PromotionPrice : producto.Price;
-                    const totalLine = (unitPrice * (producto.Quantity || 1)).toFixed(2);
+                    const totalLine = ((unitPrice ? unitPrice : 1)   * (producto.Quantity || 1)).toFixed(2);
 
                     return (
                       <div
@@ -564,7 +564,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                               </span>
                             )}
                             <span className="text-lg font-semibold text-[var(--text-primary)]">
-                              ${unitPrice.toFixed(2)}
+                              ${unitPrice ? unitPrice.toFixed(2) : "0.00"}
                             </span>
                           </div>
                           <div className="mt-4 flex items-center gap-4">
@@ -583,9 +583,18 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                                 <img src={trash} alt="Eliminar" className="w-5 h-5" />
                               </button>
                             )}
-                            <span className="text-base font-semibold text-[var(--text-primary)]">
-                              {producto.Quantity ?? 1}
-                            </span>
+                            <input
+                              type="number"
+                              min={1}
+                              max={producto.Stock ?? undefined}
+                              inputMode="numeric"
+                              value={producto.Quantity ?? 1}
+                              onChange={(e) =>
+                                handleManualQuantityChange(producto, e.target.value)
+                              }
+                              className="w-16 h-10 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-2 text-center text-base font-semibold text-[var(--text-primary)]"
+                              aria-label={`Cantidad de ${producto.Name}`}
+                            />
                             <button
                               onClick={() => incrementQuantity(producto)}
                               className="w-10 h-10 rounded-full bg-[var(--action-primary)] text-[var(--text-inverse)] text-lg flex items-center justify-center"
