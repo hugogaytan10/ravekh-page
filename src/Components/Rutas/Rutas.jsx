@@ -713,7 +713,7 @@ export const Rutas = () => {
                       <img src={cart} alt="cart" className="w-5 h-5 theme-icon" />
                     </div>
                     {context.cart.length > 0 && (
-                      <span className="absolute -top-1 -right-1 bg-[var(--text-primary)] text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
+                      <span className="absolute -top-1 -right-1 bg-[var(--text-primary)] text-[var(--text-inverse)] rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
                         {context.cart.length}
                       </span>
                     )}

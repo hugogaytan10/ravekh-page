@@ -413,7 +413,7 @@ export const DetalleProducto: React.FC = () => {
               type="button"
               onClick={handleAddCart}
               disabled={!canAdd}
-              className={`w-full rounded-full bg-[var(--action-disabled)] text-[var(--text-inverse)] py-3 text-sm font-semibold transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
+              className={`w-full rounded-full bg-[var(--action-disabled)] text-[var(--text-primary)] py-3 text-sm font-semibold transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
                 addedPulse ? "scale-[1.02] ring-2 ring-[var(--action-primary)]" : ""
               }`}
             >

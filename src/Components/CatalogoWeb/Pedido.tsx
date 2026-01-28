@@ -384,6 +384,12 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
       console.log(url);
       context.clearCart();
       window.open(url, "_blank");
+      const businessId = idBussiness || localStorage.getItem("idBusiness");
+      if (businessId) {
+        window.location.assign(`/catalogo/${businessId}`);
+      } else {
+        window.location.assign("/");
+      }
     } else {
       console.log("Formulario inválido, mostrando errores.");
     }
@@ -669,7 +675,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                   <button
                     type="button"
                     onClick={() => navigate(-1)}
-                    className="mt-4 w-full rounded-full bg-[var(--action-disabled)] text-[var(--text-inverse)] py-4 text-lg font-semibold"
+                    className="mt-4 w-full rounded-full bg-[var(--action-disabled)] text-[var(--text-primary)] py-4 text-lg font-semibold"
                   >
                     Seguir comprando
                   </button>
