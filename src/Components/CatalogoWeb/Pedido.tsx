@@ -5,7 +5,8 @@ import { CartPos } from "./PuntoVenta/Model/CarPos";
 import { FiTruck, FiCreditCard, FiPhone } from "react-icons/fi"; // Importando iconos
 import { Order } from "./Modelo/Order";
 import { OrderDetails } from "./Modelo/OrderDetails";
-import { insertOrder, sendNotification, getIdentifier } from "./Petitions";
+import { createCheckoutSession, getBusinessById, getStripeConfig, insertOrder, sendNotification, getIdentifier } from "./Petitions";
+import { getStripe } from "./StripeClient";
 import trash from '../../assets/trash.svg';
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import { URL } from "./Const/Const";
@@ -49,6 +50,18 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
   const [shippingOptions, setShippingOptions] = useState<ShippingOptions>(defaultShippingOptions);
   const [loadingShippingOptions, setLoadingShippingOptions] = useState<boolean>(true);
   const [openSection, setOpenSection] = useState<null | "contact" | "delivery" | "address" | "payment">(null);
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
+  const [stripeEnabled, setStripeEnabled] = useState(false);
+  const [stripeCurrency, setStripeCurrency] = useState("MXN");
+  const [isStripeLoading, setIsStripeLoading] = useState(false);
+  const [stripeError, setStripeError] = useState<string | null>(null);
+  const [embeddedCheckoutSecret, setEmbeddedCheckoutSecret] = useState<string | null>(null);
+  const embeddedCheckoutRef = useRef<HTMLDivElement>(null);
+  const embeddedCheckoutInstanceRef = useRef<{
+    mount: (element: HTMLElement) => void;
+    unmount?: () => void;
+    destroy?: () => void;
+  } | null>(null);
   console.log("Info tienda o negocio:", idBussiness);
   // Campos de dirección
   const [calle, setCalle] = useState<string>("");
@@ -105,6 +118,86 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     if (shippingOptions.References && referencia.trim()) parts.push(`Referencia: ${referencia}`);
 
     return parts.length ? parts.join(", ") : "Entrega a domicilio";
+  };
+
+  const canUseStripe = stripeEnabled && Boolean(stripeAccountId);
+
+  const buildStripeLineItems = () =>
+    cart.map((item) => {
+      const hasPromo =
+        item.PromotionPrice != null &&
+        item.PromotionPrice > 0 &&
+        item.PromotionPrice < item.Price;
+      const unitPrice = hasPromo ? item.PromotionPrice : item.Price;
+      const nameSuffix = item.VariantDescription ? ` (${item.VariantDescription})` : "";
+      const unitAmount = Math.round((unitPrice || 0) * 100);
+
+      return {
+        price_data: {
+          currency: stripeCurrency.toLowerCase(),
+          product_data: {
+            name: `${item.Name}${nameSuffix}`,
+          },
+          unit_amount: unitAmount,
+        },
+        quantity: item.Quantity || 1,
+      };
+    });
+
+  const startStripeCheckout = async () => {
+    if (!canUseStripe || !stripeAccountId) {
+      setStripeError("Este negocio no tiene cobros con tarjeta disponibles.");
+      return;
+    }
+
+    if (cart.length === 0) {
+      setStripeError("El carrito está vacío.");
+      return;
+    }
+
+    setIsStripeLoading(true);
+    setStripeError(null);
+
+    try {
+      const config = await getStripeConfig();
+      const publishableKey = config?.publishableKey;
+
+      if (!publishableKey) {
+        throw new Error("No se pudo obtener la configuración de Stripe.");
+      }
+
+      const lineItems = buildStripeLineItems();
+      if (!lineItems.length) {
+        throw new Error("No fue posible preparar los artículos para el pago.");
+      }
+
+      const businessId = Number(idBussiness || localStorage.getItem("idBusiness") || 0);
+      if (!Number.isFinite(businessId) || businessId <= 0) {
+        throw new Error("No se pudo identificar el negocio.");
+      }
+
+      const session = await createCheckoutSession({
+        line_items: lineItems,
+        return_url: `${window.location.origin}/catalogo/pedido-info`,
+        connectedAccountId: stripeAccountId,
+        businessId,
+        ui_mode: "embedded",
+        customer_email: email || undefined,
+        metadata: {
+          paymentMethod: "tarjeta",
+          businessId: String(businessId),
+        },
+      });
+
+      if (!session?.checkoutSessionClientSecret) {
+        throw new Error(session?.message || "Stripe no devolvió una sesión válida.");
+      }
+      setEmbeddedCheckoutSecret(session.checkoutSessionClientSecret);
+    } catch (error: any) {
+      setStripeError(error?.message || "No se pudo iniciar el pago con Stripe.");
+    } finally {
+      setIsStripeLoading(false);
+    }
   };
 
   const saveOrder = async () => {
@@ -233,6 +326,26 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     loadShippingOptions();
   }, [idBussiness]);
 
+  useEffect(() => {
+    const loadBusinessStripeInfo = async () => {
+      const businessId = idBussiness || localStorage.getItem("idBusiness");
+      if (!businessId) return;
+
+      try {
+        const dataBusiness = await getBusinessById(businessId);
+        if (!dataBusiness) return;
+
+        setStripeAccountId(dataBusiness.StripeAccountId || null);
+        setStripeEnabled(Boolean(Number(dataBusiness.ChargesEnabled)));
+        setStripeCurrency((dataBusiness.MoneyTipe || "MXN").toUpperCase());
+      } catch (error) {
+        console.error("Error cargando Stripe del negocio:", error);
+      }
+    };
+
+    loadBusinessStripeInfo();
+  }, [idBussiness]);
+
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -334,9 +447,13 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
 
 
   // Función para manejar el envío del formulario
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
+      if (paymentMethod === "tarjeta") {
+        await startStripeCheckout();
+        return;
+      }
       // Aquí puedes manejar el envío del formulario, por ejemplo, enviar los datos al servidor o preparar el mensaje para WhatsApp
       //tomamos el numero de la tienda y mandamos un mensaje de whatsapp
       //diciendo 'Hola he hecho un pedido con los siguientes productos...'
@@ -527,6 +644,58 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
       null;
     setOpenSection(firstOpen);
   }, [openSection, visibleSections]);
+
+  useEffect(() => {
+    if (paymentMethod !== "tarjeta" && stripeError) {
+      setStripeError(null);
+    }
+  }, [paymentMethod, stripeError]);
+
+  useEffect(() => {
+    if (!embeddedCheckoutSecret) {
+      if (embeddedCheckoutInstanceRef.current?.destroy) {
+        embeddedCheckoutInstanceRef.current.destroy();
+      } else if (embeddedCheckoutInstanceRef.current?.unmount) {
+        embeddedCheckoutInstanceRef.current.unmount();
+      }
+      embeddedCheckoutInstanceRef.current = null;
+      return;
+    }
+
+    let isCancelled = false;
+
+    const mountEmbeddedCheckout = async () => {
+      try {
+        const config = await getStripeConfig();
+        const publishableKey = config?.publishableKey;
+        if (!publishableKey) {
+          throw new Error("No se pudo obtener la configuración de Stripe.");
+        }
+
+        const stripe = await getStripe(publishableKey);
+        const checkout = await stripe.initEmbeddedCheckout({
+          clientSecret: embeddedCheckoutSecret,
+        });
+        if (isCancelled) return;
+        embeddedCheckoutInstanceRef.current = checkout;
+
+        const container = embeddedCheckoutRef.current;
+        if (container) {
+          container.innerHTML = "";
+          checkout.mount(container);
+        }
+      } catch (error: any) {
+        setStripeError(error?.message || "No se pudo cargar el checkout.");
+        setEmbeddedCheckoutSecret(null);
+      }
+    };
+
+    mountEmbeddedCheckout();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [embeddedCheckoutSecret]);
 
   if (loadingShippingOptions) {
     return (
@@ -980,12 +1149,21 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                   >
                     <option value="transferencia">Transferencia bancaria</option>
                     <option value="dinero">Dinero en efectivo</option>
-                    <option value="tarjeta">Tarjeta de crédito o débito</option>
+                    <option value="tarjeta" disabled={!canUseStripe}>
+                      {canUseStripe
+                        ? "Tarjeta de crédito o débito"
+                        : "Tarjeta de crédito o débito (no disponible)"}
+                    </option>
                     <option value="enlace">Enlace de pago</option>
                   </select>
                   {errors.paymentMethod && (
                     <span className="text-[var(--state-error)] text-sm mt-2 block">
                       {errors.paymentMethod}
+                    </span>
+                  )}
+                  {stripeError && (
+                    <span className="text-[var(--state-error)] text-sm mt-2 block">
+                      {stripeError}
                     </span>
                   )}
                 </div>
@@ -996,9 +1174,10 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
             <div className="mt-8 flex flex-col gap-4">
               <button
                 type="submit"
-                className="w-full rounded-full bg-[var(--action-primary)] text-white py-4 text-lg font-semibold shadow-sm"
+                className="w-full rounded-full bg-[var(--action-primary)] text-white py-4 text-lg font-semibold shadow-sm disabled:opacity-70"
+                disabled={isStripeLoading}
               >
-                Preparar pedido
+                {isStripeLoading ? "Abriendo Stripe..." : "Preparar pedido"}
               </button>
               <button
                 type="button"
@@ -1017,6 +1196,30 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
               <p className="text-[var(--text-secondary)] text-sm inline-block">
                 Contacto de la tienda: {storePhoneNumber}
               </p>
+            </div>
+          )}
+          {embeddedCheckoutSecret && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
+              <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--bg-surface)] p-4 shadow-xl">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                    Pago con tarjeta
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setEmbeddedCheckoutSecret(null)}
+                    className="rounded-full bg-[var(--action-disabled)] px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+                <div className="max-h-[calc(90vh-120px)] overflow-y-auto">
+                  <div
+                    ref={embeddedCheckoutRef}
+                    className="min-h-[500px] rounded-[var(--radius-md)] bg-white"
+                  />
+                </div>
+              </div>
             </div>
           )}
           {/* MODAL QUE VIENE DE ABAJO DE LA PANTALLA PARA PREGUNTAR SI ESTA SEGURO QUE QUIERE ELIMINAR EL CARRITO */}
