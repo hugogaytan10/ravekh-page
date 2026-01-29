@@ -1,11 +1,11 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AppContext } from "./Context/AppContext";
 import { CartPos } from "./PuntoVenta/Model/CarPos";
 import { FiTruck, FiCreditCard, FiPhone } from "react-icons/fi"; // Importando iconos
 import { Order } from "./Modelo/Order";
 import { OrderDetails } from "./Modelo/OrderDetails";
-import { createCheckoutSession, getBusinessById, getStripeConfig, insertOrder, sendNotification, getIdentifier } from "./Petitions";
+import { confirmCheckoutPayment, confirmPaymentIntent, createCheckoutSession, getBusinessById, getStripeConfig, insertOrder, sendNotification, getIdentifier } from "./Petitions";
 import { getStripe } from "./StripeClient";
 import trash from '../../assets/trash.svg';
 import { Helmet, HelmetProvider } from "react-helmet-async";
@@ -38,6 +38,7 @@ type PedidoView = "cart" | "info";
 export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
   const { cart, phoneNumber: storePhoneNumber, idBussiness, setCart, color, setColor } = useContext(AppContext); // Número de la tienda
   const navigate = useNavigate();
+  const location = useLocation();
   const [nombre, setNombre] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [showModalProduct, setShowModalProduct] = useState<boolean>(false); // Estado para mostrar el modal de confirmación
@@ -56,13 +57,15 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
   const [isStripeLoading, setIsStripeLoading] = useState(false);
   const [stripeError, setStripeError] = useState<string | null>(null);
   const [embeddedCheckoutSecret, setEmbeddedCheckoutSecret] = useState<string | null>(null);
+  const [embeddedCheckoutSessionId, setEmbeddedCheckoutSessionId] = useState<string | null>(null);
+  const stripePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stripePollAttemptsRef = useRef<number>(0);
   const embeddedCheckoutRef = useRef<HTMLDivElement>(null);
   const embeddedCheckoutInstanceRef = useRef<{
     mount: (element: HTMLElement) => void;
     unmount?: () => void;
     destroy?: () => void;
   } | null>(null);
-  console.log("Info tienda o negocio:", idBussiness);
   // Campos de dirección
   const [calle, setCalle] = useState<string>("");
   const [codigoPostal, setCodigoPostal] = useState<string>("");
@@ -70,6 +73,28 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
   const [estado, setEstado] = useState<string>("");
   const [referencia, setReferencia] = useState<string>("");
   const context = useContext(AppContext);
+  const pendingStripeOrderKey = "pendingStripeOrder";
+  const processedStripeSessionKey = "processedStripeSessionId";
+  const stripeDebugLogsKey = "stripeDebugLogs";
+
+  const logStripeDebug = (message: string, data?: unknown) => {
+    try {
+      const entry = {
+        at: new Date().toISOString(),
+        message,
+        data,
+      };
+      const raw = localStorage.getItem(stripeDebugLogsKey);
+      const logs = raw ? JSON.parse(raw) : [];
+      logs.push(entry);
+      localStorage.setItem(stripeDebugLogsKey, JSON.stringify(logs));
+      // eslint-disable-next-line no-console
+      console.log("[StripeDebug]", message, data ?? "");
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log("[StripeDebug] logging error", error);
+    }
+  };
 
   // Estados para los errores
   const [errors, setErrors] = useState<{
@@ -119,6 +144,195 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
 
     return parts.length ? parts.join(", ") : "Entrega a domicilio";
   };
+ 
+  const buildOrderPayload = () => {
+    const fullAddress = buildAddress();
+    const fallbackBusinessId = idBussiness || localStorage.getItem("idBusiness") || "0";
+    const parsedBusinessId = Number(fallbackBusinessId);
+
+    const order: Order = {
+      Name: shippingOptions.ContactInformation ? nombre : "",
+      Business_Id: Number.isFinite(parsedBusinessId) ? parsedBusinessId : 0,
+      Delivery: deliveryMethod === "domicilio" ? 1 : 0,
+      PaymentMethod: shippingOptions.PaymentMetod ? paymentMethod : "",
+      Address: fullAddress,
+      PhoneNumber: shippingOptions.ContactInformation ? clientPhoneNumber : "",
+    };
+
+    const orderDetails: OrderDetails[] = cart.map((producto) => ({
+      Product_Id: producto.Id!,
+      Quantity: producto.Quantity || 1,
+    }));
+
+    return { order, orderDetails };
+  };
+
+  const buildWhatsappMessage = () => {
+    const addressText =
+      deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled
+        ? `Dirección: ${buildAddress()}`
+        : "";
+
+    const contactText = shippingOptions.ContactInformation
+      ? `Nombre: ${nombre}
+      Email: ${email || "No proporcionado"}
+      Teléfono: ${clientPhoneNumber}`
+      : "";
+
+    const paymentText = shippingOptions.PaymentMetod
+      ? `Método de pago: ${paymentMethod}`
+      : "";
+
+    const shippingText = shippingOptions.ShippingMetod
+      ? `Método de entrega: ${
+          deliveryMethod === "domicilio" ? "Entrega a domicilio" : "Recoger en tienda"
+        }`
+      : "";
+
+    const mensaje = `Hola, he hecho un pedido con los siguientes productos:
+        ${cart
+          .map(
+            (producto) =>
+              `${producto.Name}${
+                producto.VariantDescription ? ` (${producto.VariantDescription})` : ""
+              } x ${producto.Quantity || 1} $${(producto.Quantity || 1) * producto.Price}`
+          )
+          .join("\\n")}
+        Total: $${totalPrecio.toFixed(2)}
+        ${shippingText}
+        ${paymentText}
+        ${contactText}
+        ${addressText}`.trim();
+
+    return mensaje;
+  };
+
+  const storePendingStripeOrder = () => {
+    const payload = buildOrderPayload();
+    const message = buildWhatsappMessage();
+    localStorage.setItem(
+      pendingStripeOrderKey,
+      JSON.stringify({
+        ...payload,
+        createdAt: Date.now(),
+        paymentMethod,
+        storePhoneNumber,
+        whatsappMessage: message,
+      })
+    );
+    logStripeDebug("Pedido pendiente guardado", { ...payload, whatsappMessage: message });
+  };
+
+  const clearPendingStripeOrder = () => {
+    localStorage.removeItem(pendingStripeOrderKey);
+  };
+
+  const stopStripePolling = () => {
+    if (stripePollRef.current) {
+      clearInterval(stripePollRef.current);
+      stripePollRef.current = null;
+    }
+    stripePollAttemptsRef.current = 0;
+  };
+
+  const startStripePolling = (sessionId: string) => {
+    stopStripePolling();
+    stripePollAttemptsRef.current = 0;
+    stripePollRef.current = setInterval(async () => {
+      stripePollAttemptsRef.current += 1;
+      const attempts = stripePollAttemptsRef.current;
+      logStripeDebug("Polling Stripe", { sessionId, attempts });
+
+      try {
+        const confirmation = await confirmCheckoutPayment(sessionId);
+        const paymentIntentId = confirmation?.paymentIntentId;
+        if (paymentIntentId) {
+          const intent = await confirmPaymentIntent(paymentIntentId);
+          const status = intent?.status;
+          logStripeDebug("Estado PaymentIntent", { paymentIntentId, status });
+          if (status === "succeeded") {
+            stopStripePolling();
+            await finalizeStripeOrder(sessionId, paymentIntentId);
+          }
+        }
+      } catch (error) {
+        logStripeDebug("Error en polling Stripe", error);
+      }
+
+      if (attempts >= 40) {
+        stopStripePolling();
+      }
+    }, 3000);
+  };
+
+  const finalizeStripeOrder = async (sessionId: string, paymentIntentId?: string) => {
+    if (!sessionId) return;
+
+    const alreadyProcessed = localStorage.getItem(processedStripeSessionKey);
+    if (alreadyProcessed === sessionId) return;
+    logStripeDebug("Finalizando orden de Stripe", { sessionId });
+    setIsStripeLoading(true);
+    setStripeError(null);
+
+    try {
+      const confirmation = await confirmCheckoutPayment(sessionId);
+      logStripeDebug("Confirmación Stripe", confirmation);
+      if (!confirmation?.paymentIntentId && !confirmation?.sessionId) {
+        throw new Error("No se pudo confirmar el pago con Stripe.");
+      }
+
+      const finalPaymentIntentId = paymentIntentId || confirmation?.paymentIntentId;
+      if (!finalPaymentIntentId) {
+        throw new Error("No se pudo identificar el PaymentIntent.");
+      }
+      const intent = await confirmPaymentIntent(finalPaymentIntentId);
+      const intentStatus = intent?.status;
+      logStripeDebug("Estado final PaymentIntent", { finalPaymentIntentId, intentStatus });
+      if (intentStatus !== "succeeded") {
+        setStripeError("El pago fue rechazado. Intenta con otra tarjeta.");
+        return;
+      }
+
+      const pendingRaw = localStorage.getItem(pendingStripeOrderKey);
+      if (!pendingRaw) {
+        throw new Error("No se encontró el pedido pendiente.");
+      }
+
+      const pending = JSON.parse(pendingRaw);
+      logStripeDebug("Pedido pendiente encontrado", pending);
+      localStorage.setItem(
+        pendingStripeOrderKey,
+        JSON.stringify({
+          ...pending,
+          paid: true,
+          paidAt: Date.now(),
+          sessionId,
+        })
+      );
+
+      localStorage.setItem(processedStripeSessionKey, sessionId);
+      context.clearCart();
+      localStorage.removeItem("cart");
+      localStorage.removeItem("cartBusinessId");
+      setEmbeddedCheckoutSecret(null);
+      setEmbeddedCheckoutSessionId(null);
+
+      //window.history.replaceState({}, document.title, window.location.pathname);
+
+      const businessId = idBussiness || localStorage.getItem("idBusiness");
+      if (businessId) {
+       window.location.assign(`/catalogo/${businessId}?payment=success`);
+      } else {
+       window.location.assign("/?payment=success");
+      }
+    } catch (error: any) {
+      setStripeError(error?.message || "No se pudo confirmar el pago.");
+      logStripeDebug("Error finalizando Stripe", error?.message || error);
+      // Mantener el modal abierto para mostrar el error al usuario.
+    } finally {
+      setIsStripeLoading(false);
+    }
+  };
 
   const canUseStripe = stripeEnabled && Boolean(stripeAccountId);
 
@@ -159,6 +373,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     setStripeError(null);
 
     try {
+      storePendingStripeOrder();
       const config = await getStripeConfig();
       const publishableKey = config?.publishableKey;
 
@@ -178,7 +393,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
 
       const session = await createCheckoutSession({
         line_items: lineItems,
-        return_url: `${window.location.origin}/catalogo/pedido-info`,
+        return_url: `${window.location.origin}/catalogo/${businessId}`,
         connectedAccountId: stripeAccountId,
         businessId,
         ui_mode: "embedded",
@@ -188,11 +403,31 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
           businessId: String(businessId),
         },
       });
+      logStripeDebug("Sesión Stripe creada", session);
 
       if (!session?.checkoutSessionClientSecret) {
         throw new Error(session?.message || "Stripe no devolvió una sesión válida.");
       }
       setEmbeddedCheckoutSecret(session.checkoutSessionClientSecret);
+      const sessionId = session.sessionId ?? null;
+      setEmbeddedCheckoutSessionId(sessionId);
+      if (sessionId) {
+        const pendingRaw = localStorage.getItem(pendingStripeOrderKey);
+        if (pendingRaw) {
+          try {
+            const pending = JSON.parse(pendingRaw);
+            localStorage.setItem(
+              pendingStripeOrderKey,
+              JSON.stringify({ ...pending, sessionId })
+            );
+          } catch {
+            // ignore
+          }
+        }
+      }
+      if (sessionId) {
+        startStripePolling(sessionId);
+      }
     } catch (error: any) {
       setStripeError(error?.message || "No se pudo iniciar el pago con Stripe.");
     } finally {
@@ -201,22 +436,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
   };
 
   const saveOrder = async () => {
-    const fullAddress = buildAddress();
-
-    const order: Order = {
-      Name: shippingOptions.ContactInformation ? nombre : "", // si no piden contacto, manda vacío
-      Business_Id: Number(idBussiness),
-      Delivery: deliveryMethod === "domicilio" ? 1 : 0,
-      PaymentMethod: shippingOptions.PaymentMetod ? paymentMethod : "", // si no piden pago, manda vacío
-      Address: fullAddress,
-      PhoneNumber: shippingOptions.ContactInformation ? clientPhoneNumber : "",
-    };
-
-    const orderDetails: OrderDetails[] = cart.map((producto) => ({
-      Product_Id: producto.Id!,
-      Quantity: producto.Quantity || 1,
-    }));
-
+    const { order, orderDetails } = buildOrderPayload();
     insertOrder(order, orderDetails).then((data) => console.log(data));
   };
 
@@ -242,11 +462,11 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
       navigate(fallbackRoute, { replace: true });
     };
 
-    window.history.pushState({ preventBack: true }, "", window.location.href);
-    window.addEventListener("popstate", handlePopState);
+    //window.history.pushState({ preventBack: true }, "", window.location.href);
+    //window.addEventListener("popstate", handlePopState);
 
     return () => {
-      window.removeEventListener("popstate", handlePopState);
+      //window.removeEventListener("popstate", handlePopState);
     };
   }, [idBussiness, navigate]);
 
@@ -459,53 +679,18 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
       //diciendo 'Hola he hecho un pedido con los siguientes productos...'
       saveOrder();
 
-      const addressText =
-        deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled
-          ? `Dirección: ${buildAddress()}`
-          : "";
-
-      const contactText = shippingOptions.ContactInformation
-        ? `Nombre: ${nombre}
-      Email: ${email || "No proporcionado"}
-      Teléfono: ${clientPhoneNumber}`
-        : "";
-
-      const paymentText = shippingOptions.PaymentMetod
-        ? `Método de pago: ${paymentMethod}`
-        : "";
-
-      const shippingText = shippingOptions.ShippingMetod
-        ? `Método de entrega: ${
-            deliveryMethod === "domicilio" ? "Entrega a domicilio" : "Recoger en tienda"
-          }`
-        : "";
-
-      const mensaje = `Hola, he hecho un pedido con los siguientes productos:
-        ${cart
-          .map(
-            (producto) =>
-              `${producto.Name}${
-                producto.VariantDescription ? ` (${producto.VariantDescription})` : ""
-              } x ${producto.Quantity || 1} $${(producto.Quantity || 1) * producto.Price}`
-          )
-          .join("\n")}
-        Total: $${totalPrecio.toFixed(2)}
-        ${shippingText}
-        ${paymentText}
-        ${contactText}
-        ${addressText}`.trim();
+      const mensaje = buildWhatsappMessage();
 
       const url = `https://wa.me/${storePhoneNumber}?text=${encodeURIComponent(
         mensaje
       )}`;
-      console.log(url);
       context.clearCart();
       window.open(url, "_blank");
       const businessId = idBussiness || localStorage.getItem("idBusiness");
       if (businessId) {
-        window.location.assign(`/catalogo/${businessId}`);
+       //window.location.assign(`/catalogo/${businessId}`);
       } else {
-        window.location.assign("/");
+       // window.location.assign("/");
       }
     } else {
       console.log("Formulario inválido, mostrando errores.");
@@ -653,6 +838,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
 
   useEffect(() => {
     if (!embeddedCheckoutSecret) {
+      stopStripePolling();
       if (embeddedCheckoutInstanceRef.current?.destroy) {
         embeddedCheckoutInstanceRef.current.destroy();
       } else if (embeddedCheckoutInstanceRef.current?.unmount) {
@@ -675,7 +861,12 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
         const stripe = await getStripe(publishableKey);
         const checkout = await stripe.initEmbeddedCheckout({
           clientSecret: embeddedCheckoutSecret,
-        });
+          onComplete: async () => {
+            if (embeddedCheckoutSessionId) {
+              await finalizeStripeOrder(embeddedCheckoutSessionId);
+            }
+          },
+        } as any);
         if (isCancelled) return;
         embeddedCheckoutInstanceRef.current = checkout;
 
@@ -695,7 +886,26 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     return () => {
       isCancelled = true;
     };
-  }, [embeddedCheckoutSecret]);
+  }, [embeddedCheckoutSecret, embeddedCheckoutSessionId]);
+
+  useEffect(() => {
+    if (isCartView) return;
+
+    const params = new URLSearchParams(location.search);
+    const sessionId = params.get("session_id") || params.get("sessionId");
+    if (!sessionId) return;
+
+    const alreadyProcessed = localStorage.getItem(processedStripeSessionKey);
+    if (alreadyProcessed === sessionId) return;
+
+    finalizeStripeOrder(sessionId);
+  }, [context, idBussiness, isCartView, location.search]);
+
+  useEffect(() => {
+    return () => {
+      stopStripePolling();
+    };
+  }, []);
 
   if (loadingShippingOptions) {
     return (

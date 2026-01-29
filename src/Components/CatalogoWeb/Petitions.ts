@@ -143,6 +143,36 @@ export const createCheckoutSession = async (payload: CheckoutSessionPayload) => 
         return null;
     }
 }
+
+export const confirmCheckoutPayment = async (sessionId: string) => {
+    try {
+        const response = await fetch(`${URL}confirmCheckoutPayment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ sessionId }),
+        });
+        return response.json();
+    } catch (error) {
+        return null;
+    }
+}
+
+export const confirmPaymentIntent = async (paymentIntentId: string) => {
+    try {
+        const response = await fetch(`${URL}confirmPaymentIntent`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ paymentIntentId }),
+        });
+        return response.json();
+    } catch (error) {
+        return null;
+    }
+}
 export const getCategoriesByBusinesssId = async (idBusiness: string) => {
     try{
         const response = await fetch(`${URL}categories/business/${idBusiness}`);
