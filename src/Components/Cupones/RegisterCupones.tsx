@@ -37,6 +37,7 @@ const RegisterCupones: React.FC = () => {
         },
         body: JSON.stringify({
           Role: "CLIENTE",
+          Business_Id: 1,
           Name: name,
           Email: email,
           Password: password,
