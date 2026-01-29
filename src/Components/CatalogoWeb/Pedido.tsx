@@ -1,11 +1,12 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AppContext } from "./Context/AppContext";
 import { CartPos } from "./PuntoVenta/Model/CarPos";
 import { FiTruck, FiCreditCard, FiPhone } from "react-icons/fi"; // Importando iconos
 import { Order } from "./Modelo/Order";
 import { OrderDetails } from "./Modelo/OrderDetails";
-import { insertOrder, sendNotification, getIdentifier } from "./Petitions";
+import { confirmCheckoutPayment, confirmPaymentIntent, createCheckoutSession, getBusinessById, getStripeConfig, insertOrder, sendNotification, getIdentifier } from "./Petitions";
+import { getStripe } from "./StripeClient";
 import trash from '../../assets/trash.svg';
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import { URL } from "./Const/Const";
@@ -37,6 +38,7 @@ type PedidoView = "cart" | "info";
 export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
   const { cart, phoneNumber: storePhoneNumber, idBussiness, setCart, color, setColor } = useContext(AppContext); // Número de la tienda
   const navigate = useNavigate();
+  const location = useLocation();
   const [nombre, setNombre] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [showModalProduct, setShowModalProduct] = useState<boolean>(false); // Estado para mostrar el modal de confirmación
@@ -49,7 +51,21 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
   const [shippingOptions, setShippingOptions] = useState<ShippingOptions>(defaultShippingOptions);
   const [loadingShippingOptions, setLoadingShippingOptions] = useState<boolean>(true);
   const [openSection, setOpenSection] = useState<null | "contact" | "delivery" | "address" | "payment">(null);
-  console.log("Info tienda o negocio:", idBussiness);
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
+  const [stripeEnabled, setStripeEnabled] = useState(false);
+  const [stripeCurrency, setStripeCurrency] = useState("MXN");
+  const [isStripeLoading, setIsStripeLoading] = useState(false);
+  const [stripeError, setStripeError] = useState<string | null>(null);
+  const [embeddedCheckoutSecret, setEmbeddedCheckoutSecret] = useState<string | null>(null);
+  const [embeddedCheckoutSessionId, setEmbeddedCheckoutSessionId] = useState<string | null>(null);
+  const stripePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stripePollAttemptsRef = useRef<number>(0);
+  const embeddedCheckoutRef = useRef<HTMLDivElement>(null);
+  const embeddedCheckoutInstanceRef = useRef<{
+    mount: (element: HTMLElement) => void;
+    unmount?: () => void;
+    destroy?: () => void;
+  } | null>(null);
   // Campos de dirección
   const [calle, setCalle] = useState<string>("");
   const [codigoPostal, setCodigoPostal] = useState<string>("");
@@ -57,6 +73,28 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
   const [estado, setEstado] = useState<string>("");
   const [referencia, setReferencia] = useState<string>("");
   const context = useContext(AppContext);
+  const pendingStripeOrderKey = "pendingStripeOrder";
+  const processedStripeSessionKey = "processedStripeSessionId";
+  const stripeDebugLogsKey = "stripeDebugLogs";
+
+  const logStripeDebug = (message: string, data?: unknown) => {
+    try {
+      const entry = {
+        at: new Date().toISOString(),
+        message,
+        data,
+      };
+      const raw = localStorage.getItem(stripeDebugLogsKey);
+      const logs = raw ? JSON.parse(raw) : [];
+      logs.push(entry);
+      localStorage.setItem(stripeDebugLogsKey, JSON.stringify(logs));
+      // eslint-disable-next-line no-console
+      console.log("[StripeDebug]", message, data ?? "");
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log("[StripeDebug] logging error", error);
+    }
+  };
 
   // Estados para los errores
   const [errors, setErrors] = useState<{
@@ -106,15 +144,17 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
 
     return parts.length ? parts.join(", ") : "Entrega a domicilio";
   };
-
-  const saveOrder = async () => {
+ 
+  const buildOrderPayload = () => {
     const fullAddress = buildAddress();
+    const fallbackBusinessId = idBussiness || localStorage.getItem("idBusiness") || "0";
+    const parsedBusinessId = Number(fallbackBusinessId);
 
     const order: Order = {
-      Name: shippingOptions.ContactInformation ? nombre : "", // si no piden contacto, manda vacío
-      Business_Id: Number(idBussiness),
+      Name: shippingOptions.ContactInformation ? nombre : "",
+      Business_Id: Number.isFinite(parsedBusinessId) ? parsedBusinessId : 0,
       Delivery: deliveryMethod === "domicilio" ? 1 : 0,
-      PaymentMethod: shippingOptions.PaymentMetod ? paymentMethod : "", // si no piden pago, manda vacío
+      PaymentMethod: shippingOptions.PaymentMetod ? paymentMethod : "",
       Address: fullAddress,
       PhoneNumber: shippingOptions.ContactInformation ? clientPhoneNumber : "",
     };
@@ -124,6 +164,279 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
       Quantity: producto.Quantity || 1,
     }));
 
+    return { order, orderDetails };
+  };
+
+  const buildWhatsappMessage = () => {
+    const addressText =
+      deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled
+        ? `Dirección: ${buildAddress()}`
+        : "";
+
+    const contactText = shippingOptions.ContactInformation
+      ? `Nombre: ${nombre}
+      Email: ${email || "No proporcionado"}
+      Teléfono: ${clientPhoneNumber}`
+      : "";
+
+    const paymentText = shippingOptions.PaymentMetod
+      ? `Método de pago: ${paymentMethod}`
+      : "";
+
+    const shippingText = shippingOptions.ShippingMetod
+      ? `Método de entrega: ${
+          deliveryMethod === "domicilio" ? "Entrega a domicilio" : "Recoger en tienda"
+        }`
+      : "";
+
+    const mensaje = `Hola, he hecho un pedido con los siguientes productos:
+        ${cart
+          .map(
+            (producto) =>
+              `${producto.Name}${
+                producto.VariantDescription ? ` (${producto.VariantDescription})` : ""
+              } x ${producto.Quantity || 1} $${(producto.Quantity || 1) * producto.Price}`
+          )
+          .join("\\n")}
+        Total: $${totalPrecio.toFixed(2)}
+        ${shippingText}
+        ${paymentText}
+        ${contactText}
+        ${addressText}`.trim();
+
+    return mensaje;
+  };
+
+  const storePendingStripeOrder = () => {
+    const payload = buildOrderPayload();
+    const message = buildWhatsappMessage();
+    localStorage.setItem(
+      pendingStripeOrderKey,
+      JSON.stringify({
+        ...payload,
+        createdAt: Date.now(),
+        paymentMethod,
+        storePhoneNumber,
+        whatsappMessage: message,
+      })
+    );
+    logStripeDebug("Pedido pendiente guardado", { ...payload, whatsappMessage: message });
+  };
+
+  const clearPendingStripeOrder = () => {
+    localStorage.removeItem(pendingStripeOrderKey);
+  };
+
+  const stopStripePolling = () => {
+    if (stripePollRef.current) {
+      clearInterval(stripePollRef.current);
+      stripePollRef.current = null;
+    }
+    stripePollAttemptsRef.current = 0;
+  };
+
+  const startStripePolling = (sessionId: string) => {
+    stopStripePolling();
+    stripePollAttemptsRef.current = 0;
+    stripePollRef.current = setInterval(async () => {
+      stripePollAttemptsRef.current += 1;
+      const attempts = stripePollAttemptsRef.current;
+      logStripeDebug("Polling Stripe", { sessionId, attempts });
+
+      try {
+        const confirmation = await confirmCheckoutPayment(sessionId);
+        const paymentIntentId = confirmation?.paymentIntentId;
+        if (paymentIntentId) {
+          const intent = await confirmPaymentIntent(paymentIntentId);
+          const status = intent?.status;
+          logStripeDebug("Estado PaymentIntent", { paymentIntentId, status });
+          if (status === "succeeded") {
+            stopStripePolling();
+            await finalizeStripeOrder(sessionId, paymentIntentId);
+          }
+        }
+      } catch (error) {
+        logStripeDebug("Error en polling Stripe", error);
+      }
+
+      if (attempts >= 40) {
+        stopStripePolling();
+      }
+    }, 3000);
+  };
+
+  const finalizeStripeOrder = async (sessionId: string, paymentIntentId?: string) => {
+    if (!sessionId) return;
+
+    const alreadyProcessed = localStorage.getItem(processedStripeSessionKey);
+    if (alreadyProcessed === sessionId) return;
+    logStripeDebug("Finalizando orden de Stripe", { sessionId });
+    setIsStripeLoading(true);
+    setStripeError(null);
+
+    try {
+      const confirmation = await confirmCheckoutPayment(sessionId);
+      logStripeDebug("Confirmación Stripe", confirmation);
+      if (!confirmation?.paymentIntentId && !confirmation?.sessionId) {
+        throw new Error("No se pudo confirmar el pago con Stripe.");
+      }
+
+      const finalPaymentIntentId = paymentIntentId || confirmation?.paymentIntentId;
+      if (!finalPaymentIntentId) {
+        throw new Error("No se pudo identificar el PaymentIntent.");
+      }
+      const intent = await confirmPaymentIntent(finalPaymentIntentId);
+      const intentStatus = intent?.status;
+      logStripeDebug("Estado final PaymentIntent", { finalPaymentIntentId, intentStatus });
+      if (intentStatus !== "succeeded") {
+        setStripeError("El pago fue rechazado. Intenta con otra tarjeta.");
+        return;
+      }
+
+      const pendingRaw = localStorage.getItem(pendingStripeOrderKey);
+      if (!pendingRaw) {
+        throw new Error("No se encontró el pedido pendiente.");
+      }
+
+      const pending = JSON.parse(pendingRaw);
+      logStripeDebug("Pedido pendiente encontrado", pending);
+      localStorage.setItem(
+        pendingStripeOrderKey,
+        JSON.stringify({
+          ...pending,
+          paid: true,
+          paidAt: Date.now(),
+          sessionId,
+        })
+      );
+
+      localStorage.setItem(processedStripeSessionKey, sessionId);
+      context.clearCart();
+      localStorage.removeItem("cart");
+      localStorage.removeItem("cartBusinessId");
+      setEmbeddedCheckoutSecret(null);
+      setEmbeddedCheckoutSessionId(null);
+
+      //window.history.replaceState({}, document.title, window.location.pathname);
+
+      const businessId = idBussiness || localStorage.getItem("idBusiness");
+      if (businessId) {
+       window.location.assign(`/catalogo/${businessId}?payment=success`);
+      } else {
+       window.location.assign("/?payment=success");
+      }
+    } catch (error: any) {
+      setStripeError(error?.message || "No se pudo confirmar el pago.");
+      logStripeDebug("Error finalizando Stripe", error?.message || error);
+      // Mantener el modal abierto para mostrar el error al usuario.
+    } finally {
+      setIsStripeLoading(false);
+    }
+  };
+
+  const canUseStripe = stripeEnabled && Boolean(stripeAccountId);
+
+  const buildStripeLineItems = () =>
+    cart.map((item) => {
+      const hasPromo =
+        item.PromotionPrice != null &&
+        item.PromotionPrice > 0 &&
+        item.PromotionPrice < item.Price;
+      const unitPrice = hasPromo ? item.PromotionPrice : item.Price;
+      const nameSuffix = item.VariantDescription ? ` (${item.VariantDescription})` : "";
+      const unitAmount = Math.round((unitPrice || 0) * 100);
+
+      return {
+        price_data: {
+          currency: stripeCurrency.toLowerCase(),
+          product_data: {
+            name: `${item.Name}${nameSuffix}`,
+          },
+          unit_amount: unitAmount,
+        },
+        quantity: item.Quantity || 1,
+      };
+    });
+
+  const startStripeCheckout = async () => {
+    if (!canUseStripe || !stripeAccountId) {
+      setStripeError("Este negocio no tiene cobros con tarjeta disponibles.");
+      return;
+    }
+
+    if (cart.length === 0) {
+      setStripeError("El carrito está vacío.");
+      return;
+    }
+
+    setIsStripeLoading(true);
+    setStripeError(null);
+
+    try {
+      storePendingStripeOrder();
+      const config = await getStripeConfig();
+      const publishableKey = config?.publishableKey;
+
+      if (!publishableKey) {
+        throw new Error("No se pudo obtener la configuración de Stripe.");
+      }
+
+      const lineItems = buildStripeLineItems();
+      if (!lineItems.length) {
+        throw new Error("No fue posible preparar los artículos para el pago.");
+      }
+
+      const businessId = Number(idBussiness || localStorage.getItem("idBusiness") || 0);
+      if (!Number.isFinite(businessId) || businessId <= 0) {
+        throw new Error("No se pudo identificar el negocio.");
+      }
+
+      const session = await createCheckoutSession({
+        line_items: lineItems,
+        return_url: `${window.location.origin}/catalogo/${businessId}`,
+        connectedAccountId: stripeAccountId,
+        businessId,
+        ui_mode: "embedded",
+        customer_email: email || undefined,
+        metadata: {
+          paymentMethod: "tarjeta",
+          businessId: String(businessId),
+        },
+      });
+      logStripeDebug("Sesión Stripe creada", session);
+
+      if (!session?.checkoutSessionClientSecret) {
+        throw new Error(session?.message || "Stripe no devolvió una sesión válida.");
+      }
+      setEmbeddedCheckoutSecret(session.checkoutSessionClientSecret);
+      const sessionId = session.sessionId ?? null;
+      setEmbeddedCheckoutSessionId(sessionId);
+      if (sessionId) {
+        const pendingRaw = localStorage.getItem(pendingStripeOrderKey);
+        if (pendingRaw) {
+          try {
+            const pending = JSON.parse(pendingRaw);
+            localStorage.setItem(
+              pendingStripeOrderKey,
+              JSON.stringify({ ...pending, sessionId })
+            );
+          } catch {
+            // ignore
+          }
+        }
+      }
+      if (sessionId) {
+        startStripePolling(sessionId);
+      }
+    } catch (error: any) {
+      setStripeError(error?.message || "No se pudo iniciar el pago con Stripe.");
+    } finally {
+      setIsStripeLoading(false);
+    }
+  };
+
+  const saveOrder = async () => {
+    const { order, orderDetails } = buildOrderPayload();
     insertOrder(order, orderDetails).then((data) => console.log(data));
   };
 
@@ -149,11 +462,11 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
       navigate(fallbackRoute, { replace: true });
     };
 
-    window.history.pushState({ preventBack: true }, "", window.location.href);
-    window.addEventListener("popstate", handlePopState);
+    //window.history.pushState({ preventBack: true }, "", window.location.href);
+    //window.addEventListener("popstate", handlePopState);
 
     return () => {
-      window.removeEventListener("popstate", handlePopState);
+      //window.removeEventListener("popstate", handlePopState);
     };
   }, [idBussiness, navigate]);
 
@@ -231,6 +544,26 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     };
 
     loadShippingOptions();
+  }, [idBussiness]);
+
+  useEffect(() => {
+    const loadBusinessStripeInfo = async () => {
+      const businessId = idBussiness || localStorage.getItem("idBusiness");
+      if (!businessId) return;
+
+      try {
+        const dataBusiness = await getBusinessById(businessId);
+        if (!dataBusiness) return;
+
+        setStripeAccountId(dataBusiness.StripeAccountId || null);
+        setStripeEnabled(Boolean(Number(dataBusiness.ChargesEnabled)));
+        setStripeCurrency((dataBusiness.MoneyTipe || "MXN").toUpperCase());
+      } catch (error) {
+        console.error("Error cargando Stripe del negocio:", error);
+      }
+    };
+
+    loadBusinessStripeInfo();
   }, [idBussiness]);
 
 
@@ -334,56 +667,31 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
 
 
   // Función para manejar el envío del formulario
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
+      if (paymentMethod === "tarjeta") {
+        await startStripeCheckout();
+        return;
+      }
       // Aquí puedes manejar el envío del formulario, por ejemplo, enviar los datos al servidor o preparar el mensaje para WhatsApp
       //tomamos el numero de la tienda y mandamos un mensaje de whatsapp
       //diciendo 'Hola he hecho un pedido con los siguientes productos...'
       saveOrder();
 
-      const addressText =
-        deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled
-          ? `Dirección: ${buildAddress()}`
-          : "";
-
-      const contactText = shippingOptions.ContactInformation
-        ? `Nombre: ${nombre}
-      Email: ${email || "No proporcionado"}
-      Teléfono: ${clientPhoneNumber}`
-        : "";
-
-      const paymentText = shippingOptions.PaymentMetod
-        ? `Método de pago: ${paymentMethod}`
-        : "";
-
-      const shippingText = shippingOptions.ShippingMetod
-        ? `Método de entrega: ${
-            deliveryMethod === "domicilio" ? "Entrega a domicilio" : "Recoger en tienda"
-          }`
-        : "";
-
-      const mensaje = `Hola, he hecho un pedido con los siguientes productos:
-        ${cart
-          .map(
-            (producto) =>
-              `${producto.Name}${
-                producto.VariantDescription ? ` (${producto.VariantDescription})` : ""
-              } x ${producto.Quantity || 1} $${(producto.Quantity || 1) * producto.Price}`
-          )
-          .join("\n")}
-        Total: $${totalPrecio.toFixed(2)}
-        ${shippingText}
-        ${paymentText}
-        ${contactText}
-        ${addressText}`.trim();
+      const mensaje = buildWhatsappMessage();
 
       const url = `https://wa.me/${storePhoneNumber}?text=${encodeURIComponent(
         mensaje
       )}`;
-      console.log(url);
       context.clearCart();
       window.open(url, "_blank");
+      const businessId = idBussiness || localStorage.getItem("idBusiness");
+      if (businessId) {
+       //window.location.assign(`/catalogo/${businessId}`);
+      } else {
+       // window.location.assign("/");
+      }
     } else {
       console.log("Formulario inválido, mostrando errores.");
     }
@@ -521,6 +829,83 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
       null;
     setOpenSection(firstOpen);
   }, [openSection, visibleSections]);
+
+  useEffect(() => {
+    if (paymentMethod !== "tarjeta" && stripeError) {
+      setStripeError(null);
+    }
+  }, [paymentMethod, stripeError]);
+
+  useEffect(() => {
+    if (!embeddedCheckoutSecret) {
+      stopStripePolling();
+      if (embeddedCheckoutInstanceRef.current?.destroy) {
+        embeddedCheckoutInstanceRef.current.destroy();
+      } else if (embeddedCheckoutInstanceRef.current?.unmount) {
+        embeddedCheckoutInstanceRef.current.unmount();
+      }
+      embeddedCheckoutInstanceRef.current = null;
+      return;
+    }
+
+    let isCancelled = false;
+
+    const mountEmbeddedCheckout = async () => {
+      try {
+        const config = await getStripeConfig();
+        const publishableKey = config?.publishableKey;
+        if (!publishableKey) {
+          throw new Error("No se pudo obtener la configuración de Stripe.");
+        }
+
+        const stripe = await getStripe(publishableKey);
+        const checkout = await stripe.initEmbeddedCheckout({
+          clientSecret: embeddedCheckoutSecret,
+          onComplete: async () => {
+            if (embeddedCheckoutSessionId) {
+              await finalizeStripeOrder(embeddedCheckoutSessionId);
+            }
+          },
+        } as any);
+        if (isCancelled) return;
+        embeddedCheckoutInstanceRef.current = checkout;
+
+        const container = embeddedCheckoutRef.current;
+        if (container) {
+          container.innerHTML = "";
+          checkout.mount(container);
+        }
+      } catch (error: any) {
+        setStripeError(error?.message || "No se pudo cargar el checkout.");
+        setEmbeddedCheckoutSecret(null);
+      }
+    };
+
+    mountEmbeddedCheckout();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [embeddedCheckoutSecret, embeddedCheckoutSessionId]);
+
+  useEffect(() => {
+    if (isCartView) return;
+
+    const params = new URLSearchParams(location.search);
+    const sessionId = params.get("session_id") || params.get("sessionId");
+    if (!sessionId) return;
+
+    const alreadyProcessed = localStorage.getItem(processedStripeSessionKey);
+    if (alreadyProcessed === sessionId) return;
+
+    finalizeStripeOrder(sessionId);
+  }, [context, idBussiness, isCartView, location.search]);
+
+  useEffect(() => {
+    return () => {
+      stopStripePolling();
+    };
+  }, []);
 
   if (loadingShippingOptions) {
     return (
@@ -669,7 +1054,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                   <button
                     type="button"
                     onClick={() => navigate(-1)}
-                    className="mt-4 w-full rounded-full bg-[var(--action-disabled)] text-[var(--text-inverse)] py-4 text-lg font-semibold"
+                    className="mt-4 w-full rounded-full bg-[var(--action-disabled)] text-[var(--text-primary)] py-4 text-lg font-semibold"
                   >
                     Seguir comprando
                   </button>
@@ -974,12 +1359,21 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                   >
                     <option value="transferencia">Transferencia bancaria</option>
                     <option value="dinero">Dinero en efectivo</option>
-                    <option value="tarjeta">Tarjeta de crédito o débito</option>
+                    <option value="tarjeta" disabled={!canUseStripe}>
+                      {canUseStripe
+                        ? "Tarjeta de crédito o débito"
+                        : "Tarjeta de crédito o débito (no disponible)"}
+                    </option>
                     <option value="enlace">Enlace de pago</option>
                   </select>
                   {errors.paymentMethod && (
                     <span className="text-[var(--state-error)] text-sm mt-2 block">
                       {errors.paymentMethod}
+                    </span>
+                  )}
+                  {stripeError && (
+                    <span className="text-[var(--state-error)] text-sm mt-2 block">
+                      {stripeError}
                     </span>
                   )}
                 </div>
@@ -990,9 +1384,10 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
             <div className="mt-8 flex flex-col gap-4">
               <button
                 type="submit"
-                className="w-full rounded-full bg-[var(--action-primary)] text-white py-4 text-lg font-semibold shadow-sm"
+                className="w-full rounded-full bg-[var(--action-primary)] text-white py-4 text-lg font-semibold shadow-sm disabled:opacity-70"
+                disabled={isStripeLoading}
               >
-                Preparar pedido
+                {isStripeLoading ? "Abriendo Stripe..." : "Preparar pedido"}
               </button>
               <button
                 type="button"
@@ -1011,6 +1406,30 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
               <p className="text-[var(--text-secondary)] text-sm inline-block">
                 Contacto de la tienda: {storePhoneNumber}
               </p>
+            </div>
+          )}
+          {embeddedCheckoutSecret && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
+              <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--bg-surface)] p-4 shadow-xl">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                    Pago con tarjeta
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setEmbeddedCheckoutSecret(null)}
+                    className="rounded-full bg-[var(--action-disabled)] px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+                <div className="max-h-[calc(90vh-120px)] overflow-y-auto">
+                  <div
+                    ref={embeddedCheckoutRef}
+                    className="min-h-[500px] rounded-[var(--radius-md)] bg-white"
+                  />
+                </div>
+              </div>
             </div>
           )}
           {/* MODAL QUE VIENE DE ABAJO DE LA PANTALLA PARA PREGUNTAR SI ESTA SEGURO QUE QUIERE ELIMINAR EL CARRITO */}

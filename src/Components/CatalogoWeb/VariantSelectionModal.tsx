@@ -455,7 +455,7 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
                     </button>
                     <button
                       onClick={handleConfirm}
-                      className="w-full rounded-full py-3 text-sm font-semibold bg-[var(--action-disabled)] text-[var(--text-inverse)] disabled:opacity-40"
+                      className="w-full rounded-full py-3 text-sm font-semibold bg-[var(--action-disabled)] text-[var(--text-primary)] disabled:opacity-40"
                       disabled={!canConfirm}
                     >
                       Agregar al carrito

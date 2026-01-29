@@ -16,6 +16,15 @@ export const ProductCarousel: React.FC<Props> = ({ images, alt, className }) => 
   const prev = () => setIndex((i) => (i - 1 + validImages.length) % validImages.length);
   const go = (i: number) => setIndex(i);
 
+  // autoplay
+  useEffect(() => {
+    if (validImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setIndex((i) => (i + 1) % validImages.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [validImages.length]);
+
   // soporte teclado (← →)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {

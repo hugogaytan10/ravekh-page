@@ -6,11 +6,13 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import {
+  confirmCheckoutPayment,
   getBusinessById,
   getProductsByBusinessWithStock,
   getVariantsByProductIdPublic,
+  insertOrder,
 } from "./Petitions";
 import { Producto } from "./Modelo/Producto";
 import { AppContext } from "./Context/AppContext";
@@ -20,12 +22,15 @@ import defaultImage from "../../assets/ravekh.png";
 import { ProductGrid, ProductGridSkeleton } from "./ProductGrid";
 import { Variant } from "./PuntoVenta/Model/Variant";
 import { VariantSelectionModal, getBaseVariantKey } from "./VariantSelectionModal";
+import { Order } from "./Modelo/Order";
+import { OrderDetails } from "./Modelo/OrderDetails";
 interface MainCatalogoProps {
   idBusiness?: string;
 }
 
 export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const { idBusiness } = useParams<{ idBusiness: string }>();
+  const navigate = useNavigate();
   const [productos, setProductos] = useState<Producto[]>([]);
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(true);
@@ -43,6 +48,18 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("Agregado al carrito");
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const [pendingStripeOrder, setPendingStripeOrder] = useState<{
+    order: Order;
+    orderDetails: OrderDetails[];
+    storePhoneNumber?: string | null;
+    whatsappMessage?: string;
+    paid?: boolean;
+    saved?: boolean;
+  } | null>(null);
+  const [showPendingModal, setShowPendingModal] = useState(false);
+  const [pendingLoading, setPendingLoading] = useState(false);
+  const [pendingError, setPendingError] = useState<string | null>(null);
+  const pendingSaveRef = useRef(false);
 
   const context = useContext(AppContext);
   const addProductToCart = context.addProductToCart;
@@ -69,6 +86,64 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     }
     toastTimeoutRef.current = setTimeout(() => setShowToast(false), 1800);
   }, []);
+
+  const ensurePendingOrderSaved = useCallback(async () => {
+    if (!pendingStripeOrder || pendingStripeOrder.saved || pendingSaveRef.current) return;
+    pendingSaveRef.current = true;
+    setPendingLoading(true);
+    setPendingError(null);
+
+    try {
+      const optimistic = { ...pendingStripeOrder, saved: true };
+      localStorage.setItem("pendingStripeOrder", JSON.stringify(optimistic));
+      setPendingStripeOrder(optimistic);
+
+      const response = await insertOrder(
+        pendingStripeOrder.order,
+        pendingStripeOrder.orderDetails
+      );
+      if (!response || response?.error) {
+        throw new Error(response?.message || "No se pudo registrar el pedido.");
+      }
+
+      context.clearCart();
+      localStorage.removeItem("cart");
+      localStorage.removeItem("cartBusinessId");
+    } catch (error: any) {
+      setPendingError(error?.message || "No se pudo registrar el pedido.");
+      const rollback = { ...pendingStripeOrder, saved: false };
+      localStorage.setItem("pendingStripeOrder", JSON.stringify(rollback));
+      setPendingStripeOrder(rollback);
+    } finally {
+      setPendingLoading(false);
+      pendingSaveRef.current = false;
+    }
+  }, [pendingStripeOrder]);
+
+  const handlePendingDecision = useCallback(
+    (sendWhatsapp: boolean) => {
+      if (!pendingStripeOrder) return;
+
+      if (sendWhatsapp) {
+        const phone =
+          pendingStripeOrder.storePhoneNumber || context.phoneNumber || localStorage.getItem("telefono");
+        const message = pendingStripeOrder.whatsappMessage;
+        if (phone && message) {
+          const url = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+          window.open(url, "_blank");
+        }
+      }
+
+      localStorage.removeItem("pendingStripeOrder");
+      setPendingStripeOrder(null);
+      setShowPendingModal(false);
+      if (idBusiness) {
+        navigate(`/catalogo/${idBusiness}`, { replace: true });
+      }
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [pendingStripeOrder, context.phoneNumber, idBusiness, navigate]
+  );
 
   // 2) Efecto para inicializar/ocultar elementos y cargar color/teléfono/nombre del localStorage si no están en contexto
   useEffect(() => {
@@ -109,6 +184,60 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const paymentStatus = params.get("payment");
+    if (!paymentStatus) return;
+
+    if (paymentStatus === "success") {
+      triggerToast("Pago completado correctamente.");
+    } else if (paymentStatus === "failed") {
+      triggerToast("El pago no se completó. Inténtalo de nuevo.");
+    }
+
+    params.delete("payment");
+    const next = params.toString();
+    const cleanUrl = `${window.location.pathname}${next ? `?${next}` : ""}`;
+    window.history.replaceState({}, document.title, cleanUrl);
+  }, [triggerToast]);
+
+  useEffect(() => {
+    if (!idBusiness) return;
+    const raw = localStorage.getItem("pendingStripeOrder");
+    if (!raw) return;
+    try {
+      const pending = JSON.parse(raw);
+      const businessId = Number(pending?.order?.Business_Id);
+      if (!Number.isFinite(businessId) || String(businessId) !== String(idBusiness)) {
+        return;
+      }
+
+      if (!pending?.paid && pending?.sessionId) {
+        confirmCheckoutPayment(pending.sessionId).then((confirmation) => {
+          if (confirmation?.paymentIntentId || confirmation?.sessionId) {
+            const updated = { ...pending, paid: true, paidAt: Date.now() };
+            localStorage.setItem("pendingStripeOrder", JSON.stringify(updated));
+            setPendingStripeOrder(updated);
+            setShowPendingModal(true);
+          }
+        });
+        return;
+      }
+
+      if (pending?.paid) {
+        setPendingStripeOrder(pending);
+        setShowPendingModal(true);
+      }
+    } catch (error) {
+      console.error("Error leyendo pedido pendiente:", error);
+    }
+  }, [idBusiness]);
+
+  useEffect(() => {
+    if (!showPendingModal || !pendingStripeOrder) return;
+    ensurePendingOrderSaved();
+  }, [ensurePendingOrderSaved, pendingStripeOrder, showPendingModal]);
 
   const filteredProducts = useMemo(() => {
     const normalizedQuery = context.searchQuery.trim().toLowerCase();
@@ -580,6 +709,39 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
           }
 
           {/* Modal de selección de variantes */}
+          {showPendingModal && pendingStripeOrder && (
+            <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/50">
+              <div className="bg-[var(--bg-surface)] rounded-t-[var(--radius-lg)] p-6 w-full border border-[var(--border-default)]">
+                <h2 className="text-lg font-semibold mb-2 text-center text-[var(--text-primary)]">
+                  Pedido pagado
+                </h2>
+                <p className="mb-6 text-center text-sm text-[var(--text-secondary)]">
+                  ¿Gustas mandar un mensaje por WhatsApp al comprar tu orden?
+                </p>
+                {pendingError && (
+                  <p className="mb-4 text-center text-sm text-[var(--state-error)]">
+                    {pendingError}
+                  </p>
+                )}
+                <div className="flex justify-center gap-4">
+                  <button
+                    onClick={() => handlePendingDecision(false)}
+                    disabled={pendingLoading}
+                    className="bg-[var(--action-disabled)] text-white py-2 px-6 rounded-full shadow-sm"
+                  >
+                    {pendingLoading ? "Guardando..." : "Cerrar"}
+                  </button>
+                  <button
+                    onClick={() => handlePendingDecision(true)}
+                    disabled={pendingLoading}
+                    className="bg-[var(--action-primary)] text-white py-2 px-6 rounded-full shadow-sm"
+                  >
+                    {pendingLoading ? "Enviando..." : "Sí, enviar"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
           <VariantSelectionModal
             product={variantProduct}
             variants={variantOptions}
