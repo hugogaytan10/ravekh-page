@@ -1,5 +1,6 @@
 export type CartPos = {
     Id?: number;
+    Business_Id?: number;
     Store_Id?: number;
     Business_Id?: number;
     Name: string;

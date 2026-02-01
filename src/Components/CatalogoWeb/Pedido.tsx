@@ -1,10 +1,12 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { AppContext } from "./Context/AppContext";
 import { CartPos } from "./PuntoVenta/Model/CarPos";
 import { FiTruck, FiCreditCard, FiPhone } from "react-icons/fi"; // Importando iconos
 import { Order } from "./Modelo/Order";
 import { OrderDetails } from "./Modelo/OrderDetails";
-import { insertOrder, sendNotification, getIdentifier } from "./Petitions";
+import { confirmCheckoutPayment, confirmPaymentIntent, createCheckoutSession, getBusinessById, getStripeConfig, insertOrder, sendNotification, getIdentifier } from "./Petitions";
+import { getStripe } from "./StripeClient";
 import trash from '../../assets/trash.svg';
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import { URL } from "./Const/Const";
@@ -31,8 +33,12 @@ const defaultShippingOptions: ShippingOptions = {
   PaymentMetod: true,
 };
 
-export const Pedido: React.FC = () => {
+type PedidoView = "cart" | "info";
+
+export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
   const { cart, phoneNumber: storePhoneNumber, idBussiness, setCart, color, setColor } = useContext(AppContext); // Número de la tienda
+  const navigate = useNavigate();
+  const location = useLocation();
   const [nombre, setNombre] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [showModalProduct, setShowModalProduct] = useState<boolean>(false); // Estado para mostrar el modal de confirmación
@@ -44,7 +50,22 @@ export const Pedido: React.FC = () => {
   const [quantityWarnings, setQuantityWarnings] = useState<Record<string, string | null>>({});
   const [shippingOptions, setShippingOptions] = useState<ShippingOptions>(defaultShippingOptions);
   const [loadingShippingOptions, setLoadingShippingOptions] = useState<boolean>(true);
-  console.log("Info tienda o negocio:", idBussiness);
+  const [openSection, setOpenSection] = useState<null | "contact" | "delivery" | "address" | "payment">(null);
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
+  const [stripeEnabled, setStripeEnabled] = useState(false);
+  const [stripeCurrency, setStripeCurrency] = useState("MXN");
+  const [isStripeLoading, setIsStripeLoading] = useState(false);
+  const [stripeError, setStripeError] = useState<string | null>(null);
+  const [embeddedCheckoutSecret, setEmbeddedCheckoutSecret] = useState<string | null>(null);
+  const [embeddedCheckoutSessionId, setEmbeddedCheckoutSessionId] = useState<string | null>(null);
+  const stripePollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const stripePollAttemptsRef = useRef<number>(0);
+  const embeddedCheckoutRef = useRef<HTMLDivElement>(null);
+  const embeddedCheckoutInstanceRef = useRef<{
+    mount: (element: HTMLElement) => void;
+    unmount?: () => void;
+    destroy?: () => void;
+  } | null>(null);
   // Campos de dirección
   const [calle, setCalle] = useState<string>("");
   const [codigoPostal, setCodigoPostal] = useState<string>("");
@@ -52,30 +73,64 @@ export const Pedido: React.FC = () => {
   const [estado, setEstado] = useState<string>("");
   const [referencia, setReferencia] = useState<string>("");
   const context = useContext(AppContext);
+  const pendingStripeOrderKey = "pendingStripeOrder";
+  const processedStripeSessionKey = "processedStripeSessionId";
+  const stripeDebugLogsKey = "stripeDebugLogs";
+
+  const logStripeDebug = (message: string, data?: unknown) => {
+    try {
+      const entry = {
+        at: new Date().toISOString(),
+        message,
+        data,
+      };
+      const raw = localStorage.getItem(stripeDebugLogsKey);
+      const logs = raw ? JSON.parse(raw) : [];
+      logs.push(entry);
+      localStorage.setItem(stripeDebugLogsKey, JSON.stringify(logs));
+      // eslint-disable-next-line no-console
+      console.log("[StripeDebug]", message, data ?? "");
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.log("[StripeDebug] logging error", error);
+    }
+  };
 
   // Estados para los errores
   const [errors, setErrors] = useState<{
     nombre?: string;
     email?: string;
     clientPhoneNumber?: string;
+    deliveryMethod?: string;
+    paymentMethod?: string;
+    calle?: string;
+    codigoPostal?: string;
+    municipio?: string;
+    estado?: string;
   }>({});
+  const fieldRefs = {
+    nombre: useRef<HTMLDivElement>(null),
+    email: useRef<HTMLDivElement>(null),
+    clientPhoneNumber: useRef<HTMLDivElement>(null),
+    deliveryMethod: useRef<HTMLDivElement>(null),
+    calle: useRef<HTMLDivElement>(null),
+    codigoPostal: useRef<HTMLDivElement>(null),
+    municipio: useRef<HTMLDivElement>(null),
+    estado: useRef<HTMLDivElement>(null),
+    paymentMethod: useRef<HTMLDivElement>(null),
+  };
 
-  function adjustColor(hex) {
-    // Convertimos el color hexadecimal a RGB
-    const r = parseInt(hex.slice(1, 3), 16); // Rojo
-    const g = parseInt(hex.slice(3, 5), 16); // Verde
-    const b = parseInt(hex.slice(5, 7), 16); // Azul
+  const isCartView = view === "cart";
 
-    // Aplicamos las restas al componente rojo, verde y azul para hacer el color más oscuro
-    const newR = Math.max(0, r - 100).toString(16).padStart(2, '0');
-    const newG = Math.max(0, g - 100).toString(16).padStart(2, '0');
-    const newB = Math.max(0, b - 100).toString(16).padStart(2, '0');
-
-    // Retornamos el color modificado en formato hexadecimal
-    return `#${newR}${newG}${newB}`;
-  }
   const totalArticulos = cart.reduce((total, item) => total + (item.Quantity || 1), 0);
-  const totalPrecio = cart.reduce((total, item) => total + item.Price * (item.Quantity || 1), 0);
+  const totalPrecio = cart.reduce((total, item) => {
+    const hasPromo =
+      item.PromotionPrice != null &&
+      item.PromotionPrice > 0 &&
+      item.PromotionPrice < item.Price;
+    const unitPrice = hasPromo ? item.PromotionPrice : item.Price;
+    return total + unitPrice  * (item.Quantity || 1);
+  }, 0);
   const buildAddress = () => {
     if (deliveryMethod !== "domicilio") return "Recoger en tienda";
 
@@ -89,15 +144,17 @@ export const Pedido: React.FC = () => {
 
     return parts.length ? parts.join(", ") : "Entrega a domicilio";
   };
-
-  const saveOrder = async () => {
+ 
+  const buildOrderPayload = () => {
     const fullAddress = buildAddress();
+    const fallbackBusinessId = idBussiness || localStorage.getItem("idBusiness") || "0";
+    const parsedBusinessId = Number(fallbackBusinessId);
 
     const order: Order = {
-      Name: shippingOptions.ContactInformation ? nombre : "", // si no piden contacto, manda vacío
-      Business_Id: Number(idBussiness),
+      Name: shippingOptions.ContactInformation ? nombre : "",
+      Business_Id: Number.isFinite(parsedBusinessId) ? parsedBusinessId : 0,
       Delivery: deliveryMethod === "domicilio" ? 1 : 0,
-      PaymentMethod: shippingOptions.PaymentMetod ? paymentMethod : "", // si no piden pago, manda vacío
+      PaymentMethod: shippingOptions.PaymentMetod ? paymentMethod : "",
       Address: fullAddress,
       PhoneNumber: shippingOptions.ContactInformation ? clientPhoneNumber : "",
     };
@@ -107,11 +164,320 @@ export const Pedido: React.FC = () => {
       Quantity: producto.Quantity || 1,
     }));
 
+    return { order, orderDetails };
+  };
+
+  const buildWhatsappMessage = () => {
+    const addressText =
+      deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled
+        ? `Dirección: ${buildAddress()}`
+        : "";
+
+    const contactText = shippingOptions.ContactInformation
+      ? `Nombre: ${nombre}
+      Email: ${email || "No proporcionado"}
+      Teléfono: ${clientPhoneNumber}`
+      : "";
+
+    const paymentText = shippingOptions.PaymentMetod
+      ? `Método de pago: ${paymentMethod}`
+      : "";
+
+    const shippingText = shippingOptions.ShippingMetod
+      ? `Método de entrega: ${
+          deliveryMethod === "domicilio" ? "Entrega a domicilio" : "Recoger en tienda"
+        }`
+      : "";
+
+    const mensaje = `Hola, he hecho un pedido con los siguientes productos:
+        ${cart
+          .map(
+            (producto) =>
+              `${producto.Name}${
+                producto.VariantDescription ? ` (${producto.VariantDescription})` : ""
+              } x ${producto.Quantity || 1} $${(producto.Quantity || 1) * producto.Price}`
+          )
+          .join("\\n")}
+        Total: $${totalPrecio.toFixed(2)}
+        ${shippingText}
+        ${paymentText}
+        ${contactText}
+        ${addressText}`.trim();
+
+    return mensaje;
+  };
+
+  const storePendingStripeOrder = () => {
+    const payload = buildOrderPayload();
+    const message = buildWhatsappMessage();
+    localStorage.setItem(
+      pendingStripeOrderKey,
+      JSON.stringify({
+        ...payload,
+        createdAt: Date.now(),
+        paymentMethod,
+        storePhoneNumber,
+        whatsappMessage: message,
+      })
+    );
+    logStripeDebug("Pedido pendiente guardado", { ...payload, whatsappMessage: message });
+  };
+
+  const clearPendingStripeOrder = () => {
+    localStorage.removeItem(pendingStripeOrderKey);
+  };
+
+  const stopStripePolling = () => {
+    if (stripePollRef.current) {
+      clearInterval(stripePollRef.current);
+      stripePollRef.current = null;
+    }
+    stripePollAttemptsRef.current = 0;
+  };
+
+  const startStripePolling = (sessionId: string) => {
+    stopStripePolling();
+    stripePollAttemptsRef.current = 0;
+    stripePollRef.current = setInterval(async () => {
+      stripePollAttemptsRef.current += 1;
+      const attempts = stripePollAttemptsRef.current;
+      logStripeDebug("Polling Stripe", { sessionId, attempts });
+
+      try {
+        const confirmation = await confirmCheckoutPayment(sessionId);
+        const paymentIntentId = confirmation?.paymentIntentId;
+        if (paymentIntentId) {
+          const intent = await confirmPaymentIntent(paymentIntentId);
+          const status = intent?.status;
+          logStripeDebug("Estado PaymentIntent", { paymentIntentId, status });
+          if (status === "succeeded") {
+            stopStripePolling();
+            await finalizeStripeOrder(sessionId, paymentIntentId);
+          }
+        }
+      } catch (error) {
+        logStripeDebug("Error en polling Stripe", error);
+      }
+
+      if (attempts >= 40) {
+        stopStripePolling();
+      }
+    }, 3000);
+  };
+
+  const finalizeStripeOrder = async (sessionId: string, paymentIntentId?: string) => {
+    if (!sessionId) return;
+
+    const alreadyProcessed = localStorage.getItem(processedStripeSessionKey);
+    if (alreadyProcessed === sessionId) return;
+    logStripeDebug("Finalizando orden de Stripe", { sessionId });
+    setIsStripeLoading(true);
+    setStripeError(null);
+
+    try {
+      const confirmation = await confirmCheckoutPayment(sessionId);
+      logStripeDebug("Confirmación Stripe", confirmation);
+      if (!confirmation?.paymentIntentId && !confirmation?.sessionId) {
+        throw new Error("No se pudo confirmar el pago con Stripe.");
+      }
+
+      const finalPaymentIntentId = paymentIntentId || confirmation?.paymentIntentId;
+      if (!finalPaymentIntentId) {
+        throw new Error("No se pudo identificar el PaymentIntent.");
+      }
+      const intent = await confirmPaymentIntent(finalPaymentIntentId);
+      const intentStatus = intent?.status;
+      logStripeDebug("Estado final PaymentIntent", { finalPaymentIntentId, intentStatus });
+      if (intentStatus !== "succeeded") {
+        setStripeError("El pago fue rechazado. Intenta con otra tarjeta.");
+        return;
+      }
+
+      const pendingRaw = localStorage.getItem(pendingStripeOrderKey);
+      if (!pendingRaw) {
+        throw new Error("No se encontró el pedido pendiente.");
+      }
+
+      const pending = JSON.parse(pendingRaw);
+      logStripeDebug("Pedido pendiente encontrado", pending);
+      localStorage.setItem(
+        pendingStripeOrderKey,
+        JSON.stringify({
+          ...pending,
+          paid: true,
+          paidAt: Date.now(),
+          sessionId,
+        })
+      );
+
+      localStorage.setItem(processedStripeSessionKey, sessionId);
+      context.clearCart();
+      localStorage.removeItem("cart");
+      localStorage.removeItem("cartBusinessId");
+      setEmbeddedCheckoutSecret(null);
+      setEmbeddedCheckoutSessionId(null);
+
+      //window.history.replaceState({}, document.title, window.location.pathname);
+
+      const businessId = idBussiness || localStorage.getItem("idBusiness");
+      if (businessId) {
+       window.location.assign(`/catalogo/${businessId}?payment=success`);
+      } else {
+       window.location.assign("/?payment=success");
+      }
+    } catch (error: any) {
+      setStripeError(error?.message || "No se pudo confirmar el pago.");
+      logStripeDebug("Error finalizando Stripe", error?.message || error);
+      // Mantener el modal abierto para mostrar el error al usuario.
+    } finally {
+      setIsStripeLoading(false);
+    }
+  };
+
+  const canUseStripe = stripeEnabled && Boolean(stripeAccountId);
+
+  const buildStripeLineItems = () =>
+    cart.map((item) => {
+      const hasPromo =
+        item.PromotionPrice != null &&
+        item.PromotionPrice > 0 &&
+        item.PromotionPrice < item.Price;
+      const unitPrice = hasPromo ? item.PromotionPrice : item.Price;
+      const nameSuffix = item.VariantDescription ? ` (${item.VariantDescription})` : "";
+      const unitAmount = Math.round((unitPrice || 0) * 100);
+
+      return {
+        price_data: {
+          currency: stripeCurrency.toLowerCase(),
+          product_data: {
+            name: `${item.Name}${nameSuffix}`,
+          },
+          unit_amount: unitAmount,
+        },
+        quantity: item.Quantity || 1,
+      };
+    });
+
+  const startStripeCheckout = async () => {
+    if (!canUseStripe || !stripeAccountId) {
+      setStripeError("Este negocio no tiene cobros con tarjeta disponibles.");
+      return;
+    }
+
+    if (cart.length === 0) {
+      setStripeError("El carrito está vacío.");
+      return;
+    }
+
+    setIsStripeLoading(true);
+    setStripeError(null);
+
+    try {
+      storePendingStripeOrder();
+      const config = await getStripeConfig();
+      const publishableKey = config?.publishableKey;
+
+      if (!publishableKey) {
+        throw new Error("No se pudo obtener la configuración de Stripe.");
+      }
+
+      const lineItems = buildStripeLineItems();
+      if (!lineItems.length) {
+        throw new Error("No fue posible preparar los artículos para el pago.");
+      }
+
+      const businessId = Number(idBussiness || localStorage.getItem("idBusiness") || 0);
+      if (!Number.isFinite(businessId) || businessId <= 0) {
+        throw new Error("No se pudo identificar el negocio.");
+      }
+
+      const session = await createCheckoutSession({
+        line_items: lineItems,
+        return_url: `${window.location.origin}/catalogo/${businessId}`,
+        connectedAccountId: stripeAccountId,
+        businessId,
+        ui_mode: "embedded",
+        customer_email: email || undefined,
+        metadata: {
+          paymentMethod: "tarjeta",
+          businessId: String(businessId),
+        },
+      });
+      logStripeDebug("Sesión Stripe creada", session);
+
+      if (!session?.checkoutSessionClientSecret) {
+        throw new Error(session?.message || "Stripe no devolvió una sesión válida.");
+      }
+      setEmbeddedCheckoutSecret(session.checkoutSessionClientSecret);
+      const sessionId = session.sessionId ?? null;
+      setEmbeddedCheckoutSessionId(sessionId);
+      if (sessionId) {
+        const pendingRaw = localStorage.getItem(pendingStripeOrderKey);
+        if (pendingRaw) {
+          try {
+            const pending = JSON.parse(pendingRaw);
+            localStorage.setItem(
+              pendingStripeOrderKey,
+              JSON.stringify({ ...pending, sessionId })
+            );
+          } catch {
+            // ignore
+          }
+        }
+      }
+      if (sessionId) {
+        startStripePolling(sessionId);
+      }
+    } catch (error: any) {
+      setStripeError(error?.message || "No se pudo iniciar el pago con Stripe.");
+    } finally {
+      setIsStripeLoading(false);
+    }
+  };
+
+  const saveOrder = async () => {
+    const { order, orderDetails } = buildOrderPayload();
     insertOrder(order, orderDetails).then((data) => console.log(data));
   };
 
 
   useEffect(() => {
+    let sameOriginReferrer = false;
+    if (document.referrer) {
+      try {
+        sameOriginReferrer = new URL(document.referrer).origin === window.location.origin;
+      } catch {
+        sameOriginReferrer = false;
+      }
+    }
+
+    const shouldInterceptBack = window.history.length <= 1 || !sameOriginReferrer;
+
+    if (!shouldInterceptBack) return;
+
+    const fallbackBusinessId = idBussiness || localStorage.getItem("idBusiness");
+    const fallbackRoute = fallbackBusinessId ? `/catalogo/${fallbackBusinessId}` : "/";
+
+    const handlePopState = () => {
+      navigate(fallbackRoute, { replace: true });
+    };
+
+    //window.history.pushState({ preventBack: true }, "", window.location.href);
+    //window.addEventListener("popstate", handlePopState);
+
+    return () => {
+      //window.removeEventListener("popstate", handlePopState);
+    };
+  }, [idBussiness, navigate]);
+
+  useEffect(() => {
+    const storedBusinessId = localStorage.getItem("cartBusinessId");
+    if (storedBusinessId && idBussiness && storedBusinessId !== idBussiness) {
+      localStorage.removeItem("cart");
+      localStorage.removeItem("cartBusinessId");
+      setCart([]);
+      return;
+    }
     if (cart.length === 0) {
       const storedCart = localStorage.getItem("cart");
       if (storedCart) {
@@ -121,7 +487,7 @@ export const Pedido: React.FC = () => {
         }
       }
     }
-  }, [cart, setCart]);
+  }, [cart.length, idBussiness, setCart]);
 
   useEffect(() => {
     const loadShippingOptions = async () => {
@@ -180,6 +546,26 @@ export const Pedido: React.FC = () => {
     loadShippingOptions();
   }, [idBussiness]);
 
+  useEffect(() => {
+    const loadBusinessStripeInfo = async () => {
+      const businessId = idBussiness || localStorage.getItem("idBusiness");
+      if (!businessId) return;
+
+      try {
+        const dataBusiness = await getBusinessById(businessId);
+        if (!dataBusiness) return;
+
+        setStripeAccountId(dataBusiness.StripeAccountId || null);
+        setStripeEnabled(Boolean(Number(dataBusiness.ChargesEnabled)));
+        setStripeCurrency((dataBusiness.MoneyTipe || "MXN").toUpperCase());
+      } catch (error) {
+        console.error("Error cargando Stripe del negocio:", error);
+      }
+    };
+
+    loadBusinessStripeInfo();
+  }, [idBussiness]);
+
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -217,6 +603,12 @@ export const Pedido: React.FC = () => {
       nombre?: string;
       email?: string;
       clientPhoneNumber?: string;
+      deliveryMethod?: string;
+      paymentMethod?: string;
+      calle?: string;
+      codigoPostal?: string;
+      municipio?: string;
+      estado?: string;
     } = {};
 
     if (shippingOptions.ContactInformation) {
@@ -235,66 +627,95 @@ export const Pedido: React.FC = () => {
       newErrors.email = "El email no es válido.";
     }
 
+    if (shippingOptions.ShippingMetod && !deliveryMethod) {
+      newErrors.deliveryMethod = "Selecciona un método de entrega.";
+    }
+
+    if (shippingOptions.PaymentMetod && !paymentMethod) {
+      newErrors.paymentMethod = "Selecciona un método de pago.";
+    }
+
+    if (deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled) {
+      if (shippingOptions.Street && !calle.trim()) {
+        newErrors.calle = "La calle es obligatoria.";
+      }
+      if (shippingOptions.ZipCode && !codigoPostal.trim()) {
+        newErrors.codigoPostal = "El código postal es obligatorio.";
+      }
+      if (shippingOptions.City && !municipio.trim()) {
+        newErrors.municipio = "El municipio es obligatorio.";
+      }
+      if (shippingOptions.State && !estado.trim()) {
+        newErrors.estado = "El estado es obligatorio.";
+      }
+    }
+
     setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      if (newErrors.nombre || newErrors.email || newErrors.clientPhoneNumber) {
+        setOpenSection("contact");
+      } else if (newErrors.deliveryMethod) {
+        setOpenSection("delivery");
+      } else if (newErrors.calle || newErrors.codigoPostal || newErrors.municipio || newErrors.estado) {
+        setOpenSection("address");
+      } else if (newErrors.paymentMethod) {
+        setOpenSection("payment");
+      }
+    }
     return Object.keys(newErrors).length === 0;
   };
 
 
   // Función para manejar el envío del formulario
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
+      if (paymentMethod === "tarjeta") {
+        await startStripeCheckout();
+        return;
+      }
       // Aquí puedes manejar el envío del formulario, por ejemplo, enviar los datos al servidor o preparar el mensaje para WhatsApp
       //tomamos el numero de la tienda y mandamos un mensaje de whatsapp
       //diciendo 'Hola he hecho un pedido con los siguientes productos...'
       saveOrder();
 
-      const addressText =
-        deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled
-          ? `Dirección: ${buildAddress()}`
-          : "";
-
-      const contactText = shippingOptions.ContactInformation
-        ? `Nombre: ${nombre}
-      Email: ${email || "No proporcionado"}
-      Teléfono: ${clientPhoneNumber}`
-        : "";
-
-      const paymentText = shippingOptions.PaymentMetod
-        ? `Método de pago: ${paymentMethod}`
-        : "";
-
-      const shippingText = shippingOptions.ShippingMetod
-        ? `Método de entrega: ${
-            deliveryMethod === "domicilio" ? "Entrega a domicilio" : "Recoger en tienda"
-          }`
-        : "";
-
-      const mensaje = `Hola, he hecho un pedido con los siguientes productos:
-        ${cart
-          .map(
-            (producto) =>
-              `${producto.Name}${
-                producto.VariantDescription ? ` (${producto.VariantDescription})` : ""
-              } x ${producto.Quantity || 1} $${(producto.Quantity || 1) * producto.Price}`
-          )
-          .join("\n")}
-        Total: $${totalPrecio.toFixed(2)}
-        ${shippingText}
-        ${paymentText}
-        ${contactText}
-        ${addressText}`.trim();
+      const mensaje = buildWhatsappMessage();
 
       const url = `https://wa.me/${storePhoneNumber}?text=${encodeURIComponent(
         mensaje
       )}`;
-      console.log(url);
       context.clearCart();
       window.open(url, "_blank");
+      const businessId = idBussiness || localStorage.getItem("idBusiness");
+      if (businessId) {
+       //window.location.assign(`/catalogo/${businessId}`);
+      } else {
+       // window.location.assign("/");
+      }
     } else {
       console.log("Formulario inválido, mostrando errores.");
     }
   };
+
+  useEffect(() => {
+    if (isCartView) return;
+    const order = [
+      "nombre",
+      "email",
+      "clientPhoneNumber",
+      "deliveryMethod",
+      "calle",
+      "codigoPostal",
+      "municipio",
+      "estado",
+      "paymentMethod",
+    ] as const;
+    const firstKey = order.find((key) => Boolean(errors[key]));
+    if (!firstKey) return;
+    requestAnimationFrame(() => {
+      fieldRefs[firstKey]?.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [errors, isCartView]);
 
   const incrementQuantity = (product: CartPos) => {
     const maxStock = product.Stock;
@@ -316,7 +737,10 @@ export const Pedido: React.FC = () => {
 
     if (hasChanged) {
       setCart(updatedCart);
-      localStorage.setItem('cart', JSON.stringify(updatedCart));
+      localStorage.setItem("cart", JSON.stringify(updatedCart));
+      if (idBussiness) {
+        localStorage.setItem("cartBusinessId", String(idBussiness));
+      }
       setQuantityWarnings((prev) => ({ ...prev, [key]: null }));
     }
   };
@@ -339,6 +763,9 @@ export const Pedido: React.FC = () => {
 
     setCart(updatedCart);
     localStorage.setItem("cart", JSON.stringify(updatedCart));
+    if (idBussiness) {
+      localStorage.setItem("cartBusinessId", String(idBussiness));
+    }
     setQuantityWarnings((prev) => ({ ...prev, [key]: null }));
   };
 
@@ -368,7 +795,10 @@ export const Pedido: React.FC = () => {
     });
 
     setCart(updatedCart);
-    localStorage.setItem('cart', JSON.stringify(updatedCart));
+    localStorage.setItem("cart", JSON.stringify(updatedCart));
+    if (idBussiness) {
+      localStorage.setItem("cartBusinessId", String(idBussiness));
+    }
     setQuantityWarnings((prev) => ({ ...prev, [key]: warning }));
   };
 
@@ -379,6 +809,104 @@ export const Pedido: React.FC = () => {
     shippingOptions.State ||
     shippingOptions.References;
 
+  const visibleSections = useMemo(
+    () => ({
+      contact: shippingOptions.ContactInformation,
+      delivery: shippingOptions.ShippingMetod,
+      address: hasAnyAddressFieldEnabled,
+      payment: shippingOptions.PaymentMetod,
+    }),
+    [hasAnyAddressFieldEnabled, shippingOptions]
+  );
+
+  useEffect(() => {
+    if (openSection) return;
+    const firstOpen =
+      (visibleSections.contact && "contact") ||
+      (visibleSections.delivery && "delivery") ||
+      (visibleSections.address && "address") ||
+      (visibleSections.payment && "payment") ||
+      null;
+    setOpenSection(firstOpen);
+  }, [openSection, visibleSections]);
+
+  useEffect(() => {
+    if (paymentMethod !== "tarjeta" && stripeError) {
+      setStripeError(null);
+    }
+  }, [paymentMethod, stripeError]);
+
+  useEffect(() => {
+    if (!embeddedCheckoutSecret) {
+      stopStripePolling();
+      if (embeddedCheckoutInstanceRef.current?.destroy) {
+        embeddedCheckoutInstanceRef.current.destroy();
+      } else if (embeddedCheckoutInstanceRef.current?.unmount) {
+        embeddedCheckoutInstanceRef.current.unmount();
+      }
+      embeddedCheckoutInstanceRef.current = null;
+      return;
+    }
+
+    let isCancelled = false;
+
+    const mountEmbeddedCheckout = async () => {
+      try {
+        const config = await getStripeConfig();
+        const publishableKey = config?.publishableKey;
+        if (!publishableKey) {
+          throw new Error("No se pudo obtener la configuración de Stripe.");
+        }
+
+        const stripe = await getStripe(publishableKey);
+        const checkout = await stripe.initEmbeddedCheckout({
+          clientSecret: embeddedCheckoutSecret,
+          onComplete: async () => {
+            if (embeddedCheckoutSessionId) {
+              await finalizeStripeOrder(embeddedCheckoutSessionId);
+            }
+          },
+        } as any);
+        if (isCancelled) return;
+        embeddedCheckoutInstanceRef.current = checkout;
+
+        const container = embeddedCheckoutRef.current;
+        if (container) {
+          container.innerHTML = "";
+          checkout.mount(container);
+        }
+      } catch (error: any) {
+        setStripeError(error?.message || "No se pudo cargar el checkout.");
+        setEmbeddedCheckoutSecret(null);
+      }
+    };
+
+    mountEmbeddedCheckout();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [embeddedCheckoutSecret, embeddedCheckoutSessionId]);
+
+  useEffect(() => {
+    if (isCartView) return;
+
+    const params = new URLSearchParams(location.search);
+    const sessionId = params.get("session_id") || params.get("sessionId");
+    if (!sessionId) return;
+
+    const alreadyProcessed = localStorage.getItem(processedStripeSessionKey);
+    if (alreadyProcessed === sessionId) return;
+
+    finalizeStripeOrder(sessionId);
+  }, [context, idBussiness, isCartView, location.search]);
+
+  useEffect(() => {
+    return () => {
+      stopStripePolling();
+    };
+  }, []);
+
   if (loadingShippingOptions) {
     return (
       <HelmetProvider>
@@ -386,10 +914,10 @@ export const Pedido: React.FC = () => {
           <Helmet>
             <meta name="theme-color" content={color || "#6D01D1"} />
           </Helmet>
-          <div className="min-h-screen flex items-center justify-center px-4">
+          <div className="min-h-screen flex items-center justify-center px-4 bg-[var(--bg-primary)]">
             <div className="bg-white shadow-lg rounded-xl p-6 text-center">
-              <p className="text-gray-700 font-semibold">Cargando formulario…</p>
-              <p className="text-gray-500 text-sm mt-1">Preparando campos del negocio</p>
+              <p className="text-[var(--text-primary)] font-semibold">Cargando formulario…</p>
+              <p className="text-[var(--text-secondary)] text-sm mt-1">Preparando campos del negocio</p>
             </div>
           </div>
         </>
@@ -397,331 +925,526 @@ export const Pedido: React.FC = () => {
     );
   }
 
+  const pageTitle = isCartView ? "Finaliza el pedido" : "Información del pedido";
+
   return (
     <HelmetProvider>
       <>
         <Helmet>
           <meta name="theme-color" content={color || "#6D01D1"} />
         </Helmet>
-        <div className="py-20 px-4 lg:px-0 max-w-lg md:max-w-2xl lg:w-3/4 mx-auto">
+        <div
+          className={`pt-28 ${isCartView ? "pb-32" : "pb-24"} px-4 ${
+            isCartView ? "max-w-6xl" : "max-w-xl"
+          } mx-auto min-h-screen bg-[var(--bg-primary)]`}
+        >
           {/* Resumen del pedido */}
-          <h1 className="text-3xl font-bold mt-12 mb-6 text-center text-gray-800">
-            Preparemos su pedido
+          <h1 className="text-2xl font-semibold mt-6 mb-6 text-center text-[var(--text-primary)]">
+            {pageTitle}
           </h1>
-          <div className="bg-white p-6 rounded-lg shadow-lg">
-            <h2 className="text-2xl font-semibold mb-4 text-gray-800">Su pedido</h2>
-            <div className="divide-y divide-gray-200">
-                {cart.map((producto: CartPos) => (
-                <div
-                  key={`${producto.Id}-${producto.Variant_Id ?? "base"}`}
-                  className="py-4 flex items-center justify-between"
-                >
-                  <img
-                    src={producto.Image || (producto.Images && producto.Images[0]) || ""}
-                    alt={producto.Name}
-                    className="w-16 h-16 object-cover rounded-lg mr-4"
-                  />
-                  <div className="flex flex-col flex-grow">
-                    <span className="font-medium text-gray-800">{producto.Name}</span>
-                    {producto.VariantDescription && (
-                      <span className="text-sm text-gray-500">{producto.VariantDescription}</span>
-                    )}
-                    <span className="text-gray-500">${producto.Price} x {producto.Quantity || 1}</span>
-                  </div>
 
-                  <div className="flex flex-col items-end">
-                    <span className="text-gray-800 font-semibold">
-                      ${(producto.Price * (producto.Quantity || 1)).toFixed(2)}
-                    </span>
-                    <div className="flex items-center space-x-4 mt-2">
-                      {producto.Quantity! > 1 ? (
-                        <button
-                          onClick={() => decrementQuantity(producto)}
-                          className="text-red-600 text-lg"
-                        >
-                          -
-                        </button>
-                      ) : (
-                        <button onClick={() => decrementQuantity(producto)}>
-                          <img src={trash} alt="Eliminar" className="text-red-600" />
-                        </button>
-                      )}
-                      <input
-                        type="number"
-                        min={producto.Stock === 0 ? 0 : 1}
-                        max={producto.Stock ?? undefined}
-                        value={producto.Quantity ?? 1}
-                        onChange={(e) => handleManualQuantityChange(producto, e.target.value)}
-                        className="w-16 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        aria-label={`Cantidad para ${producto.Name}${
-                          producto.VariantDescription ? ` (${producto.VariantDescription})` : ""
-                        }`}
-                      />
-                      <button
-                        onClick={() => incrementQuantity(producto)}
-                        className="text-green-600 text-lg"
+          {isCartView && (
+            <div className="md:flex md:items-start md:gap-10">
+              <div className="flex-1">
+                <h2 className="text-lg font-semibold mb-6 text-[var(--text-primary)]">Tu carrito</h2>
+                <div className="divide-y divide-[var(--border-default)]">
+                  {cart.map((producto: CartPos) => {
+                    const hasPromo =
+                      producto.PromotionPrice != null &&
+                      producto.PromotionPrice > 0 &&
+                      producto.PromotionPrice < producto.Price;
+                    const unitPrice = hasPromo ? producto.PromotionPrice : producto.Price;
+                    const totalLine = ((unitPrice ? unitPrice : 1)   * (producto.Quantity || 1)).toFixed(2);
+
+                    return (
+                      <div
+                        key={`${producto.Id}-${producto.Variant_Id ?? "base"}`}
+                        className="py-6 flex items-center gap-5"
                       >
-                        +
-                      </button>
-                    </div>
-                    {quantityWarnings[getProductKey(producto)] && (
-                      <p className="text-xs text-red-600 mt-1 max-w-[10rem] text-right">
-                        {quantityWarnings[getProductKey(producto)]}
-                      </p>
-                    )}
-                  </div>
-
-
-
+                        <img
+                          src={producto.Image || (producto.Images && producto.Images[0]) || ""}
+                          alt={producto.Name}
+                          className="w-24 h-24 object-cover rounded-[var(--radius-md)] bg-[var(--bg-subtle)]"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-base font-semibold text-[var(--text-primary)] break-words">
+                            {producto.Name}
+                            {producto.VariantDescription ? `, ${producto.VariantDescription}` : ""}
+                          </p>
+                          <div className="mt-2 flex items-center gap-3">
+                            {hasPromo && (
+                              <span className="text-sm text-[var(--text-muted)] line-through">
+                                ${producto.Price.toFixed(2)}
+                              </span>
+                            )}
+                            <span className="text-lg font-semibold text-[var(--text-primary)]">
+                              ${unitPrice ? unitPrice.toFixed(2) : "0.00"}
+                            </span>
+                          </div>
+                          <div className="mt-4 flex items-center gap-4">
+                            {producto.Quantity! > 1 ? (
+                              <button
+                                onClick={() => decrementQuantity(producto)}
+                                className="w-10 h-10 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg flex items-center justify-center"
+                              >
+                                −
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => decrementQuantity(producto)}
+                                className="w-10 h-10 rounded-full bg-[var(--bg-subtle)] flex items-center justify-center"
+                              >
+                                <img src={trash} alt="Eliminar" className="w-5 h-5" />
+                              </button>
+                            )}
+                            <input
+                              type="number"
+                              min={1}
+                              max={producto.Stock ?? undefined}
+                              inputMode="numeric"
+                              value={producto.Quantity ?? 1}
+                              onChange={(e) =>
+                                handleManualQuantityChange(producto, e.target.value)
+                              }
+                              className="w-16 h-10 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-2 text-center text-base font-semibold text-[var(--text-primary)]"
+                              aria-label={`Cantidad de ${producto.Name}`}
+                            />
+                            <button
+                              onClick={() => incrementQuantity(producto)}
+                              className="w-10 h-10 rounded-full bg-[var(--action-primary)] text-[var(--text-inverse)] text-lg flex items-center justify-center"
+                            >
+                              +
+                            </button>
+                          </div>
+                          {quantityWarnings[getProductKey(producto)] && (
+                            <p className="text-xs text-[var(--state-error)] mt-2">
+                              {quantityWarnings[getProductKey(producto)]}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
+              </div>
 
-            <div className="flex justify-between items-center mt-6 text-lg font-semibold text-gray-800">
-              <span>
-                Total artículos ({totalArticulos} artículo
-                {totalArticulos > 1 ? "s" : ""})
-              </span>
-              <span>${totalPrecio.toFixed(2)}</span>
+              <div className="mt-6 md:mt-0 md:w-80 md:sticky md:top-28 self-start">
+                <div className="rounded-[var(--radius-lg)] border border-[var(--border-default)] bg-[var(--bg-surface)] p-5 shadow-sm">
+                  <div className="flex items-center justify-between text-sm font-semibold text-[var(--text-primary)]">
+                    <span>Total de artículos</span>
+                    <span>{totalArticulos}</span>
+                  </div>
+                  <div className="mt-3 flex items-center justify-between text-sm font-semibold">
+                    <span className="text-[var(--text-primary)]">Total</span>
+                    <span className="text-[var(--state-error)]">
+                      ${totalPrecio.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="mt-6 sticky bottom-4 z-10">
+                  <button
+                    type="button"
+                    onClick={() => navigate("/catalogo/pedido-info")}
+                    className="w-full rounded-full bg-[var(--action-primary)] text-[var(--text-inverse)] py-4 text-lg font-semibold shadow-lg"
+                    disabled={cart.length === 0}
+                  >
+                    Pagar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate(-1)}
+                    className="mt-4 w-full rounded-full bg-[var(--action-disabled)] text-[var(--text-primary)] py-4 text-lg font-semibold"
+                  >
+                    Seguir comprando
+                  </button>
+                </div>
+              </div>
             </div>
-            {cart.length > 0 && (
+          )}
+            {isCartView && cart.length > 0 && (
               <div className="flex justify-center mt-6">
                 <span
                   onClick={() => {
                     setShowModal(true);
                   }}
-                  className="text-red-500 cursor-pointer hover:underline"
+                  className="text-[var(--state-error)] cursor-pointer hover:underline text-sm"
                 >
                   Limpiar Carrito
                 </span>
               </div>
             )}
-          </div>
 
           {/* Formulario para el nombre y contacto */}
+          {!isCartView && (
           <form onSubmit={handleSubmit}>
             {shippingOptions.ContactInformation && (
-            <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-                Información de contacto
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex flex-col">
-                  <label className="text-gray-700">Nombre completo</label>
+            <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
+              <button
+                type="button"
+                onClick={() => setOpenSection((prev) => (prev === "contact" ? null : "contact"))}
+                className="w-full flex items-center justify-between"
+              >
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                  Información de contacto
+                </h2>
+                <span
+                  className={`text-[var(--text-secondary)] transition-transform ${
+                    openSection === "contact" ? "rotate-180" : ""
+                  }`}
+                >
+                  ▾
+                </span>
+              </button>
+              <div
+                className={`overflow-hidden transition-all duration-200 ease-out ${
+                  openSection === "contact"
+                    ? "max-h-[900px] opacity-100 translate-y-0"
+                    : "max-h-0 opacity-0 -translate-y-2"
+                }`}
+              >
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div ref={fieldRefs.nombre} className="flex flex-col">
+                  <label className="text-sm text-[var(--text-secondary)]">Nombre completo</label>
                   <input
                     type="text"
                     value={nombre}
                     onChange={(e) => setNombre(e.target.value)}
-                    className={`bg-white w-full p-3 border ${errors.nombre ? "border-red-500" : "border-gray-300"
-                      } rounded-lg focus:outline-none focus:border-gray-500`}
+                    className={`bg-[var(--bg-subtle)] w-full p-3 border ${errors.nombre ? "border-[var(--state-error)]" : "border-[var(--border-default)]"
+                      } rounded-[var(--radius-md)] focus:outline-none`}
                     placeholder="Introduce tu nombre"
                   />
                   {errors.nombre && (
-                    <span className="text-red-500 text-sm mt-1">
+                    <span className="text-[var(--state-error)] text-sm mt-1">
                       {errors.nombre}
                     </span>
                   )}
                 </div>
-                <div className="flex flex-col">
-                  <label className="text-gray-700">Email (opcional)</label>
+                <div ref={fieldRefs.email} className="flex flex-col">
+                  <label className="text-sm text-[var(--text-secondary)]">Email (opcional)</label>
                   <input
                     type="email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className={`bg-white w-full p-3 border ${errors.email ? "border-red-500" : "border-gray-300"
-                      } rounded-lg focus:outline-none focus:border-gray-500`}
+                    className={`bg-[var(--bg-subtle)] w-full p-3 border ${errors.email ? "border-[var(--state-error)]" : "border-[var(--border-default)]"
+                      } rounded-[var(--radius-md)] focus:outline-none`}
                     placeholder="Introduce tu email"
                   />
                   {errors.email && (
-                    <span className="text-red-500 text-sm mt-1">
+                    <span className="text-[var(--state-error)] text-sm mt-1">
                       {errors.email}
                     </span>
                   )}
                 </div>
-                <div className="md:col-span-2 flex flex-col">
-                  <label className="text-gray-700">Teléfono móvil</label>
+                <div ref={fieldRefs.clientPhoneNumber} className="md:col-span-2 flex flex-col">
+                  <label className="text-sm text-[var(--text-secondary)]">Teléfono móvil</label>
                   <input
                     type="text"
                     value={clientPhoneNumber}
                     onChange={(e) => setClientPhoneNumber(e.target.value)}
-                    className={`bg-white w-full p-3 border ${errors.clientPhoneNumber
-                      ? "border-red-500"
-                      : "border-gray-300"
-                      } rounded-lg focus:outline-none focus:border-gray-500`}
+                    className={`bg-[var(--bg-subtle)] w-full p-3 border ${errors.clientPhoneNumber
+                      ? "border-[var(--state-error)]"
+                      : "border-[var(--border-default)]"
+                      } rounded-[var(--radius-md)] focus:outline-none`}
                     placeholder="Introduce tu teléfono"
                   />
                   {errors.clientPhoneNumber && (
-                    <span className="text-red-500 text-sm mt-1">
+                    <span className="text-[var(--state-error)] text-sm mt-1">
                       {errors.clientPhoneNumber}
                     </span>
                   )}
                 </div>
               </div>
+              </div>
             </div>)}
           {/* Método de entrega */}
           {shippingOptions.ShippingMetod && (
-            
-            <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-              <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-                Método de entrega
-              </h2>
-              <div className="flex items-center mb-4">
-                <FiTruck className="text-gray-600 mr-2" size={24} />
-                <label className="text-gray-700">
-                  Seleccione el método de entrega
-                </label>
-              </div>
-              <select
-                value={deliveryMethod}
-                onChange={(e) => setDeliveryMethod(e.target.value)}
-                className="bg-white w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
+            <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
+              <button
+                type="button"
+                onClick={() => setOpenSection((prev) => (prev === "delivery" ? null : "delivery"))}
+                className="w-full flex items-center justify-between"
               >
-                <option value="domicilio">Entrega a domicilio</option>
-                <option value="recoger">Recoger en tienda</option>
-              </select>
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                  Método de entrega
+                </h2>
+                <span
+                  className={`text-[var(--text-secondary)] transition-transform ${
+                    openSection === "delivery" ? "rotate-180" : ""
+                  }`}
+                >
+                  ▾
+                </span>
+              </button>
+              <div
+                className={`overflow-hidden transition-all duration-200 ease-out ${
+                  openSection === "delivery"
+                    ? "max-h-[500px] opacity-100 translate-y-0"
+                    : "max-h-0 opacity-0 -translate-y-2"
+                }`}
+              >
+                <div ref={fieldRefs.deliveryMethod} className="mt-4 flex items-center mb-4">
+                  <FiTruck className="text-[var(--text-muted)] mr-2" size={20} />
+                  <label className="text-sm text-[var(--text-secondary)]">
+                    Seleccione el método de entrega
+                  </label>
+                </div>
+                <select
+                  value={deliveryMethod}
+                  onChange={(e) => setDeliveryMethod(e.target.value)}
+                  className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)] focus:outline-none"
+                >
+                  <option value="domicilio">Entrega a domicilio</option>
+                  <option value="recoger">Recoger en tienda</option>
+                </select>
+                {errors.deliveryMethod && (
+                  <span className="text-[var(--state-error)] text-sm mt-2 block">
+                    {errors.deliveryMethod}
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
             {deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled && (
-              <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-                <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-                  Dirección de entrega
-                </h2>
+              <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
+                <button
+                  type="button"
+                  onClick={() => setOpenSection((prev) => (prev === "address" ? null : "address"))}
+                  className="w-full flex items-center justify-between"
+                >
+                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                    Dirección de entrega
+                  </h2>
+                  <span
+                    className={`text-[var(--text-secondary)] transition-transform ${
+                      openSection === "address" ? "rotate-180" : ""
+                    }`}
+                  >
+                    ▾
+                  </span>
+                </button>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div
+                  className={`overflow-hidden transition-all duration-200 ease-out ${
+                    openSection === "address"
+                      ? "max-h-[900px] opacity-100 translate-y-0"
+                      : "max-h-0 opacity-0 -translate-y-2"
+                  }`}
+                >
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
                   {shippingOptions.Street && (
-                    <div className="flex flex-col">
-                      <label className="text-gray-700">Calle</label>
+                    <div ref={fieldRefs.calle} className="flex flex-col">
+                      <label className="text-sm text-[var(--text-secondary)]">Calle</label>
                       <input
                         type="text"
                         value={calle}
                         onChange={(e) => setCalle(e.target.value)}
-                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
                         placeholder="Introduce tu calle"
                       />
+                      {errors.calle && (
+                        <span className="text-[var(--state-error)] text-sm mt-1">
+                          {errors.calle}
+                        </span>
+                      )}
                     </div>
                   )}
 
                   {shippingOptions.ZipCode && (
-                    <div className="flex flex-col">
-                      <label className="text-gray-700">Código Postal</label>
+                    <div ref={fieldRefs.codigoPostal} className="flex flex-col">
+                      <label className="text-sm text-[var(--text-secondary)]">Código Postal</label>
                       <input
                         type="text"
                         value={codigoPostal}
                         onChange={(e) => setCodigoPostal(e.target.value)}
-                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
                         placeholder="Código Postal"
                       />
+                      {errors.codigoPostal && (
+                        <span className="text-[var(--state-error)] text-sm mt-1">
+                          {errors.codigoPostal}
+                        </span>
+                      )}
                     </div>
                   )}
 
                   {shippingOptions.City && (
-                    <div className="flex flex-col">
-                      <label className="text-gray-700">Municipio</label>
+                    <div ref={fieldRefs.municipio} className="flex flex-col">
+                      <label className="text-sm text-[var(--text-secondary)]">Municipio</label>
                       <input
                         type="text"
                         value={municipio}
                         onChange={(e) => setMunicipio(e.target.value)}
-                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
                         placeholder="Municipio"
                       />
+                      {errors.municipio && (
+                        <span className="text-[var(--state-error)] text-sm mt-1">
+                          {errors.municipio}
+                        </span>
+                      )}
                     </div>
                   )}
 
                   {shippingOptions.State && (
-                    <div className="flex flex-col">
-                      <label className="text-gray-700">Estado</label>
+                    <div ref={fieldRefs.estado} className="flex flex-col">
+                      <label className="text-sm text-[var(--text-secondary)]">Estado</label>
                       <input
                         type="text"
                         value={estado}
                         onChange={(e) => setEstado(e.target.value)}
-                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
                         placeholder="Estado"
                       />
+                      {errors.estado && (
+                        <span className="text-[var(--state-error)] text-sm mt-1">
+                          {errors.estado}
+                        </span>
+                      )}
                     </div>
                   )}
 
                   {shippingOptions.References && (
                     <div className="md:col-span-2 flex flex-col">
-                      <label className="text-gray-700">Referencia (opcional)</label>
+                      <label className="text-sm text-[var(--text-secondary)]">Referencia (opcional)</label>
                       <input
                         type="text"
                         value={referencia}
                         onChange={(e) => setReferencia(e.target.value)}
-                        className="bg-white w-full p-3 border border-gray-300 rounded-lg"
+                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
                         placeholder="Introduce una referencia (opcional)"
                       />
                     </div>
                   )}
+                </div>
                 </div>
               </div>
             )}
 
             {/* Método de pago */}
             {shippingOptions.PaymentMetod && (
-              <div className="bg-white p-6 rounded-lg shadow-lg mt-6">
-                <h2 className="text-2xl font-semibold mb-4 text-gray-800">
-                  Método de pago
-                </h2>
-                <div className="flex items-center mb-4">
-                  <FiCreditCard className="text-gray-600 mr-2" size={24} />
-                  <label className="text-gray-700">Seleccione un método de pago</label>
-                </div>
-                <select
-                  value={paymentMethod}
-                  onChange={(e) => setPaymentMethod(e.target.value)}
-                  className="bg-white w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-gray-500"
+              <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
+                <button
+                  type="button"
+                  onClick={() => setOpenSection((prev) => (prev === "payment" ? null : "payment"))}
+                  className="w-full flex items-center justify-between"
                 >
-                  <option value="transferencia">Transferencia bancaria</option>
-                  <option value="dinero">Dinero en efectivo</option>
-                  <option value="tarjeta">Tarjeta de crédito o débito</option>
-                  <option value="enlace">Enlace de pago</option>
-                </select>
+                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                    Método de pago
+                  </h2>
+                  <span
+                    className={`text-[var(--text-secondary)] transition-transform ${
+                      openSection === "payment" ? "rotate-180" : ""
+                    }`}
+                  >
+                    ▾
+                  </span>
+                </button>
+                <div
+                  className={`overflow-hidden transition-all duration-200 ease-out ${
+                    openSection === "payment"
+                      ? "max-h-[500px] opacity-100 translate-y-0"
+                      : "max-h-0 opacity-0 -translate-y-2"
+                  }`}
+                >
+                  <div ref={fieldRefs.paymentMethod} className="mt-4 flex items-center mb-4">
+                    <FiCreditCard className="text-[var(--text-muted)] mr-2" size={20} />
+                    <label className="text-sm text-[var(--text-secondary)]">Seleccione un método de pago</label>
+                  </div>
+                  <select
+                    value={paymentMethod}
+                    onChange={(e) => setPaymentMethod(e.target.value)}
+                    className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)] focus:outline-none"
+                  >
+                    <option value="transferencia">Transferencia bancaria</option>
+                    <option value="dinero">Dinero en efectivo</option>
+                    <option value="tarjeta" disabled={!canUseStripe}>
+                      {canUseStripe
+                        ? "Tarjeta de crédito o débito"
+                        : "Tarjeta de crédito o débito (no disponible)"}
+                    </option>
+                    <option value="enlace">Enlace de pago</option>
+                  </select>
+                  {errors.paymentMethod && (
+                    <span className="text-[var(--state-error)] text-sm mt-2 block">
+                      {errors.paymentMethod}
+                    </span>
+                  )}
+                  {stripeError && (
+                    <span className="text-[var(--state-error)] text-sm mt-2 block">
+                      {stripeError}
+                    </span>
+                  )}
+                </div>
               </div>
             )}
 
             {/* Botón para continuar */}
-            <div className="flex justify-center mt-8">
+            <div className="mt-8 flex flex-col gap-4">
               <button
                 type="submit"
-                style={{
-                  backgroundColor: color || '#6D01D1', // Color de fondo dinámico basado en el estado 'color'
-                  transition: 'background-color 0.3s ease-in-out', // Transición suave para el color
-                }}
-                onMouseEnter={(e) =>
-                  (e.currentTarget.style.backgroundColor = adjustColor(color || '#6D01D1')) // Oscurece el color en hover
-                }
-                onMouseLeave={(e) =>
-                  (e.currentTarget.style.backgroundColor = color || '#6D01D1') // Vuelve al color original al quitar el hover
-                }
-                className="text-white py-3 px-8 rounded-full shadow-lg"
+                className="w-full rounded-full bg-[var(--action-primary)] text-white py-4 text-lg font-semibold shadow-sm disabled:opacity-70"
+                disabled={isStripeLoading}
               >
-                PREPARAR EL PEDIDO
+                {isStripeLoading ? "Abriendo Stripe..." : "Preparar pedido"}
               </button>
-
+              <button
+                type="button"
+                onClick={() => navigate("/catalogo/pedido")}
+                className="w-full rounded-full bg-[var(--action-disabled)] text-white py-4 text-lg font-semibold"
+              >
+                Seguir comprando
+              </button>
             </div>
           </form>
+          )}
 
-          {/* Mostrar el número de la tienda */}
-          <div className="mt-6 text-center">
-            <FiPhone className="inline-block text-gray-600 mr-2" size={20} />
-            <p className="text-gray-600 inline-block">
-              Contacto de la tienda: {storePhoneNumber}
-            </p>
-          </div>
+          {!isCartView && (
+            <div className="mt-6 text-center">
+              <FiPhone className="inline-block text-[var(--text-muted)] mr-2" size={18} />
+              <p className="text-[var(--text-secondary)] text-sm inline-block">
+                Contacto de la tienda: {storePhoneNumber}
+              </p>
+            </div>
+          )}
+          {embeddedCheckoutSecret && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6">
+              <div className="w-full max-w-2xl max-h-[90vh] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--bg-surface)] p-4 shadow-xl">
+                <div className="mb-4 flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-[var(--text-primary)]">
+                    Pago con tarjeta
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => setEmbeddedCheckoutSecret(null)}
+                    className="rounded-full bg-[var(--action-disabled)] px-4 py-2 text-sm font-semibold text-white"
+                  >
+                    Cerrar
+                  </button>
+                </div>
+                <div className="max-h-[calc(90vh-120px)] overflow-y-auto">
+                  <div
+                    ref={embeddedCheckoutRef}
+                    className="min-h-[500px] rounded-[var(--radius-md)] bg-white"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
           {/* MODAL QUE VIENE DE ABAJO DE LA PANTALLA PARA PREGUNTAR SI ESTA SEGURO QUE QUIERE ELIMINAR EL CARRITO */}
-          {cart.length > 0 && (
+          {isCartView && cart.length > 0 && (
             <div
-              className={`fixed inset-0 flex items-end justify-center bg-black bg-opacity-50 transition-opacity duration-300 ${showModal ? "opacity-100" : "opacity-0 pointer-events-none"
+              className={`fixed inset-0 flex items-end justify-center bg-black/50 transition-opacity duration-300 ${showModal ? "opacity-100" : "opacity-0 pointer-events-none"
                 }`}
             >
-              <div className="bg-white rounded-t-lg p-6 w-full ">
-                <h2 className="text-xl font-semibold mb-4 text-center">¿Estás seguro?</h2>
-                <p className="mb-6 text-center">¿Quieres eliminar todos los productos del carrito?</p>
-                <div className="flex justify-center space-x-4 ">
+              <div className="bg-[var(--bg-surface)] rounded-t-[var(--radius-lg)] p-6 w-full border border-[var(--border-default)]">
+                <h2 className="text-lg font-semibold mb-2 text-center text-[var(--text-primary)]">¿Estás seguro?</h2>
+                <p className="mb-6 text-center text-sm text-[var(--text-secondary)]">¿Quieres eliminar todos los productos del carrito?</p>
+                <div className="flex justify-center space-x-4">
                   <button
                     onClick={() => setShowModal(false)}
-                    className="bg-gray-300 text-gray-800 py-2 px-6 rounded-full shadow-md hover:bg-gray-400 transition-all duration-300 ease-in-out"
+                    className="bg-[var(--action-disabled)] text-white py-2 px-6 rounded-full shadow-sm"
                   >
                     Cancelar
                   </button>
@@ -730,7 +1453,7 @@ export const Pedido: React.FC = () => {
                       context.clearCart();
                       setShowModal(false);
                     }}
-                    className="bg-red-600 text-white py-2 px-6 rounded-full shadow-md hover:bg-red-700 transition-all duration-300 ease-in-out"
+                    className="bg-[var(--state-error)] text-white py-2 px-6 rounded-full shadow-sm"
                   >
                     Eliminar
                   </button>
@@ -741,18 +1464,18 @@ export const Pedido: React.FC = () => {
 
 
           {/* MODAL QUE VIENE DE ABAJO DE LA PANTALLA PARA PREGUNTAR SI ESTA SEGURO QUE QUIERE ELIMINAR EL producto */}
-          {showModalProduct && (
+          {isCartView && showModalProduct && (
             <div
-              className={`fixed inset-0 flex items-end justify-center bg-black bg-opacity-50 transition-opacity duration-300 ${showModalProduct ? "opacity-100" : "opacity-0 pointer-events-none"
+              className={`fixed inset-0 flex items-end justify-center bg-black/50 transition-opacity duration-300 ${showModalProduct ? "opacity-100" : "opacity-0 pointer-events-none"
                 }`}
             >
-              <div className="bg-white rounded-t-lg p-6 w-full ">
-                <h2 className="text-xl font-semibold mb-4 text-center">¿Estás seguro?</h2>
-                <p className="mb-6 text-center">¿Quieres eliminar el producto del carrito?</p>
-                <div className="flex justify-center space-x-4 ">
+              <div className="bg-[var(--bg-surface)] rounded-t-[var(--radius-lg)] p-6 w-full border border-[var(--border-default)]">
+                <h2 className="text-lg font-semibold mb-2 text-center text-[var(--text-primary)]">¿Estás seguro?</h2>
+                <p className="mb-6 text-center text-sm text-[var(--text-secondary)]">¿Quieres eliminar el producto del carrito?</p>
+                <div className="flex justify-center space-x-4">
                   <button
                     onClick={() => setShowModalProduct(false)}
-                    className="bg-gray-300 text-gray-800 py-2 px-6 rounded-full shadow-md hover:bg-gray-400 transition-all duration-300 ease-in-out"
+                    className="bg-[var(--action-disabled)] text-white py-2 px-6 rounded-full shadow-sm"
                   >
                     Cancelar
                   </button>
@@ -763,7 +1486,7 @@ export const Pedido: React.FC = () => {
                         context.removeProductFromCart(deleteProduct.id.toString(), deleteProduct.variantId ?? null);
                       }
                     }}
-                    className="bg-red-600 text-white py-2 px-6 rounded-full shadow-md hover:bg-red-700 transition-all duration-300 ease-in-out"
+                    className="bg-[var(--state-error)] text-white py-2 px-6 rounded-full shadow-sm"
                   >
                     Eliminar
                   </button>

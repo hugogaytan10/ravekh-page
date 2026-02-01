@@ -16,6 +16,15 @@ export const ProductCarousel: React.FC<Props> = ({ images, alt, className }) => 
   const prev = () => setIndex((i) => (i - 1 + validImages.length) % validImages.length);
   const go = (i: number) => setIndex(i);
 
+  // autoplay
+  useEffect(() => {
+    if (validImages.length <= 1) return;
+    const interval = setInterval(() => {
+      setIndex((i) => (i + 1) % validImages.length);
+    }, 3500);
+    return () => clearInterval(interval);
+  }, [validImages.length]);
+
   // soporte teclado (← →)
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -55,79 +64,66 @@ export const ProductCarousel: React.FC<Props> = ({ images, alt, className }) => 
 
   if (validImages.length === 0) {
     return (
-      <div className={`w-full h-96 bg-gray-100 rounded-lg ${className ?? ""}`} />
+      <div className={`w-full aspect-[4/5] bg-[var(--bg-subtle)] rounded-[var(--radius-lg)] ${className ?? ""}`} />
     );
   }
 
   return (
-    <div
-      ref={containerRef}
-      className={`relative w-full select-none ${className ?? ""}`}
-      tabIndex={0}
-      aria-roledescription="carousel"
-      aria-label="Galería de imágenes del producto"
-    >
-      <div className="w-full h-96 overflow-hidden rounded-lg bg-gray-50">
-        <AnimatePresence mode="wait">
-          <motion.img
-            key={validImages[index]}
-            src={validImages[index]}
-            alt={alt}
-            loading="lazy"
-            className="w-full h-96 object-cover"
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -20 }}
-            transition={{ duration: 0.25 }}
-          />
-        </AnimatePresence>
+    <div className={`w-full ${className ?? ""}`}>
+      <div
+        ref={containerRef}
+        className="relative w-full select-none"
+        tabIndex={0}
+        aria-roledescription="carousel"
+        aria-label="Galería de imágenes del producto"
+      >
+        <div className="w-full aspect-[4/5] overflow-hidden rounded-[var(--radius-lg)] bg-[var(--bg-subtle)]">
+          <AnimatePresence mode="wait">
+            <motion.img
+              key={validImages[index]}
+              src={validImages[index]}
+              alt={alt}
+              loading="lazy"
+              className="w-full h-full object-cover"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={{ duration: 0.25 }}
+            />
+          </AnimatePresence>
+        </div>
       </div>
 
-      {/* Controles */}
       {validImages.length > 1 && (
-        <>
-          <button
-            onClick={prev}
-            aria-label="Imagen anterior"
-            className="absolute left-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white shadow rounded-full w-10 h-10 grid place-content-center"
-          >
-            ‹
-          </button>
-          <button
-            onClick={next}
-            aria-label="Imagen siguiente"
-            className="absolute right-3 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white shadow rounded-full w-10 h-10 grid place-content-center"
-          >
-            ›
-          </button>
-
-          {/* Indicadores */}
-          <div className="absolute bottom-3 inset-x-0 flex items-center justify-center gap-2">
-            {validImages.map((_, i) => (
-              <button
-                key={i}
-                onClick={() => go(i)}
-                aria-label={`Ir a la imagen ${i + 1}`}
-                className={`h-2 rounded-full transition-all ${i === index ? "w-6 bg-white shadow" : "w-2 bg-white/60"}`}
-              />
-            ))}
-          </div>
-        </>
-      )}
-
-      {/* Thumbnails */}
-      {validImages.length > 1 && (
-        <div className="mt-3 flex gap-2 overflow-x-auto">
-          {validImages.map((src, i) => (
+        <div className="mt-4 flex items-center gap-2">
+          {validImages.map((_, i) => (
             <button
-              key={src + i}
+              key={i}
               onClick={() => go(i)}
-              className={`h-16 w-16 flex-shrink-0 rounded-md overflow-hidden border ${i === index ? "border-black/60" : "border-transparent"}`}
-              aria-label={`Miniatura ${i + 1}`}
-            >
-              <img src={src} alt={`${alt} miniatura ${i + 1}`} className="w-full h-full object-cover" loading="lazy" />
-            </button>
+              aria-label={`Ir a la imagen ${i + 1}`}
+              className={`h-2 rounded-full transition-all ${
+                i === index
+                  ? "w-6 bg-[var(--text-primary)]"
+                  : "w-2 bg-[var(--border-default)]"
+              }`}
+            />
           ))}
+          <div className="ml-auto flex gap-2 text-[var(--text-secondary)]">
+            <button
+              onClick={prev}
+              aria-label="Imagen anterior"
+              className="w-9 h-9 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] grid place-content-center"
+            >
+              ‹
+            </button>
+            <button
+              onClick={next}
+              aria-label="Imagen siguiente"
+              className="w-9 h-9 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] grid place-content-center"
+            >
+              ›
+            </button>
+          </div>
         </div>
       )}
     </div>

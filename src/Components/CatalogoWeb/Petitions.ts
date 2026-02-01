@@ -3,6 +3,28 @@ import { Order } from "../CatalogoWeb/Modelo/Order";
 import { OrderDetails } from "../CatalogoWeb/Modelo/OrderDetails";
 import { Variant } from "./PuntoVenta/Model/Variant";
 
+type CheckoutLineItem = {
+    price_data: {
+        currency: string;
+        product_data: {
+            name: string;
+        };
+        unit_amount: number;
+    };
+    quantity: number;
+};
+
+type CheckoutSessionPayload = {
+    line_items: CheckoutLineItem[];
+    return_url: string;
+    connectedAccountId: string;
+    businessId: number;
+    mode?: string;
+    ui_mode?: string;
+    customer_email?: string;
+    metadata?: Record<string, string>;
+};
+
 export const getProductsByBusiness = async (idBusiness: string) => {
     try {
         const response = await fetch(`${URL}products/showstore/${idBusiness}/1`)
@@ -16,9 +38,9 @@ export const getProductsByBusiness = async (idBusiness: string) => {
     }
 }
 
-export const getProductsByBusinessWithStock = async (idBusiness: string, limit: string) => {
+export const getProductsByBusinessWithStock = async (idBusiness: string, limit: string, page: number) => {
     try {
-        const response = await fetch(`${URL}products/showstore/stockgtzero/${idBusiness}/1`, {
+        const response = await fetch(`${URL}products/showstore/stockgtzero/${idBusiness}/1?page=${page}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -26,11 +48,13 @@ export const getProductsByBusinessWithStock = async (idBusiness: string, limit: 
             body: JSON.stringify({ Limit: limit }),
         })
         const data = await response.json();
+        console.log(data);
         if (data) {
             return data;
         }
         return [];
     } catch (error) {
+        console.log(error);
         return [];
     }
 }
@@ -94,6 +118,61 @@ export const getIdentifier = async (idBusiness: string) => {
         return null;
     }
 }
+
+export const getStripeConfig = async () => {
+    try {
+        const response = await fetch(`${URL}configStripe`);
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        return null;
+    }
+}
+
+export const createCheckoutSession = async (payload: CheckoutSessionPayload) => {
+    try {
+        const response = await fetch(`${URL}createCheckoutSession`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payload),
+        });
+        return response.json();
+    } catch (error) {
+        return null;
+    }
+}
+
+export const confirmCheckoutPayment = async (sessionId: string) => {
+    try {
+        const response = await fetch(`${URL}confirmCheckoutPayment`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ sessionId }),
+        });
+        return response.json();
+    } catch (error) {
+        return null;
+    }
+}
+
+export const confirmPaymentIntent = async (paymentIntentId: string) => {
+    try {
+        const response = await fetch(`${URL}confirmPaymentIntent`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ paymentIntentId }),
+        });
+        return response.json();
+    } catch (error) {
+        return null;
+    }
+}
 export const getCategoriesByBusinesssId = async (idBusiness: string) => {
     try{
         const response = await fetch(`${URL}categories/business/${idBusiness}`);
@@ -134,4 +213,3 @@ export const getVariantsByProductIdPublic = async (productId: number | string) =
         return [];
     }
 }
-
