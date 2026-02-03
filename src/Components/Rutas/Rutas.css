@@ -35,8 +35,43 @@ import tail
     margin-bottom: 10px;
     font-weight: bold;
   }
-  .list-items li > a {
-    color: white;
-    text-decoration: none;
-  }
+.list-items li > a {
+  color: white;
+  text-decoration: none;
+}
+
+.catalog-header {
+  transition: box-shadow 0.3s ease, backdrop-filter 0.3s ease, background-color 0.3s ease;
+}
+
+.catalog-header__content {
+  transition: padding 0.3s ease;
+}
+
+.catalog-header__search {
+  margin-top: 1rem;
+  max-height: 140px;
+  opacity: 1;
+  transform: translateY(0);
+  transition: max-height 0.35s ease, opacity 0.25s ease, transform 0.35s ease, margin 0.35s ease;
+}
+
+.catalog-header.is-collapsed {
+  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
+  backdrop-filter: blur(12px);
+  background-color: rgba(255, 255, 255, 0.95);
+}
+
+.catalog-header.is-collapsed .catalog-header__content {
+  padding-top: 0.75rem;
+  padding-bottom: 0.75rem;
+}
+
+.catalog-header.is-collapsed .catalog-header__search {
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-12px);
+  margin-top: 0;
+  pointer-events: none;
+}
   

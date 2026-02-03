@@ -161,6 +161,7 @@ export const Rutas = () => {
   const [nombre, setnombre] = useState("");
   const [idBusiness, setidbusiness] = useState("")
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isCatalogHeaderCollapsed, setIsCatalogHeaderCollapsed] = useState(false);
   const [filterDraft, setFilterDraft] = useState({
     orderAsc: false,
     orderDesc: false,
@@ -579,6 +580,31 @@ export const Rutas = () => {
   const catalogoId = idBusiness || context.idBussiness;
 
   useEffect(() => {
+    if (!(isMainCatalogoRoute || isCategoriaRoute) || isPedidoRoute || isPedidoInfo) {
+      setIsCatalogHeaderCollapsed(false);
+      return;
+    }
+
+    const handleScroll = () => {
+      const currentScroll = window.scrollY || 0;
+      const shouldCollapse = currentScroll > 120;
+      const shouldExpand = currentScroll < 60;
+
+      if (shouldCollapse && !isCatalogHeaderCollapsed) {
+        setIsCatalogHeaderCollapsed(true);
+      } else if (shouldExpand && isCatalogHeaderCollapsed) {
+        setIsCatalogHeaderCollapsed(false);
+      }
+
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isMainCatalogoRoute, isCategoriaRoute, isPedidoRoute, isPedidoInfo, isCatalogHeaderCollapsed]);
+
+  useEffect(() => {
     if (!isFilterOpen) return;
     setFilterDraft({
       orderAsc: Boolean(context.filterProduct?.orderAsc),
@@ -691,8 +717,12 @@ export const Rutas = () => {
         )}
 
         <div className="drawer-content flex flex-col min-w-full relative hidden" id="menuIconoCatalogo">
-          <div className="fixed top-0 left-0 right-0 z-40 bg-[var(--bg-primary)]">
-            <div className="max-w-screen-xl mx-auto px-4 pt-6 pb-4">
+          <div
+            className={`fixed top-0 left-0 right-0 z-40 bg-[var(--bg-primary)] catalog-header ${
+              isCatalogHeaderCollapsed ? "is-collapsed" : ""
+            }`}
+          >
+            <div className="max-w-screen-xl mx-auto px-4 pt-6 pb-4 catalog-header__content">
               <div className={`flex items-center gap-3 ${isPedidoInfo ? "justify-start" : "justify-between"}`}>
                 <button
                   onClick={() => window.history.back()}
@@ -722,7 +752,7 @@ export const Rutas = () => {
               </div>
 
               {showCatalogSearch && !isPedidoInfo && (
-                <div className="mt-4 flex items-center gap-3">
+                <div className="catalog-header__search flex items-center gap-3">
                   <CatalogSearchInput
                     value={context.searchQuery}
                     onChange={context.setSearchQuery}
