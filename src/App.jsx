@@ -18,11 +18,11 @@ window.addEventListener("scroll", function () {
     } else {
       element.classList.remove("visible");
     }
-  }
+  } 
 
 });
 */
-function App() {
+const AppContent = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -33,17 +33,24 @@ function App() {
     return () => clearTimeout(timer);
   }, []);
   return (
-    <div>
+    <div className="app-shell">
+      <Rutas />
       {loading ? (
-        <Carga />
-      ) : (
-        <AppProvider>
-          <BrowserRouter>
-            <Rutas />
-          </BrowserRouter>
-        </AppProvider>
-      )}
+        <div className="loading-overlay" aria-hidden="true">
+          <Carga />
+        </div>
+      ) : null}
     </div>
+  );
+};
+
+function App() {
+  return (
+    <BrowserRouter>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
+    </BrowserRouter>
   );
 }
 

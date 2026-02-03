@@ -295,29 +295,45 @@ export const AddProduct: React.FC = () => {
             id="imageUpload"
             type="file"
             accept="image/*"
+            multiple
             className="hidden"
             onChange={async (e) => {
-              if (e.target.files && e.target.files[0]) {
-                const file = e.target.files[0];
-                try {
+              if (!e.target.files || e.target.files.length === 0) {
+                return;
+              }
+              try {
+                const files = Array.from(e.target.files);
+                const images = await Promise.all(
+                  files.map(
+                    (file) =>
+                      new Promise<string>((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result as string);
+                        reader.onerror = () => reject(reader.error);
+                        reader.readAsDataURL(file);
+                      })
+                  )
+                );
+                const [nextMain, ...extraImages] = images;
+                if (nextMain) {
                   const previousMain = mainImage;
-                  const dataUrl = await new Promise<string>((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result as string);
-                    reader.onerror = () => reject(reader.error);
-                    reader.readAsDataURL(file);
+                  setMainImage(nextMain);
+                  setGalleryImages((prev) => {
+                    const nextGallery = [...prev];
+                    if (previousMain && !nextGallery.includes(previousMain)) {
+                      nextGallery.push(previousMain);
+                    }
+                    extraImages.forEach((imageValue) => {
+                      if (!nextGallery.includes(imageValue)) {
+                        nextGallery.push(imageValue);
+                      }
+                    });
+                    return nextGallery;
                   });
-                  if (
-                    previousMain &&
-                    !galleryImages.some((imageValue) => imageValue === previousMain)
-                  ) {
-                    setGalleryImages((prev) => [...prev, previousMain]);
-                  }
-                  setMainImage(dataUrl);
-                  e.target.value = "";
-                } catch (error) {
-                  console.error("Error al cargar la imagen principal:", error);
                 }
+                e.target.value = "";
+              } catch (error) {
+                console.error("Error al cargar la imagen principal:", error);
               }
             }}
           />

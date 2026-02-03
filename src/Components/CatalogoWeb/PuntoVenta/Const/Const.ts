@@ -1,3 +1,6 @@
 export const URL =
-    //'https://ravekhpos-back-production.up.railway.app/api/'
- 'http://192.168.1.215:8090/api/'
+'https://apipos.ravekh.com/api/'
+//    'https://api.ravekh.com/api/'
+//'http://192.168.1.16:8090/api/'
+
+ 

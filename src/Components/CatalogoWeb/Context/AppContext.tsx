@@ -17,8 +17,27 @@ type AppContextProps = {
 };
 export const AppContext = createContext({} as AppContextState);
 
+const defaultFilterProduct: FilterProduct = {
+  noStock: false,
+  MinStock: false,
+  OptStock: false,
+  ExpDate: false,
+  NoMaganeStock: false,
+  orderAsc: false,
+  orderDesc: false,
+};
+
 const AppProvider: React.FC<AppContextProps> = ({ children }) => {
-  const [cartPos, setCartPos] = useState<CartPos[]>([]);
+  const [cartPos, setCartPos] = useState<CartPos[]>(() => {
+    const storedCart = localStorage.getItem("cart");
+    if (!storedCart) return [];
+    try {
+      const parsed = JSON.parse(storedCart);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  });
   const cart = cartPos;
   const setCart = setCartPos;
   const [phoneNumber, setPhoneNumber] = useState<string | null>(null);
@@ -31,7 +50,40 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   const [selectedTable, setSelectedTable] = useState<string>('');
   const [showNavBar, setShowNavBar] = useState<boolean>(false); // Control de navegación
   const [stockFlag, setStockFlag] = useState<boolean>(false); // Añadir este estado para manejar el stock
-  const [filterProduct, setFilterProduct] = useState<FilterProduct>({} as FilterProduct);
+  const [filterProduct, setFilterProduct] = useState<FilterProduct>(() => {
+    const stored = localStorage.getItem("catalogFilters");
+    if (!stored) return defaultFilterProduct;
+    try {
+      const parsed = JSON.parse(stored);
+      return {
+        ...defaultFilterProduct,
+        orderAsc: Boolean(parsed?.orderAsc),
+        orderDesc: Boolean(parsed?.orderDesc),
+      };
+    } catch {
+      return defaultFilterProduct;
+    }
+  });
+  const [catalogPriceMin, setCatalogPriceMin] = useState<number | null>(() => {
+    const stored = localStorage.getItem("catalogFilters");
+    if (!stored) return null;
+    try {
+      const parsed = JSON.parse(stored);
+      return typeof parsed?.priceMin === "number" ? parsed.priceMin : null;
+    } catch {
+      return null;
+    }
+  });
+  const [catalogPriceMax, setCatalogPriceMax] = useState<number | null>(() => {
+    const stored = localStorage.getItem("catalogFilters");
+    if (!stored) return null;
+    try {
+      const parsed = JSON.parse(stored);
+      return typeof parsed?.priceMax === "number" ? parsed.priceMax : null;
+    } catch {
+      return null;
+    }
+  });
   const [quantityNextSell, setQuantityNextSell] = useState<string>('1');
   const [captureUri, setCaptureUri] = useState<string | null>(null);
   const [customer, setCustomer] = useState<Customer>({
@@ -63,6 +115,7 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   const [checkout, setCheckout] = useState<boolean>(false);
   const [showNavBarBottom, setShowNavBarBottom] = useState<boolean>(false);
   const [productFormState, setProductFormState] = useState<ProductFormState | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
 
     // Función para actualizar una mesa
     const updateTable = (tableId: string, updates: Partial<Table>) => {
@@ -91,6 +144,7 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
     const unitPrice = product.Price ?? 0;
     const mappedProduct: CartPos = {
       Id: product.Id,
+      Business_Id: product.Business_Id,
       Name: product.Name,
       Price: product.Price,
       Quantity: quantity,
@@ -146,6 +200,9 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
 
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));
+    if (product.Business_Id != null) {
+      localStorage.setItem("cartBusinessId", String(product.Business_Id));
+    }
   };
 
   //funcion para eliminar un producto del carrito
@@ -163,12 +220,16 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
 
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));
+    if (newCart.length === 0) {
+      localStorage.removeItem("cartBusinessId");
+    }
   };
 
   //funcion para limpiar el carrito
   const clearCart = () => {
     setCart([]);
     localStorage.removeItem("cart");
+    localStorage.removeItem("cartBusinessId");
   };
 
   const value = useMemo(() => {
@@ -200,6 +261,10 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
       setStockFlag,
       filterProduct,
       setFilterProduct,
+      catalogPriceMin,
+      setCatalogPriceMin,
+      catalogPriceMax,
+      setCatalogPriceMax,
       quantityNextSell,
       setQuantityNextSell,
       captureUri,
@@ -229,6 +294,8 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
       setShowNavBarBottom,
       productFormState,
       setProductFormState,
+      searchQuery,
+      setSearchQuery,
     };
   }, [
     cart,
@@ -258,6 +325,10 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
     setStockFlag,
     filterProduct,
     setFilterProduct,
+    catalogPriceMin,
+    setCatalogPriceMin,
+    catalogPriceMax,
+    setCatalogPriceMax,
     quantityNextSell,
     setQuantityNextSell,
     captureUri,
@@ -286,7 +357,9 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
     showNavBarBottom,
     setShowNavBarBottom,
     productFormState,
-    setProductFormState
+    setProductFormState,
+    searchQuery,
+    setSearchQuery
   ]);
 
   return <AppContext.Provider value={value}>{children}</AppContext.Provider>;

@@ -117,7 +117,9 @@ export const Dashboard: React.FC = () => {
           title="Compra promedio"
           value={state.averagePurchase?.total.averageToday?.toString() || "0"}
           trend={state.averagePurchase?.total.percentageChange ?? 0 > 0 ? "down" : "up"}
-          percentage={state.averagePurchase?.total.percentageChange?.toString() + "%" || "0%"}
+          //percentage={state.averagePurchase?.total.percentageChange?.toString() + "%" || "0%"}
+          percentage={`${state.newCustomers?.percentageChange ?? 0}%`}
+
           icon={<StatsIcon />}
           bgColor="#D9F7E7"
           navigation={""}

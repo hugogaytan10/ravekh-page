@@ -34,6 +34,10 @@ export type AppContextState = {
     setShowNavBar: Dispatch<SetStateAction<boolean>>;
     filterProduct: FilterProduct;
     setFilterProduct: Dispatch<SetStateAction<FilterProduct>>;
+    catalogPriceMin: number | null;
+    setCatalogPriceMin: Dispatch<SetStateAction<number | null>>;
+    catalogPriceMax: number | null;
+    setCatalogPriceMax: Dispatch<SetStateAction<number | null>>;
     stockFlag: boolean;
     setStockFlag: Dispatch<SetStateAction<boolean>>;
     quantityNextSell: string;
@@ -70,4 +74,6 @@ export type AppContextState = {
     setShowNavBarBottom: Dispatch<SetStateAction<boolean>>;
     productFormState: ProductFormState | null;
     setProductFormState: Dispatch<SetStateAction<ProductFormState | null>>;
+    searchQuery: string;
+    setSearchQuery: Dispatch<SetStateAction<string>>;
 }

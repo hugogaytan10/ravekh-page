@@ -8,7 +8,6 @@ import { Item } from "../Model/Item";
 import { AppContext } from "../../Context/AppContext";
 import { Variant } from "../Model/Variant";
 import { useVariantSelection } from "./Hook/useVariantSelection";
-import { getVariantsByProductId } from "../Products/Petitions";
 import { VariantModal } from "./VariantModal";
 
 interface ListProps {
@@ -16,7 +15,6 @@ interface ListProps {
 }
 
 export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
-  const [products, setProducts] = useState<Item[]>([]);
   const context = useContext(AppContext);
 
   const truncate = (text: string, length: number) => {
@@ -89,14 +87,7 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
   );
 
 
-  useEffect(() => {
-    setProducts(
-      Products.map((product) => ({
-        ...product,
-        Image: product.Image || product.Images?.[0] || "",
-      }))
-    );
-  }, [Products]);
+  const products = Products;
 
   const renderProduct = (product: Item) => {
     return (
@@ -106,22 +97,12 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
         key={product.Id}
       >
         {/* Imagen del producto */}
-        {product.Image || product.Images?.[0] ? (
-          <div className="w-16 h-16 flex-shrink-0">
-            <img
-              src={product.Image || product.Images?.[0] || ""}
-              alt={product.Name}
-              className="w-full h-full object-cover rounded-lg"
-            />
-          </div>
-        ) : (
-          <div
-            className="w-16 h-16 flex items-center justify-center bg-gray-300 rounded-lg text-white font-bold"
-            style={{ backgroundColor: product.Color }}
-          >
-            <p className="text-xs text-center">{product.Name}</p>
-          </div>
-        )}
+        <ProductRowImage
+          image={product.Image || product.Images?.[0] || ""}
+          name={product.Name}
+          color={product.Color}
+          storeColor={context.store.Color}
+        />
   
         {/* Nombre del producto */}
         <div className="flex-1 ml-4">
@@ -157,4 +138,47 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
   
   
   
+};
+
+type ProductRowImageProps = {
+  image: string;
+  name: string;
+  color?: string | null;
+  storeColor?: string | null;
+};
+
+const ProductRowImage: React.FC<ProductRowImageProps> = ({
+  image,
+  name,
+  color,
+  storeColor,
+}) => {
+  const [hasImageError, setHasImageError] = useState(false);
+
+  useEffect(() => {
+    setHasImageError(false);
+  }, [image]);
+
+  if (image && !hasImageError) {
+    return (
+      <div className="w-16 h-16 flex-shrink-0">
+        <img
+          src={image}
+          alt={name}
+          className="w-full h-full object-cover rounded-lg"
+          loading="lazy"
+          onError={() => setHasImageError(true)}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div
+      className="w-16 h-16 flex items-center justify-center rounded-lg text-white font-bold"
+      style={{ backgroundColor: storeColor || color || "#ccc" }}
+    >
+      <p className="text-xs text-center">{name}</p>
+    </div>
+  );
 };

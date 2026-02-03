@@ -80,16 +80,20 @@ export const AuthPage: React.FC = () => {
     const email = e.target[1].value;
     const password = e.target[2].value;
     if (name && email && password) {
-      const dataSignUp = await signUpToServer(name, email, password);
-      if (dataSignUp) {
+      //const dataSignUp = await signUpToServer(name, email, password);
+      //if (dataSignUp) {
         //si todo fue cvalido guardar el correo y contraseña en el localstorage
         //como un objeto user
-        localStorage.setItem("user", JSON.stringify({ email, password }));
-        context.setUser(dataSignUp);
+
+        context.setUser({ Name: name, Email: email, Password: password });
+        localStorage.setItem(
+          "user",
+          JSON.stringify({ name, email, password })
+        );
         /*console.log("data inicio: ", dataSignUp);
         console.log("setUser: ", context.user);*/
-        navigate("/");
-      }
+        navigate("/create-store");
+      //}
     }
   };
 

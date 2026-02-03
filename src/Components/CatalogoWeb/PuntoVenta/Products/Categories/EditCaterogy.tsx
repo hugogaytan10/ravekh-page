@@ -2,11 +2,12 @@ import React, { useContext, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
 import { PickerColor } from "../../CustomizeApp/PickerColor";
-import { insertCategory } from "../Petitions";
 import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
 import { ThemeLight } from "../../Theme/Theme";
-import { updateCategory } from "../../Sales/Petitions";
+import { deleteCategory, updateCategory } from "../../Sales/Petitions";
 import { Category } from "../../Model/Category";
+import { Trash } from "../../../../../assets/POS/Trash";
+import { DeleteCategoryModal } from "./DeleteCategoryModal";
 
 export const EditCategory: React.FC = () => {
   const navigate = useNavigate();
@@ -18,6 +19,8 @@ export const EditCategory: React.FC = () => {
     context.categorySelected.Color
   );
   const [isPickerVisible, setIsPickerVisible] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const getDynamicText = () => {
     return categoryName.length > 0 ? categoryName : "Nombre";
@@ -40,6 +43,20 @@ export const EditCategory: React.FC = () => {
     navigate(-1); // Regresa a la página anterior
   };
 
+  const handleDeleteCategory = async () => {
+    if (!context.categorySelected.Id || isDeleting) return;
+    setIsDeleting(true);
+    const success = await deleteCategory(
+      context.categorySelected.Id,
+      context.user.Token
+    );
+    setIsDeleting(false);
+    if (success) {
+      context.setStockFlag(!context.stockFlag);
+      navigate(-1);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-gray-100">
       {/* Header */}
@@ -59,7 +76,17 @@ export const EditCategory: React.FC = () => {
           <ChevronBack />
         </button>
         <h1 className="text-lg font-bold text-center">Crear categoría</h1>
-        <span className="ml-auto"></span>
+        {context.categorySelected.Id ? (
+          <button
+            className="ml-auto"
+            onClick={() => setShowDeleteModal(true)}
+            aria-label="Eliminar categoría"
+          >
+            <Trash width={24} height={24} fill="#fff" />
+          </button>
+        ) : (
+          <span className="ml-auto"></span>
+        )}
       </header>
 
       {/* Main Content */}
@@ -119,6 +146,13 @@ export const EditCategory: React.FC = () => {
         setColorSelected={setColorSelected}
         isVisible={isPickerVisible}
         setIsVisible={setIsPickerVisible}
+      />
+
+      <DeleteCategoryModal
+        isVisible={showDeleteModal}
+        isDeleting={isDeleting}
+        onClose={() => setShowDeleteModal(false)}
+        onDelete={handleDeleteCategory}
       />
     </div>
   );

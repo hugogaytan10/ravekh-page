@@ -1,4 +1,6 @@
 import {URL} from '../Const/Const'
+import { Store } from '../Model/Store';
+import { User } from '../Model/User';
 
 export const loginToServer = async (email: string, password: any) => {
     try {
@@ -7,22 +9,52 @@ export const loginToServer = async (email: string, password: any) => {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({Email: email, Password: password})
+            body: JSON.stringify({Email: email, Password: password}),
         })
+        console.log(response);
         return response.json();
     } catch (error) {
+        console.log(error);
         return {message: "Ocurrió un error al iniciar sesión."}
     }
 
 }
 
-export const signUpToServer = async (name: string, email: string, password: string) => {
-    const response = await fetch(`${URL}/signup`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({Nombre: name, Correo: email, Contrasenia: password})
-    })
-    return response.json();
+export const signUpToServer = async (businesInfo: Store, user: User, deviceToken: string) => {
+    try {
+        const url = `${URL}business`;
+        //insertar tablas por ahora
+        const bodyPetition = {
+            Business: {
+                Name: businesInfo.Name,
+                Address: businesInfo.Address,
+                PhoneNumber: businesInfo.PhoneNumber,
+                Logo: businesInfo.Logo,
+                Color: businesInfo.Color,
+                References: businesInfo.References,
+            },
+            Employee: {
+                Name: user.Name,
+                Password: user.Password,
+                Email: user.Email,
+            },
+            Tables: true,
+            deviceToken: deviceToken,
+        }
+
+        const response = await fetch(url, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(bodyPetition),
+        });
+        const data = await response.json();
+        //retornamos la data que nos devuelva el servidor
+        console.log(data);
+        return data;
+
+    } catch (e) {
+        return { error: 'Error al insertar el usuario ' + e };
+    }
 }

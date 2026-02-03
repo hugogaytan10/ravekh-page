@@ -18,7 +18,9 @@ import { DetalleProducto } from "../CatalogoWeb/DetalleProducto";
 import { Pedido } from "../CatalogoWeb/Pedido";
 import { AppContext } from "../CatalogoWeb/Context/AppContext";
 import cart from "../../assets/cart-outline.svg";
-import arrow from "../../assets/arrow-forward-white.svg";
+import arrow from "../../assets/back.svg";
+import searchIcon from "../../assets/POS/SearchIcon.svg";
+import filterIcon from "../../assets/filter-solid.svg";
 import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
 import { PoliticaPrivacidadAgenda } from "../PoliticaPrivacidad/PoliticaPrivacidadAgenda";
 //importaciones para el catalogo web
@@ -26,6 +28,7 @@ import { RavekhPos } from "../RavekhPos/RavekhPos";
 
 // Importaciones para el punto de venta - Login
 import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
+import { InitialCustomizeApp } from "../CatalogoWeb/PuntoVenta/Login/CustomizeApp";
 
 // Importaciones para el punto de venta - Sales
 import { MainSales } from "../CatalogoWeb/PuntoVenta/Sales/MainSales";
@@ -123,22 +126,18 @@ import { getCategoriesByBusinesssId } from "../CatalogoWeb/Petitions";
 // deeplink para la agenda
 import { DeepLinkRedirect } from "../AgendaT/DeepLinkRedict";
 import { MainCategoria } from "../CatalogoWeb/Categoria";
-import { LoginCupones } from "../Cupones/LoginCupones";
-import { RegisterCupones } from "../Cupones/RegisterCupones";
-import { CuponesHome } from "../Cupones/CuponesHome";
-import { CuponesList } from "../Cupones/CuponesList";
-import { CuponesSettings } from "../Cupones/CuponesSettings";
-import { CuponesAdmin } from "../Cupones/CuponesAdmin";
-import { CuponesCreate } from "../Cupones/CuponesCreate";
-import { CuponesEdit } from "../Cupones/CuponesEdit";
-import { CuponesScan } from "../Cupones/CuponesScan";
-import { CuponesSuccess } from "../Cupones/CuponesSuccess";
+import { CatalogSearchInput } from "../CatalogoWeb/CatalogSearchInput";
+import { CatalogSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/CatalogSettings";
+import { EditEmployee } from "../CatalogoWeb/PuntoVenta/Employees/EditEmployee";
 
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
   const context = useContext(AppContext);
   const location = useLocation(); // Hook de react-router-dom para obtener la ubicación actual
+  const isPedidoInfo =
+    location.pathname === "/catalogo/pedido-info" ||
+    location.pathname === "/catalogo/pedido";
 
   //lista de rutas donde NO queremos mostrar el menú
   const hiddenNavBarRoutes = ["/login-punto-venta", "/MainSales"];
@@ -161,63 +160,46 @@ export const Rutas = () => {
   const [color, setcolor] = useState("");
   const [nombre, setnombre] = useState("");
   const [idBusiness, setidbusiness] = useState("")
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const [isCatalogHeaderCollapsed, setIsCatalogHeaderCollapsed] = useState(false);
+  const [filterDraft, setFilterDraft] = useState({
+    orderAsc: false,
+    orderDesc: false,
+    priceMin: null,
+    priceMax: null,
+  });
+  const priceMinDefault = 0;
+  const priceMaxDefault = 999;
+  const clampPrice = (value) => Math.min(priceMaxDefault, Math.max(priceMinDefault, value));
+  const priceMinValue = filterDraft.priceMin ?? priceMinDefault;
+  const priceMaxValue = filterDraft.priceMax ?? priceMaxDefault;
 
 
   // Nueva referencia para el POS
   const slideDownRefPOS = useRef(null); // Referencia para el contenedor del menú
   const menuTogglePOS = useRef(null); // Referencia para la animación del menú
 
-  const adjustColorLightness = (hex, delta) => {
-    if (!hex) return "#6D01D1";
-
-    let c = hex.replace("#", "");
-    if (c.length === 3) c = c.split("").map(ch => ch + ch).join("");
-
-    const r = parseInt(c.substring(0, 2), 16) / 255;
-    const g = parseInt(c.substring(2, 4), 16) / 255;
-    const b = parseInt(c.substring(4, 6), 16) / 255;
-
-    const max = Math.max(r, g, b);
-    const min = Math.min(r, g, b);
-    let h = 0, s = 0, l = (max + min) / 2;
-
-    if (max !== min) {
-      const d = max - min;
-      s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-
-      switch (max) {
-        case r: h = (g - b) / d + (g < b ? 6 : 0); break;
-        case g: h = (b - r) / d + 2; break;
-        case b: h = (r - g) / d + 4; break;
-      }
-      h /= 6;
-    }
-
-    l = Math.min(1, Math.max(0, l + delta));
-
-    return `hsl(${Math.round(h * 360)} ${Math.round(s * 100)}% ${Math.round(l * 100)}%)`;
-  };
-
-
   useEffect(() => {
-    if (listItemsRefCatalogo.current && slideDownRefPOS.current) {
-      gsap.set(slideDownRefPOS.current, { y: "-90%", display: "block", overflow: "hidden", });
-
-      menuTogglePOS.current = new TimelineMax({
-        paused: true,
-        reversed: true,
-      })
-        .to(slideDownRefPOS.current, 1, { y: "0%", ease: "power1.out" })
-        .staggerFrom(
-          Array.from(listItemsRefCatalogo.current.children), // Convertir a array para seguridad
-          0.25,
-          {
-            y: "-30",
-            ease: "power1.out",
-          },
-          0.1
-        );
+    if (!listItemsRefCatalogo.current || !slideDownRefPOS.current) {
+      return;
     }
+
+    gsap.set(slideDownRefPOS.current, { y: "-90%", display: "block", overflow: "hidden" });
+
+    menuTogglePOS.current = new TimelineMax({
+      paused: true,
+      reversed: true,
+    })
+      .to(slideDownRefPOS.current, 1, { y: "0%", ease: "power1.out" })
+      .staggerFrom(
+        Array.from(listItemsRefCatalogo.current.children), // Convertir a array para seguridad
+        0.25,
+        {
+          y: "-30",
+          ease: "power1.out",
+        },
+        0.1
+      );
   }, []);
 
 
@@ -229,7 +211,7 @@ export const Rutas = () => {
         context.setCart(JSON.parse(localCart));
       }
     }
-    if (slideDownRef.current && listItemsRef.current) {
+    if (slideDownRef.current && listItemsRef.current && menuIconRef.current) {
       gsap.set(slideDownRef.current, { y: "-100%", display: "block", overflow: "hidden", });
 
       menuToggle.current = new TimelineMax({ paused: true, reversed: true })
@@ -247,7 +229,7 @@ export const Rutas = () => {
     }
 
 
-    if (slideDownRefCatalogo) {
+    if (slideDownRefCatalogo.current && listItemsRefCatalogo.current && catalogoIconRef.current) {
       //togle para el catalogo
       gsap.set(slideDownRefCatalogo.current, { y: "-100%", display: "block", overflow: "hidden", });
 
@@ -270,6 +252,10 @@ export const Rutas = () => {
   }, [location.pathname]);
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location.pathname]);
+
+  useEffect(() => {
     const localColor = localStorage.getItem("color");
     const localNombre = localStorage.getItem("nombre");
     const localCart = localStorage.getItem("cart");
@@ -288,7 +274,7 @@ export const Rutas = () => {
     }
 
     // Asegurar que las categorías están cargadas antes de iniciar la animación
-    if (categories.length > 0) {
+    if (categories.length > 0 && slideDownRef.current && listItemsRef.current && menuIconRef.current) {
       gsap.set(slideDownRef.current, { y: "-100%", display: "block" });
 
       menuToggle.current = new TimelineMax({ paused: true, reversed: true })
@@ -317,14 +303,18 @@ export const Rutas = () => {
     if (context.idBussiness != 0) {
       getCategoriesByBusinesssId(context.idBussiness).then((data) => {
         //ordenar categorias por el tamano del texto de la categoria
-        data.sort((a, b) => a.Name.length - b.Name.length);
-        setCategories(data);
+        if (data) {
+          data.sort((a, b) => a.Name.length - b.Name.length);
+          setCategories(data);
+        }
       });
     } else {
       getCategoriesByBusinesssId(idBusiness).then((data) => {
         //ordenar categorias por el tamano del texto de la categoria
-        data.sort((a, b) => a.Name.length - b.Name.length);
-        setCategories(data);
+        if (data) {
+          data.sort((a, b) => a.Name.length - b.Name.length);
+          setCategories(data);
+        }
       });
     }
   }, [context.idBussiness]); // Se ejecuta una vez al montar el componente
@@ -407,6 +397,7 @@ export const Rutas = () => {
       "/orders",
       "/order-details/:orderId",
       "/update-store-info",
+      "/catalog-config",
       "/address-store",
       "/name-store",
       "/phone-store",
@@ -438,12 +429,6 @@ export const Rutas = () => {
       return routeRegex.test(decodedPath);
     });
   }, [location.pathname]);
-
-  const hoverColor = useMemo(
-  () => adjustColorLightness(color, 0.20), // +10% luz (similar a un purple-600)
-  [color]
-);
-
 
   useEffect(() => {
     const protectedRoutes = [
@@ -544,7 +529,7 @@ export const Rutas = () => {
       "/register",
       "/dashboard",
       "/settings-p",
-      "/employees/:id",
+      "/edit-employee/:id",
       "/mainfinances"
     ];
 
@@ -588,9 +573,80 @@ export const Rutas = () => {
       };
     }, [navigate, context]);
   */
-  const showCategoryList = location.pathname === "/" ||
-    location.pathname.startsWith("/catalogo/") ||
-    location.pathname.startsWith("/categoria/");
+  const isCategoriaRoute = location.pathname.startsWith("/categoria/");
+  const isMainCatalogoRoute = /^\/catalogo\/[^/]+$/.test(location.pathname);
+  const isPedidoRoute = location.pathname === "/catalogo/pedido";
+  const showCatalogSearch =
+    (isMainCatalogoRoute || isCategoriaRoute) && !isPedidoRoute && !isPedidoInfo;
+  const showCategoryList =
+    (isMainCatalogoRoute || isCategoriaRoute) && !isPedidoRoute && !isPedidoInfo;
+  const catalogoId = idBusiness || context.idBussiness;
+
+  useEffect(() => {
+    if (!(isMainCatalogoRoute || isCategoriaRoute) || isPedidoRoute || isPedidoInfo) {
+      setIsCatalogHeaderCollapsed(false);
+      return;
+    }
+
+    const handleScroll = () => {
+      const currentScroll = window.scrollY || 0;
+      const shouldCollapse = currentScroll > 120;
+      const shouldExpand = currentScroll < 60;
+
+      if (shouldCollapse && !isCatalogHeaderCollapsed) {
+        setIsCatalogHeaderCollapsed(true);
+      } else if (shouldExpand && isCatalogHeaderCollapsed) {
+        setIsCatalogHeaderCollapsed(false);
+      }
+
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [isMainCatalogoRoute, isCategoriaRoute, isPedidoRoute, isPedidoInfo, isCatalogHeaderCollapsed]);
+
+  useEffect(() => {
+    if (!isFilterOpen) return;
+    setFilterDraft({
+      orderAsc: Boolean(context.filterProduct?.orderAsc),
+      orderDesc: Boolean(context.filterProduct?.orderDesc),
+      priceMin: context.catalogPriceMin,
+      priceMax: context.catalogPriceMax,
+    });
+  }, [isFilterOpen, context.filterProduct, context.catalogPriceMin, context.catalogPriceMax]);
+
+  const applyFilters = () => {
+    const next = {
+      orderAsc: filterDraft.orderAsc,
+      orderDesc: filterDraft.orderDesc,
+      priceMin: filterDraft.priceMin,
+      priceMax: filterDraft.priceMax,
+    };
+    context.setFilterProduct((prev) => ({
+      ...prev,
+      orderAsc: next.orderAsc,
+      orderDesc: next.orderDesc,
+    }));
+    context.setCatalogPriceMin(next.priceMin);
+    context.setCatalogPriceMax(next.priceMax);
+    localStorage.setItem("catalogFilters", JSON.stringify(next));
+    setIsFilterOpen(false);
+  };
+
+  const resetFilters = () => {
+    const next = { orderAsc: false, orderDesc: false, priceMin: null, priceMax: null };
+    context.setFilterProduct((prev) => ({
+      ...prev,
+      orderAsc: false,
+      orderDesc: false,
+    }));
+    context.setCatalogPriceMin(null);
+    context.setCatalogPriceMax(null);
+    localStorage.setItem("catalogFilters", JSON.stringify(next));
+    setFilterDraft(next);
+  };
   return (
     <div className="drawer ">
       <input id="my-drawer-3" type="checkbox" className="drawer-toggle" />
@@ -673,88 +729,97 @@ export const Rutas = () => {
         )}
 
         <div className="drawer-content flex flex-col min-w-full relative hidden" id="menuIconoCatalogo">
-          {/* Contenedor del encabezado del catálogo */}
           <div
-            className="w-full min-h-16 rounded-b-lg fixed z-40 flex flex-col px-4"
-            style={{ backgroundColor: color }}
+            className={`fixed top-0 left-0 right-0 z-40 bg-[var(--bg-primary)] catalog-header ${
+              isCatalogHeaderCollapsed ? "is-collapsed" : ""
+            }`}
           >
-            {/* Primera fila: menú, flecha, título, carrito */}
-            <div className="w-full flex items-center justify-between mt-5">
-              {/* Icono del menú */}
-              <div
-                ref={catalogoIconRef}
-                className="bg-white w-8 h-8 rounded-full flex items-center justify-center"
-                onClick={handleMenuClickCatalogo}
-                id="imgCatalogo"
-              >
-                <img src={menu} alt="menu" className="h-8 w-8" />
-              </div>
-
-              {/* Botón de regreso */}
-              <div
-                onClick={() => window.history.back()}
-                id="backCatalogo"
-                className="w-8 h-8 rounded-full flex items-center justify-center transform rotate-180 hidden"
-                style={{ backgroundColor: color }}
-              >
-                <img src={arrow} alt="arrow" className="w-8 h-8 " />
-              </div>
-
-              {/* Nombre del catálogo */}
-              <div>
-                <h2
-                  className="text-center text-lg font-semibold"
-                  style={{ color: idBusiness === "115" ? "#000000" : "#ffffff" }}
+            <div className="max-w-screen-xl mx-auto px-4 pt-6 pb-4 catalog-header__content bg-[var(--bg-primary)]">
+              <div className={`flex items-center gap-3 ${isPedidoInfo ? "justify-start" : "justify-between"}`}>
+                <button
+                  onClick={() => window.history.back()}
+                  id="backCatalogo"
+                  className="w-9 h-9 rounded-full flex items-center justify-center border border-[var(--border-default)] bg-[var(--bg-surface)] hidden"
+                  type="button"
                 >
-                  {nombre}
+                  <img src={arrow} alt="back" className="w-5 h-5 theme-icon" />
+                </button>
+
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                  {nombre || "Nombre de la tienda"}
                 </h2>
+
+                {!isPedidoInfo && (
+                  <NavLink to={"/catalogo/pedido"} className="relative ml-auto">
+                    <div className="w-10 h-10 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] flex items-center justify-center">
+                      <img src={cart} alt="cart" className="w-5 h-5 theme-icon" />
+                    </div>
+                    {context.cart.length > 0 && (
+                      <span className="absolute -top-1 -right-1 bg-[var(--text-primary)] text-[var(--text-inverse)] rounded-full w-5 h-5 flex items-center justify-center text-[10px]">
+                        {context.cart.length}
+                      </span>
+                    )}
+                  </NavLink>
+                )}
               </div>
 
-              {/* Ícono del carrito */}
-              <NavLink to={"/catalogo/pedido"}>
-                <div className="relative">
-                  <img src={cart} alt="cart" className="w-8 h-8" />
-                  {context.cart.length > 0 && (
-                    <span
-                      className="absolute top-0 right-0 bg-gray-50 rounded-full w-4 h-4 flex items-center justify-center text-xs"
-                      style={{ color: color }}
-                    >
-                      {context.cart.length}
-                    </span>
-                  )}
+              {showCatalogSearch && !isPedidoInfo && (
+                <div className="catalog-header__search flex items-center gap-3">
+                  <CatalogSearchInput
+                    value={context.searchQuery}
+                    onChange={context.setSearchQuery}
+                    containerClassName="flex-1"
+                    inputClassName="text-sm"
+                    rightSlot={<img src={searchIcon} alt="" className="w-5 h-5 theme-icon" />}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setIsFilterOpen(true)}
+                    className="w-12 h-12 rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-subtle)] flex items-center justify-center text-[var(--text-secondary)]"
+                    aria-label="Filtros"
+                  >
+                    <img src={filterIcon} alt="" className="w-5 h-5 theme-icon" />
+                  </button>
                 </div>
-              </NavLink>
-            </div>
+              )}
 
-            {/* Segunda fila: lista de categorías (justo debajo del carrito) */}
-            {showCategoryList && (
-              <div
-                className="w-full mt-2 overflow-x-auto whitespace-nowrap scrollbar-hide mb-2"
-                ref={slideRef}
-              >
-                <div className="flex flex-nowrap gap-2 px-4">
-                  {categories.map((category) => (
-                    <button
-                      key={category.Id}
-                      style={{
-                        "--c-base": color,
-                        "--c-hover": hoverColor,
-                      }}
-                      className={`px-4 py-2 ${
-                        idBusiness === "115" ? "text-black" : "text-white"
-                      } 
-                      rounded-lg shadow-sm transition duration-300 
-                      bg-[color:var(--c-base)] 
-                      hover:bg-[color:var(--c-hover)]`}
-                    >
-                      <NavLink to={`/categoria/${category.Id}`} className="whitespace-nowrap">
+              {showCategoryList && (
+                <div
+                  className="w-full mt-4 overflow-x-auto whitespace-nowrap scrollbar-hide"
+                  ref={slideRef}
+                >
+                  <div className="flex items-center gap-6 pr-4">
+                    {catalogoId && catalogoId !== "0" && (
+                      <NavLink
+                        to={`/catalogo/${catalogoId}`}
+                        className={({ isActive }) =>
+                          `pb-2 text-sm transition-colors ${isActive
+                            ? "text-[var(--text-primary)] border-b-2 border-[var(--text-primary)]"
+                            : "text-[var(--text-secondary)]"
+                          }`
+                        }
+                      >
+                        Todo
+                      </NavLink>
+                    )}
+                    {categories.map((category) => (
+                      <NavLink
+                        key={category.Id}
+                        to={`/categoria/${category.Id}`}
+                        className={({ isActive }) =>
+                          `pb-2 text-sm transition-colors ${isActive
+                            ? "text-[var(--text-primary)] border-b-2 border-[var(--text-primary)]"
+                            : "text-[var(--text-secondary)]"
+                          }`
+                        }
+                      >
                         {category.Name}
                       </NavLink>
-                    </button>
-                  ))}
+                    ))}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
 
@@ -818,19 +883,11 @@ export const Rutas = () => {
             path="/catalogo/producto/:idProducto/:telefono"
             element={<DetalleProducto />}
           />
-          <Route path="/catalogo/pedido" element={<Pedido />} />
-          <Route path="/cupones" element={<LoginCupones />} />
-          <Route path="/cupones/registro" element={<RegisterCupones />} />
-          <Route path="/cupones/home" element={<CuponesHome />} />
-          <Route path="/cupones/cupones" element={<CuponesList />} />
-          <Route path="/cupones/ajustes" element={<CuponesSettings />} />
-          <Route path="/cupones/admin" element={<CuponesAdmin />} />
-          <Route path="/cupones/admin/crear" element={<CuponesCreate />} />
-          <Route path="/cupones/admin/editar" element={<CuponesEdit />} />
-          <Route path="/cupones/admin/escanear" element={<CuponesScan />} />
-          <Route path="/cupones/admin/confirmado" element={<CuponesSuccess />} />
+          <Route path="/catalogo/pedido" element={<Pedido view="cart" />} />
+          <Route path="/catalogo/pedido-info" element={<Pedido view="info" />} />
           {/* RUTAS PARA EL PUNTO DE VENTA */}
           <Route path="/login-punto-venta" element={<AuthPage />} />
+          <Route path="/create-store" element={<InitialCustomizeApp />} />
           <Route path="/MainSales" element={<MainSales />} />
           <Route path="/MainCart" element={<MainCart />} />
           <Route path="/categoria/:idCategoria" element={<MainCategoria />} />
@@ -866,6 +923,7 @@ export const Rutas = () => {
           <Route path="/best-selling/:period/:businessId" element={<BestSelling />} />
           <Route path="/best-category-selling/:period/:businessId" element={<BestCategorySelling />} />
           <Route path="/more" element={<MainSettings />} />
+          <Route path="/catalog-config" element={<CatalogSettings />} />
           <Route path="/box-cutting" element={<BoxCutting />} />
           <Route path="/cutting-by-employee/:employeeId" element={<CuttingByEmployee />} />
           <Route path="/pricing" element={<AnimatedSlider />} />
@@ -891,6 +949,7 @@ export const Rutas = () => {
           <Route path="/orders-by-customer/:customerId/:period" element={<OrdersByCustomer />} />
           <Route path="/edit-customer/:id" element={<EditClient />} />
           <Route path="/employees" element={<Employees />} />
+          <Route path="/edit-employee/:id" element={<EditEmployee />} />
           <Route path="/new-employee" element={<NewEmployee />} />
           <Route path="/client-select" element={<ClientSelect />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -900,6 +959,177 @@ export const Rutas = () => {
           <Route path="/open/servicebybusiness/:business" element={<DeepLinkRedirect />} />
 
         </Routes>
+
+        {isFilterOpen && (
+          <div className="fixed inset-0 z-50 flex">
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/30"
+              onClick={() => setIsFilterOpen(false)}
+              aria-label="Cerrar filtros"
+            />
+            <div className="relative h-full w-full max-w-sm bg-[var(--bg-surface)] shadow-xl p-6">
+              <button
+                type="button"
+                onClick={() => setIsFilterOpen(false)}
+                className="text-[var(--text-primary)] text-2xl"
+                aria-label="Cerrar filtros"
+              >
+                ×
+              </button>
+
+              <h2 className="mt-6 text-xl font-semibold text-[var(--text-primary)]">
+                Filtros
+              </h2>
+
+              <div className="mt-6 space-y-4">
+                <label className="flex items-center justify-between text-[var(--text-secondary)]">
+                  <span>Precio de menor a mayor</span>
+                  <input
+                    type="checkbox"
+                    checked={filterDraft.orderAsc}
+                    onChange={(e) =>
+                      setFilterDraft((prev) => ({
+                        ...prev,
+                        orderAsc: e.target.checked,
+                        orderDesc: e.target.checked ? false : prev.orderDesc,
+                      }))
+                    }
+                    className="h-5 w-5 accent-[var(--text-primary)]"
+                  />
+                </label>
+                <label className="flex items-center justify-between text-[var(--text-secondary)]">
+                  <span>Precio de mayor a menor</span>
+                  <input
+                    type="checkbox"
+                    checked={filterDraft.orderDesc}
+                    onChange={(e) =>
+                      setFilterDraft((prev) => ({
+                        ...prev,
+                        orderDesc: e.target.checked,
+                        orderAsc: e.target.checked ? false : prev.orderAsc,
+                      }))
+                    }
+                    className="h-5 w-5 accent-[var(--text-primary)]"
+                  />
+                </label>
+              </div>
+
+              <div className="mt-10">
+                <p className="text-[var(--text-secondary)]">Rango de precios</p>
+                <div className="mt-3 flex items-center justify-between text-[var(--text-muted)] text-sm">
+                  <span>${priceMinValue}</span>
+                  <span>${priceMaxValue}</span>
+                </div>
+                <div className="mt-4 grid grid-cols-2 gap-3">
+                  <label className="flex flex-col text-xs text-[var(--text-muted)]">
+                    Mínimo
+                    <input
+                      type="number"
+                      min={priceMinDefault}
+                      max={priceMaxDefault}
+                      inputMode="numeric"
+                      value={priceMinValue}
+                      onChange={(e) => {
+                        const nextMin = clampPrice(Number(e.target.value || priceMinDefault));
+                        setFilterDraft((prev) => ({
+                          ...prev,
+                          priceMin: nextMin,
+                          priceMax:
+                            prev.priceMax != null && prev.priceMax < nextMin
+                              ? nextMin
+                              : prev.priceMax,
+                        }));
+                      }}
+                      className="mt-2 w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                    />
+                  </label>
+                  <label className="flex flex-col text-xs text-[var(--text-muted)]">
+                    Máximo
+                    <input
+                      type="number"
+                      min={priceMinDefault}
+                      max={priceMaxDefault}
+                      inputMode="numeric"
+                      value={priceMaxValue}
+                      onChange={(e) => {
+                        const nextMax = clampPrice(Number(e.target.value || priceMaxDefault));
+                        setFilterDraft((prev) => ({
+                          ...prev,
+                          priceMax: nextMax,
+                          priceMin:
+                            prev.priceMin != null && prev.priceMin > nextMax
+                              ? nextMax
+                              : prev.priceMin,
+                        }));
+                      }}
+                      className="mt-2 w-full rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                    />
+                  </label>
+                </div>
+                <div className="mt-4 space-y-3">
+                  <input
+                    type="range"
+                    min={priceMinDefault}
+                    max={priceMaxDefault}
+                    step="1"
+                    value={priceMinValue}
+                    onChange={(e) => {
+                      const nextMin = clampPrice(Number(e.target.value));
+                      setFilterDraft((prev) => ({
+                        ...prev,
+                        priceMin: nextMin,
+                        priceMax:
+                          prev.priceMax != null && prev.priceMax < nextMin
+                            ? nextMin
+                            : prev.priceMax,
+                      }));
+                    }}
+                    className="w-full catalog-range accent-[var(--text-primary)]"
+                    aria-label="Precio mínimo"
+                  />
+                  <input
+                    type="range"
+                    min={priceMinDefault}
+                    max={priceMaxDefault}
+                    step="1"
+                    value={priceMaxValue}
+                    onChange={(e) => {
+                      const nextMax = clampPrice(Number(e.target.value));
+                      setFilterDraft((prev) => ({
+                        ...prev,
+                        priceMax: nextMax,
+                        priceMin:
+                          prev.priceMin != null && prev.priceMin > nextMax
+                            ? nextMax
+                            : prev.priceMin,
+                      }));
+                    }}
+                    className="w-full catalog-range accent-[var(--text-primary)]"
+                    aria-label="Precio máximo"
+                  />
+                </div>
+              </div>
+
+              <div className="mt-10 flex gap-3">
+                <button
+                  type="button"
+                  onClick={resetFilters}
+                  className="w-1/2 rounded-full bg-[var(--action-disabled)] text-white py-3 text-sm font-semibold"
+                >
+                  Limpiar
+                </button>
+                <button
+                  type="button"
+                  onClick={applyFilters}
+                  className="w-1/2 rounded-full bg-[var(--action-primary)] text-white py-3 text-sm font-semibold"
+                >
+                  Aplicar
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
       {context.showNavBarBottom && <NavBottom />}
     </div>

@@ -34,6 +34,21 @@
   /*transform: scale(1.05);*/
 }
 
+/* Usa la misma base visual */
+.add-card-same {
+  background-color: #f9f9f9; /* igual que card-container */
+  border: 2px dashed #007bff; /* distintivo pero misma card */
+}
+
+/* Usa el área de imagen como en productos */
+.add-image {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100%;
+}
+
+
 /* Contenedor para las imágenes */
 .image-container {
   width: 100%;

@@ -11,6 +11,7 @@ export const SelectCategory: React.FC = () => {
   const context = useContext(AppContext);
   const navigate = useNavigate();
   const [categories, setCategories] = useState<Category[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   const chooseCategory = (category: Category) => {
     context.setCategorySelected(category); // Establece la categoría seleccionada
@@ -19,13 +20,26 @@ export const SelectCategory: React.FC = () => {
   };
 
   useEffect(() => {
+    let isMounted = true;
+    setIsLoading(true);
     getCategoriesByBusiness(
       context.user.Business_Id.toString(),
       context.user.Token
-    ).then((data) => {
-      setCategories(data);
-    });
-  }, [context.stockFlag]);
+    )
+      .then((data) => {
+        if (isMounted) {
+          setCategories(data);
+        }
+      })
+      .finally(() => {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [context.stockFlag, context.user.Business_Id, context.user.Token]);
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
@@ -61,7 +75,16 @@ export const SelectCategory: React.FC = () => {
         </button>
 
         {/* Lista de Categorías */}
-        {categories.length > 0 ? (
+        {isLoading ? (
+          <ul className="space-y-4">
+            {Array.from({ length: 5 }).map((_, index) => (
+              <li
+                key={`category-skeleton-${index}`}
+                className="h-10 bg-gray-200 animate-pulse rounded"
+              ></li>
+            ))}
+          </ul>
+        ) : categories.length > 0 ? (
           <ul className="space-y-4">
             {categories.map((category) => (
               <li
@@ -89,4 +112,3 @@ export const SelectCategory: React.FC = () => {
     </div>
   );
 };
-

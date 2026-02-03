@@ -1,5 +1,5 @@
-import React, { useContext, useEffect, useMemo, useState } from "react";
-import { useParams } from "react-router-dom";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import { AppContext } from "./Context/AppContext";
 import { Producto } from "./Modelo/Producto";
@@ -7,7 +7,6 @@ import { getProductById, getVariantsByProductIdPublic } from "./Petitions";
 import logoWhasa from "../../assets/logo-whatsapp.svg";
 import { ProductCarousel } from "./ProductsCarousel";
 import { Variant } from "./PuntoVenta/Model/Variant";
-import { VariantSelectionModal } from "./VariantSelectionModal";
 
 type Params = {
   idProducto?: string;
@@ -20,41 +19,24 @@ const currency = new Intl.NumberFormat("es-MX", {
   maximumFractionDigits: 2,
 });
 
-const adjustColor = (hex: string): string => {
-  if (!hex || !/^#?[0-9a-fA-F]{6}$/.test(hex)) return "#6D01D1";
-  const clean = hex.startsWith("#") ? hex.slice(1) : hex;
-  const r = parseInt(clean.slice(0, 2), 16);
-  const g = parseInt(clean.slice(2, 4), 16);
-  const b = parseInt(clean.slice(4, 6), 16);
-  const newR = Math.max(0, r - 100).toString(16).padStart(2, "0");
-  const newG = Math.max(0, g - 100).toString(16).padStart(2, "0");
-  const newB = Math.max(0, b - 100).toString(16).padStart(2, "0");
-  return `#${newR}${newG}${newB}`;
-};
-
 export const DetalleProducto: React.FC = () => {
   const { idProducto, telefono } = useParams<Params>();
   const [producto, setProducto] = useState<Producto | null>(null);
   const [count, setCount] = useState<number>(1);
-  const [limit, setLimit] = useState<number | null>(null);
   const [variants, setVariants] = useState<Variant[]>([]);
-  const [showVariantModal, setShowVariantModal] = useState(false);
   const [loadingVariants, setLoadingVariants] = useState(false);
   const [stockWarning, setStockWarning] = useState<string | null>(null);
+  const [showToast, setShowToast] = useState(false);
+  const [themeColor, setThemeColor] = useState("#F9FAFB");
+  const [addedPulse, setAddedPulse] = useState(false);
+  const [variantsOpen, setVariantsOpen] = useState(true);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
+  const toastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const pulseTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const context = useContext(AppContext);
-  const { color, setColor, addProductToCart, phoneNumber, setPhoneNumber, idBussiness, setIdBussiness, cart } =
+  const navigate = useNavigate();
+  const { color, setColor, addProductToCart, phoneNumber, setPhoneNumber, idBussiness, setIdBussiness } =
     context;
-  const cartVariantQuantities = useMemo(() => {
-    const map: Record<number, number> = {};
-
-    cart.forEach((item) => {
-      if (item.Variant_Id != null && item.Quantity != null) {
-        map[item.Variant_Id] = (map[item.Variant_Id] ?? 0) + item.Quantity;
-      }
-    });
-
-    return map;
-  }, [cart]);
 
   useEffect(() => {
     // color desde localStorage si no hay en contexto
@@ -83,14 +65,33 @@ export const DetalleProducto: React.FC = () => {
   }, [color, idBussiness, phoneNumber, setColor, setIdBussiness, setPhoneNumber]);
 
   useEffect(() => {
+    const updateThemeColor = () => {
+      const value = getComputedStyle(document.documentElement)
+        .getPropertyValue("--bg-primary")
+        .trim();
+      setThemeColor(value || "#F9FAFB");
+    };
+
+    updateThemeColor();
+    const observer = new MutationObserver(updateThemeColor);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     const id = idProducto ?? "1";
     let mounted = true;
     getProductById(id).then((data) => {
       if (!mounted) return;
       setProducto(data);
-      setLimit(typeof data?.Stock === "number" ? data.Stock : null);
       setCount(1); // reset cantidad al cambiar de producto
       setStockWarning(null);
+      setSelectedVariantId(null);
+      setVariantsOpen(true);
 
       const inlineVariants = Array.isArray((data as any)?.Variants)
         ? ((data as any).Variants as Variant[])
@@ -125,35 +126,96 @@ export const DetalleProducto: React.FC = () => {
     return Array.from(new Set(base.filter(Boolean)));
   }, [producto]);
 
+  const activeVariant = useMemo(
+    () => variants.find((variant) => variant.Id === selectedVariantId) ?? null,
+    [selectedVariantId, variants]
+  );
+  const activeStock =
+    activeVariant?.Stock ?? (producto?.Stock ?? null);
+  const activePrice =
+    activeVariant?.PromotionPrice ??
+    activeVariant?.Price ??
+    producto?.PromotionPrice ??
+    producto?.Price ??
+    0;
+  const activeOriginalPrice =
+    activeVariant?.PromotionPrice
+      ? activeVariant?.Price
+      : producto?.PromotionPrice
+        ? producto?.Price
+        : null;
+
   const canAdd =
     !!producto &&
     producto.Available === 1 &&
     producto.ForSale === 1 &&
-    (limit === null || limit > 0);
+    (activeStock === null || activeStock > 0);
 
-  const addButtonLabel = variants.length > 0 ? "Seleccionar variante" : "Añadir al carrito";
+  const triggerToast = () => {
+    setShowToast(true);
+    if (toastTimeoutRef.current) {
+      clearTimeout(toastTimeoutRef.current);
+    }
+    toastTimeoutRef.current = setTimeout(() => setShowToast(false), 1800);
+  };
+
+  const triggerPulse = () => {
+    setAddedPulse(true);
+    if (pulseTimeoutRef.current) {
+      clearTimeout(pulseTimeoutRef.current);
+    }
+    pulseTimeoutRef.current = setTimeout(() => setAddedPulse(false), 1200);
+  };
 
   const handleAddCart = () => {
     if (!producto) return;
+    const variant = activeVariant;
+    const itemPrice =
+      variant?.PromotionPrice ?? variant?.Price ?? producto.PromotionPrice ?? producto.Price ?? 0;
 
-    if (variants.length > 0) {
-      setShowVariantModal(true);
-      return;
-    }
+    addProductToCart({
+      ...producto,
+      Price: itemPrice,
+      PromotionPrice: variant?.PromotionPrice ?? producto.PromotionPrice,
+      Variant_Id: variant?.Id ?? null,
+      VariantDescription: variant?.Description,
+      Stock: variant?.Stock ?? producto.Stock,
+      Quantity: count,
+    });
+    triggerToast();
+    triggerPulse();
+  };
 
-    addProductToCart({ ...producto, Quantity: count, Variant_Id: null });
+  const handleBuyNow = () => {
+    if (!producto) return;
+    const variant = activeVariant;
+    const itemPrice =
+      variant?.PromotionPrice ?? variant?.Price ?? producto.PromotionPrice ?? producto.Price ?? 0;
+
+    addProductToCart({
+      ...producto,
+      Price: itemPrice,
+      PromotionPrice: variant?.PromotionPrice ?? producto.PromotionPrice,
+      Variant_Id: variant?.Id ?? null,
+      VariantDescription: variant?.Description,
+      Stock: variant?.Stock ?? producto.Stock,
+      Quantity: count,
+    });
+    triggerToast();
+    triggerPulse();
+    navigate("/catalogo/pedido");
   };
 
   const handleCountInput = (value: string) => {
     let parsed = Math.floor(Number(value));
     if (Number.isNaN(parsed)) parsed = 1;
-    parsed = Math.max(parsed, limit === 0 ? 0 : 1);
+    parsed = Math.max(parsed, activeStock === 0 ? 0 : 1);
 
     let warning: string | null = null;
     let next = parsed;
 
-    if (limit != null && parsed > limit) {
-      next = limit;
+    if (activeStock != null && parsed > activeStock) {
+      next = activeStock;
       warning = "Has alcanzado el límite de stock disponible.";
     }
 
@@ -161,73 +223,41 @@ export const DetalleProducto: React.FC = () => {
     setStockWarning(warning);
   };
 
-  const handleConfirmVariant = (selections: { variant: Variant; quantity: number }[]) => {
-    if (!producto) return;
 
-    selections.forEach(({ variant, quantity }) => {
-      const basePrice = variant.PromotionPrice ?? variant.Price ?? producto.Price;
-
-      addProductToCart({
-        ...producto,
-        Price: basePrice ?? 0,
-        PromotionPrice: variant.PromotionPrice ?? producto.PromotionPrice,
-        Variant_Id: variant.Id ?? null,
-        VariantDescription: variant.Description,
-        Stock: variant.Stock ?? producto.Stock,
-        Quantity: quantity,
-      });
-    });
-
-    setShowVariantModal(false);
-  };
-
-  const handleCloseVariantModal = () => {
-    setShowVariantModal(false);
-  };
+  useEffect(() => {
+    return () => {
+      if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
+      if (pulseTimeoutRef.current) clearTimeout(pulseTimeoutRef.current);
+    };
+  }, []);
 
     const DetalleProductoSkeleton: React.FC = () => {
     return (
-      <div className="px-6 py-20 min-h-screen bg-gray-100">
-        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8 animate-pulse">
-          {/* Carrusel / imagen principal */}
-          <div className="w-full h-72 bg-gray-200 rounded-md" />
-
-          {/* Título */}
-          <div className="mt-6 h-8 bg-gray-200 rounded w-3/4" />
-
-          {/* Precio y badge "nuevo" */}
-          <div className="flex justify-between items-center mt-4">
-            <div className="flex items-center gap-4">
-              <div className="h-7 w-24 bg-gray-200 rounded" />
-              <div className="h-8 w-16 bg-gray-200 rounded" />
-            </div>
-            <div className="h-4 w-24 bg-gray-200 rounded" />
-          </div>
-
-          {/* Descripción */}
-          <div className="mt-6 space-y-2">
-            <div className="h-5 w-32 bg-gray-200 rounded" />
-            <div className="h-4 w-full bg-gray-200 rounded" />
-            <div className="h-4 w-5/6 bg-gray-200 rounded" />
-            <div className="h-4 w-2/3 bg-gray-200 rounded" />
-          </div>
-
-          {/* Controles de cantidad */}
-          <div className="flex justify-center items-center gap-6 mt-8">
-            <div className="w-10 h-10 bg-gray-200 rounded-full" />
-            <div className="w-10 h-6 bg-gray-200 rounded" />
-            <div className="w-10 h-10 bg-gray-200 rounded-full" />
-          </div>
-
-          {/* Botón "Añadir al carrito" */}
-          <div className="mt-10">
-            <div className="w-full md:w-3/4 h-11 bg-gray-200 rounded-full mx-auto" />
+      <div className="px-4 pt-28 pb-24 min-h-screen bg-[var(--bg-primary)]">
+        <div
+          className={`pointer-events-none fixed left-1/2 top-24 z-50 -translate-x-1/2 transition-opacity duration-200 ${
+            showToast ? "opacity-100" : "opacity-0"
+          }`}
+        >
+          <div className="rounded-full bg-black/80 px-4 py-2 text-sm font-medium text-white shadow-sm">
+            Agregado al carrito
           </div>
         </div>
-
-        {/* Botón flotante de WhatsApp (placeholder) */}
-        <div className="bg-gray-300 rounded-full p-2 fixed right-2 bottom-4 shadow-lg">
-          <div className="w-10 h-10 bg-gray-200 rounded-full" />
+        <div className="max-w-xl mx-auto animate-pulse space-y-6">
+          <div className="w-full aspect-[4/5] bg-[var(--bg-subtle)] rounded-[var(--radius-lg)]" />
+          <div className="h-6 bg-[var(--bg-subtle)] rounded w-2/3" />
+          <div className="h-5 bg-[var(--bg-subtle)] rounded w-32" />
+          <div className="space-y-2">
+            <div className="h-4 bg-[var(--bg-subtle)] rounded w-full" />
+            <div className="h-4 bg-[var(--bg-subtle)] rounded w-5/6" />
+          </div>
+          <div className="h-12 bg-[var(--bg-subtle)] rounded-[var(--radius-md)]" />
+          <div className="flex items-center justify-between">
+            <div className="w-12 h-12 bg-[var(--bg-subtle)] rounded-full" />
+            <div className="w-8 h-4 bg-[var(--bg-subtle)] rounded" />
+            <div className="w-12 h-12 bg-[var(--bg-subtle)] rounded-full" />
+          </div>
+          <div className="h-12 bg-[var(--bg-subtle)] rounded-full" />
         </div>
       </div>
     );
@@ -237,7 +267,7 @@ export const DetalleProducto: React.FC = () => {
     return (
       <HelmetProvider>
         <Helmet>
-          <meta name="theme-color" content={color || "#6D01D1"} />
+          <meta name="theme-color" content={themeColor} />
           <title>Cargando producto...</title>
         </Helmet>
 
@@ -249,51 +279,105 @@ export const DetalleProducto: React.FC = () => {
   return (
     <HelmetProvider>
       <Helmet>
-        <meta name="theme-color" content={color || "#6D01D1"} />
+        <meta name="theme-color" content={themeColor} />
         <title>{producto.Name}</title>
       </Helmet>
 
-      <div className="px-6 py-20 min-h-screen bg-gray-100">
-        <div className="max-w-4xl mx-auto bg-white rounded-lg shadow-lg p-8">
-          {/* Carrusel de imágenes */}
-          <ProductCarousel images={images} alt={producto.Name} />
+      <div className="px-4 pt-28 pb-24 min-h-screen bg-[var(--bg-primary)]">
+        <div className="max-w-5xl mx-auto md:flex md:gap-10">
+          <div className="md:w-1/2">
+            <ProductCarousel images={images} alt={producto.Name} />
+          </div>
 
-          {/* Título y precios */}
-          <h1 className="text-4xl font-bold text-gray-900 mt-6">
-            {producto.Name}
-          </h1>
-
-          <div className="flex justify-between items-center mb-4 w-full">
-            <div className="flex items-center gap-4">
-              <div className="text-2xl font-extrabold text-gray-900">
-                {currency.format(Number(producto.Price || 0))}
-              </div>
-              <div className="flex items-center justify-center bg-yellow-100 text-yellow-800 px-4 py-2 rounded-lg shadow-lg text-sm md:text-base lg:text-lg">
-                <p>nuevo</p>
+          <div className="md:w-1/2">
+            <div className="mt-6 md:mt-0">
+              <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
+                {producto.Name}
+              </h1>
+              <div className="flex items-end gap-3 mt-2">
+                <div className="text-2xl font-semibold text-[var(--text-primary)]">
+                  {currency.format(Number(activePrice))}
+                </div>
+                {activeOriginalPrice != null && (
+                  <span className="text-sm text-[var(--text-muted)] line-through">
+                    {currency.format(Number(activeOriginalPrice))}
+                  </span>
+                )}
               </div>
             </div>
 
-            {producto.PromotionPrice && (
-              <span className="line-through text-gray-400 text-sm">
-                {currency.format(Number(producto.PromotionPrice))}
-              </span>
-            )}
-          </div>
-
-          {/* Descripción */}
           {producto.Description && (
-            <div className="my-6">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-2">
-                Descripción
-              </h2>
-              <p className="text-gray-600">{producto.Description}</p>
+            <div className="mt-4 text-[var(--text-secondary)] text-sm leading-relaxed">
+              {producto.Description}
             </div>
           )}
 
-          {/* Cantidad */}
-          <div className="flex justify-center items-center gap-6 mt-6">
+          {variants.length > 0 && (
+            <div className="mt-6">
+              <button
+                type="button"
+                onClick={() => setVariantsOpen((prev) => !prev)}
+                className="w-full flex items-center justify-between rounded-[var(--radius-md)] border border-[var(--border-default)] bg-[var(--bg-surface)] px-4 py-3 text-left"
+              >
+                <div>
+                  <p className="text-sm font-semibold text-[var(--text-primary)]">
+                    Variantes
+                  </p>
+                  <p className="text-xs text-[var(--text-muted)]">
+                    {variants.length} opciones disponibles
+                  </p>
+                </div>
+                <span
+                  className={`text-[var(--text-secondary)] transition-transform ${
+                    variantsOpen ? "rotate-180" : ""
+                  }`}
+                >
+                  ▾
+                </span>
+              </button>
+              <div
+                className={`overflow-hidden transition-all duration-200 ease-out ${
+                  variantsOpen
+                    ? "max-h-[600px] opacity-100 translate-y-0"
+                    : "max-h-0 opacity-0 -translate-y-2"
+                }`}
+              >
+                <div className="pt-4 flex flex-wrap gap-2">
+                  {variants.map((variant) => {
+                    const selected = selectedVariantId === variant.Id;
+                    const isOutOfStock =
+                      variant.Stock != null && variant.Stock <= 0;
+
+                    return (
+                      <button
+                        key={variant.Id ?? variant.Description}
+                        type="button"
+                        onClick={() => {
+                          setSelectedVariantId((prev) =>
+                            prev === variant.Id ? null : variant.Id ?? null
+                          );
+                          setCount(1);
+                          setStockWarning(null);
+                        }}
+                        disabled={isOutOfStock}
+                        className={`px-4 py-2 rounded-full border text-sm font-medium transition ${
+                          selected
+                            ? "bg-[var(--action-primary)] text-[var(--text-inverse)] border-[var(--action-primary)]"
+                            : "bg-[var(--bg-surface)] text-[var(--text-secondary)] border-[var(--border-default)]"
+                        } ${isOutOfStock ? "opacity-50" : ""}`}
+                      >
+                        {variant.Description}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="mt-6 flex items-center justify-between">
             <button
-              className="bg-gray-200 text-gray-900 w-10 h-10 rounded-full hover:bg-gray-300 transition disabled:opacity-50"
+              className="w-11 h-11 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg disabled:opacity-40"
               onClick={() => {
                 setCount((c) => Math.max(1, c - 1));
                 setStockWarning(null);
@@ -304,72 +388,63 @@ export const DetalleProducto: React.FC = () => {
             </button>
             <input
               type="number"
-              min={limit === 0 ? 0 : 1}
-              max={limit ?? undefined}
+              min={activeStock === 0 ? 0 : 1}
+              max={activeStock ?? undefined}
               value={count}
               onChange={(e) => handleCountInput(e.target.value)}
-              className="w-20 text-center border border-gray-300 rounded-md text-2xl font-semibold focus:outline-none focus:ring-2 focus:ring-purple-500"
+              className="w-16 text-center text-lg font-semibold text-[var(--text-primary)] bg-transparent focus:outline-none"
               aria-label="Cantidad a agregar"
             />
             <button
-              className="bg-gray-200 text-gray-900 w-10 h-10 rounded-full hover:bg-gray-300 transition disabled:opacity-50"
+              className="w-11 h-11 rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)] text-lg disabled:opacity-40"
               onClick={() => {
-                if (limit == null) {
+                if (activeStock == null) {
                   setCount((c) => c + 1);
                   setStockWarning(null);
                   return;
                 }
-                if (count < limit) {
+                if (count < activeStock) {
                   setCount((c) => c + 1);
                   setStockWarning(null);
                 }
               }}
-              disabled={limit !== null && count >= limit}
-              title={limit !== null ? `Disponible: ${limit}` : undefined}
+              disabled={activeStock !== null && count >= activeStock}
+              title={activeStock !== null ? `Disponible: ${activeStock}` : undefined}
             >
               +
             </button>
           </div>
           {stockWarning && (
-            <p className="text-sm text-red-600 text-center mt-2">{stockWarning}</p>
+            <p className="text-xs text-[var(--state-error)] text-center mt-2">
+              {stockWarning}
+            </p>
           )}
 
-          {/* Añadir al carrito */}
-          <div className="flex justify-center mt-10">
+          <div className="mt-8 space-y-3 md:flex md:items-center md:gap-4 md:space-y-0">
             <button
+              onClick={handleBuyNow}
+              disabled={!canAdd}
+              className="w-full rounded-full bg-[var(--action-primary)] text-[var(--text-inverse)] py-3 text-sm font-semibold shadow-sm transition-transform active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {loadingVariants && variants.length === 0 ? "Buscando variantes..." : "Comprar ahora"}
+            </button>
+            <button
+              type="button"
               onClick={handleAddCart}
               disabled={!canAdd}
-              style={{
-                backgroundColor: color || "#6D01D1",
-                transition:
-                  "background-color 0.3s ease-in-out, transform 0.3s ease-in-out",
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.backgroundColor = adjustColor(color || "#6D01D1");
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.backgroundColor = color || "#6D01D1";
-              }}
-              className="text-white w-full md:w-3/4 py-3 px-6 rounded-full shadow-lg hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed"
+              className={`w-full rounded-full bg-[var(--action-disabled)] text-[var(--text-primary)] py-3 text-sm font-semibold transition-all duration-300 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed ${
+                addedPulse ? "scale-[1.02] ring-2 ring-[var(--action-primary)]" : ""
+              }`}
             >
-              {loadingVariants && variants.length === 0
-                ? "Buscando variantes..."
-                : addButtonLabel}
+              {addedPulse ? "Agregado" : "Agregar al carrito"}
             </button>
+          </div>
           </div>
         </div>
 
-        <VariantSelectionModal
-          product={producto}
-          variants={variants}
-          isOpen={showVariantModal}
-          onClose={handleCloseVariantModal}
-          onConfirm={handleConfirmVariant}
-          existingVariantQuantities={cartVariantQuantities}
-        />
-
-        {/* WhatsApp */}
-        <div className="bg-green-500 hover:bg-green-600 rounded-full p-2 fixed right-2 bottom-4 shadow-lg transition-all">
+      {
+        /*
+          <div className="bg-green-500 hover:bg-green-600 rounded-full p-2 fixed right-2 bottom-4 shadow-lg transition-all">
           <a
             href={`https://api.whatsapp.com/send?phone=52${telefono || phoneNumber || ""}`}
             target="_blank"
@@ -378,6 +453,8 @@ export const DetalleProducto: React.FC = () => {
             <img src={logoWhasa} alt="WhatsApp" className="w-10 h-10" />
           </a>
         </div>
+        */
+      }
       </div>
     </HelmetProvider>
   );

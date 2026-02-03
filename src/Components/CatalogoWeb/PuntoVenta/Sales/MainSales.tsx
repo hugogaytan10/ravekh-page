@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext, useMemo } from "react";
+import React, { useEffect, useState, useContext, useMemo, useCallback } from "react";
 import { SalesBar } from "./NavBar/SalesBar";
 import { ProductList } from "../Sales/Card";
 import { List } from "./List";
@@ -24,6 +24,7 @@ export const MainSales: React.FC = () => {
   const [view, setView] = useState(true);
   const [showModalPremium, setShowModalPremium] = useState(false);
   const [loader, setLoader] = useState(false);
+  const skeletonCards = useMemo(() => Array.from({ length: 8 }), []);
 
   /** Muestra la barra de navegación al cambiar de página */
   useEffect(() => {
@@ -35,18 +36,33 @@ export const MainSales: React.FC = () => {
 
   /** Obtiene los productos y datos de negocio */
   useEffect(() => {
+    if (!context.user?.Business_Id || !context.user?.Token) {
+      setLoader(false);
+      return;
+    }
+
     setLoader(true);
-    getProduct(context.user.Business_Id, context.user.Token).then((data: any) => {
-      if (data?.length > 0) {
-        const filteredData = [...data[0], ...data[1]].filter(Boolean);
-        setProducts(filteredData);
-        setFilteredProducts(filteredData);
-      }
-    }).finally(() => setLoader(false));
+    getProduct(context.user.Business_Id, context.user.Token)
+      .then((data: any) => {
+        if (data?.length > 0) {
+          const filteredData = [...data[0], ...data[1]].filter(Boolean);
+          const normalized = filteredData.map((product: Item) => ({
+            ...product,
+            Image: product.Image || product.Images?.[0] || "",
+          }));
+          setProducts(normalized);
+          setFilteredProducts(normalized);
+        }
+      })
+      .finally(() => setLoader(false));
   }, [context.user.Business_Id, context.user.Token]);
 
   /** Obtiene la información de impuestos y negocio */
   useEffect(() => {
+    if (!context.user?.Business_Id || !context.user?.Token) {
+      return;
+    }
+
     getBusinessInformation(context.user.Business_Id.toString(), context.user.Token)
       .then((data: any) => data && context.setStore(data));
 
@@ -66,19 +82,27 @@ export const MainSales: React.FC = () => {
   }, [context.cartPos]);
 
   /** Manejo de agregar productos */
-  const handleAddProduct = () => {
+  const handleAddProduct = useCallback(() => {
     if (context.store.Plan === "GRATUITO" && products.length >= 10) {
       setShowModalPremium(true);
     } else {
       context.setShowNavBarBottom(false);
       navigate("/add-product");
     }
-  };
+  }, [context.store.Plan, context.setShowNavBarBottom, navigate, products.length]);
 
   /** Memoiza `ProductList` para evitar re-renders innecesarios */
   const MemoizedProductList = useMemo(
-    () => <ProductList products={filteredProducts} />,
-    [filteredProducts]
+    () => (
+      <div className="py-2">
+        <ProductList
+          products={filteredProducts}
+          onAddProduct={handleAddProduct}
+          storeColor={context.store.Color}
+        />
+      </div>
+    ),
+    [filteredProducts, handleAddProduct, context.store.Color]
   );
 
   return (
@@ -94,27 +118,45 @@ export const MainSales: React.FC = () => {
       </div>
 
       {/* Contenido principal */}
-      <div className="sales-container overflow-y-auto">
-        {filteredProducts.length > 0 ? (
+      <div className={`sales-container ${view ? "overflow-hidden" : "overflow-y-auto"}`}>
+        {loader ? (
           view ? (
-            MemoizedProductList
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 p-3">
+              {skeletonCards.map((_, index) => (
+                <div
+                  key={`sales-skeleton-card-${index}`}
+                  className="h-[250px] rounded-lg bg-gray-200 animate-pulse"
+                ></div>
+              ))}
+            </div>
           ) : (
-            <div className="p-2">
-              <button
-                className="w-full flex flex-col justify-center items-center text-indigo-900 font-semibold bg-blue-100 border-2 border-dashed border-blue-500 rounded-lg  h-[100px] cursor-pointer transition-all duration-200 hover:bg-blue-200"
-                onClick={handleAddProduct}
-              >
-                <PlusIcon width={30} height={30} color="#007bff" />
-                <span>Agregar Producto</span>
-              </button>
-              <List Products={filteredProducts} />
+            <div className="p-2 space-y-3">
+              {skeletonCards.map((_, index) => (
+                <div
+                  key={`sales-skeleton-row-${index}`}
+                  className="h-20 rounded-lg bg-gray-200 animate-pulse"
+                ></div>
+              ))}
             </div>
           )
+        ) : view ? (
+          /* ✅ SIEMPRE mostrar primero la card de agregar */
+          <div className="flex-1 min-h-0">
+            {MemoizedProductList}
+          </div>
         ) : (
-          <button className="add-product" onClick={handleAddProduct}>
-            <PlusIcon width={30} height={30} />
-            <span>Agregar Productos</span>
-          </button>
+          <div className="p-2">
+            {/* aquí sí puedes dejar tu botón arriba porque es vista lista */}
+            <button
+              className="w-full flex flex-col justify-center items-center text-indigo-900 font-semibold bg-blue-100 border-2 border-dashed border-blue-500 rounded-lg h-[100px] cursor-pointer transition-all duration-200 hover:bg-blue-200"
+              onClick={handleAddProduct}
+            >
+              <PlusIcon width={30} height={30} color="#007bff" />
+              <span>Agregar Producto</span>
+            </button>
+
+            <List Products={filteredProducts} />
+          </div>
         )}
 
         {/* Footer */}
