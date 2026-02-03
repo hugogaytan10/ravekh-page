@@ -1,7 +1,8 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { CuponesNav } from "./CuponesNav";
+import { Coupon, getCouponsByBusiness } from "./couponsApi";
 import { getCuponesUserName, hasCuponesSession } from "./cuponesSession";
 
 const accentYellow = "#fbbc04";
@@ -9,39 +10,103 @@ const cardRed = "#c0202b";
 const mutedRose = "#f3b7b7";
 const textDark = "#303030";
 
-const stats = [
-  { label: "Cupones activos", value: "12", helper: "+3 esta semana" },
-  { label: "Redenciones", value: "84", helper: "Últimos 7 días" },
-  { label: "Clientes únicos", value: "53", helper: "Base actual" },
-];
-
-const coupons = [
-  { name: "2x1 en salchitacos", status: "Activo", uses: "24 usos", expires: "Vence en 12 días" },
-  { name: "10% en hamburguesa clásica", status: "Programado", uses: "12 usos", expires: "Inicia mañana" },
-  { name: "Papas fritas gratis", status: "Pausado", uses: "8 usos", expires: "Revisar stock" },
-];
-
 const activity = [
   { title: "Cupón 2x1 aplicado", detail: "Sucursal Centro · Hace 10 min" },
   { title: "Nuevo registro", detail: "Ana Martínez · Hace 35 min" },
   { title: "Cupón pausado", detail: "Papas fritas gratis · Hace 1 h" },
 ];
 
+const BUSINESS_ID = 1;
+
 const statusStyles: Record<string, string> = {
   Activo: "bg-[#fbbc04] text-[#3e3e3e]",
   Programado: "bg-white/85 text-[#3e3e3e]",
   Pausado: "bg-[#f3b7b7] text-[#7a1f1f]",
+  Vencido: "bg-white/85 text-[#7a1f1f]",
 };
 
 const CuponesAdmin: React.FC = () => {
   const navigate = useNavigate();
   const userName = getCuponesUserName();
 
+  // ✅ Siempre array
+  const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  // ✅ Normalizador: lo que sea que venga, lo conviertes a array seguro
+  const normalizeCoupons = (payload: unknown): Coupon[] => {
+    if (Array.isArray(payload)) return payload as Coupon[];
+
+    // Si tu api a veces regresa { data: [...] }
+    if (
+      payload &&
+      typeof payload === "object" &&
+      "data" in payload &&
+      Array.isArray((payload as any).data)
+    ) {
+      return (payload as any).data as Coupon[];
+    }
+
+    return [];
+  };
+
+  const stats = useMemo(() => {
+    const now = Date.now();
+    const activeCount = coupons.filter((coupon) => {
+      const t = new Date(coupon.Valid).getTime();
+      return Number.isFinite(t) && t >= now;
+    }).length;
+
+    return [
+      { label: "Cupones activos", value: `${activeCount}`, helper: "Vigentes hoy" },
+      { label: "Cupones totales", value: `${coupons.length}`, helper: "Registrados" },
+      { label: "Clientes únicos", value: "53", helper: "Base actual" },
+    ];
+  }, [coupons]);
+
   useEffect(() => {
     if (!hasCuponesSession()) {
       navigate("/cupones", { replace: true });
+      return;
     }
+
+    const loadCoupons = async () => {
+      setIsLoading(true);
+      try {
+        const response = await getCouponsByBusiness(BUSINESS_ID);
+
+        // ✅ Aquí se evita que truene aunque venga null/undefined/objeto
+        const safeCoupons = normalizeCoupons(response);
+
+        setCoupons(safeCoupons);
+        setErrorMessage("");
+      } catch (error) {
+        setCoupons([]); // ✅ evita que quede basura/estado raro
+        const message =
+          error instanceof Error ? error.message : "No se pudieron cargar los cupones.";
+        setErrorMessage(message);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadCoupons();
   }, [navigate]);
+
+  const formatDate = (value: string) => {
+    const parsed = new Date(value);
+    if (Number.isNaN(parsed.getTime())) {
+      return value;
+    }
+    return parsed.toLocaleDateString("es-MX", { year: "numeric", month: "short", day: "numeric" });
+  };
+
+  const getStatus = (coupon: Coupon) => {
+    const validTime = new Date(coupon.Valid).getTime();
+    if (!Number.isFinite(validTime)) return "Vencido";
+    return validTime >= Date.now() ? "Activo" : "Vencido";
+  };
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden flex justify-center px-4 pb-12">
@@ -102,62 +167,107 @@ const CuponesAdmin: React.FC = () => {
               </button>
             </div>
 
-            <div
-              className="rounded-2xl px-5 py-4 shadow-[0_12px_24px_rgba(0,0,0,0.18)] text-white"
-              style={{ backgroundColor: cardRed }}
-            >
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-base font-extrabold">Escanear cupón</p>
-                  <p className="text-sm text-white/80">Valida un QR con la cámara.</p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => navigate("/cupones/admin/escanear")}
-                  className="rounded-full bg-white/90 px-4 py-2 text-xs font-bold text-[#3e3e3e]"
-                >
-                  Escanear
-                </button>
-              </div>
-            </div>
-
-            {coupons.map((coupon) => (
+            {isLoading ? (
               <div
-                key={coupon.name}
                 className="rounded-2xl px-5 py-4 shadow-[0_12px_24px_rgba(0,0,0,0.18)] text-white"
                 style={{ backgroundColor: cardRed }}
               >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-base font-extrabold">{coupon.name}</p>
-                    <p className="text-sm text-white/80">{coupon.uses}</p>
-                    <p className="text-xs text-white/70">{coupon.expires}</p>
-                  </div>
-                  <span
-                    className={`rounded-full px-3 py-1 text-xs font-bold ${statusStyles[coupon.status]}`}
-                  >
-                    {coupon.status}
-                  </span>
-                </div>
-                <div className="mt-4 flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => navigate("/cupones/admin/editar")}
-                    className="flex-1 rounded-full bg-white/90 px-3 py-2 text-xs font-bold text-[#3e3e3e]"
-                  >
-                    Editar
-                  </button>
-                  <button
-                    type="button"
-                    className="flex-1 rounded-full border border-white/70 px-3 py-2 text-xs font-bold text-white"
-                  >
-                    Pausar
-                  </button>
-                </div>
+                <p className="text-sm font-semibold">Cargando cupones...</p>
               </div>
-            ))}
-          </section>
+            ) : null}
 
+            {!isLoading && errorMessage ? (
+              <div
+                className="rounded-2xl px-5 py-4 shadow-[0_12px_24px_rgba(0,0,0,0.18)] text-white"
+                style={{ backgroundColor: cardRed }}
+              >
+                <p className="text-sm font-semibold">{errorMessage}</p>
+              </div>
+            ) : null}
+
+            {/* ✅ Aquí ya nunca truena: coupons siempre es array */}
+            {!isLoading && !errorMessage && coupons.length === 0 ? (
+              <div
+                className="rounded-2xl px-5 py-4 shadow-[0_12px_24px_rgba(0,0,0,0.18)] text-white"
+                style={{ backgroundColor: cardRed }}
+              >
+                <p className="text-sm font-semibold">No hay cupones.</p>
+              </div>
+            ) : null}
+
+            {!isLoading && !errorMessage
+              ? coupons.map((coupon) => {
+                  const status = getStatus(coupon);
+                  return (
+                    <div
+                      key={coupon.Id}
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => navigate("/cupones/admin/editar", { state: { coupon } })}
+                      onKeyDown={(event) => {
+                        if (event.key === "Enter" || event.key === " ") {
+                          navigate("/cupones/admin/editar", { state: { coupon } });
+                        }
+                      }}
+                      className="rounded-2xl px-5 py-4 shadow-[0_12px_24px_rgba(0,0,0,0.18)] text-white cursor-pointer"
+                      style={{ backgroundColor: cardRed }}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-base font-extrabold">{coupon.Description}</p>
+                          <p className="text-sm text-white/80">{`Límite: ${coupon.LimitUsers} usuarios`}</p>
+                          <p className="text-xs text-white/70">{`Vence el ${formatDate(coupon.Valid)}`}</p>
+                        </div>
+                        <span className={`rounded-full px-3 py-1 text-xs font-bold ${statusStyles[status]}`}>
+                          {status}
+                        </span>
+                      </div>
+                      <div className="mt-4 flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            navigate("/cupones/admin/editar", { state: { coupon } });
+                          }}
+                          className="flex-1 rounded-full bg-white/90 px-3 py-2 text-xs font-bold text-[#3e3e3e]"
+                        >
+                          Editar
+                        </button>
+                        <button
+                          type="button"
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            navigate("/cupones/admin/editar", { state: { coupon, focusDelete: true } });
+                          }}
+                          className="flex-1 rounded-full border border-white/70 px-3 py-2 text-xs font-bold text-white"
+                        >
+                          Eliminar
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+              : null}
+          </section>
+          <section
+            className="rounded-2xl px-5 py-4 shadow-[0_12px_26px_rgba(0,0,0,0.2)] text-white"
+            style={{ backgroundColor: cardRed }}
+          >
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-lg font-extrabold">Escanear cupón</p>
+                <p className="text-sm text-white/80">Valida un QR con la cámara.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate("/cupones/admin/escanear")}
+                className="rounded-full px-4 py-2 text-sm font-bold shadow-[0_8px_18px_rgba(0,0,0,0.18)]"
+                style={{ backgroundColor: accentYellow, color: "#3e3e3e" }}
+              >
+                Escanear
+              </button>
+            </div>
+          </section>
           <section className="rounded-2xl px-5 py-4 shadow-[0_10px_22px_rgba(0,0,0,0.16)] bg-white">
             <div className="flex items-center justify-between">
               <p className="text-base font-extrabold text-[#414141]">Actividad reciente</p>

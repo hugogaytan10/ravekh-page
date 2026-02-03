@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { CuponesNav } from "./CuponesNav";
+import { Coupon, updateCoupon, deleteCoupon } from "./couponsApi";
 import { getCuponesUserName, hasCuponesSession } from "./cuponesSession";
 
 const accentYellow = "#fbbc04";
@@ -42,11 +43,21 @@ const randomQrValue = () => {
 
 const CuponesEdit: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const userName = getCuponesUserName();
-  const [qrValue, setQrValue] = useState("QR-AB12C-9F4D");
-  const [validUntil, setValidUntil] = useState("2024-12-31");
-  const [limitUsers, setLimitUsers] = useState(120);
-  const [description, setDescription] = useState("2x1 en salchitacos en sucursales participantes.");
+  const couponState = location.state as { coupon?: Coupon; focusDelete?: boolean } | null;
+  const [coupon, setCoupon] = useState<Coupon | null>(couponState?.coupon ?? null);
+  const [qrValue, setQrValue] = useState(coupon?.QR ?? "QR-AB12C-9F4D");
+  const [validUntil, setValidUntil] = useState(
+    coupon?.Valid ? new Date(coupon.Valid).toISOString().slice(0, 10) : "2024-12-31",
+  );
+  const [limitUsers, setLimitUsers] = useState(coupon?.LimitUsers ?? 120);
+  const [description, setDescription] = useState(
+    coupon?.Description ?? "2x1 en salchitacos en sucursales participantes.",
+  );
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
     if (!hasCuponesSession()) {
@@ -54,7 +65,74 @@ const CuponesEdit: React.FC = () => {
     }
   }, [navigate]);
 
+  useEffect(() => {
+    if (couponState?.coupon) {
+      setCoupon(couponState.coupon);
+      setQrValue(couponState.coupon.QR);
+      setValidUntil(new Date(couponState.coupon.Valid).toISOString().slice(0, 10));
+      setLimitUsers(couponState.coupon.LimitUsers);
+      setDescription(couponState.coupon.Description);
+    }
+  }, [couponState]);
+
   const qrMatrix = useMemo(() => generateQrMatrix(qrValue, QR_SIZE), [qrValue]);
+  const isFormValid = Boolean(validUntil && description.trim() && coupon);
+
+  const handleUpdate = async () => {
+    if (!coupon) {
+      setErrorMessage("Selecciona un cupón válido para editar.");
+      return;
+    }
+
+    if (!isFormValid) {
+      setErrorMessage("Completa la fecha de vigencia y la descripción.");
+      return;
+    }
+
+    setErrorMessage("");
+    setIsSaving(true);
+
+    try {
+      await updateCoupon(coupon.Id, {
+        Business_Id: coupon.Business_Id,
+        QR: qrValue,
+        Description: description.trim(),
+        Valid: `${validUntil}T00:00:00`,
+        LimitUsers: limitUsers,
+      });
+      navigate("/cupones/admin");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Ocurrió un error al actualizar.";
+      setErrorMessage(message);
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!coupon) {
+      setErrorMessage("Selecciona un cupón válido para eliminar.");
+      return;
+    }
+
+    const confirmed = window.confirm("¿Seguro que quieres eliminar este cupón?");
+    if (!confirmed) {
+      return;
+    }
+
+    setErrorMessage("");
+    setIsDeleting(true);
+
+    try {
+      await deleteCoupon(coupon.Id);
+      navigate("/cupones/admin");
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Ocurrió un error al eliminar.";
+      setErrorMessage(message);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden flex justify-center px-4 pb-12">
@@ -73,6 +151,13 @@ const CuponesEdit: React.FC = () => {
         </header>
 
         <main className="mt-8 space-y-5">
+          {!coupon ? (
+            <section className="rounded-2xl px-5 py-4 shadow-[0_12px_24px_rgba(0,0,0,0.16)] bg-white">
+              <p className="text-sm font-semibold text-[#414141]">
+                No se encontró el cupón. Regresa al panel para seleccionarlo de nuevo.
+              </p>
+            </section>
+          ) : null}
           <section
             className="rounded-2xl px-5 py-4 shadow-[0_12px_26px_rgba(0,0,0,0.2)] text-white"
             style={{ backgroundColor: cardRed }}
@@ -200,12 +285,23 @@ const CuponesEdit: React.FC = () => {
               <p>LimitUsers: {limitUsers}</p>
               <p>Descripción: {description || "Agrega una descripción"}</p>
             </div>
+            {errorMessage ? <p className="mt-3 text-xs font-semibold text-white/80">{errorMessage}</p> : null}
             <button
               type="button"
               className="mt-4 w-full rounded-full px-4 py-3 text-sm font-bold shadow-[0_8px_18px_rgba(0,0,0,0.18)]"
               style={{ backgroundColor: accentYellow, color: "#3e3e3e" }}
+              onClick={handleUpdate}
+              disabled={!isFormValid || isSaving}
             >
-              Actualizar cupón
+              {isSaving ? "Actualizando..." : "Actualizar cupón"}
+            </button>
+            <button
+              type="button"
+              className="mt-3 w-full rounded-full border border-white/70 px-4 py-3 text-sm font-bold text-white"
+              onClick={handleDelete}
+              disabled={!coupon || isDeleting}
+            >
+              {isDeleting ? "Eliminando..." : "Eliminar cupón"}
             </button>
           </section>
         </main>

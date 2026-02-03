@@ -62,27 +62,25 @@ const CuponesHome: React.FC = () => {
             <p className="mt-3 text-sm font-semibold">1/5</p>
           </section>
 
-          <div className="relative">
-            <div className="absolute inset-x-[-24px] top-1/2 -translate-y-1/2 h-12 bg-[rgba(255,181,0,0.85)] rounded-full blur-md" />
-            <section className="relative rounded-2xl px-5 py-4 shadow-[0_14px_28px_rgba(0,0,0,0.18)] text-white bg-[#c0202b] flex items-center gap-4">
-              <div className="h-16 w-16 rounded-xl border-2 border-white/80 flex items-center justify-center">
-                <svg
-                  viewBox="0 0 24 24"
-                  className="h-10 w-10 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                >
-                  <rect x="4" y="5" width="16" height="14" rx="2.5" />
-                  <path d="M12 5v14M4 10h3m10 0h3m-16 4h3m10 0h3" />
-                </svg>
-              </div>
+          <section
+            className="rounded-2xl px-5 py-4 shadow-[0_12px_26px_rgba(0,0,0,0.2)] text-white"
+            style={{ backgroundColor: cardRed }}
+          >
+            <div className="flex items-center justify-between">
               <div>
-                <p className="text-base font-extrabold">Próxima recompensa</p>
-                <p className="text-sm leading-snug">10% de descuento en hamburguesa clasica</p>
+                <p className="text-lg font-extrabold">Escanear cupón</p>
+                <p className="text-sm text-white/80">Valida un QR con la cámara.</p>
               </div>
-            </section>
-          </div>
+              <button
+                type="button"
+                onClick={() => navigate("/cupones/admin/escanear")}
+                className="rounded-full px-4 py-2 text-sm font-bold shadow-[0_8px_18px_rgba(0,0,0,0.18)]"
+                style={{ backgroundColor: accentYellow, color: "#3e3e3e" }}
+              >
+                Escanear
+              </button>
+            </div>
+          </section>        
 
           <div className="grid grid-cols-2 gap-3">
             <button
@@ -103,7 +101,7 @@ const CuponesHome: React.FC = () => {
             </button>
           </div>
 
-          {rewards.map((reward) => (
+          {/* {rewards.map((reward) => (
             <section
               key={reward.description}
               className="rounded-2xl px-5 py-4 shadow-[0_10px_22px_rgba(0,0,0,0.16)] text-white bg-[#c0202b] flex items-center gap-4"
@@ -125,7 +123,7 @@ const CuponesHome: React.FC = () => {
                 <p className="text-sm leading-snug">{reward.description}</p>
               </div>
             </section>
-          ))}
+          ))} */}
         </main>
 
         <div className="mt-10">
