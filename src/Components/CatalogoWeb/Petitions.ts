@@ -48,7 +48,6 @@ export const getProductsByBusinessWithStock = async (idBusiness: string, limit: 
             body: JSON.stringify({ Limit: limit }),
         })
         const data = await response.json();
-        console.log(data);
         if (data) {
             return data;
         }
