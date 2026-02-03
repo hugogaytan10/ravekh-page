@@ -303,14 +303,18 @@ export const Rutas = () => {
     if (context.idBussiness != 0) {
       getCategoriesByBusinesssId(context.idBussiness).then((data) => {
         //ordenar categorias por el tamano del texto de la categoria
-        data.sort((a, b) => a.Name.length - b.Name.length);
-        setCategories(data);
+        if (data) {
+          data.sort((a, b) => a.Name.length - b.Name.length);
+          setCategories(data);
+        }
       });
     } else {
       getCategoriesByBusinesssId(idBusiness).then((data) => {
         //ordenar categorias por el tamano del texto de la categoria
-        data.sort((a, b) => a.Name.length - b.Name.length);
-        setCategories(data);
+        if (data) {
+          data.sort((a, b) => a.Name.length - b.Name.length);
+          setCategories(data);
+        }
       });
     }
   }, [context.idBussiness]); // Se ejecuta una vez al montar el componente
@@ -718,9 +722,8 @@ export const Rutas = () => {
 
         <div className="drawer-content flex flex-col min-w-full relative hidden" id="menuIconoCatalogo">
           <div
-            className={`fixed top-0 left-0 right-0 z-40 bg-[var(--bg-primary)] catalog-header ${
-              isCatalogHeaderCollapsed ? "is-collapsed" : ""
-            }`}
+            className={`fixed top-0 left-0 right-0 z-40 bg-[var(--bg-primary)] catalog-header ${isCatalogHeaderCollapsed ? "is-collapsed" : ""
+              }`}
           >
             <div className="max-w-screen-xl mx-auto px-4 pt-6 pb-4 catalog-header__content">
               <div className={`flex items-center gap-3 ${isPedidoInfo ? "justify-start" : "justify-between"}`}>
@@ -781,10 +784,9 @@ export const Rutas = () => {
                       <NavLink
                         to={`/catalogo/${catalogoId}`}
                         className={({ isActive }) =>
-                          `pb-2 text-sm transition-colors ${
-                            isActive
-                              ? "text-[var(--text-primary)] border-b-2 border-[var(--text-primary)]"
-                              : "text-[var(--text-secondary)]"
+                          `pb-2 text-sm transition-colors ${isActive
+                            ? "text-[var(--text-primary)] border-b-2 border-[var(--text-primary)]"
+                            : "text-[var(--text-secondary)]"
                           }`
                         }
                       >
@@ -796,10 +798,9 @@ export const Rutas = () => {
                         key={category.Id}
                         to={`/categoria/${category.Id}`}
                         className={({ isActive }) =>
-                          `pb-2 text-sm transition-colors ${
-                            isActive
-                              ? "text-[var(--text-primary)] border-b-2 border-[var(--text-primary)]"
-                              : "text-[var(--text-secondary)]"
+                          `pb-2 text-sm transition-colors ${isActive
+                            ? "text-[var(--text-primary)] border-b-2 border-[var(--text-primary)]"
+                            : "text-[var(--text-secondary)]"
                           }`
                         }
                       >
