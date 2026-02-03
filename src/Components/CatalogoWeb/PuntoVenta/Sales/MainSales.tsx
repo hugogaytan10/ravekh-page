@@ -94,11 +94,13 @@ export const MainSales: React.FC = () => {
   /** Memoiza `ProductList` para evitar re-renders innecesarios */
   const MemoizedProductList = useMemo(
     () => (
-      <ProductList
-        products={filteredProducts}
-        onAddProduct={handleAddProduct}
-        storeColor={context.store.Color}
-      />
+      <div className="py-2">
+        <ProductList
+          products={filteredProducts}
+          onAddProduct={handleAddProduct}
+          storeColor={context.store.Color}
+        />
+      </div>
     ),
     [filteredProducts, handleAddProduct, context.store.Color]
   );
@@ -116,7 +118,7 @@ export const MainSales: React.FC = () => {
       </div>
 
       {/* Contenido principal */}
-      <div className="sales-container overflow-y-auto">
+      <div className={`sales-container ${view ? "overflow-hidden" : "overflow-y-auto"}`}>
         {loader ? (
           view ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 p-3">
@@ -139,7 +141,9 @@ export const MainSales: React.FC = () => {
           )
         ) : view ? (
           /* ✅ SIEMPRE mostrar primero la card de agregar */
-          MemoizedProductList
+          <div className="flex-1 min-h-0">
+            {MemoizedProductList}
+          </div>
         ) : (
           <div className="p-2">
             {/* aquí sí puedes dejar tu botón arriba porque es vista lista */}

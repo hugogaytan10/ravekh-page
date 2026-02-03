@@ -220,6 +220,9 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
 
     setCart(newCart);
     localStorage.setItem("cart", JSON.stringify(newCart));
+    if (newCart.length === 0) {
+      localStorage.removeItem("cartBusinessId");
+    }
   };
 
   //funcion para limpiar el carrito

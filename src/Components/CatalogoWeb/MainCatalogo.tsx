@@ -34,6 +34,9 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [page, setPage] = useState(1);
   const [hasNext, setHasNext] = useState(true);
+  const [hasPrev, setHasPrev] = useState(false);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
   const [telefono, setTelefono] = useState<string | null>(null);
   const [color, setColor] = useState<string | null>(null);
   const [plan, setPlan] = useState<string | null>(null);
@@ -44,9 +47,9 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [variantModalOpen, setVariantModalOpen] = useState(false);
   const [variantLoading, setVariantLoading] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
-  const [loadingMore, setLoadingMore] = useState(false);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("Agregado al carrito");
+  const [themeColor, setThemeColor] = useState("#F9FAFB");
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const [pendingStripeOrder, setPendingStripeOrder] = useState<{
     order: Order;
@@ -77,7 +80,6 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
 
     return map;
   }, [context.cart]);
-  const loadMoreRef = useRef<HTMLDivElement>(null);
   const triggerToast = useCallback((message = "Agregado al carrito") => {
     setToastMessage(message);
     setShowToast(true);
@@ -183,6 +185,24 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     return () => {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
+  }, []);
+
+  useEffect(() => {
+    const updateThemeColor = () => {
+      const value = getComputedStyle(document.documentElement)
+        .getPropertyValue("--bg-primary")
+        .trim();
+      setThemeColor(value || "#F9FAFB");
+    };
+
+    updateThemeColor();
+    const observer = new MutationObserver(updateThemeColor);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -448,17 +468,15 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   }
 
   const fetchProductsPage = useCallback(
-    async (pageToFetch: number, mode: "reset" | "append") => {
+    async (pageToFetch: number, planOverride?: string) => {
       if (!idBusiness) return;
-      if (mode === "append" && (loadingMore || !hasNext)) return;
 
       try {
-        if (mode === "reset") setLoadingProducts(true);
-        else setLoadingMore(true);
+        setLoadingProducts(true);
 
         const resp = await getProductsByBusinessWithStock(
           idBusiness,
-          plan || "",
+          planOverride ?? plan ?? "",
           pageToFetch
         );
 
@@ -466,16 +484,11 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
         const pagination = resp?.pagination;
 
         setHasNext(Boolean(pagination?.hasNext));
-
-        setProductos((prev) => {
-          if (mode === "reset") return newProducts;
-          const map = new Map<number, Producto>();
-          prev.forEach((p) => map.set(p.Id, p));
-          newProducts.forEach((p) => map.set(p.Id, p));
-          return Array.from(map.values());
-        });
-
+        setHasPrev(Boolean(pagination?.hasPrev));
+        setTotalPages(Number(pagination?.totalPages) || 1);
+        setProductos(newProducts);
         setPage(pageToFetch);
+        setPageInput(String(pageToFetch));
 
         if (newProducts.length > 0) {
           const phone = (newProducts[0] as any).PhoneNumber;
@@ -487,14 +500,15 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
         }
       } catch (e) {
         console.error("Error paginando productos:", e);
-        if (mode === "reset") setProductos([]);
+        setProductos([]);
         setHasNext(false);
+        setHasPrev(false);
+        setTotalPages(1);
       } finally {
-        if (mode === "reset") setLoadingProducts(false);
-        else setLoadingMore(false);
+        setLoadingProducts(false);
       }
     },
-    [idBusiness, plan, loadingMore, hasNext, context]
+    [idBusiness, plan, context]
   );
 
   useEffect(() => {
@@ -551,26 +565,11 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
         setProductos([]);
         setPage(1);
         setHasNext(true);
+        setHasPrev(false);
+        setTotalPages(1);
 
         // importante: como setPlan es async, usa el plan directo del negocio aquí:
-        const resp = await getProductsByBusinessWithStock(
-          idBusiness || "1",
-          dataBusiness?.Plan || "",
-          1
-        );
-        const firstPageProducts: Producto[] = Array.isArray(resp?.data) ? resp.data : [];
-        setProductos(firstPageProducts);
-        setHasNext(Boolean(resp?.pagination?.hasNext));
-        setPage(1);
-
-        if (firstPageProducts.length > 0) {
-          const phone = (firstPageProducts[0] as any).PhoneNumber;
-          if (phone) {
-            setTelefono(phone);
-            context.setPhoneNumber(phone);
-            localStorage.setItem("telefono", phone);
-          }
-        }
+        await fetchProductsPage(1, dataBusiness?.Plan || "");
       } catch (error) {
         console.error("Error cargando catálogo:", error);
         setProductos([]);
@@ -582,31 +581,48 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idBusiness]);
 
-  const loadNextPage = useCallback(() => {
-    if (!hasNext || loadingMore || loadingProducts) return;
-    const next = page + 1;
-    void fetchProductsPage(next, "append");
-  }, [hasNext, loadingMore, loadingProducts, page, fetchProductsPage]);
+  const paginationItems = useMemo(() => {
+    if (totalPages <= 7) {
+      return Array.from({ length: totalPages }, (_, index) => index + 1);
+    }
 
-  useEffect(() => {
-    if (!hasNext) return;
+    const items: Array<number | string> = [];
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, page + 2);
 
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting) {
-          loadNextPage();
-        }
-      },
-      { rootMargin: "200px" }
-    );
+    if (start > 1) items.push(1);
+    if (start > 2) items.push("...");
 
-    const currentRef = loadMoreRef.current;
-    if (currentRef) observer.observe(currentRef);
+    for (let current = start; current <= end; current += 1) {
+      items.push(current);
+    }
 
-    return () => {
-      if (currentRef) observer.unobserve(currentRef);
-    };
-  }, [hasNext, loadNextPage]);
+    if (end < totalPages - 1) items.push("...");
+    if (end < totalPages) items.push(totalPages);
+
+    return items;
+  }, [page, totalPages]);
+
+  const handlePageChange = useCallback(
+    (nextPage: number) => {
+      if (nextPage === page || loadingProducts) return;
+      if (nextPage < 1 || nextPage > totalPages) return;
+      void fetchProductsPage(nextPage);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+    [page, totalPages, loadingProducts, fetchProductsPage]
+  );
+
+  const handlePageInputChange = useCallback((value: string) => {
+    const sanitized = value.replace(/[^\d]/g, "");
+    setPageInput(sanitized);
+  }, []);
+
+  const handlePageInputSubmit = useCallback(() => {
+    const parsed = Number(pageInput);
+    if (!Number.isFinite(parsed)) return;
+    handlePageChange(parsed);
+  }, [handlePageChange, pageInput]);
 
 
   const shareName =
@@ -617,17 +633,14 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     <HelmetProvider>
       <>
         <Helmet>
-          <meta name="theme-color" content={color || "#6D01D1"} />
+          <meta name="theme-color" content={themeColor} />
           <title>{shareName}</title>
           <meta
             name="description"
             content="Explora nuestro catálogo de productos y encuentra todo lo que necesitas a precios increíbles. ¡Compra ahora!"
           />
           <meta property="og:type" content="website" />
-          <meta
-            name="theme-color"
-            content={context.idBussiness === '115' ? "#000000" : color || "#6D01D1"}
-          />
+          <meta name="theme-color" content={themeColor} />
           <title>{shareName}</title>
           <meta
             property="og:title"
@@ -683,13 +696,76 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
             />
           )}
 
-          {hasNext && (
-            <div ref={loadMoreRef} className="h-10"></div>
-          )}
+          {totalPages > 1 && (
+            <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+              <button
+                type="button"
+                onClick={() => handlePageChange(page - 1)}
+                disabled={!hasPrev || loadingProducts}
+                className="h-10 px-4 rounded-full border border-[var(--border-default)] text-sm font-medium text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Anterior
+              </button>
 
-          {loadingMore && (
-            <div className="text-center py-4 text-[var(--text-secondary)]">
-              Cargando más productos...
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                {paginationItems.map((item, index) =>
+                  typeof item === "number" ? (
+                    <button
+                      key={`${item}-${index}`}
+                      type="button"
+                      onClick={() => handlePageChange(item)}
+                      disabled={loadingProducts}
+                      className={`h-10 w-10 rounded-full border text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                        item === page
+                          ? "bg-[var(--action-primary)] text-white border-[var(--action-primary)]"
+                          : "border-[var(--border-default)] text-[var(--text-primary)] hover:bg-[var(--bg-muted)]"
+                      }`}
+                      aria-current={item === page ? "page" : undefined}
+                    >
+                      {item}
+                    </button>
+                  ) : (
+                    <span
+                      key={`ellipsis-${index}`}
+                      className="h-10 w-10 flex items-center justify-center text-[var(--text-secondary)]"
+                    >
+                      {item}
+                    </span>
+                  )
+                )}
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handlePageChange(page + 1)}
+                disabled={!hasNext || loadingProducts}
+                className="h-10 px-4 rounded-full border border-[var(--border-default)] text-sm font-medium text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                Siguiente
+              </button>
+              <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                <span className="hidden sm:inline">Página</span>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  value={pageInput}
+                  onChange={(event) => handlePageInputChange(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") handlePageInputSubmit();
+                  }}
+                  className="h-10 w-16 rounded-full border border-[var(--border-default)] bg-transparent text-center text-sm font-semibold text-[var(--text-primary)]"
+                  aria-label="Ir a la página"
+                />
+                <span>de {totalPages}</span>
+                <button
+                  type="button"
+                  onClick={handlePageInputSubmit}
+                  disabled={loadingProducts}
+                  className="h-10 px-4 rounded-full border border-[var(--border-default)] text-sm font-medium text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Ir
+                </button>
+              </div>
             </div>
           )}
 
