@@ -482,8 +482,7 @@ export const Rutas = () => {
       "/finish",
       "/add-product",
       "/select-caterory-sales",
-      "/add-category-sales",
-      "/MainFinances",
+      "/add-category-sales", 
       "/main-products",
       "/add-product-products",
       "/select-category-product",
@@ -702,6 +701,15 @@ export const Rutas = () => {
                   className="text-base"
                 >
                   Punto de Venta
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/cupones"
+                  onClick={handleMenuClick}
+                  className="text-base"
+                >
+                  Cupones
                 </NavLink>
               </li>
               <li>
