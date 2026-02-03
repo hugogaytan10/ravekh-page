@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import bolsita from "../../assets/Cupones/bolsita.png";
 import { URL } from "../CatalogoWeb/Const/Const";
-import { setCuponesSession } from "./cuponesSession";
+import { setCuponesBusinessId, setCuponesSession, setCuponesUserId, setCuponesUserName } from "./cuponesSession";
 
 const accentYellow = "#fbbc04";
 const softGray = "#e6e6e6";
@@ -48,7 +48,11 @@ const RegisterCupones: React.FC = () => {
         throw new Error("No se pudo registrar la cuenta.");
       }
 
+      const data = await response.json();
       setCuponesSession(true);
+      setCuponesUserName(name);
+      setCuponesUserId(data?.Id ?? data?.id);
+      setCuponesBusinessId(1);
       navigate("/cupones/home");
     } catch (error) {
       console.error("Error registrando cuenta:", error);

@@ -25,6 +25,16 @@ import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
 import { PoliticaPrivacidadAgenda } from "../PoliticaPrivacidad/PoliticaPrivacidadAgenda";
 //importaciones para el catalogo web
 import { RavekhPos } from "../RavekhPos/RavekhPos";
+import { LoginCupones } from "../Cupones/LoginCupones";
+import { RegisterCupones } from "../Cupones/RegisterCupones";
+import { CuponesHome } from "../Cupones/CuponesHome";
+import { CuponesList } from "../Cupones/CuponesList";
+import { CuponesSettings } from "../Cupones/CuponesSettings";
+import { CuponesAdmin } from "../Cupones/CuponesAdmin";
+import { CuponesCreate } from "../Cupones/CuponesCreate";
+import { CuponesEdit } from "../Cupones/CuponesEdit";
+import { CuponesScan } from "../Cupones/CuponesScan";
+import { CuponesSuccess } from "../Cupones/CuponesSuccess";
 
 // Importaciones para el punto de venta - Login
 import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
@@ -863,6 +873,16 @@ export const Rutas = () => {
           <Route path="/politica" element={<PoliticaPrivacidad />} />
           <Route path="/politicaAgenda" element={<PoliticaPrivacidadAgenda />} />
           <Route path="/RavekhPos" element={<RavekhPos />} />
+          <Route path="/cupones" element={<LoginCupones />} />
+          <Route path="/cupones/registro" element={<RegisterCupones />} />
+          <Route path="/cupones/home" element={<CuponesHome />} />
+          <Route path="/cupones/cupones" element={<CuponesList />} />
+          <Route path="/cupones/ajustes" element={<CuponesSettings />} />
+          <Route path="/cupones/admin" element={<CuponesAdmin />} />
+          <Route path="/cupones/admin/crear" element={<CuponesCreate />} />
+          <Route path="/cupones/admin/editar" element={<CuponesEdit />} />
+          <Route path="/cupones/admin/escanear" element={<CuponesScan />} />
+          <Route path="/cupones/admin/confirmado" element={<CuponesSuccess />} />
           <Route path="/blog" element={<BlogMain />} />
           <Route path="/blog/articulosIA" element={<MainArticulosIA />} />
           <Route

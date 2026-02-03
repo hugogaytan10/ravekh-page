@@ -2,7 +2,12 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import cubito from "../../assets/Cupones/cubito.png";
 import bolsita from "../../assets/Cupones/bolsita.png";
-import { setCuponesSession, setCuponesUserName } from "./cuponesSession";
+import {
+  setCuponesBusinessId,
+  setCuponesSession,
+  setCuponesUserId,
+  setCuponesUserName,
+} from "./cuponesSession";
 import { loginCupones } from "./couponsApi";
 
 const accentYellow = "#fbbc04";
@@ -27,6 +32,8 @@ const LoginCupones: React.FC = () => {
       if (loginResponse?.Role) {
         setCuponesSession(true);
         setCuponesUserName(loginResponse.Name ?? "");
+        setCuponesUserId(loginResponse.Id);
+        setCuponesBusinessId(loginResponse.Business_Id);
         localStorage.setItem("cupones-role", loginResponse.Role);
         localStorage.setItem("cupones-token", loginResponse.Token ?? "");
         if (loginResponse.Role === "ADMINISTRADOR") {

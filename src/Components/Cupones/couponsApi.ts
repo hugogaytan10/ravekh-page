@@ -17,6 +17,14 @@ interface Coupon {
   LimitUsers: number;
 }
 
+interface CouponHasUser {
+  Id: number;
+  Coupon_Id: number;
+  User_Id: number;
+  Used: boolean;
+  DateUsed: string;
+}
+
 const createCoupon = async (payload: CreateCouponPayload) => {
   const response = await fetch(`${URL}coupons`, {
     method: "POST",
@@ -45,14 +53,39 @@ const getCouponsByBusiness = async (businessId: number) => {
 
   return response.json() as Promise<Coupon[]>;
 };
-const getCouponsByUser = async (businessId: number) => {
-  const response = await fetch(`${URL}coupons/business/${businessId}`);
+
+const getCouponById = async (couponId: number) => {
+  const response = await fetch(`${URL}coupons/${couponId}`);
 
   if (!response.ok) {
-    throw new Error("No se pudieron cargar los cupones.");
+    throw new Error("No se pudo cargar el cupón.");
   }
 
-  return response.json() as Promise<Coupon[]>;
+  return response.json() as Promise<Coupon | null>;
+};
+
+const getCouponHasUsersByUser = async (userId: number) => {
+  const response = await fetch(`${URL}couponhasusers/user/${userId}`);
+
+  if (!response.ok) {
+    throw new Error("No se pudieron cargar los cupones del usuario.");
+  }
+
+  return response.json() as Promise<CouponHasUser[] | null>;
+};
+
+const getCouponsByUser = async (userId: number) => {
+  const relations = await getCouponHasUsersByUser(userId);
+
+  if (!relations || relations.length === 0) {
+    return [] as Coupon[];
+  }
+
+  const coupons = await Promise.all(
+    relations.map(async (relation) => getCouponById(relation.Coupon_Id))
+  );
+
+  return coupons.filter((coupon): coupon is Coupon => Boolean(coupon));
 };
 const updateCoupon = async (couponId: number, payload: CreateCouponPayload) => {
   const response = await fetch(`${URL}coupons/${couponId}`, {
@@ -82,8 +115,8 @@ const deleteCoupon = async (couponId: number) => {
   return response;
 };
 
-export { getCouponsByBusiness, updateCoupon, deleteCoupon };
-export type { Coupon };
+export { getCouponById, getCouponHasUsersByUser, getCouponsByBusiness, getCouponsByUser, updateCoupon, deleteCoupon };
+export type { Coupon, CouponHasUser };
 
 interface LoginPayload {
   Email: string;
