@@ -27,6 +27,7 @@ export const DetalleProducto: React.FC = () => {
   const [loadingVariants, setLoadingVariants] = useState(false);
   const [stockWarning, setStockWarning] = useState<string | null>(null);
   const [showToast, setShowToast] = useState(false);
+  const [themeColor, setThemeColor] = useState("#F9FAFB");
   const [addedPulse, setAddedPulse] = useState(false);
   const [variantsOpen, setVariantsOpen] = useState(true);
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
@@ -62,6 +63,24 @@ export const DetalleProducto: React.FC = () => {
     document.getElementById("imgCatalogo")?.classList.add("hidden");
     document.getElementById("backCatalogo")?.classList.remove("hidden");
   }, [color, idBussiness, phoneNumber, setColor, setIdBussiness, setPhoneNumber]);
+
+  useEffect(() => {
+    const updateThemeColor = () => {
+      const value = getComputedStyle(document.documentElement)
+        .getPropertyValue("--bg-primary")
+        .trim();
+      setThemeColor(value || "#F9FAFB");
+    };
+
+    updateThemeColor();
+    const observer = new MutationObserver(updateThemeColor);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     const id = idProducto ?? "1";
@@ -248,7 +267,7 @@ export const DetalleProducto: React.FC = () => {
     return (
       <HelmetProvider>
         <Helmet>
-          <meta name="theme-color" content={color || "#6D01D1"} />
+          <meta name="theme-color" content={themeColor} />
           <title>Cargando producto...</title>
         </Helmet>
 
@@ -260,7 +279,7 @@ export const DetalleProducto: React.FC = () => {
   return (
     <HelmetProvider>
       <Helmet>
-        <meta name="theme-color" content={color || "#6D01D1"} />
+        <meta name="theme-color" content={themeColor} />
         <title>{producto.Name}</title>
       </Helmet>
 

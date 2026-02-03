@@ -49,6 +49,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("Agregado al carrito");
+  const [themeColor, setThemeColor] = useState("#F9FAFB");
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const [pendingStripeOrder, setPendingStripeOrder] = useState<{
     order: Order;
@@ -184,6 +185,24 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     return () => {
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
     };
+  }, []);
+
+  useEffect(() => {
+    const updateThemeColor = () => {
+      const value = getComputedStyle(document.documentElement)
+        .getPropertyValue("--bg-primary")
+        .trim();
+      setThemeColor(value || "#F9FAFB");
+    };
+
+    updateThemeColor();
+    const observer = new MutationObserver(updateThemeColor);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
@@ -614,17 +633,14 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     <HelmetProvider>
       <>
         <Helmet>
-          <meta name="theme-color" content={color || "#6D01D1"} />
+          <meta name="theme-color" content={themeColor} />
           <title>{shareName}</title>
           <meta
             name="description"
             content="Explora nuestro catálogo de productos y encuentra todo lo que necesitas a precios increíbles. ¡Compra ahora!"
           />
           <meta property="og:type" content="website" />
-          <meta
-            name="theme-color"
-            content={context.idBussiness === '115' ? "#000000" : color || "#6D01D1"}
-          />
+          <meta name="theme-color" content={themeColor} />
           <title>{shareName}</title>
           <meta
             property="og:title"

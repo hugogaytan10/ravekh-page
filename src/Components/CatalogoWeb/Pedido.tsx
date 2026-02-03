@@ -50,6 +50,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
   const [quantityWarnings, setQuantityWarnings] = useState<Record<string, string | null>>({});
   const [shippingOptions, setShippingOptions] = useState<ShippingOptions>(defaultShippingOptions);
   const [loadingShippingOptions, setLoadingShippingOptions] = useState<boolean>(true);
+  const [themeColor, setThemeColor] = useState("#F9FAFB");
   const [openSection, setOpenSection] = useState<null | "contact" | "delivery" | "address" | "payment">(null);
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
   const [stripeEnabled, setStripeEnabled] = useState(false);
@@ -121,6 +122,24 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
   };
 
   const isCartView = view === "cart";
+
+  useEffect(() => {
+    const updateThemeColor = () => {
+      const value = getComputedStyle(document.documentElement)
+        .getPropertyValue("--bg-primary")
+        .trim();
+      setThemeColor(value || "#F9FAFB");
+    };
+
+    updateThemeColor();
+    const observer = new MutationObserver(updateThemeColor);
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+
+    return () => observer.disconnect();
+  }, []);
 
   const totalArticulos = cart.reduce((total, item) => total + (item.Quantity || 1), 0);
   const totalPrecio = cart.reduce((total, item) => {
@@ -912,7 +931,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
       <HelmetProvider>
         <>
           <Helmet>
-            <meta name="theme-color" content={color || "#6D01D1"} />
+            <meta name="theme-color" content={themeColor} />
           </Helmet>
           <div className="min-h-screen flex items-center justify-center px-4 bg-[var(--bg-primary)]">
             <div className="bg-white shadow-lg rounded-xl p-6 text-center">
@@ -931,7 +950,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     <HelmetProvider>
       <>
         <Helmet>
-          <meta name="theme-color" content={color || "#6D01D1"} />
+          <meta name="theme-color" content={themeColor} />
         </Helmet>
         <div
           className={`pt-28 ${isCartView ? "pb-32" : "pb-24"} px-4 ${

@@ -23,6 +23,7 @@ export const MainCategoria: React.FC = () => {
     const [variantOptions, setVariantOptions] = useState<Variant[]>([]);
     const [variantModalOpen, setVariantModalOpen] = useState(false);
     const [variantLoading, setVariantLoading] = useState(false);
+    const [themeColor, setThemeColor] = useState("#F9FAFB");
     const catalogoId =
         (context.idBussiness !== "0" ? context.idBussiness : localStorage.getItem("idBusiness")) ?? "";
 
@@ -100,6 +101,24 @@ export const MainCategoria: React.FC = () => {
         //ocultamos la flecha de regreso
         const arrowIcon = document.getElementById("backCatalogo");
         arrowIcon?.classList.add("hidden");
+    }, []);
+
+    useEffect(() => {
+        const updateThemeColor = () => {
+            const value = getComputedStyle(document.documentElement)
+                .getPropertyValue("--bg-primary")
+                .trim();
+            setThemeColor(value || "#F9FAFB");
+        };
+
+        updateThemeColor();
+        const observer = new MutationObserver(updateThemeColor);
+        observer.observe(document.documentElement, {
+            attributes: true,
+            attributeFilter: ["data-theme"],
+        });
+
+        return () => observer.disconnect();
     }, []);
 
     useEffect(() => {
@@ -286,7 +305,7 @@ export const MainCategoria: React.FC = () => {
         <HelmetProvider>
             <>
                 <Helmet>
-                    <meta name="theme-color" content="#F64301" />
+                    <meta name="theme-color" content={themeColor} />
                 </Helmet>
                 <div className="px-4 pt-44 pb-12 min-h-screen w-full max-w-screen-xl mx-auto bg-[var(--bg-primary)]">
                     {loadingProducts ? (
