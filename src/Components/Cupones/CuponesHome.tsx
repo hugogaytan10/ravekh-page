@@ -27,12 +27,12 @@ const CuponesHome: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-white relative overflow-hidden flex justify-center px-4 pb-8">
-      <div className="absolute top-[-80px] right-[-120px] w-[260px] h-[260px] bg-[#ffca1f] rounded-full opacity-70" />
-      <div className="absolute bottom-[-120px] left-[-100px] w-[240px] h-[240px] bg-[#ffca1f] rounded-full opacity-70" />
+      <div className="absolute top-[-80px] right-[-120px] w-[260px] h-[260px] bg-[#FEB419] rounded-full " />
+      <div className="absolute bottom-[-120px] left-[-100px] w-[240px] h-[240px] bg-[#FEB419] rounded-full " />
 
       <div className="w-full max-w-[460px] relative">
         <header className="flex items-center gap-3 pt-8 px-1 text-[#414141]">
-          <div className="h-14 w-14 rounded-full bg-[#fff2c2] border-2 border-[#ffd24c] flex items-center justify-center shadow-sm">
+          <div className="h-14 w-14 rounded-full bg-[#FEB419] border-2 border-[#FEB419] flex items-center justify-center shadow-sm">
             <img src={cuponsito} alt="Avatar" className="h-10 w-10 object-contain" />
           </div>
           <div>
@@ -42,7 +42,7 @@ const CuponesHome: React.FC = () => {
         </header>
 
         <main className="mt-8 space-y-5">
-          <section className="rounded-2xl px-5 py-4 shadow-[0_10px_24px_rgba(0,0,0,0.15)] text-white bg-[#c0202b]">
+          <section className="rounded-2xl px-5 py-4 shadow-[0_10px_24px_rgba(0,0,0,0.15)] text-white bg-[#d76068]">
             <div className="flex items-center justify-between">
               <p className="text-lg font-extrabold">Mis visitas</p>
               <span className="text-sm font-semibold">1/5</span>

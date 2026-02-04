@@ -30,9 +30,6 @@ import { RegisterCupones } from "../Cupones/RegisterCupones";
 import { CuponesHome } from "../Cupones/CuponesHome";
 import { CuponesList } from "../Cupones/CuponesList";
 import { CuponesSettings } from "../Cupones/CuponesSettings";
-import { CuponesAdmin } from "../Cupones/CuponesAdmin";
-import { CuponesCreate } from "../Cupones/CuponesCreate";
-import { CuponesEdit } from "../Cupones/CuponesEdit";
 import { CuponesScan } from "../Cupones/CuponesScan";
 import { CuponesSuccess } from "../Cupones/CuponesSuccess";
 
@@ -878,9 +875,6 @@ export const Rutas = () => {
           <Route path="/cupones/home" element={<CuponesHome />} />
           <Route path="/cupones/cupones" element={<CuponesList />} />
           <Route path="/cupones/ajustes" element={<CuponesSettings />} />
-          <Route path="/cupones/admin" element={<CuponesAdmin />} />
-          <Route path="/cupones/admin/crear" element={<CuponesCreate />} />
-          <Route path="/cupones/admin/editar" element={<CuponesEdit />} />
           <Route path="/cupones/admin/escanear" element={<CuponesScan />} />
           <Route path="/cupones/admin/confirmado" element={<CuponesSuccess />} />
           <Route path="/blog" element={<BlogMain />} />
