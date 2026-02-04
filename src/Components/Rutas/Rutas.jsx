@@ -25,13 +25,13 @@ import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
 import { PoliticaPrivacidadAgenda } from "../PoliticaPrivacidad/PoliticaPrivacidadAgenda";
 //importaciones para el catalogo web
 import { RavekhPos } from "../RavekhPos/RavekhPos";
-import { LoginCupones } from "../Cupones/LoginCupones";
-import { RegisterCupones } from "../Cupones/RegisterCupones";
-import { CuponesHome } from "../Cupones/CuponesHome";
-import { CuponesList } from "../Cupones/CuponesList";
-import { CuponesSettings } from "../Cupones/CuponesSettings";
-import { CuponesScan } from "../Cupones/CuponesScan";
-import { CuponesSuccess } from "../Cupones/CuponesSuccess";
+import { LoginPage } from "../../coupons/pages/LoginPage";
+import { RegisterPage } from "../../coupons/pages/RegisterPage";
+import { HomePage } from "../../coupons/pages/HomePage";
+import { CouponsPage } from "../../coupons/pages/CouponsPage";
+import { SettingsPage } from "../../coupons/pages/SettingsPage";
+import { ScanPage } from "../../coupons/pages/ScanPage";
+import { SuccessPage } from "../../coupons/pages/SuccessPage";
 
 // Importaciones para el punto de venta - Login
 import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
@@ -870,13 +870,13 @@ export const Rutas = () => {
           <Route path="/politica" element={<PoliticaPrivacidad />} />
           <Route path="/politicaAgenda" element={<PoliticaPrivacidadAgenda />} />
           <Route path="/RavekhPos" element={<RavekhPos />} />
-          <Route path="/cupones" element={<LoginCupones />} />
-          <Route path="/cupones/registro" element={<RegisterCupones />} />
-          <Route path="/cupones/home" element={<CuponesHome />} />
-          <Route path="/cupones/cupones" element={<CuponesList />} />
-          <Route path="/cupones/ajustes" element={<CuponesSettings />} />
-          <Route path="/cupones/admin/escanear" element={<CuponesScan />} />
-          <Route path="/cupones/admin/confirmado" element={<CuponesSuccess />} />
+          <Route path="/cupones" element={<LoginPage />} />
+          <Route path="/cupones/registro" element={<RegisterPage />} />
+          <Route path="/cupones/home" element={<HomePage />} />
+          <Route path="/cupones/cupones" element={<CouponsPage />} />
+          <Route path="/cupones/ajustes" element={<SettingsPage />} />
+          <Route path="/cupones/admin/escanear" element={<ScanPage />} />
+          <Route path="/cupones/admin/confirmado" element={<SuccessPage />} />
           <Route path="/blog" element={<BlogMain />} />
           <Route path="/blog/articulosIA" element={<MainArticulosIA />} />
           <Route

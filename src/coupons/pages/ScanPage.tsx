@@ -1,14 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
-import { CuponesNav } from "./CuponesNav";
-import { Coupon, getCouponsByBusiness } from "./couponsApi";
-import { getCuponesUserName, hasCuponesSession } from "./cuponesSession";
-
-const accentYellow = "#fbbc04";
-const cardRed = "#c0202b";
-const mutedRose = "#f3b7b7";
-const textDark = "#303030";
+import { CuponesNav } from "../interface/CouponsNav";
+import { useCouponsTheme } from "../interface/useCouponsTheme";
+import { Coupon, getCouponsByBusiness } from "../services/couponsApi";
+import { getCuponesUserName, hasCuponesSession } from "../services/session";
 
 const BUSINESS_ID = 1;
 
@@ -24,10 +20,10 @@ const SUPPORTED_BARCODE_FORMATS = [
   "itf",
 ];
 
-const CuponesScan: React.FC = () => {
+const ScanPage: React.FC = () => {
   const navigate = useNavigate();
   const userName = getCuponesUserName();
-
+  const { theme } = useCouponsTheme();
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const rafIdRef = useRef<number | null>(null);
@@ -89,7 +85,6 @@ const CuponesScan: React.FC = () => {
         try {
           video.pause();
         } catch {}
-        // @ts-expect-error: srcObject exists in browsers
         video.srcObject = null;
       }
 
@@ -157,7 +152,6 @@ const CuponesScan: React.FC = () => {
           return;
         }
 
-        // @ts-expect-error: srcObject exists in browsers
         video.srcObject = stream;
 
         // Asegura autoplay en móviles
@@ -290,35 +284,48 @@ const CuponesScan: React.FC = () => {
     : "";
 
   return (
-    <div className="min-h-screen bg-white relative overflow-hidden flex justify-center px-4 pb-12">
-      <div className="absolute top-[-140px] right-[-160px] w-[340px] h-[340px] bg-[#ffca1f] rounded-full opacity-70" />
-      <div className="absolute bottom-[-160px] left-[-180px] w-[360px] h-[360px] bg-[#ffca1f] rounded-full opacity-70" />
-
+    <div
+    className="min-h-screen relative overflow-hidden flex justify-center px-4 pb-28 transition-colors"
+    style={{ backgroundColor: theme.background }}
+  >
+    <div
+      className="absolute top-[-160px] right-[-200px] w-[380px] h-[380px] rounded-full opacity-80"
+      style={{ backgroundColor: theme.accent }}
+    />
+    <div
+      className="absolute bottom-[-200px] left-[-220px] w-[420px] h-[420px] rounded-full opacity-80"
+      style={{ backgroundColor: theme.accent }}
+    />
       <div className="relative w-full max-w-[460px] z-10">
-        <header className="flex items-center gap-3 pt-8 px-1 text-[#414141]">
-          <div className="h-14 w-14 rounded-full bg-[#fff2c2] border-2 border-[#ffd24c] flex items-center justify-center shadow-sm">
+      <header className="flex items-center gap-3 pt-8 px-1" style={{ color: theme.textPrimary }}>
+          <div
+            className="h-14 w-14 rounded-full border-2 flex items-center justify-center shadow-[0_12px_24px_rgba(0,0,0,0.18)]"
+            style={{ backgroundColor: theme.accent, borderColor: theme.accentSoft }}
+          >
             <img src={cuponsito} alt="Avatar" className="h-10 w-10 object-contain" />
           </div>
           <div>
             <p className="text-sm font-semibold">Hola{userName ? ` ${userName}` : ""}</p>
-            <p className="text-sm text-[#6a6a6a]">Escanear cupón</p>
-          </div>
+            <p className="text-sm" style={{ color: theme.textMuted }}>
+              Escanear cupón
+            </p>          </div>
         </header>
 
         <main className="mt-8 space-y-5">
-          <section
-            className="rounded-2xl px-5 py-4 shadow-[0_12px_26px_rgba(0,0,0,0.2)] text-white"
-            style={{ backgroundColor: cardRed }}
+        <section
+            className="rounded-2xl px-5 py-4 shadow-[0_16px_32px_rgba(0,0,0,0.22)] border"
+            style={{ backgroundColor: theme.surface, color: theme.textPrimary, borderColor: theme.border }}
           >
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-lg font-extrabold">Escaneo de QR</p>
-                <p className="text-sm text-white/80">Apunta la cámara al código.</p>
-              </div>
-              <button
+                <p className="text-sm" style={{ color: theme.textMuted }}>
+                  Apunta la cámara al código.
+                </p>              </div>
+                <button
                 type="button"
-                className="rounded-full px-4 py-2 text-sm font-bold shadow-[0_8px_18px_rgba(0,0,0,0.18)]"
-                style={{ backgroundColor: accentYellow, color: "#3e3e3e" }}
+                className="rounded-full px-4 py-2 text-sm font-bold shadow-[0_10px_22px_rgba(0,0,0,0.2)]"
+                style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
                 onClick={() => navigate("/cupones/home")}
               >
                 Volver
@@ -326,10 +333,15 @@ const CuponesScan: React.FC = () => {
             </div>
           </section>
 
-          <section className="rounded-2xl bg-white px-5 py-4 shadow-[0_12px_24px_rgba(0,0,0,0.16)]">
-            <p className="text-sm font-bold text-[#414141]">Vista de cámara</p>
-            <div className="mt-3 rounded-2xl border-2 border-dashed border-[#cfcfcf] bg-[#f5f5f5] p-4">
-              <div className="relative overflow-hidden rounded-2xl bg-black">
+          <section className="rounded-2xl px-5 py-4 shadow-[0_16px_32px_rgba(0,0,0,0.22)] border" style={{ backgroundColor: theme.surface, borderColor: theme.border }}>
+            <p className="text-sm font-bold" style={{ color: theme.textPrimary }}>
+              Vista de cámara
+            </p>
+            <div
+              className="mt-3 rounded-2xl border-2 border-dashed p-4"
+              style={{ borderColor: theme.border, backgroundColor: theme.surfaceElevated }}
+            >
+               <div className="relative overflow-hidden rounded-2xl bg-black">
                 <video ref={videoRef} className="h-56 w-full object-cover" playsInline muted />
                 {!isCameraReady && !cameraError ? (
                   <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white/80">
@@ -337,10 +349,10 @@ const CuponesScan: React.FC = () => {
                   </div>
                 ) : null}
               </div>
-              {cameraError ? <p className="mt-4 text-xs text-[#b91c1c]">{cameraError}</p> : null}
-              {scanError ? <p className="mt-2 text-xs text-[#b91c1c]">{scanError}</p> : null}
+              {cameraError ? <p className="mt-4 text-xs text-red-500">{cameraError}</p> : null}
+              {scanError ? <p className="mt-2 text-xs text-red-500">{scanError}</p> : null}
               {!cameraError && !scanError ? (
-                <p className="mt-4 text-xs text-[#6a6a6a]">
+                <p className="mt-4 text-xs" style={{ color: theme.textMuted }}>
                   Asegúrate de permitir el acceso a la cámara para detectar QR o códigos de barras.
                 </p>
               ) : null}
@@ -348,50 +360,35 @@ const CuponesScan: React.FC = () => {
           </section>
 
           <section
-            className="rounded-2xl px-5 py-4 shadow-[0_10px_22px_rgba(0,0,0,0.14)]"
-            style={{ backgroundColor: mutedRose, color: textDark }}
-          >
+            className="rounded-2xl px-5 py-4 shadow-[0_16px_32px_rgba(0,0,0,0.22)] border"
+            style={{ backgroundColor: theme.surface, color: theme.textPrimary, borderColor: theme.border }}>
             <p className="text-base font-extrabold">Datos del cupón</p>
             <div className="mt-3 space-y-2 text-sm font-semibold">
-              {isLoadingCoupons ? <p>Cargando cupones...</p> : null}
-              {!isLoadingCoupons && couponsError ? <p>{couponsError}</p> : null}
-              {!isLoadingCoupons && !couponsError ? (
-                <>
-                  <p>Código detectado: {scannedValue || "Sin lectura"}</p>
-                  {scanStatus === "matched" && matchedCoupon ? (
-                    <>
-                      <p>Descripción: {matchedCoupon.Description}</p>
-                      <p>QR: {matchedCoupon.QR}</p>
-                      <p>Valid: {formattedValidDate}</p>
-                      <p>LimitUsers: {matchedCoupon.LimitUsers}</p>
-                      <p>Estado: Disponible</p>
-                    </>
-                  ) : null}
-                  {scanStatus === "not-found" ? <p>Estado: Código no disponible</p> : null}
-                  {scanStatus === "idle" ? <p>Estado: Esperando lectura</p> : null}
-                </>
+              {isLoadingCoupons ? (
+                <p style={{ color: theme.textMuted }}>Cargando cupones...</p>
               ) : null}
             </div>
           </section>
 
           <section
-            className="rounded-2xl px-5 py-4 shadow-[0_12px_24px_rgba(0,0,0,0.16)] text-white"
-            style={{ backgroundColor: cardRed }}
+            className="rounded-2xl px-5 py-4 shadow-[0_16px_32px_rgba(0,0,0,0.22)] border"
+            style={{ backgroundColor: theme.surface, color: theme.textPrimary, borderColor: theme.border }}
           >
-            <p className="text-sm font-semibold text-white/80">Revisión</p>
+            <p className="text-sm font-semibold" style={{ color: theme.textMuted }}>
+              Revisión
+            </p>
             <p className="mt-2 text-sm">Confirma los datos del cupón antes de aceptar la redención.</p>
             <div className="mt-4 flex items-center gap-2">
               <button
                 type="button"
-                className="flex-1 rounded-full border border-white/70 px-3 py-2 text-xs font-bold text-white"
+                className="flex-1 rounded-full border border-white/40 px-3 py-2 text-xs font-bold text-white"
               >
                 Rechazar
               </button>
               <button
                 type="button"
-                className="flex-1 rounded-full bg-white/90 px-3 py-2 text-xs font-bold text-[#3e3e3e] disabled:cursor-not-allowed disabled:opacity-60"
-                onClick={() => navigate("/cupones/admin/confirmado")}
-                disabled={scanStatus !== "matched"}
+                className="flex-1 rounded-full border px-3 py-2 text-xs font-bold"
+                style={{ borderColor: theme.border, color: theme.textPrimary }}
               >
                 Aceptar
               </button>
@@ -399,13 +396,11 @@ const CuponesScan: React.FC = () => {
           </section>
         </main>
 
-        <div className="mt-10">
-          <CuponesNav active="ajustes" />
-        </div>
+        <CuponesNav active="ajustes" />
       </div>
     </div>
   );
 };
 
-export { CuponesScan };
-export default CuponesScan;
+export { ScanPage };
+export default ScanPage;

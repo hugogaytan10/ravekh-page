@@ -1,29 +1,6 @@
-import { URL } from "../CatalogoWeb/Const/Const";
-
-interface CreateCouponPayload {
-  Business_Id: number;
-  QR: string;
-  Description: string;
-  Valid: string;
-  LimitUsers: number;
-}
-
-interface Coupon {
-  Id: number;
-  Business_Id: number;
-  QR: string;
-  Description: string;
-  Valid: string;
-  LimitUsers: number;
-}
-
-interface CouponHasUser {
-  Id: number;
-  Coupon_Id: number;
-  User_Id: number;
-  Used: boolean;
-  DateUsed: string;
-}
+import { URL } from "../../Components/CatalogoWeb/Const/Const";
+import type { Coupon, CouponHasUser, CreateCouponPayload } from "../models/coupon";
+import type { LoginPayload } from "../models/auth";
 
 const createCoupon = async (payload: CreateCouponPayload) => {
   const response = await fetch(`${URL}coupons`, {
@@ -42,7 +19,6 @@ const createCoupon = async (payload: CreateCouponPayload) => {
 };
 
 export { createCoupon };
-export type { CreateCouponPayload };
 
 const getCouponsByBusiness = async (businessId: number) => {
   const response = await fetch(`${URL}coupons/business/${businessId}`);
@@ -116,12 +92,6 @@ const deleteCoupon = async (couponId: number) => {
 };
 
 export { getCouponById, getCouponHasUsersByUser, getCouponsByBusiness, getCouponsByUser, updateCoupon, deleteCoupon };
-export type { Coupon, CouponHasUser };
-
-interface LoginPayload {
-  Email: string;
-  Password: string;
-}
 
 const loginCupones = async (payload: LoginPayload) => {
   const response = await fetch(`${URL}Login`, {
@@ -140,4 +110,4 @@ const loginCupones = async (payload: LoginPayload) => {
 };
 
 export { loginCupones };
-export type { LoginPayload };
+export type { Coupon, CouponHasUser, CreateCouponPayload, LoginPayload };
