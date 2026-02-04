@@ -1,12 +1,12 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import cuponsito from "../../assets/Cupones/cuponsito.png";
-import tiendita from "../../assets/Cupones/tiendita.png";
-import cuenta from "../../assets/Cupones/cuenta.png";
 import { useCouponsTheme } from "./useCouponsTheme";
+import homeIcon from "../../assets/Cupones/home.svg";
+import couponIcon from "../../assets/Cupones/coupon.svg";
+import settingsIcon from "../../assets/Cupones/settings.svg"; 
 type CuponesNavKey = "inicio" | "cupones" | "ajustes";
 
-interface CuponesNavProps {
+interface CuponesNavProps {   
   active: CuponesNavKey;
 }
 
@@ -14,9 +14,9 @@ const CuponesNav: React.FC<CuponesNavProps> = ({ active }) => {
   const navigate = useNavigate();
   const { theme } = useCouponsTheme();
   const navItems: { key: CuponesNavKey; label: string; icon: string; path: string }[] = [
-    { key: "inicio", label: "Inicio", icon: tiendita, path: "/cupones/home" },
-    { key: "cupones", label: "Cupones", icon: cuponsito, path: "/cupones/cupones" },
-    { key: "ajustes", label: "Configurar", icon: cuenta, path: "/cupones/ajustes" },
+    { key: "inicio", label: "Inicio", icon: homeIcon, path: "/cupones/home" },
+    { key: "cupones", label: "Cupones", icon: couponIcon, path: "/cupones/cupones" },
+    { key: "ajustes", label: "Configurar", icon: settingsIcon, path: "/cupones/ajustes" },
   ];
 
   return (

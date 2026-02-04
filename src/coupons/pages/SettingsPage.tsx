@@ -90,7 +90,7 @@ const SettingsPage: React.FC = () => {
                 <span
                   className="absolute top-1 h-6 w-6 rounded-full shadow-[0_6px_12px_rgba(0,0,0,0.2)] transition-transform"
                   style={{
-                    transform: themeMode === "dark" ? "translateX(28px)" : "translateX(4px)",
+                    transform: themeMode === "dark" ? "translateX(-28px)" : "translateX(4px)",
                     backgroundColor: themeMode === "dark" ? theme.surface : theme.accent,
                   }}
                 />
