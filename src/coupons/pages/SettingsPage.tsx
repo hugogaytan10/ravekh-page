@@ -6,7 +6,6 @@ import { useCouponsTheme, type ThemePreference } from "../interface/useCouponsTh
 import { getCuponesUserName, hasCuponesSession, setCuponesSession } from "../services/session";
 
 const options = [
-  { label: "Panel de administración", path: "/cupones/admin" },
   { label: "Cambiar nombre" },
   { label: "Eliminar cuenta" },
 ];

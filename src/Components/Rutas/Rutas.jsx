@@ -429,6 +429,7 @@ export const Rutas = () => {
       "/cupones/login",
       "/cupones/registro",
       "/cupones/ajustes",
+      "/cupones/cupones"
     ];
 
     const path = location.pathname.toLowerCase(); // Asegúrate de trabajar con minúsculas
