@@ -63,7 +63,7 @@ const CouponsPage: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen relative overflow-hidden flex justify-center px-4 pb-28 transition-colors"
+      className="min-h-screen relative overflow-hidden flex justify-center px-4 pb-36 transition-colors"
       style={{ backgroundColor: theme.background }}
     >
       <div

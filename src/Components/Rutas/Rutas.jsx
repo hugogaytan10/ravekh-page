@@ -424,6 +424,11 @@ export const Rutas = () => {
       "/select-money",
       "/close-session",
       "/sales-tax-settings",
+      "/cupones",
+      "/cupones/home",
+      "/cupones/login",
+      "/cupones/registro",
+      "/cupones/ajustes",
     ];
 
     const path = location.pathname.toLowerCase(); // Asegúrate de trabajar con minúsculas

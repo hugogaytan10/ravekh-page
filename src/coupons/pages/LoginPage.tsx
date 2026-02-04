@@ -2,6 +2,10 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import cubito from "../../assets/Cupones/cubito.png";
 import bolsita from "../../assets/Cupones/bolsita.png";
+import cajita from "../../assets/Cupones/cajita.png";
+import carterita from "../../assets/Cupones/carterita.png";
+import papitas from "../../assets/Cupones/papitas.png";
+import { AutoImageCarousel } from "../components/AutoImageCarousel";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import {
   setCuponesBusinessId,
@@ -48,6 +52,8 @@ const LoginPage: React.FC = () => {
       setCuponesSession(false);
     }
   };
+
+  const carouselImages = [bolsita, cajita, carterita, papitas];
 
   return (
     <div className="min-h-screen flex flex-col items-center" style={{ backgroundColor: theme.background }}>
@@ -114,13 +120,13 @@ const LoginPage: React.FC = () => {
         </button>
       </div>
 
-      <div className="relative w-full mt-14 pb-6 flex justify-center overflow-hidden">
+      <div className="relative w-full mt-12 pb-8 flex justify-center overflow-hidden">
         <div
-          className="absolute bottom-[-48px] left-0 right-0 h-40 rounded-t-[120px]"
+          className="absolute bottom-[-48px] left-0 right-0 h-44 rounded-t-[120px]"
           style={{ backgroundColor: theme.accent }}
           aria-hidden="true"
         />
-        <img src={bolsita} alt="Bolsa amarilla sonriente" className="relative w-36 drop-shadow-xl" />
+        <AutoImageCarousel images={carouselImages} className="relative drop-shadow-xl" />
       </div>
     </div>
   );

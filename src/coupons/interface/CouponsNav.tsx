@@ -28,39 +28,39 @@ const CuponesNav: React.FC<CuponesNavProps> = ({ active }) => {
       />
       <div className="relative mx-auto w-full max-w-[560px]">
         <div
-          className="relative rounded-full border shadow-[0_18px_40px_rgba(0,0,0,0.35)] px-3 py-3 flex items-center gap-3 backdrop-blur"
+          className="relative rounded-full border shadow-[0_18px_40px_rgba(0,0,0,0.35)] px-4 py-3 flex items-center justify-between gap-3"
           style={{ backgroundColor: theme.nav, borderColor: theme.border }}
-        >        
+        >
           {navItems.map((item) => {
-          const isActive = active === item.key;
+            const isActive = active === item.key;
 
-          return (
-            <button
-              key={item.key}
-              type="button"
-              onClick={() => navigate(item.path)}
-              className={`flex-1 min-h-[72px] flex flex-col items-center justify-center gap-1 transition-all duration-200 rounded-full px-3 py-2 ${
-                isActive ? "shadow-[0_10px_22px_rgba(0,0,0,0.3)]" : "bg-transparent"
-              }`}
-              style={{
-                backgroundColor: isActive ? theme.accent : "transparent",
-                color: isActive ? theme.textPrimary : theme.textMuted,
-              }}
-            
-            >
-              <span
-                  className="inline-flex h-9 w-9 items-center justify-center rounded-full border"
-                  style={{
-                    backgroundColor: isActive ? theme.surface : "transparent",
-                    borderColor: isActive ? "transparent" : theme.border,
-                  }}
-                >
-                <img src={item.icon} alt={item.label} className="h-6 w-6 object-contain" />
-              </span>
-              <span className="font-semibold text-xs leading-tight text-center">{item.label}</span>
-            </button>
-          );
-        })}
+            return (
+              <button
+                key={item.key}
+                type="button"
+                onClick={() => navigate(item.path)}
+                aria-current={isActive ? "page" : undefined}
+                className="flex-1 flex items-center justify-center transition-all duration-200"
+              >
+                {isActive ? (
+                  <span
+                    className="inline-flex items-center gap-2 rounded-full px-4 py-2 shadow-[0_10px_22px_rgba(0,0,0,0.25)]"
+                    style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
+                  >
+                    <img src={item.icon} alt={item.label} className="h-7 w-7 object-contain" />
+                    <span className="text-sm font-semibold">{item.label}</span>
+                  </span>
+                ) : (
+                  <span
+                    className="inline-flex h-12 w-12 items-center justify-center rounded-full border"
+                    style={{ borderColor: theme.border }}
+                  >
+                    <img src={item.icon} alt={item.label} className="h-7 w-7 object-contain opacity-80" />
+                  </span>
+                )}
+              </button>
+            );
+          })}
         </div>
       </div>
     </div>

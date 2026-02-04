@@ -38,7 +38,7 @@ const SettingsPage: React.FC = () => {
 
   return (
     <div
-      className="min-h-screen relative overflow-hidden flex justify-center px-4 pb-28 transition-colors"
+      className="min-h-screen relative overflow-hidden flex justify-center px-4 pb-36 transition-colors"
       style={{ backgroundColor: theme.background }}
     >
       <div
@@ -80,7 +80,7 @@ const SettingsPage: React.FC = () => {
               </div>
               <button
                 type="button"
-                className="relative h-8 w-14 rounded-full transition-colors"
+                className="relative h-8 w-20 rounded-full transition-colors"
                 style={{ backgroundColor: themeMode === "dark" ? theme.accent : theme.surfaceElevated }}
                 onClick={() => {
                   const nextMode: ThemePreference = themeMode === "dark" ? "light" : "dark";
