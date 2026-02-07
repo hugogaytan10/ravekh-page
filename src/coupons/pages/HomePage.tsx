@@ -1,10 +1,11 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
-import { getCuponesUserName, hasCuponesSession } from "../services/session";
-
+import { getCuponesUserId, getCuponesUserName, hasCuponesSession } from "../services/session";
+import { Visits } from "../models/coupon";
+import { getVisitsByUserId } from "../services/visitsApi";
 const rewards = [
   { title: "Próxima recompensa", description: "10% de descuento en hamburguesa clasica" },
   { title: "Próxima recompensa", description: "10% de descuento en papas fritas" },
@@ -15,12 +16,30 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const userName = getCuponesUserName();
   const { theme } = useCouponsTheme();
+  const [visits,setVisits] = useState<Visits[]>([]);
 
   useEffect(() => {
     if (!hasCuponesSession()) {
       navigate("/cupones", { replace: true });
     }
   }, [navigate]);
+
+  useEffect(() => {
+    //hacemos la peticion de las visitas por usuario y seteamos el estado
+    const fetchVisits = async () => { 
+      try {
+        const userId = getCuponesUserId();
+        if (userId) {
+          const visitsData: Visits[] = await getVisitsByUserId(userId);
+          setVisits(visitsData);
+          console.log("Visitas cargadas:", visitsData);
+        }
+      } catch (error) {
+        console.error("Error al cargar las visitas:", error);
+      }
+    }
+    fetchVisits();
+  }, []);
 
   return (
     <div
@@ -53,7 +72,9 @@ const HomePage: React.FC = () => {
         </header>
 
         <main className="mt-8 space-y-5">
-          <section
+          {
+            /*
+               <section
             className="rounded-2xl px-5 py-4 shadow-[0_14px_28px_rgba(0,0,0,0.2)] border"
             style={{ backgroundColor: theme.surface, color: theme.textPrimary, borderColor: theme.border }}
           >            <div className="flex items-center justify-between">
@@ -75,6 +96,37 @@ const HomePage: React.FC = () => {
             </div>
             <p className="mt-3 text-sm font-semibold">1/5</p>
           </section>
+            */
+          }
+          {
+            visits.length > 0 && (
+            visits.map((visit) => (
+              <section
+              className="rounded-2xl px-5 py-4 shadow-[0_14px_28px_rgba(0,0,0,0.2)] border"
+              style={{ backgroundColor: theme.surface, color: theme.textPrimary, borderColor: theme.border }}
+            >            <div className="flex items-center justify-between">
+                <p className="text-lg font-extrabold">Mis visitas en {visit.BusinessName}</p>
+                <span className="text-sm font-semibold">{visit.VisitCount}/{visit.MinVisits}</span>
+              </div>
+              <div className="mt-4 flex items-center gap-3">
+                <div className="flex-1 flex items-center gap-2">
+                    {Array.from({ length: visit.MinVisits }, (_, index) => index + 1).map((step) => (
+                    <span
+                      key={step}
+                      className="h-3 w-full rounded-full"
+                      style={{
+                      backgroundColor: step <= (visit.VisitCount ?? 0) ? theme.accent : theme.surfaceElevated,
+                      }}
+                    />
+                    ))}
+                </div>
+              </div>
+              <p className="mt-3 text-sm font-semibold">1/5</p>
+            </section>
+            ))
+            )
+          }
+       
 
           <section
             className="rounded-2xl px-5 py-4 shadow-[0_16px_32px_rgba(0,0,0,0.22)] border"
@@ -150,3 +202,5 @@ const HomePage: React.FC = () => {
 
 export { HomePage };
 export default HomePage;
+
+

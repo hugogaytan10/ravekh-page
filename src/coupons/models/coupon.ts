@@ -23,4 +23,14 @@ interface CouponHasUser {
   DateUsed: string;
 }
 
-export type { Coupon, CouponHasUser, CreateCouponPayload };
+interface Visits {
+  Id?: number;
+  Business_Id: number;
+  User_Id: number;
+  Date?: Date;
+  VisitCount?: number;
+  BusinessName?: string;
+  MinVisits?: number;
+}
+
+export type { Coupon, CouponHasUser, CreateCouponPayload, Visits };
