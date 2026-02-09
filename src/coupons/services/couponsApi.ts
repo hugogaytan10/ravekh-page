@@ -93,6 +93,25 @@ const deleteCoupon = async (couponId: number) => {
 
 export { getCouponById, getCouponHasUsersByUser, getCouponsByBusiness, getCouponsByUser, updateCoupon, deleteCoupon };
 
+const deleteCouponsAccount = async (userId: number, token: string) => {
+  const response = await fetch(`${URL}employee/${userId}`, {
+    method: "DELETE",
+    headers: {
+      "Content-Type": "application/json",
+      token,
+    },
+  });
+
+  const data = await response.json().catch(() => null);
+
+  if (!response.ok) {
+    const message = data?.message || "No se pudo eliminar la cuenta.";
+    throw new Error(message);
+  }
+
+  return data;
+};
+
 const loginCupones = async (payload: LoginPayload) => {
   const response = await fetch(`${URL}Login`, {
     method: "POST",
@@ -109,5 +128,5 @@ const loginCupones = async (payload: LoginPayload) => {
   return response.json();
 };
 
-export { loginCupones };
+export { deleteCouponsAccount, loginCupones };
 export type { Coupon, CouponHasUser, CreateCouponPayload, LoginPayload };

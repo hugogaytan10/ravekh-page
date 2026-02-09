@@ -10,6 +10,7 @@ import { useCouponsTheme } from "../interface/useCouponsTheme";
 import {
   setCuponesBusinessId,
   setCuponesSession,
+  setCuponesToken,
   setCuponesUserId,
   setCuponesUserName,
 } from "../services/session";
@@ -37,7 +38,7 @@ const LoginPage: React.FC = () => {
         setCuponesUserId(loginResponse.Id);
         setCuponesBusinessId(loginResponse.Business_Id);
         localStorage.setItem("cupones-role", loginResponse.Role);
-        localStorage.setItem("cupones-token", loginResponse.Token ?? "");
+        setCuponesToken(loginResponse.Token ?? "");
         if (loginResponse.Role === "ADMINISTRADOR") {
           navigate("/cupones/admin");
           return;

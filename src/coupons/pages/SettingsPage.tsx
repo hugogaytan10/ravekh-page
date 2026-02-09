@@ -7,7 +7,7 @@ import { getCuponesUserName, hasCuponesSession, setCuponesSession } from "../ser
 
 const options = [
   { label: "Cambiar nombre", path: "/cupones/cambio-nombre" },
-  { label: "Eliminar cuenta" },
+  { label: "Eliminar cuenta", path: "/cupones/eliminar-cuenta" },
 ];
 
 const ArrowIcon: React.FC = () => (

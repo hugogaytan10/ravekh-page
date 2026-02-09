@@ -2,6 +2,7 @@ const SESSION_KEY = "cupones-session";
 const USER_NAME_KEY = "cupones-name";
 const USER_ID_KEY = "cupones-user-id";
 const BUSINESS_ID_KEY = "cupones-business-id";
+const TOKEN_KEY = "cupones-token";
 
 const setCuponesSession = (isActive: boolean) => {
   if (isActive) {
@@ -49,13 +50,25 @@ const getCuponesBusinessId = () => {
   return value ? Number(value) : null;
 };
 
+const setCuponesToken = (token?: string) => {
+  if (token) {
+    localStorage.setItem(TOKEN_KEY, token);
+  } else {
+    localStorage.removeItem(TOKEN_KEY);
+  }
+};
+
+const getCuponesToken = () => localStorage.getItem(TOKEN_KEY) ?? "";
+
 export {
   getCuponesBusinessId,
+  getCuponesToken,
   getCuponesUserId,
   getCuponesUserName,
   hasCuponesSession,
   setCuponesBusinessId,
   setCuponesSession,
+  setCuponesToken,
   setCuponesUserId,
   setCuponesUserName,
 };
