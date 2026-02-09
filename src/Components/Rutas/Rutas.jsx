@@ -34,6 +34,7 @@ import { ScanPage } from "../../coupons/pages/ScanPage";
 import { SuccessPage } from "../../coupons/pages/SuccessPage";
 import { ChangeName } from "../../coupons/pages/ChangeName";
 import { DeleteAccountPage } from "../../coupons/pages/DeleteAccountPage";
+import { VisitHistoryPage } from "../../coupons/pages/VisitHistoryPage";
 import { VisitRedeemPage } from "../../coupons/pages/VisitRedeemPage";
 import { CouponQrPage } from "../../coupons/pages/CouponQrPage";
 import { CouponCongratsPage } from "../../coupons/pages/CouponCongratsPage";
@@ -435,6 +436,7 @@ export const Rutas = () => {
       "/cupones/registro",
       "/cupones/ajustes",
       "/cupones/eliminar-cuenta",
+      "/cupones/visitas",
       "/cupones/cupones",
       "/cupones/cambio-nombre",
       "/cupones/qr"
@@ -890,6 +892,7 @@ export const Rutas = () => {
           <Route path="/cupones/cupones" element={<CouponsPage />} />
           <Route path="/cupones/ajustes" element={<SettingsPage />} />
           <Route path="/cupones/eliminar-cuenta" element={<DeleteAccountPage />} />
+          <Route path="/cupones/visitas" element={<VisitHistoryPage />} />
           <Route path="/cupones/admin/escanear" element={<ScanPage />} />
           <Route path="/cupones/admin/confirmado" element={<SuccessPage />} />
           <Route path="/visit/redeem" element={<VisitRedeemPage />} />

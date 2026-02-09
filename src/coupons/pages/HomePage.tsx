@@ -156,6 +156,7 @@ const HomePage: React.FC = () => {
               type="button"
               className="flex flex-col items-center justify-center rounded-xl px-2 py-3 shadow-[0_12px_24px_rgba(0,0,0,0.2)] border"
               style={{ backgroundColor: theme.accent, color: theme.textPrimary, borderColor: theme.border }}
+              onClick={() => navigate("/cupones/visitas")}
             >
               <img src={cuponsito} alt="Mis visitas" className="h-12 w-12 object-contain" />
               <span className="mt-2 font-bold text-sm">Mis visitas</span>
@@ -204,5 +205,4 @@ const HomePage: React.FC = () => {
 
 export { HomePage };
 export default HomePage;
-
 

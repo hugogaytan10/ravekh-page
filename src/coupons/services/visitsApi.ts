@@ -8,7 +8,16 @@ const getVisitsByUserId = async (userId: number): Promise<Visits[]> => {
     throw new Error("No se pudieron cargar las visitas del usuario.");
   }
   return response.json() as Promise<Visits[]>;
-}
+};
+
+const getVisitHistoryByUserId = async (userId: number): Promise<Visits[]> => {
+  const endpoint = `${URL}visits/user/history/${userId}`;
+  const response = await fetch(endpoint);
+  if (!response.ok) {
+    throw new Error("No se pudo cargar el historial de visitas.");
+  }
+  return response.json() as Promise<Visits[]>;
+};
 const redeemVisitQr = async (token: string, userId: number) => {
   const response = await fetch(`${URL}visits/qr/redeem`, {
     method: "POST",
@@ -28,5 +37,6 @@ const redeemVisitQr = async (token: string, userId: number) => {
 
 export {
     getVisitsByUserId,
+    getVisitHistoryByUserId,
     redeemVisitQr,
 }
