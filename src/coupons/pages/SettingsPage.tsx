@@ -6,7 +6,7 @@ import { useCouponsTheme, type ThemePreference } from "../interface/useCouponsTh
 import { getCuponesUserName, hasCuponesSession, setCuponesSession } from "../services/session";
 
 const options = [
-  { label: "Cambiar nombre" },
+  { label: "Cambiar nombre", path: "/cupones/cambio-nombre" },
   { label: "Eliminar cuenta" },
 ];
 

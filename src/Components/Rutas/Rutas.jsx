@@ -32,6 +32,8 @@ import { CouponsPage } from "../../coupons/pages/CouponsPage";
 import { SettingsPage } from "../../coupons/pages/SettingsPage";
 import { ScanPage } from "../../coupons/pages/ScanPage";
 import { SuccessPage } from "../../coupons/pages/SuccessPage";
+import { ChangeName } from "../../coupons/pages/ChangeName";
+import { VisitRedeemPage } from "../../coupons/pages/VisitRedeemPage";
 
 // Importaciones para el punto de venta - Login
 import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
@@ -429,7 +431,8 @@ export const Rutas = () => {
       "/cupones/login",
       "/cupones/registro",
       "/cupones/ajustes",
-      "/cupones/cupones"
+      "/cupones/cupones",
+      "/cupones/cambio-nombre"
     ];
 
     const path = location.pathname.toLowerCase(); // Asegúrate de trabajar con minúsculas
@@ -883,6 +886,8 @@ export const Rutas = () => {
           <Route path="/cupones/ajustes" element={<SettingsPage />} />
           <Route path="/cupones/admin/escanear" element={<ScanPage />} />
           <Route path="/cupones/admin/confirmado" element={<SuccessPage />} />
+          <Route path="/visit/redeem" element={<VisitRedeemPage />} />
+          <Route path="/cupones/cambio-nombre" element={<ChangeName />} />
           <Route path="/blog" element={<BlogMain />} />
           <Route path="/blog/articulosIA" element={<MainArticulosIA />} />
           <Route
