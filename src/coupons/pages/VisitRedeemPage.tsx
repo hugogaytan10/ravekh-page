@@ -139,11 +139,23 @@ const VisitRedeemPage: React.FC = () => {
                 {message || "Procesaremos tu QR en segundos."}
               </p>
               {status === "success" ? (
-                <p className="mt-3 text-sm font-semibold" style={{ color: theme.textMuted }}>
-                  {couponGenerated
-                    ? "¡Genial! Se generó un cupón por tu visita."
-                    : "Sigue visitando el negocio para desbloquear recompensas."}
-                </p>
+                <div className="mt-3 space-y-3">
+                  <p className="text-sm font-semibold" style={{ color: theme.textMuted }}>
+                    {couponGenerated
+                      ? "¡Genial! Se generó un cupón por tu visita."
+                      : "Sigue visitando el negocio para desbloquear recompensas."}
+                  </p>
+                  {couponGenerated ? (
+                    <button
+                      type="button"
+                      className="w-full rounded-full px-4 py-2 text-sm font-bold"
+                      style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
+                      onClick={() => navigate("/cupones/nuevo")}
+                    >
+                      Ver mi nuevo cupón
+                    </button>
+                  ) : null}
+                </div>
               ) : null}
             </section>
           )}

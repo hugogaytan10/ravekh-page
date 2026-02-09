@@ -121,7 +121,9 @@ const HomePage: React.FC = () => {
                     ))}
                 </div>
               </div>
-              <p className="mt-3 text-sm font-semibold">1/5</p>
+              <p className="mt-3 text-sm font-semibold">
+                {visit.VisitCount}/{visit.MinVisits} visitas
+              </p>
             </section>
             ))
             )

@@ -125,9 +125,17 @@ const CouponsPage: React.FC = () => {
               >
                 <TicketIcon className="h-10 w-10" />
               </div>
-              <div>
+              <div className="flex-1">
                 <p className="text-base font-extrabold">Cupón disponible</p>
                 <p className="text-sm leading-snug">{coupon.Description}</p>
+                <button
+                  type="button"
+                  className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold shadow-[0_6px_14px_rgba(0,0,0,0.18)]"
+                  style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
+                  onClick={() => navigate("/cupones/qr", { state: { coupon } })}
+                >
+                  Mostrar QR
+                </button>
               </div>
             </section>
           ))}
