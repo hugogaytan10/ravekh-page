@@ -16,7 +16,7 @@ const HomePage: React.FC = () => {
   const navigate = useNavigate();
   const userName = getCuponesUserName();
   const { theme } = useCouponsTheme();
-  const [visits,setVisits] = useState<Visits[]>([]);
+  const [visits, setVisits] = useState<Visits[]>([]);
 
   useEffect(() => {
     if (!hasCuponesSession()) {
@@ -26,7 +26,7 @@ const HomePage: React.FC = () => {
 
   useEffect(() => {
     //hacemos la peticion de las visitas por usuario y seteamos el estado
-    const fetchVisits = async () => { 
+    const fetchVisits = async () => {
       try {
         const userId = getCuponesUserId();
         if (userId) {
@@ -99,36 +99,37 @@ const HomePage: React.FC = () => {
             */
           }
           {
+            visits &&
             visits.length > 0 && (
-            visits.map((visit) => (
-              <section
-              className="rounded-2xl px-5 py-4 shadow-[0_14px_28px_rgba(0,0,0,0.2)] border"
-              style={{ backgroundColor: theme.surface, color: theme.textPrimary, borderColor: theme.border }}
-            >            <div className="flex items-center justify-between">
-                <p className="text-lg font-extrabold">Mis visitas en {visit.BusinessName}</p>
-                <span className="text-sm font-semibold">{visit.VisitCount}/{visit.MinVisits}</span>
-              </div>
-              <div className="mt-4 flex items-center gap-3">
-                <div className="flex-1 flex items-center gap-2">
-                    {Array.from({ length: visit.MinVisits }, (_, index) => index + 1).map((step) => (
-                    <span
-                      key={step}
-                      className="h-3 w-full rounded-full"
-                      style={{
-                      backgroundColor: step <= (visit.VisitCount ?? 0) ? theme.accent : theme.surfaceElevated,
-                      }}
-                    />
-                    ))}
-                </div>
-              </div>
-              <p className="mt-3 text-sm font-semibold">
-                {visit.VisitCount}/{visit.MinVisits} visitas
-              </p>
-            </section>
-            ))
+              visits.map((visit) => (
+                <section
+                  className="rounded-2xl px-5 py-4 shadow-[0_14px_28px_rgba(0,0,0,0.2)] border"
+                  style={{ backgroundColor: theme.surface, color: theme.textPrimary, borderColor: theme.border }}
+                >            <div className="flex items-center justify-between">
+                    <p className="text-lg font-extrabold">Mis visitas en {visit.BusinessName}</p>
+                    <span className="text-sm font-semibold">{visit.VisitCount}/{visit.MinVisits}</span>
+                  </div>
+                  <div className="mt-4 flex items-center gap-3">
+                    <div className="flex-1 flex items-center gap-2">
+                      {Array.from({ length: visit.MinVisits }, (_, index) => index + 1).map((step) => (
+                        <span
+                          key={step}
+                          className="h-3 w-full rounded-full"
+                          style={{
+                            backgroundColor: step <= (visit.VisitCount ?? 0) ? theme.accent : theme.surfaceElevated,
+                          }}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <p className="mt-3 text-sm font-semibold">
+                    {visit.VisitCount}/{visit.MinVisits} visitas
+                  </p>
+                </section>
+              ))
             )
           }
-       
+
 
           <section
             className="rounded-2xl px-5 py-4 shadow-[0_16px_32px_rgba(0,0,0,0.22)] border"
