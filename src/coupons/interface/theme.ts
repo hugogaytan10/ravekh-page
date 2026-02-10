@@ -1,4 +1,5 @@
 type CouponsThemeMode = "light" | "dark";
+
 const couponsThemes = {
   light: {
     background: "#ffffff",
@@ -24,5 +25,7 @@ const couponsThemes = {
   },
 } as const;
 
-export type { CouponsThemeMode };
+type CouponsTheme = (typeof couponsThemes)[CouponsThemeMode];
+
+export type { CouponsTheme, CouponsThemeMode };
 export { couponsThemes };

@@ -5,17 +5,14 @@ import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { getCuponesUserId, getCuponesUserName, hasCuponesSession } from "../services/session";
 import type { Visits } from "../models/coupon";
+import { CouponsPageHeader } from "../components/CouponsPageHeader";
+import { toValidVisits } from "../utils/visitValidation";
 import { getVisitsByUserId } from "../services/visitsApi";
 import { getClaimedCouponsByUser } from "../services/couponsApi";
 import type { Coupon } from "../models/coupon";
 
 type HomeView = "overview" | "myCoupons";
 
-const ArrowBackIcon: React.FC<{ className?: string }> = ({ className }) => (
-  <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="2">
-    <path d="M15 18l-6-6 6-6" />
-  </svg>
-);
 
 const TicketIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -24,14 +21,6 @@ const TicketIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-const isValidVisit = (value: unknown): value is Visits => {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const visit = value as Partial<Visits>;
-  return typeof visit.Business_Id === "number" && typeof visit.User_Id === "number";
-};
 
 const isValidCoupon = (value: unknown): value is Coupon => {
   if (!value || typeof value !== "object") {
@@ -75,7 +64,7 @@ const HomePage: React.FC = () => {
         }
 
         const visitsData = await getVisitsByUserId(userId);
-        const safeVisits = Array.isArray(visitsData) ? visitsData.filter(isValidVisit) : [];
+        const safeVisits = toValidVisits(visitsData);
 
         setVisits(safeVisits);
         setVisitsError("");
@@ -134,38 +123,21 @@ const HomePage: React.FC = () => {
 
       <div className="w-full max-w-[460px] relative z-10">
         {activeView === "overview" ? (
-          <header className="flex items-center gap-3 pt-8 px-1" style={{ color: theme.textPrimary }}>
-            <div
-              className="h-14 w-14 rounded-full border-2 flex items-center justify-center shadow-[0_12px_24px_rgba(0,0,0,0.18)]"
-              style={{ backgroundColor: theme.accent, borderColor: theme.accentSoft }}
-            >
-              <img src={cuponsito} alt="Avatar" className="h-10 w-10 object-contain" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold">Hola{userName ? ` ${userName}` : ""}</p>
-              <p className="text-sm" style={{ color: theme.textMuted }}>
-                Buen día
-              </p>
-            </div>
-          </header>
+          <CouponsPageHeader
+            theme={theme}
+            title="Hola"
+            userName={userName}
+            subtitle="Buen día"
+          />
         ) : (
-          <header className="flex items-center gap-3 pt-8 px-1" style={{ color: theme.textPrimary }}>
-            <button
-              type="button"
-              className="h-11 w-11 rounded-full border flex items-center justify-center"
-              style={{ borderColor: theme.border, backgroundColor: theme.surfaceElevated }}
-              onClick={() => setActiveView("overview")}
-              aria-label="Volver a inicio"
-            >
-              <ArrowBackIcon className="h-5 w-5" />
-            </button>
-            <div>
-              <p className="text-base font-extrabold">Mis cupones reclamados</p>
-              <p className="text-sm" style={{ color: theme.textMuted }}>
-                Estos cupones ya son tuyos.
-              </p>
-            </div>
-          </header>
+          <CouponsPageHeader
+            theme={theme}
+            title="Mis cupones reclamados"
+            subtitle="Estos cupones ya son tuyos."
+            showAvatar={false}
+            onBack={() => setActiveView("overview")}
+            backLabel="Volver a inicio"
+          />
         )}
 
         {activeView === "overview" ? (

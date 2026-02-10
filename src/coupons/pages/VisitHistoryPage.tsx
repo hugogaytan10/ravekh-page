@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
-import { Visits } from "../models/coupon";
+import type { Visits } from "../models/coupon";
+import { CouponsPageHeader } from "../components/CouponsPageHeader";
+import { toValidVisits } from "../utils/visitValidation";
 import { getVisitHistoryByUserId } from "../services/visitsApi";
 import { getCuponesUserId, hasCuponesSession } from "../services/session";
 
-const formatVisitDate = (dateValue?: Date) => {
+const formatVisitDate = (dateValue?: Date | string) => {
   if (!dateValue) {
     return "Sin fecha";
   }
@@ -34,15 +35,15 @@ const VisitHistoryPage: React.FC = () => {
   }, [navigate]);
 
   useEffect(() => {
-    const fetchHistory = async () => {
+    const fetchHistory = async (): Promise<void> => {
       try {
         const userId = getCuponesUserId();
-        if (!userId) {
+        if (typeof userId !== "number" || !Number.isFinite(userId)) {
           setErrorMessage("Necesitamos tu sesión activa para ver el historial.");
           return;
         }
         const history = await getVisitHistoryByUserId(userId);
-        setVisits(history ?? []);
+        setVisits(toValidVisits(history));
       } catch (error) {
         setErrorMessage(error instanceof Error ? error.message : "No se pudo cargar el historial de visitas.");
       } finally {
@@ -79,31 +80,15 @@ const VisitHistoryPage: React.FC = () => {
       />
 
       <div className="relative w-full max-w-[460px] z-10">
-        <header className="flex items-center gap-3 pt-6 px-1" style={{ color: theme.textPrimary }}>
-          <div
-            className="h-14 w-14 rounded-full border-2 flex items-center justify-center shadow-[0_12px_24px_rgba(0,0,0,0.18)]"
-            style={{ backgroundColor: theme.accent, borderColor: theme.accentSoft }}
-          >
-            <img src={cuponsito} alt="Avatar" className="h-10 w-10 object-contain" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold">Historial de visitas</p>
-            <p className="text-sm" style={{ color: theme.textMuted }}>
-              Revisa tus visitas más recientes.
-            </p>
-          </div>
-        </header>
+        <CouponsPageHeader
+          theme={theme}
+          title="Historial de visitas"
+          subtitle="Revisa tus visitas más recientes."
+          onBack={() => navigate("/cupones/home")}
+          backLabel="Volver a inicio"
+        />
 
         <main className="mt-8 space-y-4">
-          <button
-            type="button"
-            className="w-full rounded-full border px-4 py-2 text-sm font-bold"
-            style={{ borderColor: theme.border, backgroundColor: theme.surfaceElevated, color: theme.textPrimary }}
-            onClick={() => navigate("/cupones/home")}
-          >
-            Volver a inicio
-          </button>
-
           {isLoading ? (
             <section
               className="rounded-2xl px-5 py-4 shadow-[0_14px_28px_rgba(0,0,0,0.2)] border text-center"
