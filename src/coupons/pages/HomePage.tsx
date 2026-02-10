@@ -10,6 +10,7 @@ import { toValidVisits } from "../utils/visitValidation";
 import { getVisitsByUserId } from "../services/visitsApi";
 import { getClaimedCouponsByUser } from "../services/couponsApi";
 import type { Coupon } from "../models/coupon";
+import { toValidCoupons } from "../utils/couponValidation";
 
 type HomeView = "overview" | "myCoupons";
 
@@ -21,15 +22,6 @@ const TicketIcon: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
-
-const isValidCoupon = (value: unknown): value is Coupon => {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-
-  const coupon = value as Partial<Coupon>;
-  return typeof coupon.Id === "number" && typeof coupon.Description === "string";
-};
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
@@ -94,7 +86,7 @@ const HomePage: React.FC = () => {
         setClaimedCouponsError("");
 
         const coupons = await getClaimedCouponsByUser(userId);
-        const safeCoupons = Array.isArray(coupons) ? coupons.filter(isValidCoupon) : [];
+        const safeCoupons = toValidCoupons(coupons);
         setClaimedCoupons(safeCoupons);
       } catch (error) {
         setClaimedCoupons([]);

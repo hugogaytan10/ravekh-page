@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { getCuponesUserId, hasCuponesSession } from "../services/session";
 import { redeemVisitQr } from "../services/visitsApi";
+import { CouponsPageHeader } from "../components/CouponsPageHeader";
 
 const VisitRedeemPage: React.FC = () => {
   const navigate = useNavigate();
@@ -12,6 +12,8 @@ const VisitRedeemPage: React.FC = () => {
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
   const [couponGenerated, setCouponGenerated] = useState(false);
+
+  const hasSession = hasCuponesSession();
 
   const token = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -25,13 +27,13 @@ const VisitRedeemPage: React.FC = () => {
       return;
     }
 
-    if (!hasCuponesSession()) {
+    if (!hasSession) {
       setStatus("idle");
       return;
     }
 
     const userId = getCuponesUserId();
-    if (!userId) {
+    if (typeof userId !== "number" || !Number.isFinite(userId)) {
       setStatus("error");
       setMessage("Necesitamos tu sesión activa para registrar la visita.");
       return;
@@ -51,8 +53,8 @@ const VisitRedeemPage: React.FC = () => {
       }
     };
 
-    submitRedeem();
-  }, [token]);
+    void submitRedeem();
+  }, [hasSession, token]);
 
   return (
     <div
@@ -69,23 +71,16 @@ const VisitRedeemPage: React.FC = () => {
       />
 
       <div className="relative w-full max-w-[460px] z-10">
-        <header className="flex items-center gap-3 pt-4 px-1" style={{ color: theme.textPrimary }}>
-          <div
-            className="h-14 w-14 rounded-full border-2 flex items-center justify-center shadow-[0_12px_24px_rgba(0,0,0,0.18)]"
-            style={{ backgroundColor: theme.accent, borderColor: theme.accentSoft }}
-          >
-            <img src={cuponsito} alt="Avatar" className="h-10 w-10 object-contain" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold">Registro de visita</p>
-            <p className="text-sm" style={{ color: theme.textMuted }}>
-              Valida tu QR para sumar visitas.
-            </p>
-          </div>
-        </header>
+        <CouponsPageHeader
+          theme={theme}
+          title="Registro de visita"
+          subtitle="Valida tu QR para sumar visitas."
+          onBack={() => navigate("/cupones/home")}
+          backLabel="Volver a inicio"
+        />
 
         <main className="mt-10 space-y-4">
-          {!hasCuponesSession() ? (
+          {!hasSession ? (
             <section
               className="rounded-2xl px-5 py-4 shadow-[0_14px_28px_rgba(0,0,0,0.2)] border"
               style={{ backgroundColor: theme.surface, color: theme.textPrimary, borderColor: theme.border }}
@@ -160,7 +155,7 @@ const VisitRedeemPage: React.FC = () => {
             </section>
           )}
 
-          {hasCuponesSession() ? (
+          {hasSession ? (
             <div className="flex flex-col gap-3">
               <button
                 type="button"

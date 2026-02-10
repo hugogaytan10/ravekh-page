@@ -1,10 +1,12 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { getCuponesUserId, getCuponesUserName, hasCuponesSession } from "../services/session";
-import { Coupon, getClaimedCouponsByUser } from "../services/couponsApi";
+import { getClaimedCouponsByUser } from "../services/couponsApi";
+import type { Coupon } from "../models/coupon";
+import { CouponsPageHeader } from "../components/CouponsPageHeader";
+import { toValidCoupons } from "../utils/couponValidation";
 
 const TicketIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -16,12 +18,15 @@ const TicketIcon: React.FC<{ className?: string }> = ({ className }) => (
 const MyCouponsPage: React.FC = () => {
   const navigate = useNavigate();
   const userName = getCuponesUserName();
-  const userId = getCuponesUserId();
   const { theme } = useCouponsTheme();
-
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
   const [claimedCoupons, setClaimedCoupons] = useState<Coupon[]>([]);
+
+  const userId = useMemo<number | null>(() => {
+    const currentUserId = getCuponesUserId();
+    return typeof currentUserId === "number" && Number.isFinite(currentUserId) ? currentUserId : null;
+  }, []);
 
   useEffect(() => {
     if (!hasCuponesSession()) {
@@ -32,9 +37,10 @@ const MyCouponsPage: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
 
-    const fetchClaimedCoupons = async () => {
+    const fetchClaimedCoupons = async (): Promise<void> => {
       if (!userId) {
         setClaimedCoupons([]);
+        setErrorMessage("Necesitamos tu sesión activa para ver tus cupones.");
         setIsLoading(false);
         return;
       }
@@ -44,10 +50,16 @@ const MyCouponsPage: React.FC = () => {
 
       try {
         const coupons = await getClaimedCouponsByUser(userId);
-        if (!isMounted) return;
-        setClaimedCoupons(coupons ?? []);
+        if (!isMounted) {
+          return;
+        }
+
+        setClaimedCoupons(toValidCoupons(coupons));
       } catch (error) {
-        if (!isMounted) return;
+        if (!isMounted) {
+          return;
+        }
+
         setErrorMessage(error instanceof Error ? error.message : "No se pudieron cargar tus cupones.");
       } finally {
         if (isMounted) {
@@ -56,7 +68,7 @@ const MyCouponsPage: React.FC = () => {
       }
     };
 
-    fetchClaimedCoupons();
+    void fetchClaimedCoupons();
 
     return () => {
       isMounted = false;
@@ -78,20 +90,7 @@ const MyCouponsPage: React.FC = () => {
       />
 
       <div className="relative w-full max-w-[460px] z-10">
-        <header className="flex items-center gap-3 pt-8 px-1" style={{ color: theme.textPrimary }}>
-          <div
-            className="h-14 w-14 rounded-full border-2 flex items-center justify-center shadow-[0_12px_24px_rgba(0,0,0,0.18)]"
-            style={{ backgroundColor: theme.accent, borderColor: theme.accentSoft }}
-          >
-            <img src={cuponsito} alt="Avatar" className="h-10 w-10 object-contain" />
-          </div>
-          <div>
-            <p className="text-sm font-semibold">Hola{userName ? ` ${userName}` : ""}</p>
-            <p className="text-sm" style={{ color: theme.textMuted }}>
-              Mis cupones reclamados
-            </p>
-          </div>
-        </header>
+        <CouponsPageHeader theme={theme} title="Hola" userName={userName} subtitle="Mis cupones reclamados" />
 
         <main className="mt-8 relative space-y-5">
           {isLoading ? (

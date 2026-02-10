@@ -20,7 +20,10 @@ const LoginPage: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const { theme } = useCouponsTheme();
+
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     event.currentTarget.style.boxShadow = `0 0 0 4px ${theme.accent}40`;
   };
@@ -29,28 +32,44 @@ const LoginPage: React.FC = () => {
     event.currentTarget.style.boxShadow = "none";
   };
 
-  const handleLogin = async () => {
+  const handleLogin = async (): Promise<void> => {
+    if (isSubmitting) {
+      return;
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    if (!normalizedEmail || !password.trim()) {
+      setErrorMessage("Ingresa tu correo y contraseña para continuar.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage("");
+
     try {
-      const loginResponse = await loginCupones({ Email: email, Password: password });
-      if (loginResponse?.Role) {
-        setCuponesSession(true);
-        setCuponesUserName(loginResponse.Name ?? "");
-        setCuponesUserId(loginResponse.Id);
-        setCuponesBusinessId(loginResponse.Business_Id);
-        localStorage.setItem("cupones-role", loginResponse.Role);
-        setCuponesToken(loginResponse.Token ?? "");
-        if (loginResponse.Role === "ADMINISTRADOR") {
-          navigate("/cupones/admin");
-          return;
-        }
-        if (loginResponse.Role === "CLIENTE") {
-          navigate("/cupones/home");
-          return;
-        }
+      const loginResponse = await loginCupones({ Email: normalizedEmail, Password: password });
+      if (!loginResponse?.Role || typeof loginResponse.Id !== "number") {
+        throw new Error("La respuesta de inicio de sesión no es válida.");
       }
-      setCuponesSession(false);
+
+      setCuponesSession(true);
+      setCuponesUserName(loginResponse.Name ?? "");
+      setCuponesUserId(loginResponse.Id);
+      setCuponesBusinessId(loginResponse.Business_Id);
+      localStorage.setItem("cupones-role", loginResponse.Role);
+      setCuponesToken(loginResponse.Token ?? "");
+
+      if (loginResponse.Role === "ADMINISTRADOR") {
+        navigate("/cupones/admin");
+        return;
+      }
+
+      navigate("/cupones/home");
     } catch (error) {
       setCuponesSession(false);
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo iniciar sesión.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -99,6 +118,8 @@ const LoginPage: React.FC = () => {
           />
         </div>
 
+        {errorMessage ? <p className="mt-4 text-sm font-semibold text-red-500">{errorMessage}</p> : null}
+
         <p className="mt-5 text-sm font-semibold" style={{ color: theme.textMuted }}>
           Si no tienes cuenta,
           <button
@@ -113,11 +134,14 @@ const LoginPage: React.FC = () => {
 
         <button
           type="button"
-          className="mt-7 w-full font-extrabold py-3.5 text-lg rounded-full shadow-[0_14px_30px_rgba(0,0,0,0.25)] hover:brightness-110 transition"
+          className="mt-7 w-full font-extrabold py-3.5 text-lg rounded-full shadow-[0_14px_30px_rgba(0,0,0,0.25)] hover:brightness-110 transition disabled:opacity-70"
           style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-          onClick={handleLogin}
+          onClick={() => {
+            void handleLogin();
+          }}
+          disabled={isSubmitting}
         >
-          Iniciar sesión
+          {isSubmitting ? "Iniciando sesión..." : "Iniciar sesión"}
         </button>
       </div>
 

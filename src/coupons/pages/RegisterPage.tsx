@@ -10,6 +10,12 @@ import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { URL } from "../../Components/CatalogoWeb/Const/Const";
 import { setCuponesBusinessId, setCuponesSession, setCuponesUserId, setCuponesUserName } from "../services/session";
 
+type RegisterResponse = {
+  Id?: number;
+  id?: number;
+  message?: string;
+};
+
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
@@ -18,6 +24,7 @@ const RegisterPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const { theme } = useCouponsTheme();
+
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     event.currentTarget.style.boxShadow = `0 0 0 4px ${theme.accent}40`;
   };
@@ -26,8 +33,25 @@ const RegisterPage: React.FC = () => {
     event.currentTarget.style.boxShadow = "none";
   };
 
-  const handleSubmit = async () => {
-    if (isSubmitting) return;
+  const handleSubmit = async (): Promise<void> => {
+    if (isSubmitting) {
+      return;
+    }
+
+    const normalizedName = name.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+    const normalizedPassword = password.trim();
+
+    if (!normalizedName || !normalizedEmail || !normalizedPassword) {
+      setErrorMessage("Completa nombre, correo y contraseña para crear tu cuenta.");
+      return;
+    }
+
+    if (normalizedPassword.length < 6) {
+      setErrorMessage("Tu contraseña debe tener al menos 6 caracteres.");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage("");
 
@@ -40,25 +64,30 @@ const RegisterPage: React.FC = () => {
         body: JSON.stringify({
           Role: "CLIENTE",
           Business_Id: 1,
-          Name: name,
-          Email: email,
-          Password: password,
+          Name: normalizedName,
+          Email: normalizedEmail,
+          Password: normalizedPassword,
         }),
       });
 
+      const data = (await response.json().catch(() => null)) as RegisterResponse | null;
+
       if (!response.ok) {
-        throw new Error("No se pudo registrar la cuenta.");
+        throw new Error(data?.message || "No se pudo registrar la cuenta.");
       }
 
-      const data = await response.json();
+      const userId = data?.Id ?? data?.id;
+      if (typeof userId !== "number") {
+        throw new Error("La cuenta se creó, pero no se pudo iniciar sesión automáticamente.");
+      }
+
       setCuponesSession(true);
-      setCuponesUserName(name);
-      setCuponesUserId(data?.Id ?? data?.id);
+      setCuponesUserName(normalizedName);
+      setCuponesUserId(userId);
       setCuponesBusinessId(1);
       navigate("/cupones/home");
     } catch (error) {
-      console.error("Error registrando cuenta:", error);
-      setErrorMessage("No se pudo registrar la cuenta. Intenta nuevamente.");
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo registrar la cuenta. Intenta nuevamente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -119,15 +148,15 @@ const RegisterPage: React.FC = () => {
           />
         </div>
 
-        {errorMessage ? (
-          <p className="mt-4 text-sm font-semibold text-red-500">{errorMessage}</p>
-        ) : null}
+        {errorMessage ? <p className="mt-4 text-sm font-semibold text-red-500">{errorMessage}</p> : null}
 
         <button
           type="button"
           className="mt-7 w-full font-extrabold py-3.5 text-lg rounded-full shadow-[0_14px_30px_rgba(0,0,0,0.25)] hover:brightness-110 transition disabled:opacity-70"
           style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-          onClick={handleSubmit}
+          onClick={() => {
+            void handleSubmit();
+          }}
           disabled={isSubmitting}
         >
           {isSubmitting ? "Creando cuenta..." : "Crear cuenta"}

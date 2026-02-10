@@ -4,7 +4,9 @@ import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { getCuponesBusinessId, getCuponesUserId, getCuponesUserName, hasCuponesSession } from "../services/session";
-import { Coupon, claimCoupon, getClaimedCouponsByUser, getCouponsByBusiness, getCouponsDisponibilityByUser } from "../services/couponsApi";
+import { claimCoupon, getClaimedCouponsByUser, getCouponsByBusiness, getCouponsDisponibilityByUser } from "../services/couponsApi";
+import type { Coupon } from "../models/coupon";
+import { toValidCoupons } from "../utils/couponValidation";
 
 const TicketIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">  <rect x="4" y="5" width="16" height="14" rx="2.5" />
@@ -50,18 +52,20 @@ const CouponsPage: React.FC = () => {
         if (userId) {
           const [availableResponse, claimedResponse] = await Promise.all([
             getCouponsDisponibilityByUser(userId),
-            getClaimedCouponsByUser(userId),
-             (userId),
+            getClaimedCouponsByUser(userId)
           ]);
 
           if (!isMounted) return;
-          const claimedIds = new Set((claimedResponse ?? []).map((coupon) => coupon.Id));
-          setClaimedCoupons(claimedResponse ?? []);
-          setCoupons((availableResponse ?? []).filter((coupon) => !claimedIds.has(coupon.Id)));
+          const safeClaimedCoupons = toValidCoupons(claimedResponse);
+          const safeAvailableCoupons = toValidCoupons(availableResponse);
+          const claimedIds = new Set(safeClaimedCoupons.map((coupon) => coupon.Id));
+
+          setClaimedCoupons(safeClaimedCoupons);
+          setCoupons(safeAvailableCoupons.filter((coupon) => !claimedIds.has(coupon.Id)));
         } else {
           const response = await getCouponsByBusiness(businessId);
           if (!isMounted) return;
-          setCoupons(response ?? []);
+          setCoupons(toValidCoupons(response));
           setClaimedCoupons([]);
         }
       } catch (error) {
