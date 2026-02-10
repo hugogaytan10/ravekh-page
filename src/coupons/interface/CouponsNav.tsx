@@ -12,6 +12,7 @@ const whiteIconFilter = "brightness(0) invert(1)";
 const ACTIVE_PILL_W = 110;
 const ANIM_MS = 220;
 
+
 const indexByKey: Record<CuponesNavKey, number> = {
   inicio: 0,
   cupones: 1,

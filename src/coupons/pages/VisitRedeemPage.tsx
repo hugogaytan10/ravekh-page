@@ -33,6 +33,9 @@ const VisitRedeemPage: React.FC = () => {
     }
 
     const userId = getCuponesUserId();
+    // Aunque no es probable que esto falle, lo validamos para evitar errores inesperados al hacer la petición.
+    const controller = new AbortController();
+
     if (typeof userId !== "number" || !Number.isFinite(userId)) {
       setStatus("error");
       setMessage("Necesitamos tu sesión activa para registrar la visita.");
@@ -43,7 +46,7 @@ const VisitRedeemPage: React.FC = () => {
       setStatus("loading");
       setMessage("");
       try {
-        const response = await redeemVisitQr(token, userId);
+        const response = await redeemVisitQr(token, userId, controller.signal);
         setCouponGenerated(response.couponGenerated);
         setStatus("success");
         setMessage("¡Visita registrada exitosamente!");
