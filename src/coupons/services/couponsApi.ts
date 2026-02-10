@@ -40,22 +40,32 @@ const getCouponById = async (couponId: number) => {
   return response.json() as Promise<Coupon | null>;
 };
 
-const getCouponHasUsersByUser = async (userId: number) => {
+const getCouponDisponibility = async (userId: number) => {
   try {
     const response = await fetch(`${URL}coupons/user/${userId}`);
-    console.log("Respuesta de relaciones de cupones del usuario:", response);
     if (!response.ok) {
       throw new Error("No se pudieron cargar las relaciones de cupones del usuario.");
     }
-    return response.json() as Promise<CouponHasUser[] | null>;
+    return response.json() as Promise<Coupon[] | null>;
   } catch (error) {
-    console.error("Error al obtener las relaciones de cupones del usuario:", error);
     throw new Error("Error al obtener las relaciones de cupones del usuario.");
   }
 };
 
 const getCouponsByUser = async (userId: number) => {
-  const relations = await getCouponHasUsersByUser(userId);
+  try{
+    const response = await fetch(`${URL}couponhasusers/user/${userId}`);
+    if (!response.ok) {
+      throw new Error("No se pudieron cargar las relaciones de cupones del usuario.");
+    }
+    const relations = await response.json() as CouponHasUser[] | null;
+  }catch(error){
+    throw new Error("Error al obtener los cupones del usuario.");
+  }
+}
+
+const getCouponsDisponibilityByUser = async (userId: number) => {
+  const relations = await getCouponDisponibility(userId);
   if (!relations || relations.length === 0) {
     return [] as Coupon[];
   }
@@ -94,7 +104,7 @@ const deleteCoupon = async (couponId: number) => {
   return response;
 };
 
-export { getCouponById, getCouponHasUsersByUser, getCouponsByBusiness, getCouponsByUser, updateCoupon, deleteCoupon };
+export { getCouponById, getCouponDisponibility, getCouponsDisponibilityByUser, getCouponsByBusiness, getCouponsByUser, updateCoupon, deleteCoupon };
 
 const deleteCouponsAccount = async (userId: number, token: string) => {
   const response = await fetch(`${URL}employee/${userId}`, {

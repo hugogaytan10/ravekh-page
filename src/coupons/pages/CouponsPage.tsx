@@ -4,7 +4,7 @@ import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { getCuponesBusinessId, getCuponesUserId, getCuponesUserName, hasCuponesSession } from "../services/session";
-import { Coupon, getCouponsByBusiness, getCouponsByUser } from "../services/couponsApi";
+import { Coupon, getCouponsByBusiness, getCouponsDisponibilityByUser } from "../services/couponsApi";
 
 const TicketIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">  <rect x="4" y="5" width="16" height="14" rx="2.5" />
@@ -41,7 +41,7 @@ const CouponsPage: React.FC = () => {
       setIsLoading(true);
       setErrorMessage("");
       try {
-        const response = userId ? await getCouponsByUser(userId) : await getCouponsByBusiness(businessId);
+        const response = userId ? await getCouponsDisponibilityByUser(userId) : await getCouponsByBusiness(businessId);
         if (!isMounted) return;
         setCoupons(response ?? []);
       } catch (error) {
