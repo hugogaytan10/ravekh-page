@@ -5,6 +5,10 @@ import { getCuponesUserId, hasCuponesSession } from "../services/session";
 import { redeemVisitQr } from "../services/visitsApi";
 import { CouponsPageHeader } from "../components/CouponsPageHeader";
 
+type RedeemVisitResponse = { visitCreated: boolean; couponGenerated: boolean };
+
+const redeemRequests = new Map<string, Promise<RedeemVisitResponse>>();
+
 const VisitRedeemPage: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -33,8 +37,6 @@ const VisitRedeemPage: React.FC = () => {
     }
 
     const userId = getCuponesUserId();
-    // Aunque no es probable que esto falle, lo validamos para evitar errores inesperados al hacer la petición.
-    const controller = new AbortController();
 
     if (typeof userId !== "number" || !Number.isFinite(userId)) {
       setStatus("error");
@@ -42,21 +44,44 @@ const VisitRedeemPage: React.FC = () => {
       return;
     }
 
+    const requestKey = `${userId}:${token}`;
+    let isCancelled = false;
+
     const submitRedeem = async () => {
       setStatus("loading");
       setMessage("");
       try {
-        const response = await redeemVisitQr(token, userId, controller.signal);
+        const currentRequest =
+          redeemRequests.get(requestKey) ??
+          redeemVisitQr(token, userId).finally(() => {
+            redeemRequests.delete(requestKey);
+          });
+
+        redeemRequests.set(requestKey, currentRequest);
+
+        const response = await currentRequest;
+        if (isCancelled) {
+          return;
+        }
+
         setCouponGenerated(response.couponGenerated);
         setStatus("success");
         setMessage("¡Visita registrada exitosamente!");
       } catch (error) {
+        if (isCancelled) {
+          return;
+        }
+
         setStatus("error");
         setMessage(error instanceof Error ? error.message : "No se pudo registrar la visita.");
       }
     };
 
     void submitRedeem();
+
+    return () => {
+      isCancelled = true;
+    };
   }, [hasSession, token]);
 
   return (
