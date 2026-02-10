@@ -41,24 +41,27 @@ const getCouponById = async (couponId: number) => {
 };
 
 const getCouponHasUsersByUser = async (userId: number) => {
-  const response = await fetch(`${URL}couponhasusers/user/${userId}`);
-
-  if (!response.ok) {
-    throw new Error("No se pudieron cargar los cupones del usuario.");
+  try {
+    const response = await fetch(`${URL}coupons/user/${userId}`);
+    console.log("Respuesta de relaciones de cupones del usuario:", response);
+    if (!response.ok) {
+      throw new Error("No se pudieron cargar las relaciones de cupones del usuario.");
+    }
+    return response.json() as Promise<CouponHasUser[] | null>;
+  } catch (error) {
+    console.error("Error al obtener las relaciones de cupones del usuario:", error);
+    throw new Error("Error al obtener las relaciones de cupones del usuario.");
   }
-
-  return response.json() as Promise<CouponHasUser[] | null>;
 };
 
 const getCouponsByUser = async (userId: number) => {
   const relations = await getCouponHasUsersByUser(userId);
-
   if (!relations || relations.length === 0) {
     return [] as Coupon[];
   }
 
   const coupons = await Promise.all(
-    relations.map(async (relation) => getCouponById(relation.Coupon_Id))
+    relations.map(async (relation) => getCouponById(relation.Id))
   );
 
   return coupons.filter((coupon): coupon is Coupon => Boolean(coupon));
