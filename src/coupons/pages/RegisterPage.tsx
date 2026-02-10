@@ -7,14 +7,8 @@ import carterita from "../../assets/Cupones/carterita.png";
 import tiendita from "../../assets/Cupones/tiendita.png";
 import { AutoImageCarousel } from "../components/AutoImageCarousel";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
-import { URL } from "../../Components/CatalogoWeb/Const/Const";
-import { setCuponesBusinessId, setCuponesSession, setCuponesUserId, setCuponesUserName } from "../services/session";
-
-type RegisterResponse = {
-  Id?: number;
-  id?: number;
-  message?: string;
-};
+import { loginCupones, registerCupones } from "../services/couponsApi";
+import { parseNumericId, persistCuponesAuthSession } from "../services/authSession";
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -56,35 +50,29 @@ const RegisterPage: React.FC = () => {
     setErrorMessage("");
 
     try {
-      const response = await fetch(`${URL}employee`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          Role: "CLIENTE",
-          Business_Id: 1,
-          Name: normalizedName,
-          Email: normalizedEmail,
-          Password: normalizedPassword,
-        }),
+      const registerResponse = await registerCupones({
+        Role: "CLIENTE",
+        Business_Id: 1,
+        Name: normalizedName,
+        Email: normalizedEmail,
+        Password: normalizedPassword,
       });
 
-      const data = (await response.json().catch(() => null)) as RegisterResponse | null;
+      const registerUserId = parseNumericId(registerResponse?.Id ?? registerResponse?.id);
 
-      if (!response.ok) {
-        throw new Error(data?.message || "No se pudo registrar la cuenta.");
+      if (registerUserId) {
+        persistCuponesAuthSession({
+          Role: "CLIENTE",
+          Id: registerUserId,
+          Business_Id: 1,
+          Name: normalizedName,
+        });
+        navigate("/cupones/home");
+        return;
       }
 
-      const userId = data?.Id ?? data?.id;
-      if (typeof userId !== "number") {
-        throw new Error("La cuenta se creó, pero no se pudo iniciar sesión automáticamente.");
-      }
-
-      setCuponesSession(true);
-      setCuponesUserName(normalizedName);
-      setCuponesUserId(userId);
-      setCuponesBusinessId(1);
+      const loginResponse = await loginCupones({ Email: normalizedEmail, Password: normalizedPassword });
+      persistCuponesAuthSession(loginResponse);
       navigate("/cupones/home");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "No se pudo registrar la cuenta. Intenta nuevamente.");

@@ -3,11 +3,25 @@ import type { ClaimCouponPayload, Coupon, CouponHasUser, CreateCouponPayload } f
 import type { LoginPayload } from "../models/auth";
 
 type LoginResponse = {
-  Id?: number;
-  Business_Id?: number;
+  Id?: number | string;
+  Business_Id?: number | string;
   Name?: string;
   Role?: string;
   Token?: string;
+};
+
+type RegisterPayload = {
+  Role: "CLIENTE";
+  Business_Id: number;
+  Name: string;
+  Email: string;
+  Password: string;
+};
+
+type RegisterResponse = {
+  Id?: number | string;
+  id?: number | string;
+  message?: string;
 };
 
 const isValidId = (value: unknown): value is number => typeof value === "number" && Number.isFinite(value) && value > 0;
@@ -207,6 +221,22 @@ const loginCupones = async (payload: LoginPayload): Promise<LoginResponse> => {
   return (await parseJsonOrNull<LoginResponse>(response)) ?? {};
 };
 
+const registerCupones = async (payload: RegisterPayload): Promise<RegisterResponse> => {
+  const response = await fetch(`${URL}employee`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw await buildHttpError(response, "No se pudo registrar la cuenta.");
+  }
+
+  return (await parseJsonOrNull<RegisterResponse>(response)) ?? {};
+};
+
 export {
   claimCoupon,
   createCoupon,
@@ -219,7 +249,8 @@ export {
   getCouponsByUser,
   getCouponsDisponibilityByUser,
   loginCupones,
+  registerCupones,
   updateCoupon,
 };
 
-export type { ClaimCouponPayload, Coupon, CouponHasUser, CreateCouponPayload, LoginPayload, LoginResponse };
+export type { ClaimCouponPayload, Coupon, CouponHasUser, CreateCouponPayload, LoginPayload, LoginResponse, RegisterPayload, RegisterResponse };

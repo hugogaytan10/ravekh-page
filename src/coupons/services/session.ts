@@ -1,3 +1,6 @@
+const isValidNumericId = (value: unknown): value is number =>
+  typeof value === "number" && Number.isFinite(value) && value > 0;
+
 const SESSION_KEY = "cupones-session";
 const USER_NAME_KEY = "cupones-name";
 const USER_ID_KEY = "cupones-user-id";
@@ -25,7 +28,7 @@ const setCuponesUserName = (name: string) => {
 const getCuponesUserName = () => localStorage.getItem(USER_NAME_KEY) ?? "";
 
 const setCuponesUserId = (userId?: number) => {
-  if (userId) {
+  if (isValidNumericId(userId)) {
     localStorage.setItem(USER_ID_KEY, String(userId));
   } else {
     localStorage.removeItem(USER_ID_KEY);
@@ -34,11 +37,12 @@ const setCuponesUserId = (userId?: number) => {
 
 const getCuponesUserId = () => {
   const value = localStorage.getItem(USER_ID_KEY);
-  return value ? Number(value) : null;
+  const parsed = value ? Number(value) : NaN;
+  return isValidNumericId(parsed) ? parsed : null;
 };
 
 const setCuponesBusinessId = (businessId?: number) => {
-  if (businessId) {
+  if (isValidNumericId(businessId)) {
     localStorage.setItem(BUSINESS_ID_KEY, String(businessId));
   } else {
     localStorage.removeItem(BUSINESS_ID_KEY);
@@ -47,7 +51,8 @@ const setCuponesBusinessId = (businessId?: number) => {
 
 const getCuponesBusinessId = () => {
   const value = localStorage.getItem(BUSINESS_ID_KEY);
-  return value ? Number(value) : null;
+  const parsed = value ? Number(value) : NaN;
+  return isValidNumericId(parsed) ? parsed : null;
 };
 
 const setCuponesToken = (token?: string) => {

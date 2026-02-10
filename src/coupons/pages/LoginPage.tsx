@@ -7,14 +7,9 @@ import carterita from "../../assets/Cupones/carterita.png";
 import papitas from "../../assets/Cupones/papitas.png";
 import { AutoImageCarousel } from "../components/AutoImageCarousel";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
-import {
-  setCuponesBusinessId,
-  setCuponesSession,
-  setCuponesToken,
-  setCuponesUserId,
-  setCuponesUserName,
-} from "../services/session";
+import { setCuponesSession } from "../services/session";
 import { loginCupones } from "../services/couponsApi";
+import { persistCuponesAuthSession } from "../services/authSession";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
@@ -48,18 +43,9 @@ const LoginPage: React.FC = () => {
 
     try {
       const loginResponse = await loginCupones({ Email: normalizedEmail, Password: password });
-      if (!loginResponse?.Role || typeof loginResponse.Id !== "number") {
-        throw new Error("La respuesta de inicio de sesión no es válida.");
-      }
+      const { role } = persistCuponesAuthSession(loginResponse);
 
-      setCuponesSession(true);
-      setCuponesUserName(loginResponse.Name ?? "");
-      setCuponesUserId(loginResponse.Id);
-      setCuponesBusinessId(loginResponse.Business_Id);
-      localStorage.setItem("cupones-role", loginResponse.Role);
-      setCuponesToken(loginResponse.Token ?? "");
-
-      if (loginResponse.Role === "ADMINISTRADOR") {
+      if (role === "ADMINISTRADOR") {
         navigate("/cupones/admin");
         return;
       }

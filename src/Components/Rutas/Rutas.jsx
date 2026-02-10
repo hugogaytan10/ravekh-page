@@ -697,7 +697,7 @@ export const Rutas = () => {
           >
             <ul
               ref={listItemsRef}
-              className="list-items flex flex-col items-center justify-center h-full"
+              className="list-items flex flex-col items-center justify-center min-h-full"
             >
               <li>
                 <NavLink to="/" onClick={handleMenuClick}>
@@ -857,7 +857,7 @@ export const Rutas = () => {
             className="menu-container fixed top-0 left-0 w-full h-full z-30"
             style={{ display: "none", backgroundColor: color }}
           >
-            <ul ref={listItemsRefCatalogo} className="list-items flex flex-col items-center justify-center h-full">
+            <ul ref={listItemsRefCatalogo} className="list-items flex flex-col items-center justify-center min-h-full">
               <li>
                 <p className="text-white text-base">ravekh.team@gmail.com</p>
               </li>
@@ -872,7 +872,7 @@ export const Rutas = () => {
           >
             <ul
               ref={listItemsRefCatalogo}
-              className="list-items flex flex-col items-center justify-center h-full"
+              className="list-items flex flex-col items-center justify-center min-h-full"
             >
               <li>
                 <p className="text-white text-base">ravekh.team@gmail.com</p>
