@@ -4,7 +4,7 @@ import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { getCuponesBusinessId, getCuponesUserId, getCuponesUserName, hasCuponesSession } from "../services/session";
-import { Coupon, getCouponsByBusiness, getCouponsDisponibilityByUser } from "../services/couponsApi";
+import { Coupon, claimCoupon, getClaimedCouponsByUser, getCouponsByBusiness, getCouponsDisponibilityByUser } from "../services/couponsApi";
 
 const TicketIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">  <rect x="4" y="5" width="16" height="14" rx="2.5" />
@@ -16,8 +16,11 @@ const CouponsPage: React.FC = () => {
   const navigate = useNavigate();
   const userName = getCuponesUserName();
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [claimedCoupons, setClaimedCoupons] = useState<Coupon[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [claimLoadingId, setClaimLoadingId] = useState<number | null>(null);
   const [errorMessage, setErrorMessage] = useState("");
+  const [infoMessage, setInfoMessage] = useState("");
   const userId = getCuponesUserId();
   const businessId = getCuponesBusinessId() ?? 1;
   const { theme } = useCouponsTheme();
@@ -26,7 +29,8 @@ const CouponsPage: React.FC = () => {
     if (!userId && !businessId) {
       return "Configura tu negocio para ver cupones disponibles.";
     }
-    return "Aún no hay cupones disponibles.";
+
+    return "Aún no hay cupones disponibles para reclamar.";
   }, [businessId, userId]);
 
   useEffect(() => {
@@ -40,10 +44,26 @@ const CouponsPage: React.FC = () => {
     const fetchCoupons = async () => {
       setIsLoading(true);
       setErrorMessage("");
+      setInfoMessage("");
+
       try {
-        const response = userId ? await getCouponsDisponibilityByUser(userId) : await getCouponsByBusiness(businessId);
-        if (!isMounted) return;
-        setCoupons(response ?? []);
+        if (userId) {
+          const [availableResponse, claimedResponse] = await Promise.all([
+            getCouponsDisponibilityByUser(userId),
+            getClaimedCouponsByUser(userId),
+             (userId),
+          ]);
+
+          if (!isMounted) return;
+          const claimedIds = new Set((claimedResponse ?? []).map((coupon) => coupon.Id));
+          setClaimedCoupons(claimedResponse ?? []);
+          setCoupons((availableResponse ?? []).filter((coupon) => !claimedIds.has(coupon.Id)));
+        } else {
+          const response = await getCouponsByBusiness(businessId);
+          if (!isMounted) return;
+          setCoupons(response ?? []);
+          setClaimedCoupons([]);
+        }
       } catch (error) {
         if (!isMounted) return;
         setErrorMessage(error instanceof Error ? error.message : "No se pudieron cargar los cupones.");
@@ -60,6 +80,23 @@ const CouponsPage: React.FC = () => {
     };
   }, [businessId, userId]);
 
+  const onClaimCoupon = async (coupon: Coupon) => {
+    if (!userId) return;
+
+    setClaimLoadingId(coupon.Id);
+    setErrorMessage("");
+    setInfoMessage("");
+
+    try {
+      await claimCoupon({ Coupon_Id: coupon.Id, User_Id: userId });
+      setCoupons((prevCoupons) => prevCoupons.filter((currentCoupon) => currentCoupon.Id !== coupon.Id));
+      setInfoMessage("Cupón reclamado correctamente. Ya lo puedes ver en Mis cupones.");
+    } catch (error) {
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo reclamar el cupón.");
+    } finally {
+      setClaimLoadingId(null);
+    }
+  };
 
   return (
     <div
@@ -86,7 +123,7 @@ const CouponsPage: React.FC = () => {
           <div>
             <p className="text-sm font-semibold">Hola{userName ? ` ${userName}` : ""}</p>
             <p className="text-sm" style={{ color: theme.textMuted }}>
-              Buen día
+              Cupones disponibles para reclamar
             </p>
           </div>
         </header>
@@ -107,13 +144,19 @@ const CouponsPage: React.FC = () => {
             <p className="text-sm font-semibold text-red-500">{errorMessage}</p>
           ) : null}
 
+          {infoMessage ? (
+            <p className="text-sm font-semibold text-emerald-500">{infoMessage}</p>
+          ) : null}
+
           {!isLoading && !errorMessage && coupons.length === 0 ? (
             <p className="text-sm font-semibold" style={{ color: theme.textMuted }}>
               {fallbackCopy}
             </p>
           ) : null}
 
-          {coupons.map((coupon, index) => (
+          {
+            coupons.length > 0 ?
+          coupons.map((coupon, index) => (
             <section
               key={coupon.Id}
               className="relative rounded-2xl px-5 py-4 shadow-[0_14px_28px_rgba(0,0,0,0.22)] flex items-center gap-4 border"
@@ -128,17 +171,30 @@ const CouponsPage: React.FC = () => {
               <div className="flex-1">
                 <p className="text-base font-extrabold">Cupón disponible</p>
                 <p className="text-sm leading-snug">{coupon.Description}</p>
-                <button
-                  type="button"
-                  className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold shadow-[0_6px_14px_rgba(0,0,0,0.18)]"
-                  style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-                  onClick={() => navigate("/cupones/qr", { state: { coupon } })}
-                >
-                  Mostrar QR
-                </button>
+                {userId ? (
+                  <button
+                    type="button"
+                    className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold shadow-[0_6px_14px_rgba(0,0,0,0.18)]"
+                    style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
+                    onClick={() => onClaimCoupon(coupon)}
+                    disabled={claimLoadingId === coupon.Id}
+                  >
+                    {claimLoadingId === coupon.Id ? "Reclamando..." : "Reclamar cupón"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold shadow-[0_6px_14px_rgba(0,0,0,0.18)]"
+                    style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
+                    onClick={() => navigate("/cupones/qr", { state: { coupon } })}
+                  >
+                    Mostrar QR
+                  </button>
+                )}
               </div>
             </section>
-          ))}
+          )) : null
+        }
         </main>
 
         <CuponesNav active="cupones" />

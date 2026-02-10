@@ -119,7 +119,7 @@ const CouponQrPage: React.FC = () => {
               type="button"
               className="w-full rounded-full px-4 py-3 text-sm font-bold shadow-[0_10px_22px_rgba(0,0,0,0.2)]"
               style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-              onClick={() => navigate("/cupones/cupones")}
+              onClick={() => navigate("/cupones/mis-cupones")}
             >
               Volver a mis cupones
             </button>

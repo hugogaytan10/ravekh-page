@@ -23,6 +23,13 @@ interface CouponHasUser {
   DateUsed: string;
 }
 
+interface ClaimCouponPayload {
+  Coupon_Id: number;
+  User_Id: number;
+  Used?: boolean;
+  DateUsed?: string;
+}
+
 interface Visits {
   Id?: number;
   Business_Id: number;
@@ -33,4 +40,4 @@ interface Visits {
   MinVisits?: number;
 }
 
-export type { Coupon, CouponHasUser, CreateCouponPayload, Visits };
+export type { ClaimCouponPayload, Coupon, CouponHasUser, CreateCouponPayload, Visits };

@@ -1,5 +1,5 @@
 import { URL } from "../../Components/CatalogoWeb/Const/Const";
-import type { Coupon, CouponHasUser, CreateCouponPayload } from "../models/coupon";
+import type { ClaimCouponPayload, Coupon, CouponHasUser, CreateCouponPayload } from "../models/coupon";
 import type { LoginPayload } from "../models/auth";
 
 const createCoupon = async (payload: CreateCouponPayload) => {
@@ -53,16 +53,45 @@ const getCouponDisponibility = async (userId: number) => {
 };
 
 const getCouponsByUser = async (userId: number) => {
-  try{
+  try {
     const response = await fetch(`${URL}couponhasusers/user/${userId}`);
     if (!response.ok) {
       throw new Error("No se pudieron cargar las relaciones de cupones del usuario.");
     }
-    const relations = await response.json() as CouponHasUser[] | null;
-  }catch(error){
+
+    return (await response.json()) as CouponHasUser[] | null;
+  } catch (error) {
     throw new Error("Error al obtener los cupones del usuario.");
   }
-}
+};
+
+const getClaimedCouponsByUser = async (userId: number) => {
+  const relations = await getCouponsByUser(userId);
+  if (!relations || relations.length === 0) {
+    return [] as Coupon[];
+  }
+
+  const uniqueCouponIds = Array.from(new Set(relations.map((relation) => relation.Coupon_Id)));
+  const coupons = await Promise.all(uniqueCouponIds.map(async (couponId) => getCouponById(couponId)));
+
+  return coupons.filter((coupon): coupon is Coupon => Boolean(coupon));
+};
+
+const claimCoupon = async (payload: ClaimCouponPayload) => {
+  const response = await fetch(`${URL}coupons/take`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    throw new Error("No se pudo reclamar el cupón.");
+  }
+
+  return response.json().catch(() => null);
+};
 
 const getCouponsDisponibilityByUser = async (userId: number) => {
   const relations = await getCouponDisponibility(userId);
@@ -104,7 +133,17 @@ const deleteCoupon = async (couponId: number) => {
   return response;
 };
 
-export { getCouponById, getCouponDisponibility, getCouponsDisponibilityByUser, getCouponsByBusiness, getCouponsByUser, updateCoupon, deleteCoupon };
+export {
+  claimCoupon,
+  getClaimedCouponsByUser,
+  getCouponById,
+  getCouponDisponibility,
+  getCouponsDisponibilityByUser,
+  getCouponsByBusiness,
+  getCouponsByUser,
+  updateCoupon,
+  deleteCoupon,
+};
 
 const deleteCouponsAccount = async (userId: number, token: string) => {
   const response = await fetch(`${URL}employee/${userId}`, {
@@ -142,4 +181,4 @@ const loginCupones = async (payload: LoginPayload) => {
 };
 
 export { deleteCouponsAccount, loginCupones };
-export type { Coupon, CouponHasUser, CreateCouponPayload, LoginPayload };
+export type { ClaimCouponPayload, Coupon, CouponHasUser, CreateCouponPayload, LoginPayload };
