@@ -172,28 +172,6 @@ const HomePage: React.FC = () => {
               </section>
             ))}
 
-            <section
-              className="rounded-2xl px-5 py-4 shadow-[0_16px_32px_rgba(0,0,0,0.22)] border"
-              style={{ backgroundColor: theme.surface, color: theme.textPrimary, borderColor: theme.border }}
-            >
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-lg font-extrabold">Escanear cupón</p>
-                  <p className="text-sm" style={{ color: theme.textMuted }}>
-                    Valida un QR con la cámara.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => navigate("/cupones/admin/escanear")}
-                  className="rounded-full px-4 py-2 text-sm font-bold shadow-[0_10px_22px_rgba(0,0,0,0.2)]"
-                  style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-                >
-                  Escanear
-                </button>
-              </div>
-            </section>
-
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"

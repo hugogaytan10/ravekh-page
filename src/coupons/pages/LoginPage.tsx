@@ -7,7 +7,7 @@ import carterita from "../../assets/Cupones/carterita.png";
 import papitas from "../../assets/Cupones/papitas.png";
 import { AutoImageCarousel } from "../components/AutoImageCarousel";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
-import { setCuponesSession } from "../services/session";
+import { getPendingVisitRedeemToken, setCuponesSession } from "../services/session";
 import { loginCupones } from "../services/couponsApi";
 import { persistCuponesAuthSession } from "../services/authSession";
 
@@ -47,6 +47,13 @@ const LoginPage: React.FC = () => {
 
       if (role === "ADMINISTRADOR") {
         navigate("/cupones/admin");
+        return;
+      }
+
+      const pendingVisitToken = getPendingVisitRedeemToken();
+
+      if (pendingVisitToken) {
+        navigate(`/visit/redeem?token=${encodeURIComponent(pendingVisitToken)}`);
         return;
       }
 

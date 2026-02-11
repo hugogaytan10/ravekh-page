@@ -1,7 +1,13 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
-import { getCuponesUserId, hasCuponesSession } from "../services/session";
+import {
+  clearPendingVisitRedeemToken,
+  getCuponesUserId,
+  getPendingVisitRedeemToken,
+  hasCuponesSession,
+  setPendingVisitRedeemToken,
+} from "../services/session";
 import { redeemVisitQr } from "../services/visitsApi";
 import { CouponsPageHeader } from "../components/CouponsPageHeader";
 
@@ -21,11 +27,13 @@ const VisitRedeemPage: React.FC = () => {
 
   const token = useMemo(() => {
     const params = new URLSearchParams(location.search);
-    return params.get("token") ?? "";
+    return (params.get("token") ?? "").trim();
   }, [location.search]);
 
+  const effectiveToken = token || getPendingVisitRedeemToken();
+
   useEffect(() => {
-    if (!token) {
+    if (!effectiveToken) {
       setStatus("error");
       setMessage("No encontramos el QR de visita en el enlace.");
       return;
@@ -33,6 +41,7 @@ const VisitRedeemPage: React.FC = () => {
 
     if (!hasSession) {
       setStatus("idle");
+      setPendingVisitRedeemToken(effectiveToken);
       return;
     }
 
@@ -44,7 +53,7 @@ const VisitRedeemPage: React.FC = () => {
       return;
     }
 
-    const requestKey = `${userId}:${token}`;
+    const requestKey = `${userId}:${effectiveToken}`;
     let isCancelled = false;
 
     const submitRedeem = async () => {
@@ -53,7 +62,7 @@ const VisitRedeemPage: React.FC = () => {
       try {
         const currentRequest =
           redeemRequests.get(requestKey) ??
-          redeemVisitQr(token, userId).finally(() => {
+          redeemVisitQr(effectiveToken, userId).finally(() => {
             redeemRequests.delete(requestKey);
           });
 
@@ -67,6 +76,7 @@ const VisitRedeemPage: React.FC = () => {
         setCouponGenerated(response.couponGenerated);
         setStatus("success");
         setMessage("¡Visita registrada exitosamente!");
+        clearPendingVisitRedeemToken();
       } catch (error) {
         if (isCancelled) {
           return;
@@ -82,7 +92,7 @@ const VisitRedeemPage: React.FC = () => {
     return () => {
       isCancelled = true;
     };
-  }, [hasSession, token]);
+  }, [effectiveToken, hasSession]);
 
   return (
     <div
@@ -135,6 +145,9 @@ const VisitRedeemPage: React.FC = () => {
                   Crear cuenta
                 </button>
               </div>
+              <p className="mt-4 text-xs" style={{ color: theme.textMuted }}>
+                Guardaremos esta visita y la registraremos automáticamente cuando entres con tu cuenta.
+              </p>
             </section>
           ) : (
             <section

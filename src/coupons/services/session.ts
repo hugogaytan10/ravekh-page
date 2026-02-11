@@ -6,6 +6,7 @@ const USER_NAME_KEY = "cupones-name";
 const USER_ID_KEY = "cupones-user-id";
 const BUSINESS_ID_KEY = "cupones-business-id";
 const TOKEN_KEY = "cupones-token";
+const PENDING_VISIT_TOKEN_KEY = "cupones-pending-visit-token";
 
 const setCuponesSession = (isActive: boolean) => {
   if (isActive) {
@@ -65,12 +66,31 @@ const setCuponesToken = (token?: string) => {
 
 const getCuponesToken = () => localStorage.getItem(TOKEN_KEY) ?? "";
 
+const setPendingVisitRedeemToken = (token?: string) => {
+  const normalizedToken = token?.trim();
+
+  if (normalizedToken) {
+    localStorage.setItem(PENDING_VISIT_TOKEN_KEY, normalizedToken);
+  } else {
+    localStorage.removeItem(PENDING_VISIT_TOKEN_KEY);
+  }
+};
+
+const getPendingVisitRedeemToken = () => localStorage.getItem(PENDING_VISIT_TOKEN_KEY) ?? "";
+
+const clearPendingVisitRedeemToken = () => {
+  localStorage.removeItem(PENDING_VISIT_TOKEN_KEY);
+};
+
 export {
+  clearPendingVisitRedeemToken,
   getCuponesBusinessId,
   getCuponesToken,
   getCuponesUserId,
   getCuponesUserName,
+  getPendingVisitRedeemToken,
   hasCuponesSession,
+  setPendingVisitRedeemToken,
   setCuponesBusinessId,
   setCuponesSession,
   setCuponesToken,

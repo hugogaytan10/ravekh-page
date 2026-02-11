@@ -9,6 +9,7 @@ import { AutoImageCarousel } from "../components/AutoImageCarousel";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { loginCupones, registerCupones } from "../services/couponsApi";
 import { parseNumericId, persistCuponesAuthSession } from "../services/authSession";
+import { getPendingVisitRedeemToken } from "../services/session";
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -67,12 +68,28 @@ const RegisterPage: React.FC = () => {
           Business_Id: 1,
           Name: normalizedName,
         });
+
+        const pendingVisitToken = getPendingVisitRedeemToken();
+
+        if (pendingVisitToken) {
+          navigate(`/visit/redeem?token=${encodeURIComponent(pendingVisitToken)}`);
+          return;
+        }
+
         navigate("/cupones/home");
         return;
       }
 
       const loginResponse = await loginCupones({ Email: normalizedEmail, Password: normalizedPassword });
       persistCuponesAuthSession(loginResponse);
+
+      const pendingVisitToken = getPendingVisitRedeemToken();
+
+      if (pendingVisitToken) {
+        navigate(`/visit/redeem?token=${encodeURIComponent(pendingVisitToken)}`);
+        return;
+      }
+
       navigate("/cupones/home");
     } catch (error) {
       setErrorMessage("No se pudo registrar la cuenta. Intenta nuevamente.");
