@@ -75,7 +75,7 @@ const RegisterPage: React.FC = () => {
       persistCuponesAuthSession(loginResponse);
       navigate("/cupones/home");
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : "No se pudo registrar la cuenta. Intenta nuevamente.");
+      setErrorMessage("No se pudo registrar la cuenta. Intenta nuevamente.");
     } finally {
       setIsSubmitting(false);
     }
