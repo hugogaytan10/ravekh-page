@@ -24,7 +24,7 @@ const redeemVisitQr = async (token: string, userId: number, signal?: AbortSignal
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ token, userId }),
+    body: JSON.stringify({ token, userId, regenerateDynamicQr: true }),
     signal,
   });
 
