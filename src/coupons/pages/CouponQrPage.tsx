@@ -1,9 +1,11 @@
 import React, { useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
+import QRCode from "../lib/QRCode";
+import QRErrorCorrectLevel from "../lib/QRCode/QRErrorCorrectLevel";
 import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
-import { getCuponesUserName, hasCuponesSession } from "../services/session";
+import { getCuponesUserId, getCuponesUserName, hasCuponesSession } from "../services/session";
 import type { Coupon } from "../models/coupon";
 
 const CouponQrPage: React.FC = () => {
@@ -26,16 +28,38 @@ const CouponQrPage: React.FC = () => {
     );
   }, [location.state]);
 
-  const qrCells = useMemo(() => {
-    const seed = coupon.QR.split("").reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    return Array.from({ length: 81 }, (_, index) => {
-      const x = index % 9;
-      const y = Math.floor(index / 9);
-      const isFinder = (x < 2 && y < 2) || (x > 6 && y < 2) || (x < 2 && y > 6);
-      if (isFinder) return true;
-      return (x * y + seed + index) % 3 === 0;
-    });
-  }, [coupon.QR]);
+  const userId = getCuponesUserId();
+
+  const qrPayload = useMemo(
+    () => JSON.stringify({ Code: coupon.QR, UserId: userId }),
+    [coupon.QR, userId]
+  );
+
+  const qrUrl = useMemo(() => {
+    const qr = new QRCode(0, QRErrorCorrectLevel.M);
+    qr.addData(qrPayload);
+    qr.make();
+
+    const moduleCount = qr.getModuleCount();
+    const size = 256;
+    const margin = 16;
+    const moduleSize = (size - margin * 2) / moduleCount;
+    const rects: string[] = [];
+
+    for (let row = 0; row < moduleCount; row += 1) {
+      for (let col = 0; col < moduleCount; col += 1) {
+        if (qr.isDark(row, col)) {
+          const x = (margin + col * moduleSize).toFixed(4);
+          const y = (margin + row * moduleSize).toFixed(4);
+          const w = moduleSize.toFixed(4);
+          rects.push(`<rect x="${x}" y="${y}" width="${w}" height="${w}" fill="#111827" />`);
+        }
+      }
+    }
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect width="100%" height="100%" fill="#ffffff"/>${rects.join("")}</svg>`;
+    return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+  }, [qrPayload]);
 
   useEffect(() => {
     if (!hasCuponesSession()) {
@@ -95,17 +119,9 @@ const CouponQrPage: React.FC = () => {
 
             <div
               className="mt-6 mx-auto w-56 rounded-3xl p-4 shadow-[0_10px_22px_rgba(0,0,0,0.12)]"
-              style={{ backgroundColor: theme.surfaceElevated }}
+              style={{ backgroundColor: "#ffffff" }}
             >
-              <div className="grid grid-cols-9 gap-1">
-                {qrCells.map((isActive, index) => (
-                  <span
-                    key={`qr-cell-${index}`}
-                    className="block aspect-square rounded-[2px]"
-                    style={{ backgroundColor: isActive ? theme.textPrimary : "transparent" }}
-                  />
-                ))}
-              </div>
+              <img src={qrUrl} alt="Código QR del cupón" className="w-full h-auto rounded-xl" loading="lazy" />
             </div>
 
             <div className="mt-6 space-y-1 text-sm font-semibold" style={{ color: theme.textMuted }}>
