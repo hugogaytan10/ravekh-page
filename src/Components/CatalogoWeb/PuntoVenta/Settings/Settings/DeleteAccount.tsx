@@ -14,6 +14,7 @@ export const DeleteAccount: React.FC<{ navigation: any }> = ({ navigation }) => 
   const [resultModalVisible, setResultModalVisible] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [modalMessage, setModalMessage] = useState("");
+  const [didDelete, setDidDelete] = useState(false);
   const context = useContext(AppContext);
   const appColor = context.store?.Color || ThemeLight.btnBackground;
 
@@ -24,21 +25,27 @@ export const DeleteAccount: React.FC<{ navigation: any }> = ({ navigation }) => 
   const handleConfirmDelete = async () => {
     setConfirmModalVisible(false);
     setIsLoading(true);
+    setDidDelete(false);
 
     try {
+      if (!context.user?.Token || !context.user?.Id) {
+        setModalMessage("Necesitamos tu sesión activa para eliminar la cuenta.");
+        return;
+      }
+
       const data = await deleteAccount(context.user.Token, context.user.Id);
-      if (data) {
+      if (data?.affectedRows || data?.success) {
         context.setUser({} as User);
         context.setStore({} as Store);
-        //await removeItem("user");
+        localStorage.removeItem("user");
         context.setShowNavBar(false);
         setModalMessage("Cuenta eliminada con éxito");
-        navigation.navigate("GetStartedDelete");
+        setDidDelete(true);
       } else {
         setModalMessage("No se pudo eliminar la cuenta. Intenta de nuevo.");
       }
     } catch (error) {
-      setModalMessage("Ocurrió un error al intentar eliminar la cuenta.");
+      setModalMessage(error instanceof Error ? error.message : "Ocurrió un error al intentar eliminar la cuenta.");
     } finally {
       setIsLoading(false);
       setResultModalVisible(true);
@@ -135,7 +142,12 @@ export const DeleteAccount: React.FC<{ navigation: any }> = ({ navigation }) => 
                 <p className="text-gray-700 text-lg mb-4">{modalMessage}</p>
                 <button
                   className="px-5 py-2 bg-blue-500 text-white rounded-lg"
-                  onClick={() => setResultModalVisible(false)}
+                  onClick={() => {
+                    setResultModalVisible(false);
+                    if (didDelete) {
+                      navigation.navigate("GetStartedDelete");
+                    }
+                  }}
                 >
                   Aceptar
                 </button>

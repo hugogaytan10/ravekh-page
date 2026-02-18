@@ -10,10 +10,15 @@ export const deleteAccount = async (token: string, idUser: number) => {
                 token: token
             }
         });
-        const data = await response.json();
+        const data = await response.json().catch(() => null);
+        if (!response.ok) {
+            const message = data?.message || "No se pudo eliminar la cuenta.";
+            throw new Error(message);
+        }
         return data;
     } catch (error) {
         console.error(error);
+        throw error;
     }
 
 }
@@ -86,4 +91,3 @@ export const updateBusinessWithTaxId = async (newTaxId: number, businessId: numb
       console.error('Error al actualizar el Taxes_Id en el negocio:', error);
     }
   };
-
