@@ -65,7 +65,7 @@ const VisitRedeemPage: React.FC = () => {
       try {
         const currentRequest =
           redeemRequests.get(requestKey) ??
-          redeemVisitQr(effectiveToken, userId).finally(() => {
+          redeemVisitQr(effectiveToken, userId, { regenerateDynamicQr: true }).finally(() => {
             redeemRequests.delete(requestKey);
           });
 

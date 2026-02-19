@@ -18,14 +18,18 @@ const getVisitHistoryByUserId = async (userId: number): Promise<Visits[]> => {
   }
   return response.json() as Promise<Visits[]>;
 };
-const redeemVisitQr = async (token: string, userId: number, signal?: AbortSignal) => {
+const redeemVisitQr = async (
+  token: string,
+  userId: number,
+  options?: { signal?: AbortSignal; regenerateDynamicQr?: boolean },
+) => {
   const response = await fetch(`${URL}visits/qr/redeem`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ token, userId, regenerateDynamicQr: true }),
-    signal,
+    body: JSON.stringify({ token, userId, regenerateDynamicQr: options?.regenerateDynamicQr ?? true }),
+    signal: options?.signal,
   });
 
   if (!response.ok) {
