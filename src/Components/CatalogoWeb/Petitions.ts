@@ -199,7 +199,7 @@ export const getProductsByCategoryIdAndDisponibilty = async (
 ) => {
     try{
         const response = await fetch(`${URL}products/category/availablegtzero/${idCategory}?page=${page}`, {
-            method: 'GET',
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
             },
