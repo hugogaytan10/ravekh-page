@@ -39,9 +39,12 @@ const VisitRedeemPage: React.FC = () => {
       return;
     }
 
+    // Persistimos el token antes de cualquier intento para recuperarlo si el backend falla
+    // durante login/registro/canje y evitar perder la visita pendiente.
+    setPendingVisitRedeemToken(effectiveToken);
+
     if (!hasSession) {
       setStatus("idle");
-      setPendingVisitRedeemToken(effectiveToken);
       return;
     }
 
