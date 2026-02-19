@@ -192,9 +192,19 @@ export const getProductsByCategoryId = async (idCategory: string) => {
         return null;
     }
 }
-export const getProductsByCategoryIdAndDisponibilty = async (idCategory: string) => {
+export const getProductsByCategoryIdAndDisponibilty = async (
+    idCategory: string,
+    limit?: string,
+    page: number = 1
+) => {
     try{
-        const response = await fetch(`${URL}products/category/availablegtzero/${idCategory}`);
+        const response = await fetch(`${URL}products/category/availablegtzero/${idCategory}?page=${page}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ Limit: limit ?? "" }),
+        });
         const data = await response.json();
         return data;
     }catch(error){

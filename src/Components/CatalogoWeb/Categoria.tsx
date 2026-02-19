@@ -15,6 +15,11 @@ export const MainCategoria: React.FC = () => {
         idCategoria: string;
     }>();
     const [productos, setProductos] = useState<Producto[]>([]);
+    const [page, setPage] = useState(1);
+    const [hasNext, setHasNext] = useState(true);
+    const [hasPrev, setHasPrev] = useState(false);
+    const [totalPages, setTotalPages] = useState(1);
+    const [pageInput, setPageInput] = useState("1");
     const [telefono, setTelefono] = useState<string | null>(null);
     const context = useContext(AppContext);
     const [notPay, setNotPay] = useState(false);
@@ -43,29 +48,51 @@ export const MainCategoria: React.FC = () => {
     }, [context.cart]);
 
 
-    useEffect(() => {
-        /*context.setIdBussiness(idBusiness);
-        getProductsByBusiness(idBusiness).then((data) => {
-          if (data.length === 0) {
-            return;
-          }
-          setProductos(data || []);
-          setTelefono(data[0].PhoneNumber || null);
-          context.setPhoneNumber(data[0].PhoneNumber || null);
-          localStorage.setItem("telefono", data[0].PhoneNumber || "");
-        });*/
-        //rescatamos el id del negocio del local storage
-      
-        if (idCategoria) {
+    const fetchProductsPage = useCallback(async (pageToFetch: number) => {
+        if (!idCategoria) return;
+
+        try {
             setLoadingProducts(true);
-            getProductsByCategoryIdAndDisponibilty(idCategoria)
-                .then((data) => {
-                    setProductos(Array.isArray(data) ? data : []);
-                })
-                .finally(() => {
-                    setLoadingProducts(false);
-                });
+            const response = await getProductsByCategoryIdAndDisponibilty(
+                idCategoria,
+                "",
+                pageToFetch
+            );
+
+            if (Array.isArray(response)) {
+                setProductos(response);
+                setHasNext(false);
+                setHasPrev(false);
+                setTotalPages(1);
+                setPage(1);
+                setPageInput("1");
+                return;
+            }
+
+            const newProducts: Producto[] = Array.isArray(response?.data) ? response.data : [];
+            const pagination = response?.pagination;
+            setProductos(newProducts);
+            setHasNext(Boolean(pagination?.hasNext));
+            setHasPrev(Boolean(pagination?.hasPrev));
+            setTotalPages(Number(pagination?.totalPages) || 1);
+            setPage(pageToFetch);
+            setPageInput(String(pageToFetch));
+        } catch (error) {
+            console.error("Error paginando productos por categoría:", error);
+            setProductos([]);
+            setHasNext(false);
+            setHasPrev(false);
+            setTotalPages(1);
+        } finally {
+            setLoadingProducts(false);
         }
+    }, [idCategoria]);
+
+    useEffect(() => {
+        if (idCategoria) {
+            void fetchProductsPage(1);
+        }
+
         if (!context.phoneNumber) {
             const storedPhoneNumber = localStorage.getItem("telefono");
             if (storedPhoneNumber) {
@@ -75,7 +102,7 @@ export const MainCategoria: React.FC = () => {
         }else{
             setTelefono(context.phoneNumber);
         }
-    }, [context.idBussiness, idCategoria]);
+    }, [context.idBussiness, idCategoria, fetchProductsPage]);
 
     useEffect(() => {
         if (!context.phoneNumber) {
@@ -292,6 +319,46 @@ export const MainCategoria: React.FC = () => {
         [context]
     );
 
+    const paginationItems = useMemo(() => {
+        if (totalPages <= 7) {
+            return Array.from({ length: totalPages }, (_, index) => index + 1);
+        }
+
+        const items: Array<number | string> = [];
+        const start = Math.max(1, page - 2);
+        const end = Math.min(totalPages, page + 2);
+
+        if (start > 1) items.push(1);
+        if (start > 2) items.push("...");
+
+        for (let current = start; current <= end; current += 1) {
+            items.push(current);
+        }
+
+        if (end < totalPages - 1) items.push("...");
+        if (end < totalPages) items.push(totalPages);
+
+        return items;
+    }, [page, totalPages]);
+
+    const handlePageChange = useCallback((nextPage: number) => {
+        if (nextPage === page || loadingProducts) return;
+        if (nextPage < 1 || nextPage > totalPages) return;
+        void fetchProductsPage(nextPage);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+    }, [fetchProductsPage, loadingProducts, page, totalPages]);
+
+    const handlePageInputChange = useCallback((value: string) => {
+        const sanitized = value.replace(/[^\d]/g, "");
+        setPageInput(sanitized);
+    }, []);
+
+    const handlePageInputSubmit = useCallback(() => {
+        const parsed = Number(pageInput);
+        if (!Number.isFinite(parsed)) return;
+        handlePageChange(parsed);
+    }, [handlePageChange, pageInput]);
+
     if(notPay) {
         return (
             <div className="flex flex-col items-center justify-center min-h-screen bg-[var(--bg-primary)]">
@@ -338,6 +405,80 @@ export const MainCategoria: React.FC = () => {
                             onQuickView={handleQuickView}
                             onRemove={handleRemoveFromCart}
                         />
+                    )}
+
+                    {totalPages > 1 && (
+                        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+                            <button
+                                type="button"
+                                onClick={() => handlePageChange(page - 1)}
+                                disabled={!hasPrev || loadingProducts}
+                                className="h-10 px-4 rounded-full border border-[var(--border-default)] text-sm font-medium text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Anterior
+                            </button>
+
+                            <div className="flex flex-wrap items-center justify-center gap-2">
+                                {paginationItems.map((item, index) =>
+                                    typeof item === "number" ? (
+                                        <button
+                                            key={`${item}-${index}`}
+                                            type="button"
+                                            onClick={() => handlePageChange(item)}
+                                            disabled={loadingProducts}
+                                            className={`h-10 w-10 rounded-full border text-sm font-semibold transition-colors disabled:cursor-not-allowed disabled:opacity-50 ${
+                                                item === page
+                                                    ? "bg-[var(--action-primary)] text-white border-[var(--action-primary)]"
+                                                    : "border-[var(--border-default)] text-[var(--text-primary)] hover:bg-[var(--bg-muted)]"
+                                            }`}
+                                            aria-current={item === page ? "page" : undefined}
+                                        >
+                                            {item}
+                                        </button>
+                                    ) : (
+                                        <span
+                                            key={`ellipsis-${index}`}
+                                            className="h-10 w-10 flex items-center justify-center text-[var(--text-secondary)]"
+                                        >
+                                            {item}
+                                        </span>
+                                    )
+                                )}
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => handlePageChange(page + 1)}
+                                disabled={!hasNext || loadingProducts}
+                                className="h-10 px-4 rounded-full border border-[var(--border-default)] text-sm font-medium text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                            >
+                                Siguiente
+                            </button>
+
+                            <div className="flex items-center gap-2 text-sm text-[var(--text-secondary)]">
+                                <span className="hidden sm:inline">Página</span>
+                                <input
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={pageInput}
+                                    onChange={(event) => handlePageInputChange(event.target.value)}
+                                    onKeyDown={(event) => {
+                                        if (event.key === "Enter") handlePageInputSubmit();
+                                    }}
+                                    className="h-10 w-16 rounded-full border border-[var(--border-default)] bg-transparent text-center text-sm font-semibold text-[var(--text-primary)]"
+                                    aria-label="Ir a la página"
+                                />
+                                <span>de {totalPages}</span>
+                                <button
+                                    type="button"
+                                    onClick={handlePageInputSubmit}
+                                    disabled={loadingProducts}
+                                    className="h-10 px-4 rounded-full border border-[var(--border-default)] text-sm font-medium text-[var(--text-primary)] disabled:cursor-not-allowed disabled:opacity-50"
+                                >
+                                    Ir
+                                </button>
+                            </div>
+                        </div>
                     )}
 
                     {/* Botón de WhatsApp */}
