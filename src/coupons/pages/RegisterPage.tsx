@@ -42,8 +42,8 @@ const RegisterPage: React.FC = () => {
       return;
     }
 
-    if (normalizedPassword.length < 6) {
-      setErrorMessage("Tu contraseña debe tener al menos 6 caracteres.");
+    if (normalizedPassword.length < 4) {
+      setErrorMessage("Tu contraseña debe tener al menos 4 caracteres.");
       return;
     }
 
