@@ -29,7 +29,7 @@ const redeemVisitQr = async (
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ token, userId, regenerateDynamicQr: options?.regenerateDynamicQr ?? true }),
+    body: JSON.stringify({ token, userId, regenerateDynamicQr: true }),
     signal: options?.signal,
   });
 
