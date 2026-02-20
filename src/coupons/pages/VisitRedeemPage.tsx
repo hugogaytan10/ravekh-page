@@ -8,13 +8,12 @@ import {
   hasCuponesSession,
   setPendingVisitRedeemToken,
 } from "../services/session";
-import { redeemVisitQr, rotateDynamicVisitQrOnScan } from "../services/visitsApi";
+import { redeemVisitQr } from "../services/visitsApi";
 import { CouponsPageHeader } from "../components/CouponsPageHeader";
 
 type RedeemVisitResponse = { visitCreated: boolean; couponGenerated: boolean };
 
 const redeemRequests = new Map<string, Promise<RedeemVisitResponse>>();
-const scanRotationRequests = new Map<string, Promise<void>>();
 
 const VisitRedeemPage: React.FC = () => {
   const navigate = useNavigate();
@@ -43,19 +42,6 @@ const VisitRedeemPage: React.FC = () => {
     // Persistimos el token antes de cualquier intento para recuperarlo si el backend falla
     // durante login/registro/canje y evitar perder la visita pendiente.
     setPendingVisitRedeemToken(effectiveToken);
-
-    const rotatePromise =
-      scanRotationRequests.get(effectiveToken) ??
-      rotateDynamicVisitQrOnScan(effectiveToken)
-        .then(() => undefined)
-        .catch((error) => {
-          console.warn("No se pudo rotar el QR al escanear:", error);
-        })
-        .finally(() => {
-          scanRotationRequests.delete(effectiveToken);
-        });
-
-    scanRotationRequests.set(effectiveToken, rotatePromise);
 
     if (!hasSession) {
       setStatus("idle");
