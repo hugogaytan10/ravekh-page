@@ -18,6 +18,7 @@ const getVisitHistoryByUserId = async (userId: number): Promise<Visits[]> => {
   }
   return response.json() as Promise<Visits[]>;
 };
+
 const redeemVisitQr = async (
   token: string,
   userId: number,
@@ -28,7 +29,7 @@ const redeemVisitQr = async (
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ token, userId, regenerateDynamicQr: options?.regenerateDynamicQr ?? true }),
+    body: JSON.stringify({ token, userId, regenerateDynamicQr: true }),
     signal: options?.signal,
   });
 
@@ -40,33 +41,4 @@ const redeemVisitQr = async (
   return response.json() as Promise<{ visitCreated: boolean; couponGenerated: boolean }>;
 };
 
-const rotateDynamicVisitQrOnScan = async (
-  token: string,
-  options?: { signal?: AbortSignal },
-) => {
-  const response = await fetch(`${URL}visits/qr/dynamic/scan/next`, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ token }),
-    signal: options?.signal,
-  });
-
-  if (!response.ok) {
-    const payload = await response.json().catch(() => null);
-    throw new Error(payload?.message || "No se pudo rotar el QR dinámico.");
-  }
-
-  return response.json() as Promise<{
-    businessId: number;
-    nextQr: { token: string; qrUrl: string; expiresAt: number; refreshAfterSeconds: number };
-  }>;
-};
-
-export {
-    getVisitsByUserId,
-    getVisitHistoryByUserId,
-    redeemVisitQr,
-    rotateDynamicVisitQrOnScan,
-}
+export { getVisitsByUserId, getVisitHistoryByUserId, redeemVisitQr };
