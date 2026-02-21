@@ -77,6 +77,9 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
   const pendingStripeOrderKey = "pendingStripeOrder";
   const processedStripeSessionKey = "processedStripeSessionId";
   const stripeDebugLogsKey = "stripeDebugLogs";
+  const catalogBusinessId =
+    idBussiness || localStorage.getItem("idBusiness") || localStorage.getItem("cartBusinessId");
+  const catalogHomeRoute = catalogBusinessId ? `/catalogo/${catalogBusinessId}` : "/";
 
   const logStripeDebug = (message: string, data?: unknown) => {
     try {
@@ -1093,7 +1096,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate(catalogHomeRoute)}
                     className="mt-4 w-full rounded-full bg-[var(--action-disabled)] text-[var(--text-primary)] py-4 text-lg font-semibold"
                   >
                     Seguir comprando
@@ -1423,7 +1426,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate("/catalogo/pedido")}
+                  onClick={() => navigate(catalogHomeRoute)}
                   className="w-full rounded-full bg-[var(--action-disabled)] text-white py-4 text-lg font-semibold"
                 >
                   Seguir comprando
