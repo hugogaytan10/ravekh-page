@@ -25,6 +25,21 @@ import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
 import { PoliticaPrivacidadAgenda } from "../PoliticaPrivacidad/PoliticaPrivacidadAgenda";
 //importaciones para el catalogo web
 import { RavekhPos } from "../RavekhPos/RavekhPos";
+import { LoginPage } from "../../coupons/pages/LoginPage";
+import { RegisterPage } from "../../coupons/pages/RegisterPage";
+import { HomePage } from "../../coupons/pages/HomePage";
+import { CouponsPage } from "../../coupons/pages/CouponsPage";
+import { MyCouponsPage } from "../../coupons/pages/MyCouponsPage";
+import { SettingsPage } from "../../coupons/pages/SettingsPage";
+import { ScanPage } from "../../coupons/pages/ScanPage";
+import { SuccessPage } from "../../coupons/pages/SuccessPage";
+import { ChangeName } from "../../coupons/pages/ChangeName";
+import { DeleteAccountPage } from "../../coupons/pages/DeleteAccountPage";
+import { VisitHistoryPage } from "../../coupons/pages/VisitHistoryPage";
+import { VisitRedeemPage } from "../../coupons/pages/VisitRedeemPage";
+import { CouponQrPage } from "../../coupons/pages/CouponQrPage";
+import { CouponCongratsPage } from "../../coupons/pages/CouponCongratsPage";
+import { CouponClaimPage } from "../../coupons/pages/CouponClaimPage";
 
 // Importaciones para el punto de venta - Login
 import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
@@ -417,6 +432,18 @@ export const Rutas = () => {
       "/select-money",
       "/close-session",
       "/sales-tax-settings",
+      "/cupones",
+      "/cupones/home",
+      "/cupones/login",
+      "/cupones/registro",
+      "/cupones/ajustes",
+      "/cupones/eliminar-cuenta",
+      "/cupones/visitas",
+      "/cupones/cupones",
+      "/cupones/mis-cupones",
+      "/cupones/cambio-nombre",
+      "/cupones/qr",
+      "/cupones/:couponId"
     ];
 
     const path = location.pathname.toLowerCase(); // Asegúrate de trabajar con minúsculas
@@ -482,8 +509,7 @@ export const Rutas = () => {
       "/finish",
       "/add-product",
       "/select-caterory-sales",
-      "/add-category-sales",
-      "/MainFinances",
+      "/add-category-sales", 
       "/main-products",
       "/add-product-products",
       "/select-category-product",
@@ -673,7 +699,7 @@ export const Rutas = () => {
           >
             <ul
               ref={listItemsRef}
-              className="list-items flex flex-col items-center justify-center h-full"
+              className="list-items flex flex-col items-center justify-center min-h-full"
             >
               <li>
                 <NavLink to="/" onClick={handleMenuClick}>
@@ -702,6 +728,15 @@ export const Rutas = () => {
                   className="text-base"
                 >
                   Punto de Venta
+                </NavLink>
+              </li>
+              <li>
+                <NavLink
+                  to="/cupones"
+                  onClick={handleMenuClick}
+                  className="text-base"
+                >
+                  Cupones
                 </NavLink>
               </li>
               <li>
@@ -824,7 +859,7 @@ export const Rutas = () => {
             className="menu-container fixed top-0 left-0 w-full h-full z-30"
             style={{ display: "none", backgroundColor: color }}
           >
-            <ul ref={listItemsRefCatalogo} className="list-items flex flex-col items-center justify-center h-full">
+            <ul ref={listItemsRefCatalogo} className="list-items flex flex-col items-center justify-center min-h-full">
               <li>
                 <p className="text-white text-base">ravekh.team@gmail.com</p>
               </li>
@@ -839,7 +874,7 @@ export const Rutas = () => {
           >
             <ul
               ref={listItemsRefCatalogo}
-              className="list-items flex flex-col items-center justify-center h-full"
+              className="list-items flex flex-col items-center justify-center min-h-full"
             >
               <li>
                 <p className="text-white text-base">ravekh.team@gmail.com</p>
@@ -855,6 +890,21 @@ export const Rutas = () => {
           <Route path="/politica" element={<PoliticaPrivacidad />} />
           <Route path="/politicaAgenda" element={<PoliticaPrivacidadAgenda />} />
           <Route path="/RavekhPos" element={<RavekhPos />} />
+          <Route path="/cupones" element={<LoginPage />} />
+          <Route path="/cupones/registro" element={<RegisterPage />} />
+          <Route path="/cupones/home" element={<HomePage />} />
+          <Route path="/cupones/cupones" element={<CouponsPage />} />
+          <Route path="/cupones/mis-cupones" element={<MyCouponsPage />} />
+          <Route path="/cupones/ajustes" element={<SettingsPage />} />
+          <Route path="/cupones/eliminar-cuenta" element={<DeleteAccountPage />} />
+          <Route path="/cupones/visitas" element={<VisitHistoryPage />} />
+          <Route path="/cupones/admin/escanear" element={<ScanPage />} />
+          <Route path="/cupones/admin/confirmado" element={<SuccessPage />} />
+          <Route path="/visit/redeem" element={<VisitRedeemPage />} />
+          <Route path="/cupones/cambio-nombre" element={<ChangeName />} />
+          <Route path="/cupones/qr" element={<CouponQrPage />} />
+          <Route path="/cupones/:couponId" element={<CouponClaimPage />} />
+          <Route path="/cupones/nuevo" element={<CouponCongratsPage />} />
           <Route path="/blog" element={<BlogMain />} />
           <Route path="/blog/articulosIA" element={<MainArticulosIA />} />
           <Route

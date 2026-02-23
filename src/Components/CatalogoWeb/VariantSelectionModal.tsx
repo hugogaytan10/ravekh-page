@@ -462,6 +462,11 @@ export const VariantSelectionModal: React.FC<VariantSelectionModalProps> = ({
                     </button>
                   </div>
                 </div>
+                {Object.values(stockWarnings).some(Boolean) && (
+                  <p className="text-xs text-red-600 mt-1 text-right">
+                    {Object.values(stockWarnings).find(Boolean)}
+                  </p>
+                )}
               </div>
             </div>
           </div>
