@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import bolsita from "../../assets/Cupones/bolsita.png";
 import cajita from "../../assets/Cupones/cajita.png";
@@ -13,12 +13,14 @@ import { getPendingVisitRedeemToken } from "../services/session";
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const { theme } = useCouponsTheme();
+  const tokenFromQuery = new URLSearchParams(location.search).get("token")?.trim() ?? "";
 
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     event.currentTarget.style.boxShadow = `0 0 0 4px ${theme.accent}40`;
@@ -69,7 +71,7 @@ const RegisterPage: React.FC = () => {
           Name: normalizedName,
         });
 
-        const pendingVisitToken = getPendingVisitRedeemToken();
+        const pendingVisitToken = tokenFromQuery || getPendingVisitRedeemToken();
 
         if (pendingVisitToken) {
           navigate(`/visit/redeem?token=${encodeURIComponent(pendingVisitToken)}`);
@@ -83,7 +85,7 @@ const RegisterPage: React.FC = () => {
       const loginResponse = await loginCupones({ Email: normalizedEmail, Password: normalizedPassword });
       persistCuponesAuthSession(loginResponse);
 
-      const pendingVisitToken = getPendingVisitRedeemToken();
+      const pendingVisitToken = tokenFromQuery || getPendingVisitRedeemToken();
 
       if (pendingVisitToken) {
         navigate(`/visit/redeem?token=${encodeURIComponent(pendingVisitToken)}`);
@@ -173,7 +175,7 @@ const RegisterPage: React.FC = () => {
             type="button"
             className="ml-1 font-bold"
             style={{ color: theme.accent }}
-            onClick={() => navigate("/cupones")}
+            onClick={() => navigate(`/cupones${tokenFromQuery ? `?token=${encodeURIComponent(tokenFromQuery)}` : ""}`)}
           >
             inicia sesión
           </button>

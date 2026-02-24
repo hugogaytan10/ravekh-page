@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import cubito from "../../assets/Cupones/cubito.png";
 import bolsita from "../../assets/Cupones/bolsita.png";
 import cajita from "../../assets/Cupones/cajita.png";
@@ -13,11 +13,13 @@ import { persistCuponesAuthSession } from "../services/authSession";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const { theme } = useCouponsTheme();
+  const tokenFromQuery = new URLSearchParams(location.search).get("token")?.trim() ?? "";
 
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     event.currentTarget.style.boxShadow = `0 0 0 4px ${theme.accent}40`;
@@ -50,7 +52,7 @@ const LoginPage: React.FC = () => {
         return;
       }
 
-      const pendingVisitToken = getPendingVisitRedeemToken();
+      const pendingVisitToken = tokenFromQuery || getPendingVisitRedeemToken();
 
       if (pendingVisitToken) {
         navigate(`/visit/redeem?token=${encodeURIComponent(pendingVisitToken)}`);
@@ -119,7 +121,9 @@ const LoginPage: React.FC = () => {
             type="button"
             className="ml-1 font-bold"
             style={{ color: theme.accent }}
-            onClick={() => navigate("/cupones/registro")}
+            onClick={() =>
+              navigate(`/cupones/registro${tokenFromQuery ? `?token=${encodeURIComponent(tokenFromQuery)}` : ""}`)
+            }
           >
             puedes crearla
           </button>
