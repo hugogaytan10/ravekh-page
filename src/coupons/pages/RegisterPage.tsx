@@ -21,6 +21,7 @@ const RegisterPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const { theme } = useCouponsTheme();
   const tokenFromQuery = new URLSearchParams(location.search).get("token")?.trim() ?? "";
+  const effectiveToken = tokenFromQuery || getPendingVisitRedeemToken();
 
   const tokenFromUrl = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -82,10 +83,8 @@ const RegisterPage: React.FC = () => {
           Name: normalizedName,
         });
 
-        const pendingVisitToken = tokenFromQuery || getPendingVisitRedeemToken();
-
-        if (pendingVisitToken) {
-          navigate(`/visit/redeem?token=${encodeURIComponent(pendingVisitToken)}`);
+        if (effectiveToken) {
+          navigate(`/visit/redeem?token=${encodeURIComponent(effectiveToken)}`);
           return;
         }
 
@@ -96,10 +95,8 @@ const RegisterPage: React.FC = () => {
       const loginResponse = await loginCupones({ Email: normalizedEmail, Password: normalizedPassword });
       persistCuponesAuthSession(loginResponse);
 
-      const pendingVisitToken = tokenFromQuery || getPendingVisitRedeemToken();
-
-      if (pendingVisitToken) {
-        navigate(`/visit/redeem?token=${encodeURIComponent(pendingVisitToken)}`);
+      if (effectiveToken) {
+        navigate(`/visit/redeem?token=${encodeURIComponent(effectiveToken)}`);
         return;
       }
 
@@ -186,7 +183,7 @@ const RegisterPage: React.FC = () => {
             type="button"
             className="ml-1 font-bold"
             style={{ color: theme.accent }}
-            onClick={() => navigate(`/cupones${tokenFromQuery ? `?token=${encodeURIComponent(tokenFromQuery)}` : ""}`)}
+            onClick={() => navigate(`/cupones${effectiveToken ? `?token=${encodeURIComponent(effectiveToken)}` : ""}`)}
           >
             inicia sesión
           </button>

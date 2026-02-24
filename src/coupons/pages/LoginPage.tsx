@@ -20,6 +20,7 @@ const LoginPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const { theme } = useCouponsTheme();
   const tokenFromQuery = new URLSearchParams(location.search).get("token")?.trim() ?? "";
+  const effectiveToken = tokenFromQuery || getPendingVisitRedeemToken();
 
   const tokenFromUrl = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -63,10 +64,8 @@ const LoginPage: React.FC = () => {
         return;
       }
 
-      const pendingVisitToken = tokenFromQuery || getPendingVisitRedeemToken();
-
-      if (pendingVisitToken) {
-        navigate(`/visit/redeem?token=${encodeURIComponent(pendingVisitToken)}`);
+      if (effectiveToken) {
+        navigate(`/visit/redeem?token=${encodeURIComponent(effectiveToken)}`);
         return;
       }
 
@@ -134,7 +133,7 @@ const LoginPage: React.FC = () => {
             style={{ color: theme.accent }}
             onClick={() =>
               navigate(
-                tokenFromUrl ? `/cupones/registro?token=${encodeURIComponent(tokenFromUrl)}` : "/cupones/registro",
+                effectiveToken ? `/cupones/registro?token=${encodeURIComponent(effectiveToken)}` : "/cupones/registro",
               )
             }
           >
