@@ -135,7 +135,9 @@ const VisitRedeemPage: React.FC = () => {
                   type="button"
                   className="w-full rounded-full px-4 py-2 text-sm font-bold"
                   style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-                  onClick={() => navigate("/cupones")}
+                  onClick={() =>
+                    navigate(token ? `/cupones?token=${encodeURIComponent(token)}` : "/cupones")
+                  }
                 >
                   Iniciar sesión
                 </button>
@@ -143,7 +145,9 @@ const VisitRedeemPage: React.FC = () => {
                   type="button"
                   className="w-full rounded-full border px-4 py-2 text-sm font-bold"
                   style={{ borderColor: theme.border, backgroundColor: theme.surfaceElevated, color: theme.textPrimary }}
-                  onClick={() => navigate("/cupones/registro")}
+                  onClick={() =>
+                    navigate(token ? `/cupones/registro?token=${encodeURIComponent(token)}` : "/cupones/registro")
+                  }
                 >
                   Crear cuenta
                 </button>

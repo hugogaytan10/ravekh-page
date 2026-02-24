@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import cubito from "../../assets/Cupones/cubito.png";
 import bolsita from "../../assets/Cupones/bolsita.png";
 import cajita from "../../assets/Cupones/cajita.png";
@@ -7,17 +7,29 @@ import carterita from "../../assets/Cupones/carterita.png";
 import papitas from "../../assets/Cupones/papitas.png";
 import { AutoImageCarousel } from "../components/AutoImageCarousel";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
-import { getPendingVisitRedeemToken, setCuponesSession } from "../services/session";
+import { getPendingVisitRedeemToken, setCuponesSession, setPendingVisitRedeemToken } from "../services/session";
 import { loginCupones } from "../services/couponsApi";
 import { persistCuponesAuthSession } from "../services/authSession";
 
 const LoginPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const { theme } = useCouponsTheme();
+
+  const tokenFromUrl = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return (params.get("token") ?? "").trim();
+  }, [location.search]);
+
+  useEffect(() => {
+    if (tokenFromUrl) {
+      setPendingVisitRedeemToken(tokenFromUrl);
+    }
+  }, [tokenFromUrl]);
 
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     event.currentTarget.style.boxShadow = `0 0 0 4px ${theme.accent}40`;
@@ -119,7 +131,11 @@ const LoginPage: React.FC = () => {
             type="button"
             className="ml-1 font-bold"
             style={{ color: theme.accent }}
-            onClick={() => navigate("/cupones/registro")}
+            onClick={() =>
+              navigate(
+                tokenFromUrl ? `/cupones/registro?token=${encodeURIComponent(tokenFromUrl)}` : "/cupones/registro",
+              )
+            }
           >
             puedes crearla
           </button>
