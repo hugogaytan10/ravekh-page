@@ -19,6 +19,7 @@ const LoginPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const { theme } = useCouponsTheme();
+  const tokenFromQuery = new URLSearchParams(location.search).get("token")?.trim() ?? "";
 
   const tokenFromUrl = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -62,7 +63,7 @@ const LoginPage: React.FC = () => {
         return;
       }
 
-      const pendingVisitToken = getPendingVisitRedeemToken();
+      const pendingVisitToken = tokenFromQuery || getPendingVisitRedeemToken();
 
       if (pendingVisitToken) {
         navigate(`/visit/redeem?token=${encodeURIComponent(pendingVisitToken)}`);
