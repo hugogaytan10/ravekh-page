@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import bolsita from "../../assets/Cupones/bolsita.png";
@@ -9,7 +9,7 @@ import { AutoImageCarousel } from "../components/AutoImageCarousel";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { loginCupones, registerCupones } from "../services/couponsApi";
 import { parseNumericId, persistCuponesAuthSession } from "../services/authSession";
-import { getPendingVisitRedeemToken } from "../services/session";
+import { getPendingVisitRedeemToken, setPendingVisitRedeemToken } from "../services/session";
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -21,6 +21,17 @@ const RegisterPage: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState("");
   const { theme } = useCouponsTheme();
   const tokenFromQuery = new URLSearchParams(location.search).get("token")?.trim() ?? "";
+
+  const tokenFromUrl = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+    return (params.get("token") ?? "").trim();
+  }, [location.search]);
+
+  useEffect(() => {
+    if (tokenFromUrl) {
+      setPendingVisitRedeemToken(tokenFromUrl);
+    }
+  }, [tokenFromUrl]);
 
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     event.currentTarget.style.boxShadow = `0 0 0 4px ${theme.accent}40`;
