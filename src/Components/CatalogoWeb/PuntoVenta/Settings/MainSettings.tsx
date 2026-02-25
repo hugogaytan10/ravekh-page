@@ -12,6 +12,7 @@ import { Basket } from "../../../../assets/POS/Basket";
 import { CashRegister } from "../../../../assets/POS/CashRegister";
 import { AnimatedSlider } from "./Pricing/pricing";
 import { ModalBoxCutting } from "./BoxCutting/ModalBoxCutting";
+import Coupon from "../../../../assets/Cupones/Coupon";
 
 export const MainSettings: React.FC = () => {
   const context = useContext(AppContext);
@@ -125,6 +126,20 @@ export const MainSettings: React.FC = () => {
               </div>
               <span className="mt-2 text-sm font-medium text-gray-700">
                 Ajustes
+              </span>
+
+            </button>
+                            <button
+              className="flex flex-col items-center"
+              onClick={() => {
+                context.setShowNavBarBottom(false); // Hide the bottom navbar
+                navigate("/settings-p")}} // Redirect to the settings screen
+            >
+              <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center ">
+                <Coupon width={30} height={30} fillColor={iconColor} />
+              </div>
+              <span className="mt-2 text-sm font-medium text-gray-700">
+                Cupones
               </span>
             </button>
 
