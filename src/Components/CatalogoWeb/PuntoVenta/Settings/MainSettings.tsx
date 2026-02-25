@@ -133,7 +133,7 @@ export const MainSettings: React.FC = () => {
               className="flex flex-col items-center"
               onClick={() => {
                 context.setShowNavBarBottom(false); // Hide the bottom navbar
-                navigate("/settings-p")}} // Redirect to the settings screen
+                navigate("/cupones")}} // Redirect to coupons module
             >
               <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center ">
                 <Coupon width={30} height={30} fillColor={iconColor} />

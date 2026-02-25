@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect, useContext, useState, useMemo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LandingPage } from "../LandingPage/LandingPage";
 import { BlogMain } from "../Blog/BlogMain";
 import { MainArticulosIA } from "../Blog/ArticulosIA/MainArticulosIA";
@@ -25,17 +25,14 @@ import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
 import { PoliticaPrivacidadAgenda } from "../PoliticaPrivacidad/PoliticaPrivacidadAgenda";
 //importaciones para el catalogo web
 import { RavekhPos } from "../RavekhPos/RavekhPos";
-import { LoginPage } from "../../coupons/pages/LoginPage";
 import { RegisterPage } from "../../coupons/pages/RegisterPage";
 import { HomePage } from "../../coupons/pages/HomePage";
-import { CouponsPage } from "../../coupons/pages/CouponsPage";
 import { MyCouponsPage } from "../../coupons/pages/MyCouponsPage";
 import { SettingsPage } from "../../coupons/pages/SettingsPage";
 import { ScanPage } from "../../coupons/pages/ScanPage";
 import { SuccessPage } from "../../coupons/pages/SuccessPage";
 import { ChangeName } from "../../coupons/pages/ChangeName";
 import { DeleteAccountPage } from "../../coupons/pages/DeleteAccountPage";
-import { VisitHistoryPage } from "../../coupons/pages/VisitHistoryPage";
 import { VisitRedeemPage } from "../../coupons/pages/VisitRedeemPage";
 import { CouponQrPage } from "../../coupons/pages/CouponQrPage";
 import { CouponCongratsPage } from "../../coupons/pages/CouponCongratsPage";
@@ -144,6 +141,7 @@ import { MainCategoria } from "../CatalogoWeb/Categoria";
 import { CatalogSearchInput } from "../CatalogoWeb/CatalogSearchInput";
 import { CatalogSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/CatalogSettings";
 import { EditEmployee } from "../CatalogoWeb/PuntoVenta/Employees/EditEmployee";
+import { MainCoupons, VisitsNavigator, CouponsNavigator } from "../CatalogoWeb/Cupones";
 
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
@@ -890,14 +888,16 @@ export const Rutas = () => {
           <Route path="/politica" element={<PoliticaPrivacidad />} />
           <Route path="/politicaAgenda" element={<PoliticaPrivacidadAgenda />} />
           <Route path="/RavekhPos" element={<RavekhPos />} />
-          <Route path="/cupones" element={<LoginPage />} />
+          <Route path="/cupones" element={<MainCoupons />}>
+            <Route index element={<Navigate to="visitas" replace />} />
+            <Route path="visitas/*" element={<VisitsNavigator />} />
+            <Route path="cupones/*" element={<CouponsNavigator />} />
+          </Route>
           <Route path="/cupones/registro" element={<RegisterPage />} />
           <Route path="/cupones/home" element={<HomePage />} />
-          <Route path="/cupones/cupones" element={<CouponsPage />} />
           <Route path="/cupones/mis-cupones" element={<MyCouponsPage />} />
           <Route path="/cupones/ajustes" element={<SettingsPage />} />
           <Route path="/cupones/eliminar-cuenta" element={<DeleteAccountPage />} />
-          <Route path="/cupones/visitas" element={<VisitHistoryPage />} />
           <Route path="/cupones/admin/escanear" element={<ScanPage />} />
           <Route path="/cupones/admin/confirmado" element={<SuccessPage />} />
           <Route path="/visit/redeem" element={<VisitRedeemPage />} />
