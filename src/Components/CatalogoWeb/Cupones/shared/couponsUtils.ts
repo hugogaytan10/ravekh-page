@@ -38,3 +38,12 @@ export const getCouponId = (coupon?: any): number | null => {
   const n = Number(raw);
   return Number.isFinite(n) && n > 0 ? n : null;
 };
+
+
+export const parseValidDate = (value?: string | null): Date | null => {
+  if (!value) return null;
+
+  const normalized = String(value).trim().replace(" ", "T");
+  const d = new Date(normalized);
+  return Number.isNaN(d.getTime()) ? null : d;
+};

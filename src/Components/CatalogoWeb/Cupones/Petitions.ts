@@ -85,3 +85,27 @@ export const updateCoupon = async (
 
   return (data?.coupon || data?.updatedCoupon || data?.data?.coupon || data) as Coupon;
 };
+
+
+export const getCouponsByBusiness = async (businessId: number, token?: string): Promise<Coupon[]> => {
+  const headers = buildHeaders(token);
+  console.log("el bussines Id que ando agarrando es este",businessId)
+  const response = await fetch(`${URL}coupons/business/${businessId}`, {
+    method: "GET",
+    headers,
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data?.message || "No se pudieron cargar los cupones.");
+  }
+
+  const normalized =
+    data?.coupons ??
+    data?.data?.coupons ??
+    data?.data ??
+    data;
+
+  return Array.isArray(normalized) ? (normalized as Coupon[]) : [];
+};

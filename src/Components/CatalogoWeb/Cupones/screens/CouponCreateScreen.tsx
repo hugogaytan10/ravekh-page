@@ -1,7 +1,6 @@
 import React, { useContext, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import QRCode from "../../../../coupons/lib/QRCode";
-import QRErrorCorrectLevel from "../../../../coupons/lib/QRCode/QRErrorCorrectLevel";
+import { QRCodeSVG } from "qrcode.react";
 import { AppContext } from "../../Context/AppContext";
 import { ThemeLight } from "../../PuntoVenta/Theme/Theme";
 import { ChevronBack } from "../../../../assets/POS/ChevronBack";
@@ -10,13 +9,6 @@ import { WEB_COUPONS_DOMAIN } from "../shared/constants";
 import { buildQrCode, formatDateTime, getCouponId, mergeDateAndTime } from "../shared/couponsUtils";
 import { createCoupon, updateCoupon } from "../Petitions";
 import { Coupon } from "../types";
-
-const createQrDataUrl = (value: string): string => {
-  const qr = new QRCode(0, QRErrorCorrectLevel.M);
-  qr.addData(value);
-  qr.make();
-  return qr.createDataURL(8, 8);
-};
 
 export const CouponCreateScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -43,8 +35,6 @@ export const CouponCreateScreen: React.FC = () => {
   };
 
   const couponsDomain = WEB_COUPONS_DOMAIN || window.location.origin;
-  const canShowQr = Boolean(generatedCoupon?.QR);
-
   const couponLink = useMemo(() => {
     if (!generatedCoupon) {
       return "";
@@ -62,18 +52,6 @@ export const CouponCreateScreen: React.FC = () => {
 
     return couponLink || generatedCoupon.QR;
   }, [couponLink, generatedCoupon?.QR]);
-
-  const qrDataUrl = useMemo(() => {
-    if (!qrDisplayValue) {
-      return "";
-    }
-
-    try {
-      return createQrDataUrl(qrDisplayValue);
-    } catch {
-      return "";
-    }
-  }, [qrDisplayValue]);
 
   const handleBack = () => {
     if (window.history.length > 1) {
@@ -250,11 +228,11 @@ ${couponLink}`;
             />
           </div>
 
-          {canShowQr && (
+          {generatedCoupon?.QR && (
             <div className="rounded-2xl border border-gray-200 p-4">
               <div className="flex justify-center">
-                {qrDataUrl ? (
-                  <img src={qrDataUrl} alt="QR del cupón" className="h-[140px] w-[140px]" />
+                {qrDisplayValue ? (
+                  <QRCodeSVG value={qrDisplayValue} size={140} level="M" />
                 ) : (
                   <div className="h-[140px] w-[140px] rounded-xl bg-gray-100" />
                 )}

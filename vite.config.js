@@ -5,6 +5,11 @@ import svgr from 'vite-plugin-svgr';
 
 // https://vitejs.dev/config/
 export default defineConfig({
+  resolve: {
+    alias: {
+      "qrcode.react": "/src/qrcode-react-shim.tsx",
+    },
+  },
   plugins: [react(),  svgr({
     svgrOptions: {
       exportAsDefault: true, // Configura la exportación como "default"
