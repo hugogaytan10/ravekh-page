@@ -55,6 +55,7 @@ export const insertProduct = async (product: Item, token: string) => {
             body: JSON.stringify({ Product: product, Variants: null })
         });
         const data = await response.json();
+        console.log(data);
         return true;
     } catch (e) {
         return false;
