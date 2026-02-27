@@ -7,12 +7,19 @@ import {
   getBusinessInformation,
   getProduct,
   getTaxes,
+  getCategoriesByBusiness,
 } from "./Petitions";
 import "./Css/MainSales.css";
 import { Item } from "../Model/Item";
+import { Category } from "../Model/Category";
 import { AppContext } from "../../Context/AppContext";
-import { CartPos } from "../Model/CarPos";
 import { useLocation, useNavigate } from "react-router-dom";
+
+type CategoryOption = {
+  key: string;
+  label: string;
+  categoryId: number | null;
+};
 
 export const MainSales: React.FC = () => {
   const navigate = useNavigate();
@@ -20,21 +27,65 @@ export const MainSales: React.FC = () => {
   const location = useLocation();
 
   const [products, setProducts] = useState<Item[]>([]);
-  const [filteredProducts, setFilteredProducts] = useState<Item[]>([]);
   const [view, setView] = useState(true);
   const [showModalPremium, setShowModalPremium] = useState(false);
   const [loader, setLoader] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [selectedCategoryKey, setSelectedCategoryKey] = useState<string>("all");
+  const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
   const skeletonCards = useMemo(() => Array.from({ length: 8 }), []);
 
-  /** Muestra la barra de navegación al cambiar de página */
+  const categoryOptions = useMemo<CategoryOption[]>(() => {
+    const dynamic = categories.map((category) => ({
+      key: String(category.Id),
+      label: category.Name,
+      categoryId: category.Id,
+    }));
+
+    return [{ key: "all", label: "Ver todos", categoryId: null }, ...dynamic];
+  }, [categories]);
+
+  const selectedCategoryOption = useMemo(() => {
+    return (
+      categoryOptions.find((option) => option.key === selectedCategoryKey) ||
+      categoryOptions[0]
+    );
+  }, [categoryOptions, selectedCategoryKey]);
+
+  const filteredProducts = useMemo(() => {
+    if (!selectedCategoryOption || selectedCategoryOption.categoryId === null) {
+      return products;
+    }
+
+    return products.filter(
+      (product) => Number(product.Category_Id) === selectedCategoryOption.categoryId,
+    );
+  }, [products, selectedCategoryOption]);
+
+  const moveCategory = useCallback(
+    (direction: "prev" | "next") => {
+      if (categoryOptions.length <= 1) {
+        return;
+      }
+
+      const currentIndex = categoryOptions.findIndex(
+        (option) => option.key === selectedCategoryKey,
+      );
+      const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+      const delta = direction === "next" ? 1 : -1;
+      const nextIndex = (safeIndex + delta + categoryOptions.length) % categoryOptions.length;
+      setSelectedCategoryKey(categoryOptions[nextIndex].key);
+    },
+    [categoryOptions, selectedCategoryKey],
+  );
+
   useEffect(() => {
     const checkFocus = () => context.setShowNavBarBottom(true);
     checkFocus();
     window.addEventListener("popstate", checkFocus);
     return () => window.removeEventListener("popstate", checkFocus);
-  }, [location.pathname]);
+  }, [location.pathname, context.setShowNavBarBottom]);
 
-  /** Obtiene los productos y datos de negocio */
   useEffect(() => {
     if (!context.user?.Business_Id || !context.user?.Token) {
       setLoader(false);
@@ -51,13 +102,39 @@ export const MainSales: React.FC = () => {
             Image: product.Image || product.Images?.[0] || "",
           }));
           setProducts(normalized);
-          setFilteredProducts(normalized);
+        } else {
+          setProducts([]);
         }
       })
       .finally(() => setLoader(false));
-  }, [context.user.Business_Id, context.user.Token]);
+  }, [context.user.Business_Id, context.user.Token, context.stockFlag]);
 
-  /** Obtiene la información de impuestos y negocio */
+  useEffect(() => {
+    if (!context.user?.Business_Id || !context.user?.Token) {
+      return;
+    }
+
+    getCategoriesByBusiness(context.user.Business_Id.toString(), context.user.Token)
+      .then((data: Category[]) => {
+        const mapped = Array.isArray(data) ? data : [];
+        setCategories(mapped);
+
+        if (mapped.length > 0) {
+          setSelectedCategoryKey((prev) => {
+            const prevExists = mapped.some((category) => String(category.Id) === prev);
+            return prevExists ? prev : String(mapped[0].Id);
+          });
+          return;
+        }
+
+        setSelectedCategoryKey("all");
+      })
+      .catch(() => {
+        setCategories([]);
+        setSelectedCategoryKey("all");
+      });
+  }, [context.user.Business_Id, context.user.Token, context.stockFlag]);
+
   useEffect(() => {
     if (!context.user?.Business_Id || !context.user?.Token) {
       return;
@@ -68,9 +145,13 @@ export const MainSales: React.FC = () => {
 
     getTaxes(context.user.Business_Id.toString(), context.user.Token)
       .then((data: any) => data && context.setTax(data));
-  }, [context.user.Business_Id, context.user.Token]);
+  }, [
+    context.user.Business_Id,
+    context.user.Token,
+    context.setStore,
+    context.setTax,
+  ]);
 
-  /** Calcula totales del carrito */
   const { totalPrice, totalItems } = useMemo(() => {
     let totalP = 0;
     let total = 0;
@@ -81,7 +162,6 @@ export const MainSales: React.FC = () => {
     return { totalPrice: totalP, totalItems: total };
   }, [context.cartPos]);
 
-  /** Manejo de agregar productos */
   const handleAddProduct = useCallback(() => {
     if (context.store.Plan === "GRATUITO" && products.length >= 10) {
       setShowModalPremium(true);
@@ -91,7 +171,6 @@ export const MainSales: React.FC = () => {
     }
   }, [context.store.Plan, context.setShowNavBarBottom, navigate, products.length]);
 
-  /** Memoiza `ProductList` para evitar re-renders innecesarios */
   const MemoizedProductList = useMemo(
     () => (
       <div className="py-2">
@@ -107,17 +186,75 @@ export const MainSales: React.FC = () => {
 
   return (
     <div className="main-sales">
-      {/* Barra de herramientas */}
       <div className="header-tools">
         <SalesBar
           view={view}
           setView={setView}
           products={products}
-          setFilteredProducts={setFilteredProducts}
+          setFilteredProducts={() => undefined}
         />
       </div>
 
-      {/* Contenido principal */}
+      <div className="bg-white border-b border-gray-200 px-3 py-2 flex items-center justify-between">
+        <button
+          type="button"
+          className="text-xl font-semibold px-2 text-gray-700"
+          onClick={() => moveCategory("prev")}
+        >
+          ‹
+        </button>
+        <button
+          type="button"
+          className="text-sm font-semibold text-gray-800 px-3 py-1 rounded-md hover:bg-gray-100"
+          onClick={() => setIsCategoryModalOpen(true)}
+        >
+          {selectedCategoryOption?.label || "Ver todos"}
+        </button>
+        <button
+          type="button"
+          className="text-xl font-semibold px-2 text-gray-700"
+          onClick={() => moveCategory("next")}
+        >
+          ›
+        </button>
+      </div>
+
+      {isCategoryModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center px-4"
+          onClick={() => setIsCategoryModalOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-lg bg-white p-4"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <h3 className="text-base font-semibold text-gray-900 mb-3">Seleccionar categoría</h3>
+            <div className="max-h-[60vh] overflow-y-auto space-y-2">
+              {categoryOptions.map((option) => {
+                const isActive = option.key === selectedCategoryKey;
+                return (
+                  <button
+                    key={option.key}
+                    type="button"
+                    className={`w-full text-left px-3 py-2 rounded-md text-sm ${
+                      isActive
+                        ? "bg-purple-100 text-purple-800 font-semibold"
+                        : "bg-gray-50 text-gray-700"
+                    }`}
+                    onClick={() => {
+                      setSelectedCategoryKey(option.key);
+                      setIsCategoryModalOpen(false);
+                    }}
+                  >
+                    {option.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className={`sales-container ${view ? "overflow-hidden" : "overflow-y-auto"}`}>
         {loader ? (
           view ? (
@@ -140,13 +277,11 @@ export const MainSales: React.FC = () => {
             </div>
           )
         ) : view ? (
-          /* ✅ SIEMPRE mostrar primero la card de agregar */
           <div className="flex-1 min-h-0">
             {MemoizedProductList}
           </div>
         ) : (
           <div className="p-2">
-            {/* aquí sí puedes dejar tu botón arriba porque es vista lista */}
             <button
               className="w-full flex flex-col justify-center items-center text-indigo-900 font-semibold bg-blue-100 border-2 border-dashed border-blue-500 rounded-lg h-[100px] cursor-pointer transition-all duration-200 hover:bg-blue-200"
               onClick={handleAddProduct}
@@ -159,7 +294,6 @@ export const MainSales: React.FC = () => {
           </div>
         )}
 
-        {/* Footer */}
         <footer className={loader ? "sales-footer-loader" : "sales-footer"}>
           <div className="cart-info">
             <span>Pedidos</span>
