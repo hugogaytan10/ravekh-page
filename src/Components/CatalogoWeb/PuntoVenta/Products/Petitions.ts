@@ -7,7 +7,7 @@ import { Variant } from "../Model/Variant";
  * Helpers
  */
 const ensureArray = <T,>(value: unknown): T[] => {
-  return Array.isArray(value) ? (value as T[]) : [];
+    return Array.isArray(value) ? (value as T[]) : [];
 };
 
 export const getProducts = async (token: string, Business_Id: string) => {
@@ -25,15 +25,15 @@ export const getProducts = async (token: string, Business_Id: string) => {
             }));
         }*/
         //return [];
-         const data = ensureArray<Item>(await response.json());
+        const data = ensureArray<Item>(await response.json());
 
         // Normalizamos la Image desde Images[0] si viene vacío
         return data.map((product: Item & { Images?: string[] }) => ({
-        ...product,
-        Image:
-            (product as any).Image ||
-            (product.Images && product.Images[0]) ||
-            "",
+            ...product,
+            Image:
+                (product as any).Image ||
+                (product.Images && product.Images[0]) ||
+                "",
         }));
     }
     catch (e) {
@@ -62,7 +62,7 @@ export const getProduct = async (id: number, token: string) => {
         const data: any = await response.json();
 
         if (data && Array.isArray(data.Images) && !data.Image) {
-        data.Image = data.Images[0];
+            data.Image = data.Images[0];
         }
 
         return data;
@@ -97,7 +97,7 @@ export const updateProduct = async (product: Item, token: string) => {
                 'Content-Type': 'application/json',
                 token: token
             },
-            body: JSON.stringify( product )
+            body: JSON.stringify(product)
         });
         console.log("este es el body", product)
         const data = await response.json();
@@ -116,7 +116,7 @@ export const insertProduct = async (product: Item, token: string, Variants?: Var
                 'Content-Type': 'application/json',
                 token: token
             },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 Product: product,
                 Variants: Variants && Variants.length ? Variants : null
             })
@@ -129,88 +129,88 @@ export const insertProduct = async (product: Item, token: string, Variants?: Var
 }
 
 export const getVariantsByProductId = async (productId: number, token: string) => {
-  try {
-    const response = await fetch(`${URL}variants/product/${productId}`, {
-      headers: {
-        "Content-Type": "application/json",
-        token,
-      },
-    });
+    try {
+        const response = await fetch(`${URL}variants/product/${productId}`, {
+            headers: {
+                "Content-Type": "application/json",
+                token,
+            },
+        });
 
-    const data = ensureArray<Variant>(await response.json());
-    return data;
-  } catch (e) {
-    return [];
-  }
+        const data = ensureArray<Variant>(await response.json());
+        return data;
+    } catch (e) {
+        return [];
+    }
 };
 
 export const insertVariant = async (productId: number, variant: Variant, token: string) => {
-  const localVariant: Variant = {
-    ...variant,
-    Product_Id: productId,
-  };
+    const localVariant: Variant = {
+        ...variant,
+        Product_Id: productId,
+    };
 
-  try {
-    const { Id, ...variantData } = localVariant as any;
+    try {
+        const { Id, ...variantData } = localVariant as any;
 
-    const response = await fetch(`${URL}variants`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        token,
-      },
-      body: JSON.stringify({ ...variantData, Product_Id: productId }),
-    });
+        const response = await fetch(`${URL}variants`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                token,
+            },
+            body: JSON.stringify({ ...variantData, Product_Id: productId }),
+        });
 
-    await response.json().catch(() => undefined);
-    return true;
-  } catch (e) {
-    return false;
-  }
+        await response.json().catch(() => undefined);
+        return true;
+    } catch (e) {
+        return false;
+    }
 };
 
 export const updateVariant = async (variantId: number, productId: number, variant: Variant, token: string) => {
 
-  const localVariant: Variant = {
-    ...variant,
-    Id: variantId,
-    Product_Id: productId,
-  };
+    const localVariant: Variant = {
+        ...variant,
+        Id: variantId,
+        Product_Id: productId,
+    };
 
-  try {
-    const { Id, ...variantData } = localVariant as any;
+    try {
+        const { Id, ...variantData } = localVariant as any;
 
-    const response = await fetch(`${URL}variants/${variantId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        token,
-      },
-      body: JSON.stringify({ ...variantData, Product_Id: productId }),
-    });
+        const response = await fetch(`${URL}variants/${variantId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                token,
+            },
+            body: JSON.stringify({ ...variantData, Product_Id: productId }),
+        });
 
-    await response.json().catch(() => undefined);
-    return true;
-  } catch (e) {
-    return false;
-  }
+        await response.json().catch(() => undefined);
+        return true;
+    } catch (e) {
+        return false;
+    }
 };
 
-export const deleteVariant = async ( variantId: number, token: string) => {
-  try {
-    const response = await fetch(`${URL}variants/${variantId}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        token,
-      },
-    });
+export const deleteVariant = async (variantId: number, token: string) => {
+    try {
+        const response = await fetch(`${URL}variants/${variantId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                token,
+            },
+        });
 
-    await response.json().catch(() => ({ success: true }));
-    return true;
-  } catch (e) {
-    return false;
-  }
+        await response.json().catch(() => ({ success: true }));
+        return true;
+    } catch (e) {
+        return false;
+    }
 };
 
 
