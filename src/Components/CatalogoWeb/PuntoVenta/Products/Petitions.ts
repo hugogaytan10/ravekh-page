@@ -10,6 +10,40 @@ const ensureArray = <T,>(value: unknown): T[] => {
     return Array.isArray(value) ? (value as T[]) : [];
 };
 
+export interface MutationResult {
+    success: boolean;
+    message: string;
+    error?: string;
+}
+
+const parseJsonSafely = async (response: Response) => {
+    try {
+        return await response.json();
+    } catch {
+        return null;
+    }
+};
+
+const extractErrorMessage = (payload: any, fallback: string) => {
+    if (!payload) {
+        return fallback;
+    }
+
+    if (typeof payload.error === "string" && payload.error.trim()) {
+        return payload.error;
+    }
+
+    if (payload.error && typeof payload.error.message === "string" && payload.error.message.trim()) {
+        return payload.error.message;
+    }
+
+    if (typeof payload.message === "string" && payload.message.trim()) {
+        return payload.message;
+    }
+
+    return fallback;
+};
+
 export const getProducts = async (token: string, Business_Id: string) => {
     try {
         const response = await fetch(`${URL}products/business/${Business_Id}`, {
@@ -89,7 +123,7 @@ export const updateStock = async (id: number, Stock: string, token: string) => {
     }
 }
 
-export const updateProduct = async (product: Item, token: string) => {
+export const updateProduct = async (product: Item, token: string): Promise<MutationResult> => {
     try {
         const response = await fetch(`${URL}products/${product.Id}`, {
             method: 'PUT',
@@ -100,15 +134,31 @@ export const updateProduct = async (product: Item, token: string) => {
             body: JSON.stringify(product)
         });
         console.log("este es el body", product)
-        const data = await response.json();
-        return true;
+        const data = await parseJsonSafely(response);
+
+        if (!response.ok) {
+            return {
+                success: false,
+                message: data?.message || "No se pudo actualizar el producto.",
+                error: extractErrorMessage(data, "Error desconocido al actualizar el producto."),
+            };
+        }
+
+        return {
+            success: true,
+            message: data?.message || "Producto actualizado correctamente.",
+        };
     } catch (e) {
         console.log(e);
-        return false;
+        return {
+            success: false,
+            message: "No se pudo actualizar el producto.",
+            error: e instanceof Error ? e.message : "Error inesperado al actualizar el producto.",
+        };
     }
 }
 
-export const insertProduct = async (product: Item, token: string, Variants?: Variant[]) => {
+export const insertProduct = async (product: Item, token: string, Variants?: Variant[]): Promise<MutationResult> => {
     try {
         const response = await fetch(`${URL}products`, {
             method: 'POST',
@@ -121,10 +171,26 @@ export const insertProduct = async (product: Item, token: string, Variants?: Var
                 Variants: Variants && Variants.length ? Variants : null
             })
         });
-        const data = await response.json();
-        return true;
+        const data = await parseJsonSafely(response);
+
+        if (!response.ok) {
+            return {
+                success: false,
+                message: data?.message || "No se pudo insertar el producto.",
+                error: extractErrorMessage(data, "Error desconocido al insertar el producto."),
+            };
+        }
+
+        return {
+            success: true,
+            message: data?.message || "Producto insertado correctamente.",
+        };
     } catch (e) {
-        return false;
+        return {
+            success: false,
+            message: "No se pudo insertar el producto.",
+            error: e instanceof Error ? e.message : "Error inesperado al insertar el producto.",
+        };
     }
 }
 
@@ -260,7 +326,7 @@ export const getStockInfo = async (idBusiness: string, token: string) => {
     }
 }
 
-export const deleteProduct = async (id: number, token: string) => {
+export const deleteProduct = async (id: number, token: string): Promise<MutationResult> => {
     try {
         const response = await fetch(`${URL}products/available/${id}`, {
             method: 'PUT',
@@ -269,9 +335,25 @@ export const deleteProduct = async (id: number, token: string) => {
             },
             body: JSON.stringify({ Available: false })
         });
-        const data = await response.json();
-        return true;
+        const data = await parseJsonSafely(response);
+
+        if (!response.ok) {
+            return {
+                success: false,
+                message: data?.message || "No se pudo eliminar el producto.",
+                error: extractErrorMessage(data, "Error desconocido al eliminar el producto."),
+            };
+        }
+
+        return {
+            success: true,
+            message: data?.message || "Producto eliminado correctamente.",
+        };
     } catch (e) {
-        return false;
+        return {
+            success: false,
+            message: "No se pudo eliminar el producto.",
+            error: e instanceof Error ? e.message : "Error inesperado al eliminar el producto.",
+        };
     }
 }

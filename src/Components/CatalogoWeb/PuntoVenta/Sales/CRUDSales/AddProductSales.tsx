@@ -15,6 +15,7 @@ import { ChevronGo } from "../../../../../assets/POS/ChevronGo";
 import { VariantDraft } from "./variantTypes";
 import { draftsToVariants, syncDraftColors } from "./variantUtils";
 import VariantsEditor from "./VariantsEditor";
+import { OperationResultModal } from "../../Products/CRUDProducts/OperationResultModal";
 
 export const AddProductSales: React.FC = () => {
   const context = useContext(AppContext);
@@ -46,6 +47,14 @@ export const AddProductSales: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const formLoadedRef = useRef(false);
   const [variantDrafts, setVariantDrafts] = useState<VariantDraft[]>([]);
+  const [feedbackModal, setFeedbackModal] = useState({
+    isVisible: false,
+    title: "",
+    message: "",
+    error: "",
+    isSuccess: false,
+  });
+  const [navigateAfterModal, setNavigateAfterModal] = useState(false);
 
   const unitOptions = ["Unidad", "Kilos", "Litros"];
   const accentColor = colorSelected || ThemeLight.secondaryColor;
@@ -124,8 +133,42 @@ export const AddProductSales: React.FC = () => {
     setVariantDrafts((prev) => syncDraftColors(prev, colorSelected));
   }, [colorSelected]);
 
+  const resetFormState = () => {
+    formLoadedRef.current = false;
+    setProductName("");
+    setPrice("");
+    setCost("");
+    setBarcode("");
+    setStock("");
+    setMinStock("");
+    setOptStock("");
+    setPromoPrice("");
+    setDescription("");
+    setUnitType("Unidad");
+    setColorSelected(context.store.Color || ThemeLight.secondaryColor);
+    setIsAvailableForSale(true);
+    setIsDisplayedInStore(true);
+    setMainImage(null);
+    setGalleryImages([]);
+    setVariantDrafts([]);
+    context.setCategorySelected({ Id: 0, Name: "", Color: "" } as Category);
+    context.setProductFormState(null);
+  };
+
   const handleSave = async () => {
     if (isSaving) {
+      return;
+    }
+
+    if (!productName.trim()) {
+      setNavigateAfterModal(false);
+      setFeedbackModal({
+        isVisible: true,
+        title: "Falta información obligatoria",
+        message: "El nombre del producto es obligatorio.",
+        error: "",
+        isSuccess: false,
+      });
       return;
     }
 
@@ -176,17 +219,32 @@ export const AddProductSales: React.FC = () => {
 
       const variantsPayload = draftsToVariants(variantDrafts, colorSelected);
 
-      await insertProduct(product, context.user?.Token, variantsPayload);
+      const result = await insertProduct(product, context.user?.Token, variantsPayload);
+
+      if (!result.success) {
+        setNavigateAfterModal(false);
+        setFeedbackModal({
+          isVisible: true,
+          title: "No se pudo guardar el producto",
+          message: result.message,
+          error: result.error || "",
+          isSuccess: false,
+        });
+        return;
+      }
 
       context.setStockFlag(!context.stockFlag);
-      context.setCategorySelected({ Id: 0, Name: "", Color: "" } as Category);
-      context.setProductFormState(null);
-      setMainImage(null);
-      setGalleryImages([]);
-      setVariantDrafts([]);
-      formLoadedRef.current = false;
+      resetFormState();
       context.setShowNavBarBottom(true); // Mostrar la barra de navegación inferior
-      navigation("/MainSales");
+
+      setNavigateAfterModal(true);
+      setFeedbackModal({
+        isVisible: true,
+        title: "Producto guardado",
+        message: result.message,
+        error: "",
+        isSuccess: true,
+      });
     } catch (error) {
       console.error("Error al guardar el producto:", error);
     } finally {
@@ -203,6 +261,27 @@ export const AddProductSales: React.FC = () => {
 
   return (
     <div className="flex flex-col bg-gray-100 container-add-product">
+      <OperationResultModal
+        isVisible={feedbackModal.isVisible}
+        title={feedbackModal.title}
+        message={feedbackModal.message}
+        error={feedbackModal.error}
+        isSuccess={feedbackModal.isSuccess}
+        onClose={() => {
+          setFeedbackModal({
+            isVisible: false,
+            title: "",
+            message: "",
+            error: "",
+            isSuccess: false,
+          });
+
+          if (navigateAfterModal) {
+            setNavigateAfterModal(false);
+            navigation("/MainSales");
+          }
+        }}
+      />
       {/* Header */}
       <header
         className="flex items-center px-4 py-3 text-white"
@@ -212,11 +291,7 @@ export const AddProductSales: React.FC = () => {
       >
         <button
           onClick={() => {
-            context.setProductFormState(null);
-            formLoadedRef.current = false;
-            setMainImage(null);
-            setGalleryImages([]);
-            setVariantDrafts([]);
+            resetFormState();
             navigation("/MainSales");
             context.setShowNavBarBottom(true);
           }}

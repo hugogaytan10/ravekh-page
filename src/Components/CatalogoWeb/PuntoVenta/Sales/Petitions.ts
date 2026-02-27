@@ -1,6 +1,21 @@
 import { URL } from "../Const/Const";
 import { Category } from "../Model/Category";
 import { Item } from "../Model/Item";
+import { Variant } from "../Model/Variant";
+
+interface MutationResult {
+    success: boolean;
+    message: string;
+    error?: string;
+}
+
+const parseJsonSafely = async (response: Response) => {
+    try {
+        return await response.json();
+    } catch {
+        return null;
+    }
+};
 
 export const getProduct = (idUser: number, token: string) => {
     try {
@@ -44,7 +59,7 @@ export const getProduct = (idUser: number, token: string) => {
     }
 }
 
-export const insertProduct = async (product: Item, token: string) => {
+export const insertProduct = async (product: Item, token: string, variants?: Variant[]): Promise<MutationResult> => {
     try {
         const response = await fetch(`${URL}products`, {
             method: 'POST',
@@ -52,13 +67,32 @@ export const insertProduct = async (product: Item, token: string) => {
                 'Content-Type': 'application/json',
                 token: token
             },
-            body: JSON.stringify({ Product: product, Variants: null })
+            body: JSON.stringify({
+                Product: product,
+                Variants: variants && variants.length ? variants : null,
+            })
         });
-        const data = await response.json();
-        console.log(data);
-        return true;
+
+        const data = await parseJsonSafely(response);
+
+        if (!response.ok) {
+            return {
+                success: false,
+                message: data?.message || "No se pudo guardar el producto.",
+                error: data?.error?.message || data?.error || data?.message || "Error desconocido al guardar el producto.",
+            };
+        }
+
+        return {
+            success: true,
+            message: data?.message || "Producto guardado correctamente.",
+        };
     } catch (e) {
-        return false;
+        return {
+            success: false,
+            message: "No se pudo guardar el producto.",
+            error: e instanceof Error ? e.message : "Error inesperado al guardar el producto.",
+        };
     }
 }
 
