@@ -8,25 +8,11 @@ import { QRCodeSVG } from "qrcode.react";
 import { Coupon } from "../types";
 import { deleteCoupon, getCouponById, updateCoupon } from "../Petitions";
 import { hasCuponesSession } from "../../../../coupons/services/session";
+import { formatDateTime, getCouponId, mergeDateAndTime, parseValidDate, toDatetimeLocalValue } from "../shared/couponsUtils";
 
 const fromBackendDate = (value?: string): string => {
-  if (!value) return "";
-  const normalized = String(value).trim().replace(" ", "T");
-  const date = new Date(normalized);
-  if (Number.isNaN(date.getTime())) return "";
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  const hh = String(date.getHours()).padStart(2, "0");
-  const min = String(date.getMinutes()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
-};
-
-const toBackendDate = (value: string): string | undefined => {
-  if (!value) return undefined;
-  const parsed = new Date(value);
-  if (Number.isNaN(parsed.getTime())) return undefined;
-  return parsed.toISOString();
+  const parsed = parseValidDate(value);
+  return parsed ? toDatetimeLocalValue(parsed) : "";
 };
 
 const isValidPositiveInt = (value: string): boolean => {
@@ -34,17 +20,14 @@ const isValidPositiveInt = (value: string): boolean => {
   return Number.isInteger(parsed) && parsed > 0;
 };
 
-const mapCouponResponse = (coupon: Coupon): Coupon => ({
-  ...coupon,
-  Id:
-    typeof coupon.Id === "number"
-      ? coupon.Id
-      : typeof coupon.id === "number"
-        ? coupon.id
-        : typeof coupon.couponId === "number"
-          ? coupon.couponId
-          : undefined,
-});
+const mapCouponResponse = (coupon: Coupon): Coupon => {
+  const normalizedId = getCouponId(coupon);
+
+  return {
+    ...coupon,
+    ...(normalizedId ? { Id: normalizedId } : {}),
+  };
+};
 
 const formatDisplayDate = (value: string): string => {
   if (!value) return "";
@@ -86,6 +69,7 @@ const CuponesEdit: React.FC = () => {
   const context = useContext(AppContext);
 
   const accentColor = context.store?.Color ?? ThemeLight.btnBackground;
+  const businessId = Number(context.user?.Business_Id || 0);
   const token = context.user?.Token;
 
   const couponId = useMemo(() => Number(CouponId), [CouponId]);
@@ -190,16 +174,28 @@ const CuponesEdit: React.FC = () => {
     setIsUpdating(true);
 
     try {
+      const parsedValidDate = validDate ? new Date(validDate) : null;
+      const mergedDate = parsedValidDate ? mergeDateAndTime(parsedValidDate) : "";
       const payload: Coupon = {
-        ...coupon,
+        Business_Id: Number(coupon.Business_Id) || businessId,
+        QR: coupon.QR,
         Description: description.trim(),
         LimitUsers: Number(limitUsers),
-        ...(toBackendDate(validDate) ? { Valid: toBackendDate(validDate) } : { Valid: undefined }),
+        ...(mergedDate ? { Valid: formatDateTime(new Date(mergedDate)) } : {}),
       };
 
       const updated = await updateCoupon(couponId, payload, token);
-      const normalized = mapCouponResponse(updated ?? payload);
+      const updatedCouponData = typeof updated === "object" && updated ? updated : {};
+      const normalized = mapCouponResponse({
+        ...payload,
+        ...updatedCouponData,
+        ...(getCouponId(updated) ? { Id: getCouponId(updated) } : {}),
+      });
+
       setCoupon(normalized);
+      setDescription(normalized.Description || "");
+      setLimitUsers(String(normalized.LimitUsers || 1));
+      setValidDate(fromBackendDate(normalized.Valid));
       showFeedback("Éxito", "Cupón actualizado correctamente.");
     } catch (error) {
       showFeedback("Error", error instanceof Error ? error.message : "No se pudo actualizar el cupón.");

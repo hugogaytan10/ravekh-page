@@ -1,6 +1,25 @@
 import { URL } from "../Const/Const";
 import type { Coupon } from "./types";
 
+type GenerateVisitQrPayload = {
+  businessId: number;
+  quantity: number;
+  ttlMinutes: number;
+  domain: string;
+};
+
+type VisitQrTokenItem = {
+  token?: string;
+  qr?: string;
+  url?: string;
+  [key: string]: unknown;
+};
+
+export type GenerateVisitQrResponse = {
+  tokens: VisitQrTokenItem[];
+  [key: string]: unknown;
+};
+
 type CouponResponseShape = {
   coupon?: Coupon;
   newCoupon?: Coupon;
@@ -249,4 +268,35 @@ export const redeemCouponForUser = async (
   }
 
   return data;
+};
+
+export const generateVisitQrTokens = async (
+  payload: GenerateVisitQrPayload,
+  token?: string,
+): Promise<GenerateVisitQrResponse> => {
+  const headers = buildHeaders(token);
+
+  const response = await fetch(`${URL}visits/qr/generate`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | (GenerateVisitQrResponse & { message?: string; error?: string; data?: GenerateVisitQrResponse })
+    | null;
+
+  if (!response.ok) {
+    const reason = [data?.message, data?.error].filter(Boolean).join(" - ");
+    throw new Error(reason || "No se pudieron generar los códigos QR de visita.");
+  }
+
+  const normalized =
+    data?.tokens && Array.isArray(data.tokens)
+      ? data
+      : data?.data?.tokens && Array.isArray(data.data.tokens)
+        ? data.data
+        : { tokens: [] };
+
+  return normalized;
 };
