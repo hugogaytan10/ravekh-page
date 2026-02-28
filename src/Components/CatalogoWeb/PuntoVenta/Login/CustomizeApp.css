@@ -8,24 +8,26 @@
   .customize-app-preview-col,
   .customize-app-color-btn,
   .customize-app-footer {
-    background-color: #111827 !important;
-    color: #f3f4f6;
+    background-color: #ffffff !important;
+    color: #111827 !important;
   }
 
   .customize-app-header p,
   .customize-app-logo-btn span,
-  .customize-app-color-btn span {
-    color: #f3f4f6 !important;
+  .customize-app-color-btn span,
+  .customize-app-footer,
+  .customize-app-footer * {
+    color: #111827 !important;
   }
 
   .customize-app-input {
-    background-color: #1f2937 !important;
-    color: #f9fafb !important;
-    border-color: #374151 !important;
+    background-color: #ffffff !important;
+    color: #111827 !important;
+    border-color: #d1d5db !important;
   }
 
   .customize-app-input::placeholder {
-    color: #9ca3af;
+    color: #6b7280;
   }
 
   .customize-app-input:focus {
@@ -38,6 +40,6 @@
   .customize-app-preview-col,
   .customize-app-logo-btn,
   .customize-app-color-btn {
-    border: 1px solid #374151;
+    border: 1px solid #d1d5db;
   }
 }
