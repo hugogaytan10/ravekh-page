@@ -187,8 +187,9 @@ export const AuthPage: React.FC = () => {
               placeholder="Contraseña"
               className="input-login"
             />
-            <button className="btn-login">Registrarme</button>
+            <button type="submit" className="btn-login">Registrarme</button>
             <button
+              type="button"
               className="btn-crear-cuenta"
               id="signIn-Mobile"
               ref={signInMobileButtonRef}
@@ -246,8 +247,9 @@ export const AuthPage: React.FC = () => {
             <a href="#" className="self-end text-xs mt-2 mb-2">
               Olvidaste tu contraseña?
             </a>
-            <button className="btn-login mt-2">Iniciar Sesión</button>
+            <button type="submit" className="btn-login mt-2">Iniciar Sesión</button>
             <button
+              type="button"
               className="btn-crear-cuenta mt-3"
               id="signUp-Mobile"
               ref={signUpMobileButtonRef}
@@ -265,6 +267,7 @@ export const AuthPage: React.FC = () => {
                 tus datos personales
               </p>
               <button
+                type="button"
                 className="ghost btn-login mt-2"
                 id="signIn"
                 ref={signInButtonRef}
@@ -276,6 +279,7 @@ export const AuthPage: React.FC = () => {
               <h2>Hola, Bienvenido</h2>
               <p className="mt-2">Ingresa tus datos y comienza a comprar</p>
               <button
+                type="button"
                 className="ghost btn-login mt-2"
                 id="signUp"
                 ref={signUpButtonRef}

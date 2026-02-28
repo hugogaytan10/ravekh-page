@@ -7,7 +7,7 @@ import { PickerPhoto } from "../CustomizeApp/PickerPhoto";
 import { AppContext } from "../../Context/AppContext";
 import { uploadImage } from "../Cloudinary/Cloudinary";
 import { ChevronBack } from "../../../../assets/POS/ChevronBack";
-import { signUpToServer } from "./Peticiones";
+import { loginToServer, signUpToServer } from "./Peticiones";
 import "./CustomizeApp.css";
 
 export const InitialCustomizeApp: React.FC<{ navigation: any }> = ({
@@ -87,30 +87,41 @@ export const InitialCustomizeApp: React.FC<{ navigation: any }> = ({
         References: references.trim(),
       };
 
+      let businessLogo = urlPhoto;
       if (urlPhoto && urlPhoto !== "error") {
-        const uriPhoto = await uploadImage(urlPhoto);
-        business = { ...business, Logo: uriPhoto };
+        businessLogo = await uploadImage(urlPhoto);
+      }
 
-        // ✅ si tu backend ya toma los datos desde context.store,
-        // actualizamos store antes de llamar signUpToServer:
-        const updatedStore: any = {
-          ...context.store,
-          ...business,
-          Logo: uriPhoto,
-          Color: color,
-        };
+      const updatedStore: any = {
+        ...context.store,
+        ...business,
+        Logo: businessLogo,
+        Color: color,
+      };
 
-        console.log("updatedStore", updatedStore);
+      const data = await signUpToServer(
+        updatedStore,
+        context.user,
+        context.user.Token
+      );
 
-        const data = await signUpToServer(
-          updatedStore,
-          context.user,
-          context.user.Token
+      if (data?.error || data?.message === "error") {
+        return;
+      }
+
+      context.setStore(updatedStore);
+
+      const dataLogin = await loginToServer(context.user.Email, context.user.Password);
+      if (!dataLogin?.message) {
+        context.setUser(dataLogin);
+        context.setShowNavBarBottom(true);
+        localStorage.setItem(
+          "user",
+          JSON.stringify({ email: context.user.Email, password: context.user.Password })
         );
-
-        if (data) {
-          context.setStore(updatedStore);
-        }
+        navigate("/MainSales");
+      } else {
+        navigate("/");
       }
     } catch (e) {
       console.log(e);
