@@ -1,7 +1,9 @@
 import React, { useContext, useMemo } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import { useLocation, useParams } from "react-router-dom";
 import { VisitsSharedScreen } from "./VisitsSharedScreen";
 import { AppContext } from "../../Context/AppContext";
+import { WEB_COUPONS_DOMAIN } from "../shared/constants";
 
 const VISITS_OFFLINE_POOL_KEY = "ravekh-visits-offline-qr-pool";
 
@@ -28,6 +30,22 @@ const normalizeTokenText = (item: unknown): string => {
   }
 
   return "";
+};
+
+const buildVisitQrUrl = (tokenText: string): string => {
+  if (!tokenText) {
+    return "";
+  }
+
+  if (/^https?:\/\//i.test(tokenText)) {
+    return tokenText;
+  }
+
+  const domain = WEB_COUPONS_DOMAIN && WEB_COUPONS_DOMAIN !== "https://TU_DOMINIO"
+    ? WEB_COUPONS_DOMAIN
+    : window.location.origin;
+
+  return `${domain}/visit/redeem?token=${encodeURIComponent(tokenText)}`;
 };
 
 export const VisitsQrActivesScreen: React.FC = () => {
@@ -69,10 +87,19 @@ export const VisitsQrActivesScreen: React.FC = () => {
       {tokensToRender.length === 0 ? (
         <p className="text-sm text-[#7A7A7A]">No hay códigos QR disponibles todavía.</p>
       ) : (
-        <ul className="space-y-2">
+        <ul className="space-y-3">
           {tokensToRender.map((item, index) => (
-            <li key={`${normalizeTokenText(item)}-${index}`} className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
-              <p className="break-all text-xs font-semibold text-[#565656]">{normalizeTokenText(item) || "QR generado"}</p>
+            <li key={`${normalizeTokenText(item)}-${index}`} className="rounded-xl border border-gray-200 bg-gray-50 p-3">
+              {normalizeTokenText(item) ? (
+                <div className="flex flex-col items-center gap-3">
+                  <QRCodeSVG value={buildVisitQrUrl(normalizeTokenText(item))} size={170} level="M" />
+                  <p className="break-all text-center text-xs font-semibold text-[#565656]">
+                    {buildVisitQrUrl(normalizeTokenText(item))}
+                  </p>
+                </div>
+              ) : (
+                <p className="break-all text-xs font-semibold text-[#565656]">QR generado</p>
+              )}
             </li>
           ))}
         </ul>
