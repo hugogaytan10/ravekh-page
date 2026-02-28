@@ -92,7 +92,7 @@ const Card: React.FC<CardProps> = React.memo(({ product, handleAddItem, storeCol
       ) : (
         <div
           className="no-image-container"
-          style={{ backgroundColor: storeColor || Color || "#ccc" }}
+          style={{ backgroundColor: Color || storeColor || "#ccc" }}
         >
           <p className="no-image-text">{Name}</p>
         </div>
