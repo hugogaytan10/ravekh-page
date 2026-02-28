@@ -1,6 +1,6 @@
 import React, { useContext, useEffect } from "react";
 import "./FinishScreen.css";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { insertComand, InsertOrder } from "./Petitions";
 import { AppContext } from "../../../Context/AppContext";
 import { PrintTicket } from "../../Printer/PrintTicket";
@@ -9,6 +9,8 @@ import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
 export const FinishScreen: React.FC = () => {
   const context = useContext(AppContext);
   const navigate = useNavigate();
+  const location = useLocation();
+  const saleToken = (location.state as { saleToken?: string } | null)?.saleToken;
 
   const PrintTicketAgain = async () => {
       PrintTicket(
@@ -45,6 +47,20 @@ export const FinishScreen: React.FC = () => {
   };
 
   useEffect(() => {
+    if (!saleToken) {
+      return;
+    }
+
+    const processedSalesRaw = sessionStorage.getItem("processedSalesTokens");
+    const processedSales = new Set<string>(processedSalesRaw ? JSON.parse(processedSalesRaw) : []);
+
+    if (processedSales.has(saleToken)) {
+      return;
+    }
+
+    processedSales.add(saleToken);
+    sessionStorage.setItem("processedSalesTokens", JSON.stringify(Array.from(processedSales)));
+
     if (context.selectedTable) {
       const command = {
         Employee_Id: context.user.Id,
@@ -98,7 +114,21 @@ export const FinishScreen: React.FC = () => {
         context.ticketDetail.discount || 0
       );
     }
-  }, [context]);
+  }, [
+    context.cartPos,
+    context.customer.Id,
+    context.note,
+    context.selectedTable,
+    context.store.Name,
+    context.tax.QuitInSale,
+    context.ticketDetail.discount,
+    context.ticketDetail.payment,
+    context.ticketDetail.paymentMethod,
+    context.ticketDetail.total,
+    context.user.Id,
+    context.user.Token,
+    saleToken,
+  ]);
 
   return (
     <div className="finish-screen-container">
