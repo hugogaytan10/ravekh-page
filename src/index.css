@@ -119,3 +119,39 @@ body {
     border: 2px solid var(--bg-surface);
     box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
+
+
+@media (prefers-color-scheme: dark) {
+    .main-products-shell,
+    .main-sales,
+    .container-add-product {
+        color-scheme: light;
+        color: #111827;
+    }
+
+    .main-products-shell .bg-white,
+    .main-sales .bg-white,
+    .container-add-product .bg-white {
+        color: #111827;
+    }
+
+    .main-products-shell input,
+    .main-products-shell textarea,
+    .main-products-shell select,
+    .main-sales input,
+    .main-sales textarea,
+    .main-sales select,
+    .container-add-product input,
+    .container-add-product textarea,
+    .container-add-product select {
+        background-color: #ffffff;
+        color: #111827;
+        border-color: #d1d5db;
+    }
+
+    .main-products-shell input::placeholder,
+    .main-sales input::placeholder,
+    .container-add-product input::placeholder {
+        color: #6b7280;
+    }
+}

@@ -7,7 +7,41 @@ import { Variant } from "../Model/Variant";
  * Helpers
  */
 const ensureArray = <T,>(value: unknown): T[] => {
-  return Array.isArray(value) ? (value as T[]) : [];
+    return Array.isArray(value) ? (value as T[]) : [];
+};
+
+export interface MutationResult {
+    success: boolean;
+    message: string;
+    error?: string;
+}
+
+const parseJsonSafely = async (response: Response) => {
+    try {
+        return await response.json();
+    } catch {
+        return null;
+    }
+};
+
+const extractErrorMessage = (payload: any, fallback: string) => {
+    if (!payload) {
+        return fallback;
+    }
+
+    if (typeof payload.error === "string" && payload.error.trim()) {
+        return payload.error;
+    }
+
+    if (payload.error && typeof payload.error.message === "string" && payload.error.message.trim()) {
+        return payload.error.message;
+    }
+
+    if (typeof payload.message === "string" && payload.message.trim()) {
+        return payload.message;
+    }
+
+    return fallback;
 };
 
 export const getProducts = async (token: string, Business_Id: string) => {
@@ -25,15 +59,15 @@ export const getProducts = async (token: string, Business_Id: string) => {
             }));
         }*/
         //return [];
-         const data = ensureArray<Item>(await response.json());
+        const data = ensureArray<Item>(await response.json());
 
         // Normalizamos la Image desde Images[0] si viene vacío
         return data.map((product: Item & { Images?: string[] }) => ({
-        ...product,
-        Image:
-            (product as any).Image ||
-            (product.Images && product.Images[0]) ||
-            "",
+            ...product,
+            Image:
+                (product as any).Image ||
+                (product.Images && product.Images[0]) ||
+                "",
         }));
     }
     catch (e) {
@@ -62,7 +96,7 @@ export const getProduct = async (id: number, token: string) => {
         const data: any = await response.json();
 
         if (data && Array.isArray(data.Images) && !data.Image) {
-        data.Image = data.Images[0];
+            data.Image = data.Images[0];
         }
 
         return data;
@@ -89,7 +123,7 @@ export const updateStock = async (id: number, Stock: string, token: string) => {
     }
 }
 
-export const updateProduct = async (product: Item, token: string) => {
+export const updateProduct = async (product: Item, token: string): Promise<MutationResult> => {
     try {
         const response = await fetch(`${URL}products/${product.Id}`, {
             method: 'PUT',
@@ -97,18 +131,34 @@ export const updateProduct = async (product: Item, token: string) => {
                 'Content-Type': 'application/json',
                 token: token
             },
-            body: JSON.stringify( product )
+            body: JSON.stringify(product)
         });
         console.log("este es el body", product)
-        const data = await response.json();
-        return true;
+        const data = await parseJsonSafely(response);
+
+        if (!response.ok) {
+            return {
+                success: false,
+                message: data?.message || "No se pudo actualizar el producto.",
+                error: extractErrorMessage(data, "Error desconocido al actualizar el producto."),
+            };
+        }
+
+        return {
+            success: true,
+            message: data?.message || "Producto actualizado correctamente.",
+        };
     } catch (e) {
         console.log(e);
-        return false;
+        return {
+            success: false,
+            message: "No se pudo actualizar el producto.",
+            error: e instanceof Error ? e.message : "Error inesperado al actualizar el producto.",
+        };
     }
 }
 
-export const insertProduct = async (product: Item, token: string, Variants?: Variant[]) => {
+export const insertProduct = async (product: Item, token: string, Variants?: Variant[]): Promise<MutationResult> => {
     try {
         const response = await fetch(`${URL}products`, {
             method: 'POST',
@@ -116,101 +166,117 @@ export const insertProduct = async (product: Item, token: string, Variants?: Var
                 'Content-Type': 'application/json',
                 token: token
             },
-            body: JSON.stringify({ 
+            body: JSON.stringify({
                 Product: product,
                 Variants: Variants && Variants.length ? Variants : null
             })
         });
-        const data = await response.json();
-        return true;
+        const data = await parseJsonSafely(response);
+
+        if (!response.ok) {
+            return {
+                success: false,
+                message: data?.message || "No se pudo insertar el producto.",
+                error: extractErrorMessage(data, "Error desconocido al insertar el producto."),
+            };
+        }
+
+        return {
+            success: true,
+            message: data?.message || "Producto insertado correctamente.",
+        };
     } catch (e) {
-        return false;
+        return {
+            success: false,
+            message: "No se pudo insertar el producto.",
+            error: e instanceof Error ? e.message : "Error inesperado al insertar el producto.",
+        };
     }
 }
 
 export const getVariantsByProductId = async (productId: number, token: string) => {
-  try {
-    const response = await fetch(`${URL}variants/product/${productId}`, {
-      headers: {
-        "Content-Type": "application/json",
-        token,
-      },
-    });
+    try {
+        const response = await fetch(`${URL}variants/product/${productId}`, {
+            headers: {
+                "Content-Type": "application/json",
+                token,
+            },
+        });
 
-    const data = ensureArray<Variant>(await response.json());
-    return data;
-  } catch (e) {
-    return [];
-  }
+        const data = ensureArray<Variant>(await response.json());
+        return data;
+    } catch (e) {
+        return [];
+    }
 };
 
 export const insertVariant = async (productId: number, variant: Variant, token: string) => {
-  const localVariant: Variant = {
-    ...variant,
-    Product_Id: productId,
-  };
+    const localVariant: Variant = {
+        ...variant,
+        Product_Id: productId,
+    };
 
-  try {
-    const { Id, ...variantData } = localVariant as any;
+    try {
+        const { Id, ...variantData } = localVariant as any;
 
-    const response = await fetch(`${URL}variants`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        token,
-      },
-      body: JSON.stringify({ ...variantData, Product_Id: productId }),
-    });
+        const response = await fetch(`${URL}variants`, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                token,
+            },
+            body: JSON.stringify({ ...variantData, Product_Id: productId }),
+        });
 
-    await response.json().catch(() => undefined);
-    return true;
-  } catch (e) {
-    return false;
-  }
+        await response.json().catch(() => undefined);
+        return true;
+    } catch (e) {
+        return false;
+    }
 };
 
 export const updateVariant = async (variantId: number, productId: number, variant: Variant, token: string) => {
 
-  const localVariant: Variant = {
-    ...variant,
-    Id: variantId,
-    Product_Id: productId,
-  };
+    const localVariant: Variant = {
+        ...variant,
+        Id: variantId,
+        Product_Id: productId,
+    };
 
-  try {
-    const { Id, ...variantData } = localVariant as any;
+    try {
+        const { Id, ...variantData } = localVariant as any;
 
-    const response = await fetch(`${URL}variants/${variantId}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        token,
-      },
-      body: JSON.stringify({ ...variantData, Product_Id: productId }),
-    });
+        const response = await fetch(`${URL}variants/${variantId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                token,
+            },
+            body: JSON.stringify({ ...variantData, Product_Id: productId }),
+        });
 
-    await response.json().catch(() => undefined);
-    return true;
-  } catch (e) {
-    return false;
-  }
+        await response.json().catch(() => undefined);
+        return true;
+    } catch (e) {
+        return false;
+    }
 };
 
-export const deleteVariant = async ( variantId: number, token: string) => {
-  try {
-    const response = await fetch(`${URL}variants/${variantId}`, {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        token,
-      },
-    });
+export const deleteVariant = async (variantId: number, token: string) => {
+    try {
+        const response = await fetch(`${URL}variants/${variantId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                token,
+            },
+        });
 
-    await response.json().catch(() => ({ success: true }));
-    return true;
-  } catch (e) {
-    return false;
-  }
+        await response.json().catch(() => ({ success: true }));
+        return true;
+    } catch (e) {
+        return false;
+    }
 };
 
 
@@ -260,7 +326,7 @@ export const getStockInfo = async (idBusiness: string, token: string) => {
     }
 }
 
-export const deleteProduct = async (id: number, token: string) => {
+export const deleteProduct = async (id: number, token: string): Promise<MutationResult> => {
     try {
         const response = await fetch(`${URL}products/available/${id}`, {
             method: 'PUT',
@@ -269,9 +335,25 @@ export const deleteProduct = async (id: number, token: string) => {
             },
             body: JSON.stringify({ Available: false })
         });
-        const data = await response.json();
-        return true;
+        const data = await parseJsonSafely(response);
+
+        if (!response.ok) {
+            return {
+                success: false,
+                message: data?.message || "No se pudo eliminar el producto.",
+                error: extractErrorMessage(data, "Error desconocido al eliminar el producto."),
+            };
+        }
+
+        return {
+            success: true,
+            message: data?.message || "Producto eliminado correctamente.",
+        };
     } catch (e) {
-        return false;
+        return {
+            success: false,
+            message: "No se pudo eliminar el producto.",
+            error: e instanceof Error ? e.message : "Error inesperado al eliminar el producto.",
+        };
     }
 }
