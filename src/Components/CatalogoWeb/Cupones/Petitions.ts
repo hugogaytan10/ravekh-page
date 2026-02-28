@@ -1,5 +1,5 @@
 import { URL } from "../Const/Const";
-import type { Coupon } from "./types";
+import type { Coupon, Visit } from "./types";
 
 type GenerateVisitQrPayload = {
   businessId: number;
@@ -346,4 +346,50 @@ export const generateDynamicVisitQr = async (
   }
 
   return normalized;
+};
+
+
+export const getVisitsByBusiness = async (
+  businessId: number,
+  token?: string,
+): Promise<Visit[]> => {
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${URL}visits/business/${businessId}`, {
+    method: "GET",
+    headers,
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | { message?: string; visits?: Visit[]; data?: { visits?: Visit[] } | Visit[] }
+    | Visit[]
+    | null;
+
+  if (!response.ok) {
+    throw new Error((data as { message?: string } | null)?.message || "No se pudieron obtener las visitas.");
+  }
+
+  if (Array.isArray(data)) {
+    return data as Visit[];
+  }
+
+  if (Array.isArray(data?.visits)) {
+    return data.visits;
+  }
+
+  if (Array.isArray(data?.data)) {
+    return data.data as Visit[];
+  }
+
+  if (Array.isArray((data?.data as { visits?: Visit[] } | undefined)?.visits)) {
+    return (data?.data as { visits: Visit[] }).visits;
+  }
+
+  return [];
 };

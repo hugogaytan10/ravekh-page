@@ -129,17 +129,37 @@ export const MainSettings: React.FC = () => {
               </span>
 
             </button>
-                            <button
+            <button
               className="flex flex-col items-center"
               onClick={() => {
                 context.setShowNavBarBottom(false); // Hide the bottom navbar
-                navigate("/cupones")}} // Redirect to coupons module
+                navigate("/cupones/cupones", {
+                  state: { hideMainCouponsTabs: true },
+                });
+              }} // Redirect only to coupons flow
             >
               <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center ">
                 <Coupon width={30} height={30} fillColor={iconColor} />
               </div>
               <span className="mt-2 text-sm font-medium text-gray-700">
                 Cupones
+              </span>
+            </button>
+
+            <button
+              className="flex flex-col items-center"
+              onClick={() => {
+                context.setShowNavBarBottom(false);
+                navigate("/cupones/visitas", {
+                  state: { hideMainCouponsTabs: true },
+                });
+              }}
+            >
+              <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center ">
+                <Repeat width={30} height={30} fill={iconColor} />
+              </div>
+              <span className="mt-2 text-sm font-medium text-gray-700">
+                Visitas
               </span>
             </button>
 
