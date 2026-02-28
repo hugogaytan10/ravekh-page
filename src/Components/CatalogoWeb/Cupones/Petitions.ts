@@ -8,6 +8,11 @@ type GenerateVisitQrPayload = {
   domain: string;
 };
 
+type GenerateDynamicVisitQrPayload = {
+  businessId: number;
+  domain: string;
+};
+
 type VisitQrTokenItem = {
   token?: string;
   qr?: string;
@@ -17,6 +22,13 @@ type VisitQrTokenItem = {
 
 export type GenerateVisitQrResponse = {
   tokens: VisitQrTokenItem[];
+  [key: string]: unknown;
+};
+
+export type DynamicVisitQrToken = {
+  token?: string;
+  qrUrl?: string;
+  refreshAfterSeconds?: number;
   [key: string]: unknown;
 };
 
@@ -297,6 +309,41 @@ export const generateVisitQrTokens = async (
       : data?.data?.tokens && Array.isArray(data.data.tokens)
         ? data.data
         : { tokens: [] };
+
+  return normalized;
+};
+
+export const generateDynamicVisitQr = async (
+  payload: GenerateDynamicVisitQrPayload,
+  token?: string,
+): Promise<DynamicVisitQrToken> => {
+  const headers = buildHeaders(token);
+
+  const response = await fetch(`${URL}visits/qr/dynamic/next`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(payload),
+  });
+
+  const data = (await response.json().catch(() => null)) as
+    | (DynamicVisitQrToken & { message?: string; error?: string; data?: DynamicVisitQrToken })
+    | null;
+
+  if (!response.ok) {
+    const reason = [data?.message, data?.error].filter(Boolean).join(" - ");
+    throw new Error(reason || "No se pudo generar el QR dinámico.");
+  }
+
+  const normalized =
+    data?.qrUrl
+      ? data
+      : data?.data?.qrUrl
+        ? data.data
+        : null;
+
+  if (!normalized?.qrUrl) {
+    throw new Error("No se recibió un QR dinámico válido.");
+  }
 
   return normalized;
 };
