@@ -1,6 +1,15 @@
 import { URL } from "../Const/Const";
 import type { Coupon } from "./types";
 
+type CouponResponseShape = {
+  coupon?: Coupon;
+  newCoupon?: Coupon;
+  createdCoupon?: Coupon;
+  updatedCoupon?: Coupon;
+  data?: unknown;
+  message?: string;
+};
+
 const buildHeaders = (token?: string): Record<string, string> => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -14,25 +23,40 @@ const buildHeaders = (token?: string): Record<string, string> => {
   return headers;
 };
 
-export const createCoupon = async (coupon: Coupon, token?: string): Promise<Coupon> => {
-  const headers = buildHeaders(token);
+export const getCouponByBusinessAndQR = async (
+  businessId: number,
+  qrCode: string,
+  token?: string,
+): Promise<Coupon> => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
 
-  const response = await fetch(`${URL}coupons`, {
-    method: "POST",
-    headers,
-    body: JSON.stringify(coupon),
-  });
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(
+    `${URL}coupons/business/${businessId}/qr/${encodeURIComponent(qrCode)}`,
+    {
+      method: 'GET',
+      headers,
+    },
+  );
 
   const data = await response.json();
 
-  console.log("[Coupons][createCoupon] status/data:", {
+  console.log('[Coupons][getCouponByBusinessAndQR] status/data:', {
     status: response.status,
     ok: response.ok,
+    businessId,
+    qrCode,
     data,
   });
 
   if (!response.ok) {
-    throw new Error(data?.message || "No se pudo crear el cupón.");
+    const reason = [data?.message, data?.error].filter(Boolean).join(' - ');
+    throw new Error(reason || 'No se encontró el cupón.');
   }
 
   const normalizedCoupon =
@@ -45,23 +69,62 @@ export const createCoupon = async (coupon: Coupon, token?: string): Promise<Coup
     data?.data ??
     data;
 
-  const parsedId = Number(normalizedCoupon);
-  const couponFromNumericId =
-    Number.isFinite(parsedId) && parsedId > 0 ? ({ ...coupon, Id: parsedId } as Coupon) : null;
-
-  const finalCoupon =
-    couponFromNumericId ||
-    (normalizedCoupon && typeof normalizedCoupon === "object"
-      ? (normalizedCoupon as Coupon)
-      : coupon);
-
-  console.log("[Coupons][createCoupon] normalized coupon:", {
+  console.log('[Coupons][getCouponByBusinessAndQR] normalized coupon:', {
     normalizedCoupon,
-    finalCoupon,
-    extractedId: (finalCoupon as any)?.Id ?? (finalCoupon as any)?.id ?? (finalCoupon as any)?.couponId,
+    extractedId:
+      (normalizedCoupon as Coupon & {id?: number; couponId?: number}).Id ??
+      (normalizedCoupon as Coupon & {id?: number; couponId?: number}).id ??
+      (normalizedCoupon as Coupon & {id?: number; couponId?: number}).couponId,
   });
 
-  return finalCoupon;
+  return normalizedCoupon as Coupon;
+};
+
+const normalizeCouponResponse = (data: unknown): Coupon | null => {
+  const payload = data as CouponResponseShape | null;
+  const normalizedCoupon =
+    payload?.coupon ??
+    payload?.newCoupon ??
+    payload?.createdCoupon ??
+    (payload?.data as CouponResponseShape | undefined)?.coupon ??
+    (payload?.data as CouponResponseShape | undefined)?.newCoupon ??
+    (payload?.data as CouponResponseShape | undefined)?.createdCoupon ??
+    payload?.data ??
+    payload;
+
+  if (typeof normalizedCoupon === "number" && Number.isFinite(normalizedCoupon) && normalizedCoupon > 0) {
+    return { Id: normalizedCoupon, Business_Id: 0, QR: "", Description: "", LimitUsers: 0 };
+  }
+
+  if (normalizedCoupon && typeof normalizedCoupon === "object") {
+    return normalizedCoupon as Coupon;
+  }
+
+  return null;
+};
+
+export const createCoupon = async (coupon: Coupon, token?: string): Promise<Coupon> => {
+  const headers = buildHeaders(token);
+
+  const response = await fetch(`${URL}coupons`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(coupon),
+  });
+
+  const data = (await response.json()) as CouponResponseShape | number | null;
+
+  if (!response.ok) {
+    throw new Error((data as CouponResponseShape | null)?.message || "No se pudo crear el cupón.");
+  }
+
+  const normalizedCoupon = normalizeCouponResponse(data);
+
+  if (typeof normalizedCoupon?.Id === "number" && normalizedCoupon.Id > 0 && !normalizedCoupon.QR) {
+    return { ...coupon, Id: normalizedCoupon.Id };
+  }
+
+  return normalizedCoupon ?? coupon;
 };
 
 export const updateCoupon = async (
@@ -77,35 +140,113 @@ export const updateCoupon = async (
     body: JSON.stringify(coupon),
   });
 
-  const data = await response.json();
+  const data = (await response.json()) as CouponResponseShape | null;
 
   if (!response.ok) {
     throw new Error(data?.message || "No se pudo actualizar el cupón.");
   }
 
-  return (data?.coupon || data?.updatedCoupon || data?.data?.coupon || data) as Coupon;
+  return (data?.coupon || data?.updatedCoupon || (data?.data as CouponResponseShape | undefined)?.coupon || data) as Coupon;
 };
-
 
 export const getCouponsByBusiness = async (businessId: number, token?: string): Promise<Coupon[]> => {
   const headers = buildHeaders(token);
-  console.log("el bussines Id que ando agarrando es este",businessId)
+
   const response = await fetch(`${URL}coupons/business/${businessId}`, {
     method: "GET",
     headers,
   });
 
-  const data = await response.json();
+  const data = (await response.json()) as CouponResponseShape | Coupon[] | null;
 
   if (!response.ok) {
-    throw new Error(data?.message || "No se pudieron cargar los cupones.");
+    throw new Error((data as CouponResponseShape | null)?.message || "No se pudieron cargar los cupones.");
   }
 
   const normalized =
-    data?.coupons ??
-    data?.data?.coupons ??
-    data?.data ??
+    (data as CouponResponseShape | null)?.data && Array.isArray((data as CouponResponseShape).data)
+      ? ((data as CouponResponseShape).data as Coupon[])
+      : ((data as CouponResponseShape | null)?.data as CouponResponseShape | undefined)?.coupon &&
+          Array.isArray(((data as CouponResponseShape).data as CouponResponseShape).coupon)
+        ? ((((data as CouponResponseShape).data as CouponResponseShape).coupon as unknown) as Coupon[])
+        : (data as CouponResponseShape | null)?.data &&
+            Array.isArray((data as CouponResponseShape).data)
+          ? ((data as CouponResponseShape).data as Coupon[])
+          : ((data as CouponResponseShape | null)?.data as Coupon[] | undefined) ??
+            ((data as Coupon[] | null) ?? []);
+
+  if (Array.isArray((data as CouponResponseShape | null)?.coupons)) {
+    return (data as CouponResponseShape & { coupons: Coupon[] }).coupons;
+  }
+
+  return Array.isArray(normalized) ? normalized : [];
+};
+
+export const getCouponById = async (couponId: number, token?: string): Promise<Coupon | null> => {
+  const headers = buildHeaders(token);
+
+  const response = await fetch(`${URL}coupons/${couponId}`, {
+    method: "GET",
+    headers,
+  });
+
+  const data = (await response.json()) as CouponResponseShape | Coupon | null;
+
+  if (!response.ok) {
+    throw new Error((data as CouponResponseShape | null)?.message || "No se pudo cargar el cupón.");
+  }
+
+  const normalized =
+    (data as CouponResponseShape | null)?.coupon ??
+    ((data as CouponResponseShape | null)?.data as CouponResponseShape | undefined)?.coupon ??
+    (data as CouponResponseShape | null)?.data ??
     data;
 
-  return Array.isArray(normalized) ? (normalized as Coupon[]) : [];
+  return normalized && typeof normalized === "object" ? (normalized as Coupon) : null;
+};
+
+export const deleteCoupon = async (couponId: number, token?: string): Promise<void> => {
+  const headers = buildHeaders(token);
+
+  const response = await fetch(`${URL}coupons/${couponId}`, {
+    method: "DELETE",
+    headers,
+  });
+
+  const data = (await response.json()) as CouponResponseShape | null;
+
+  if (!response.ok) {
+    throw new Error(data?.message || "No se pudo eliminar el cupón.");
+  }
+};
+
+export const redeemCouponForUser = async (
+  couponId: number,
+  userId: number,
+  token?: string,
+) => {
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(
+    `${URL}couponhasusers/coupon/${couponId}/user/${userId}`,
+    {
+      method: 'PUT',
+      headers,
+    },
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const reason = [data?.message, data?.error].filter(Boolean).join(' - ');
+    throw new Error(reason || 'No se pudo usar el cupón.');
+  }
+
+  return data;
 };
