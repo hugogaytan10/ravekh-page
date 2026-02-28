@@ -202,7 +202,7 @@ const VariantsEditor: React.FC<Props> = ({
                   </div>
 
                   {isVariantExpanded && (
-                    <div className="mt-3 space-y-2">
+                    <div className="mt-3 space-y-2" style={{ colorScheme: "light" }}>
                       {/* Descripción */}
                       <input
                         placeholder="Descripción"
@@ -214,7 +214,7 @@ const VariantsEditor: React.FC<Props> = ({
                             e.target.value
                           )
                         }
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        className="w-full bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                       />
 
                       {/* Código de barras */}
@@ -224,7 +224,7 @@ const VariantsEditor: React.FC<Props> = ({
                         onChange={(e) =>
                           handleFieldChange(index, "barcode", e.target.value)
                         }
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        className="w-full bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                       />
 
                       {/*<button
@@ -247,7 +247,7 @@ const VariantsEditor: React.FC<Props> = ({
                           handleFieldChange(index, "price", e.target.value)
                         }
                         type="number"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        className="w-full bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                       />
 
                       {/* Promoción */}
@@ -262,7 +262,7 @@ const VariantsEditor: React.FC<Props> = ({
                           )
                         }
                         type="number"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        className="w-full bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                       />
 
                       {/* Costo */}
@@ -277,7 +277,7 @@ const VariantsEditor: React.FC<Props> = ({
                           )
                         }
                         type="number"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        className="w-full bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                       />
 
                       {/* Stock */}
@@ -288,7 +288,7 @@ const VariantsEditor: React.FC<Props> = ({
                           handleFieldChange(index, "stock", e.target.value)
                         }
                         type="number"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        className="w-full bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                       />
 
                       {/* Stock mínimo */}
@@ -299,7 +299,7 @@ const VariantsEditor: React.FC<Props> = ({
                           handleFieldChange(index, "minStock", e.target.value)
                         }
                         type="number"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        className="w-full bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                       />
 
                       {/* Stock óptimo */}
@@ -310,7 +310,7 @@ const VariantsEditor: React.FC<Props> = ({
                           handleFieldChange(index, "optStock", e.target.value)
                         }
                         type="number"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        className="w-full bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                       />
 
                       {/* Fecha de caducidad */}
@@ -321,7 +321,7 @@ const VariantsEditor: React.FC<Props> = ({
                           handleFieldChange(index, "expDate", e.target.value)
                         }
                         type="text"
-                        className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
+                        className="w-full bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                       />
                     </div>
                   )}

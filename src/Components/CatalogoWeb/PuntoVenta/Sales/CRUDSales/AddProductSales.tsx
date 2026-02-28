@@ -260,7 +260,7 @@ export const AddProductSales: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col bg-gray-100 container-add-product">
+    <div className="flex flex-col bg-gray-100 text-gray-800 container-add-product">
       <OperationResultModal
         isVisible={feedbackModal.isVisible}
         title={feedbackModal.title}

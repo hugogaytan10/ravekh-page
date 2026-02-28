@@ -1,0 +1,43 @@
+@media (prefers-color-scheme: dark) {
+  .customize-app-screen,
+  .customize-app-content,
+  .customize-app-form-section,
+  .customize-app-header,
+  .customize-app-logo-btn,
+  .customize-app-preview,
+  .customize-app-preview-col,
+  .customize-app-color-btn,
+  .customize-app-footer {
+    background-color: #111827 !important;
+    color: #f3f4f6;
+  }
+
+  .customize-app-header p,
+  .customize-app-logo-btn span,
+  .customize-app-color-btn span {
+    color: #f3f4f6 !important;
+  }
+
+  .customize-app-input {
+    background-color: #1f2937 !important;
+    color: #f9fafb !important;
+    border-color: #374151 !important;
+  }
+
+  .customize-app-input::placeholder {
+    color: #9ca3af;
+  }
+
+  .customize-app-input:focus {
+    outline: none;
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
+  }
+
+  .customize-app-preview,
+  .customize-app-preview-col,
+  .customize-app-logo-btn,
+  .customize-app-color-btn {
+    border: 1px solid #374151;
+  }
+}
