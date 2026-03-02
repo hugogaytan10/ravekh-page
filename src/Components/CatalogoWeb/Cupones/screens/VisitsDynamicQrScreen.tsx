@@ -230,7 +230,7 @@ export const VisitsDynamicQrScreen: React.FC = () => {
       return;
     }
 
-    navigate("/cupones/visitas");
+    navigate("/cuponespv/visitas");
   };
 
   return (

@@ -103,7 +103,7 @@ const CuponesEdit: React.FC = () => {
       navigate(-1);
       return;
     }
-    navigate("/cupones/cupones");
+    navigate("/cuponespv/cupones");
   };
 
   const openDatePicker = () => {

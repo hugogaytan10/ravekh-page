@@ -133,7 +133,7 @@ export const MainSettings: React.FC = () => {
               className="flex flex-col items-center"
               onClick={() => {
                 context.setShowNavBarBottom(false); // Hide the bottom navbar
-                navigate("/cupones/cupones", {
+                navigate("/cuponespv/cupones", {
                   state: { hideMainCouponsTabs: true },
                 });
               }} // Redirect only to coupons flow
@@ -150,7 +150,7 @@ export const MainSettings: React.FC = () => {
               className="flex flex-col items-center"
               onClick={() => {
                 context.setShowNavBarBottom(false);
-                navigate("/cupones/visitas", {
+                navigate("/cuponespv/visitas", {
                   state: { hideMainCouponsTabs: true },
                 });
               }}

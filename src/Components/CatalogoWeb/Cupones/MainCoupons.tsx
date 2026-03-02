@@ -4,8 +4,8 @@ import { AppContext } from "../Context/AppContext";
 import { ThemeLight } from "../PuntoVenta/Theme/Theme";
 
 const tabs = [
-  { label: "Visitas", to: "/cupones/visitas" },
-  { label: "Cupones", to: "/cupones/cupones" },
+  { label: "Visitas", to: "/cuponespv/visitas" },
+  { label: "Cupones", to: "/cuponespv/cupones" },
 ];
 
 export const MainCoupons: React.FC = () => {

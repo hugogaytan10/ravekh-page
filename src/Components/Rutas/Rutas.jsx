@@ -25,6 +25,7 @@ import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
 import { PoliticaPrivacidadAgenda } from "../PoliticaPrivacidad/PoliticaPrivacidadAgenda";
 //importaciones para el catalogo web
 import { RavekhPos } from "../RavekhPos/RavekhPos";
+import { LoginPage } from "../../coupons/pages/LoginPage";
 import { RegisterPage } from "../../coupons/pages/RegisterPage";
 import { HomePage } from "../../coupons/pages/HomePage";
 import { MyCouponsPage } from "../../coupons/pages/MyCouponsPage";
@@ -141,8 +142,10 @@ import { MainCategoria } from "../CatalogoWeb/Categoria";
 import { CatalogSearchInput } from "../CatalogoWeb/CatalogSearchInput";
 import { CatalogSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/CatalogSettings";
 import { EditEmployee } from "../CatalogoWeb/PuntoVenta/Employees/EditEmployee";
-import { MainCoupons, VisitsNavigator, CouponsNavigator } from "../CatalogoWeb/Cupones";
+//importaciones para cupones
 
+import { MainCoupons, VisitsNavigator, CouponsNavigator } from "../CatalogoWeb/Cupones";
+import CuponesEdit from "../CatalogoWeb/Cupones/screens/CuponesEdit";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -431,13 +434,14 @@ export const Rutas = () => {
       "/close-session",
       "/sales-tax-settings",
       "/cupones",
+      "/cuponespv",
       "/cupones/home",
       "/cupones/login",
       "/cupones/registro",
       "/cupones/ajustes",
       "/cupones/eliminar-cuenta",
-      "/cupones/visitas",
-      "/cupones/cupones",
+      "/cuponespv/visitas",
+      "/cuponespv/cupones",
       "/cupones/mis-cupones",
       "/cupones/cambio-nombre",
       "/cupones/qr",
@@ -507,7 +511,7 @@ export const Rutas = () => {
       "/finish",
       "/add-product",
       "/select-caterory-sales",
-      "/add-category-sales", 
+      "/add-category-sales",
       "/main-products",
       "/add-product-products",
       "/select-category-product",
@@ -755,9 +759,8 @@ export const Rutas = () => {
 
         <div className="drawer-content flex flex-col min-w-full relative hidden" id="menuIconoCatalogo">
           <div
-            className={`fixed top-0 left-0 right-0 z-40 bg-[var(--bg-primary)] catalog-header ${
-              isCatalogHeaderCollapsed ? "is-collapsed" : ""
-            }`}
+            className={`fixed top-0 left-0 right-0 z-40 bg-[var(--bg-primary)] catalog-header ${isCatalogHeaderCollapsed ? "is-collapsed" : ""
+              }`}
           >
             <div className="max-w-screen-xl mx-auto px-4 pt-6 pb-4 catalog-header__content bg-[var(--bg-primary)]">
               <div className={`flex items-center gap-3 ${isPedidoInfo ? "justify-start" : "justify-between"}`}>
@@ -888,12 +891,14 @@ export const Rutas = () => {
           <Route path="/politica" element={<PoliticaPrivacidad />} />
           <Route path="/politicaAgenda" element={<PoliticaPrivacidadAgenda />} />
           <Route path="/RavekhPos" element={<RavekhPos />} />
-          <Route path="/cupones" element={<MainCoupons />}>
+          <Route path="/cupones" element={<LoginPage />} />
+          <Route path="/cuponespv" element={<MainCoupons />}>
             <Route index element={<Navigate to="visitas" replace />} />
             <Route path="visitas/*" element={<VisitsNavigator />} />
             <Route path="cupones/*" element={<CouponsNavigator />} />
           </Route>
           <Route path="/cupones/registro" element={<RegisterPage />} />
+          <Route path="cupones/editar/:CouponId" element={<CuponesEdit />} />
           <Route path="/cupones/home" element={<HomePage />} />
           <Route path="/cupones/mis-cupones" element={<MyCouponsPage />} />
           <Route path="/cupones/ajustes" element={<SettingsPage />} />

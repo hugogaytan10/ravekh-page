@@ -68,7 +68,7 @@ export const VisitsTopClientsScreen: React.FC = () => {
       return;
     }
 
-    navigate("/cupones/visitas");
+    navigate("/cuponespv/visitas");
   };
 
   return (

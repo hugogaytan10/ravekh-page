@@ -59,7 +59,7 @@ export const CouponCreateScreen: React.FC = () => {
       return;
     }
 
-    navigate("/cupones/cupones");
+    navigate("/cuponespv/cupones");
   };
 
   const handleSaveCoupon = async () => {

@@ -59,7 +59,7 @@ export const VisitsGenerateScreen: React.FC = () => {
       return;
     }
 
-    navigate("/cupones/visitas");
+    navigate("/cuponespv/visitas");
   };
 
   const handleGenerate = async () => {
@@ -92,7 +92,7 @@ export const VisitsGenerateScreen: React.FC = () => {
         saveOfflineTokens(businessId, data.tokens);
       }
 
-      navigate(`/cupones/visitas/qrs-activos/${modeLabel}`, {
+      navigate(`/cuponespv/visitas/qrs-activos/${modeLabel}`, {
         replace: true,
         state: { tokens: data.tokens },
       });
@@ -147,7 +147,7 @@ export const VisitsGenerateScreen: React.FC = () => {
             <button
               type="button"
               onClick={() =>
-                navigate(`/cupones/visitas/qrs-activos/${modeLabel}`, {
+                navigate(`/cuponespv/visitas/qrs-activos/${modeLabel}`, {
                   replace: true,
                 })
               }

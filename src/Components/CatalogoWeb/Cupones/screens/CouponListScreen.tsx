@@ -104,7 +104,7 @@ export const CouponListScreen: React.FC = () => {
       return;
     }
 
-    navigate("/cupones/cupones");
+    navigate("/cuponespv/cupones");
   };
 
   const handleCopyLink = async (coupon: Coupon) => {
@@ -126,7 +126,7 @@ export const CouponListScreen: React.FC = () => {
       return;
     }
 
-    navigate(`/cupones/cupones/editar/${id}`, {
+    navigate(`/cuponespv/cupones/editar/${id}`, {
       state: { hideMainCouponsTabs: true },
     });
   };
