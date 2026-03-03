@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { AppContext } from "../../Context/AppContext";
 import { ChevronBack } from "../../../../assets/POS/ChevronBack";
 import { ThemeLight } from "../../PuntoVenta/Theme/Theme";
@@ -65,6 +65,7 @@ const TrashIcon = ({ size = 18, className = "" }: { size?: number; className?: s
 
 const CuponesEdit: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { CouponId } = useParams();
   const context = useContext(AppContext);
 
@@ -117,7 +118,9 @@ const CuponesEdit: React.FC = () => {
   };
 
   useEffect(() => {
-    if (!hasCuponesSession()) {
+    const isCouponsPublicFlow = location.pathname.startsWith("/cupones/");
+
+    if (isCouponsPublicFlow && !hasCuponesSession()) {
       navigate("/cupones", { replace: true });
       return;
     }
@@ -153,7 +156,7 @@ const CuponesEdit: React.FC = () => {
     };
 
     loadCoupon();
-  }, [couponId, isCouponIdInvalid, navigate, token]);
+  }, [couponId, isCouponIdInvalid, location.pathname, navigate, token]);
 
   const handleSave = async () => {
     if (!coupon || isCouponIdInvalid) {

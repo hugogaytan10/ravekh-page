@@ -126,7 +126,7 @@ export const CouponListScreen: React.FC = () => {
       return;
     }
 
-    navigate(`/cuponespv/cupones/editar/${id}`, {
+    navigate(`/cuponespv/editar/${id}`, {
       state: { hideMainCouponsTabs: true },
     });
   };

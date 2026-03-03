@@ -442,6 +442,7 @@ export const Rutas = () => {
       "/cupones/eliminar-cuenta",
       "/cuponespv/visitas",
       "/cuponespv/cupones",
+      "/cuponespv/editar/:CouponId",
       "/cupones/mis-cupones",
       "/cupones/cambio-nombre",
       "/cupones/qr",
@@ -896,8 +897,10 @@ export const Rutas = () => {
             <Route index element={<Navigate to="visitas" replace />} />
             <Route path="visitas/*" element={<VisitsNavigator />} />
             <Route path="cupones/*" element={<CouponsNavigator />} />
+            <Route path="editar/:CouponId" element={<CuponesEdit />} />
           </Route>
           <Route path="/cupones/registro" element={<RegisterPage />} />
+          <Route path="/cuponespv/editar/:CouponId" element={<CuponesEdit />} />
           <Route path="cupones/editar/:CouponId" element={<CuponesEdit />} />
           <Route path="/cupones/home" element={<HomePage />} />
           <Route path="/cupones/mis-cupones" element={<MyCouponsPage />} />
