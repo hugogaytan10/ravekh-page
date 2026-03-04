@@ -4,9 +4,9 @@ import { AppContext } from "../../Context/AppContext";
 import { ThemeLight } from "../../PuntoVenta/Theme/Theme";
 import { ChevronBack } from "../../../../assets/POS/ChevronBack";
 import { ChevronGo } from "../../../../assets/POS/ChevronGo";
-import { PlusIcon } from "../icons/PlusIcon";
-import { GridIcon } from "../icons/GridIcon";
-import { ScannerIcon } from "../icons/ScannerIcon";
+import { PlusIcon } from "../../../../assets/Cupones/icons/PlusIcon";
+import { GridIcon } from "../../../../assets/Cupones/icons/GridIcon";
+import { ScannerIcon } from "../../../../assets/Cupones/icons/ScannerIcon";
 
 const CardAction: React.FC<{
   title: string;

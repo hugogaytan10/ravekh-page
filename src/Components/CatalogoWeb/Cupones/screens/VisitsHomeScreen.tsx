@@ -3,9 +3,9 @@ import { useNavigate } from "react-router-dom";
 import { ChevronBack } from "../../../../assets/POS/ChevronBack";
 import { ChevronGo } from "../../../../assets/POS/ChevronGo";
 import PlusIcon from "../../../../assets/POS/PlusIcon";
-import { GridIcon } from "../icons/GridIcon";
-import { TopClientsIcon } from "../icons/TopClientsIcon";
-import { OfflineIcon } from "../icons/OfflineIcon";
+import { GridIcon } from "../../../../assets/Cupones/icons/GridIcon";
+import { TopClientsIcon } from "../../../../assets/Cupones/icons/TopClientsIcon";
+import { OfflineIcon } from "../../../../assets/Cupones/icons/OfflineIcon";
 import { ThemeLight } from "../../PuntoVenta/Theme/Theme";
 
 const Tile: React.FC<{ title: string; icon: React.ReactNode; onClick: () => void }> = ({ title, icon, onClick }) => (
