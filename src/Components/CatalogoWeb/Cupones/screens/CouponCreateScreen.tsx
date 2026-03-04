@@ -5,7 +5,7 @@ import { AppContext } from "../../Context/AppContext";
 import { ThemeLight } from "../../PuntoVenta/Theme/Theme";
 import { ChevronBack } from "../../../../assets/POS/ChevronBack";
 import { FeedbackModal } from "../components/FeedbackModal";
-import { WEB_COUPONS_DOMAIN } from "../shared/constants";
+import { URL } from "../../Const/Const";
 import { buildQrCode, formatDateTime, getCouponId, mergeDateAndTime } from "../shared/couponsUtils";
 import { createCoupon, updateCoupon } from "../Petitions";
 import { Coupon } from "../types";
@@ -34,7 +34,7 @@ export const CouponCreateScreen: React.FC = () => {
     setFeedbackVisible(true);
   };
 
-  const couponsDomain = WEB_COUPONS_DOMAIN || window.location.origin;
+  const couponsDomain = URL || window.location.origin;
   const couponLink = useMemo(() => {
     if (!generatedCoupon) {
       return "";

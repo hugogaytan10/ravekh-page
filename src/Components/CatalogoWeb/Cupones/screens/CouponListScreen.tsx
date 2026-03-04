@@ -4,7 +4,8 @@ import { AppContext } from "../../Context/AppContext";
 import { ThemeLight } from "../../PuntoVenta/Theme/Theme";
 import { ChevronBack } from "../../../../assets/POS/ChevronBack";
 import { FeedbackModal } from "../components/FeedbackModal";
-import { WEB_COUPONS_DOMAIN } from "../shared/constants";
+
+import { URL } from "../../Const/Const";
 import { getCouponId, parseValidDate } from "../shared/couponsUtils";
 import { getCouponsByBusiness } from "../Petitions";
 import { Coupon } from "../types";
@@ -71,7 +72,7 @@ export const CouponListScreen: React.FC = () => {
     loadCoupons(false);
   }, [businessId, token]);
 
-  const couponsDomain = WEB_COUPONS_DOMAIN || window.location.origin;
+  const couponsDomain = URL || window.location.origin;
 
   const groupedCoupons = useMemo(() => {
     const now = new Date();

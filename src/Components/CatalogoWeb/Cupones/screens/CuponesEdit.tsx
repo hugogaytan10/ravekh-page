@@ -9,6 +9,7 @@ import { Coupon } from "../types";
 import { deleteCoupon, getCouponById, updateCoupon } from "../Petitions";
 import { hasCuponesSession } from "../../../../coupons/services/session";
 import { formatDateTime, getCouponId, mergeDateAndTime, parseValidDate, toDatetimeLocalValue } from "../shared/couponsUtils";
+import {Trash} from "../../../../assets/POS/trash";
 
 const fromBackendDate = (value?: string): string => {
   const parsed = parseValidDate(value);
@@ -43,25 +44,6 @@ const formatDisplayDate = (value: string): string => {
   }).format(d);
 };
 
-const TrashIcon = ({ size = 18, className = "" }: { size?: number; className?: string }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    className={className}
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    aria-hidden="true"
-  >
-    <path
-      d="M9 3h6m-8 4h10m-9 0 1 14h6l1-14M10 11v7m4-7v7"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
 
 const CuponesEdit: React.FC = () => {
   const navigate = useNavigate();
@@ -253,7 +235,7 @@ const CuponesEdit: React.FC = () => {
             aria-label="Eliminar"
             title="Eliminar"
           >
-            <TrashIcon />
+            <Trash width={22} height={22} />
           </button>
         </div>
 

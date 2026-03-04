@@ -5,6 +5,7 @@ import { ThemeLight } from "../../PuntoVenta/Theme/Theme";
 import { ChevronBack } from "../../../../assets/POS/ChevronBack";
 import { FeedbackModal } from "../components/FeedbackModal";
 import { WEB_COUPONS_DOMAIN } from "../shared/constants";
+import { URL } from "../../Const/Const";
 import { generateVisitQrTokens } from "../Petitions";
 
 const VISITS_OFFLINE_POOL_KEY = "ravekh-visits-offline-qr-pool";

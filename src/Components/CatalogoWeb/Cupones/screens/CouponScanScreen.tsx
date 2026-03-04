@@ -9,23 +9,13 @@ import { FeedbackModal } from "../components/FeedbackModal";
 import { Coupon } from "../types";
 import { getCouponByBusinessAndQR, redeemCouponForUser } from "../Petitions";
 import { hasCuponesSession } from "../../../../coupons/services/session";
-
+import {Trash} from "../../../../assets/POS/trash";
 type ScannedCouponPayload = {
   Code: string;
   UserId: number;
 };
 
-const TrashIcon = ({ size = 18 }: { size?: number }) => (
-  <svg width={size} height={size} viewBox="0 0 24 24" fill="none" aria-hidden="true">
-    <path
-      d="M9 3h6m-8 4h10m-9 0 1 14h6l1-14M10 11v7m4-7v7"
-      stroke="currentColor"
-      strokeWidth="1.8"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-    />
-  </svg>
-);
+
 
 const ModalShell: React.FC<{
   open: boolean;
@@ -276,7 +266,7 @@ export const CouponScanScreen: React.FC = () => {
           </div>
 
           <div className="grid h-10 w-10 place-items-center rounded-2xl bg-white/10 ring-1 ring-white/10 text-white/80">
-            <TrashIcon />
+            <Trash width={22} height={22} />
           </div>
         </div>
 

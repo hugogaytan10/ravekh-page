@@ -15,6 +15,12 @@ export const MainCoupons: React.FC = () => {
   const accentColor = context.store?.Color ?? ThemeLight.btnBackground;
   const hideMainCouponsTabs =
     (location.state as { hideMainCouponsTabs?: boolean } | null)?.hideMainCouponsTabs === true;
+  const hiddenTabsRoutes = [
+    "/cuponespv/visitas/qr-dinamico",
+    "/cuponespv/visitas/generar/",
+    "/cuponespv/visitas/qrs-activos/online",
+  ];
+  const hideTabsForRoute = hiddenTabsRoutes.some((route) => location.pathname.includes(route));
 
   useEffect(() => {
     if (typeof context.setShowNavBarBottom === "function") {
@@ -30,7 +36,7 @@ export const MainCoupons: React.FC = () => {
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: ThemeLight.backgrounColor }}>
-      {!hideMainCouponsTabs && (
+      {!hideMainCouponsTabs && !hideTabsForRoute && (
         <div className="border-b border-gray-200 bg-white px-4 pt-4">
           <nav className="flex gap-6">
             {tabs.map((tab) => (

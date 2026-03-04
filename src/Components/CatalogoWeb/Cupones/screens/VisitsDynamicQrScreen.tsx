@@ -7,6 +7,7 @@ import { ChevronBack } from "../../../../assets/POS/ChevronBack";
 import { URL as API_URL } from "../../Const/Const";
 import { FeedbackModal } from "../components/FeedbackModal";
 import { WEB_COUPONS_DOMAIN } from "../shared/constants";
+import { URL } from "../../Const/Const";
 import { DynamicVisitQrToken, generateDynamicVisitQr } from "../Petitions";
 
 type DynamicStreamStatus = "closed" | "connecting" | "open" | "error";
@@ -42,6 +43,7 @@ export const VisitsDynamicQrScreen: React.FC = () => {
   const [feedbackVisible, setFeedbackVisible] = useState(false);
   const [feedbackTitle, setFeedbackTitle] = useState("");
   const [feedbackMessage, setFeedbackMessage] = useState("");
+  const [isQrZoomed, setIsQrZoomed] = useState(false);
 
   const dynamicStreamRef = useRef<EventSource | null>(null);
   const dynamicReconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -262,7 +264,15 @@ export const VisitsDynamicQrScreen: React.FC = () => {
         >
           {!!dynamicQr?.qrUrl && (
             <div className="flex flex-col items-center gap-3">
-              <QRCodeSVG value={dynamicQr.qrUrl} size={190} level="M" />
+              <button
+                type="button"
+                className="rounded-xl p-1 transition hover:bg-gray-100"
+                onClick={() => setIsQrZoomed(true)}
+                aria-label="Ampliar QR dinámico"
+              >
+                <QRCodeSVG value={dynamicQr.qrUrl} size={190} level="M" />
+              </button>
+              <p className="text-xs text-[#7A7A7A]">Toca el QR para ampliarlo.</p>
               <p className="break-all text-center text-xs font-semibold text-[#565656]">{dynamicQr.qrUrl}</p>
             </div>
           )}
@@ -293,6 +303,33 @@ export const VisitsDynamicQrScreen: React.FC = () => {
         onClose={() => setFeedbackVisible(false)}
         accentColor={accentColor}
       />
+
+      {isQrZoomed && !!dynamicQr?.qrUrl && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-5"
+          onClick={() => setIsQrZoomed(false)}
+          role="button"
+          tabIndex={0}
+          onKeyDown={(event) => {
+            if (event.key === "Escape" || event.key === "Enter" || event.key === " ") {
+              setIsQrZoomed(false);
+            }
+          }}
+          aria-label="Cerrar vista ampliada del QR"
+        >
+          <div className="rounded-2xl bg-white p-4 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <QRCodeSVG value={dynamicQr.qrUrl} size={300} level="M" />
+            <button
+              type="button"
+              className="mt-4 w-full rounded-xl px-3 py-2 text-sm font-semibold text-white"
+              style={{ backgroundColor: accentColor }}
+              onClick={() => setIsQrZoomed(false)}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
