@@ -22,8 +22,8 @@ type StockListProps = {
 
 export const StockList: React.FC<StockListProps> = ({ barcode }) => {
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showModalPremium, setShowModalPremium] = useState(false);
+  const [imageErrorsByProduct, setImageErrorsByProduct] = useState<Record<string, boolean>>({});
   const context = useContext(AppContext);
   const navigate = useNavigate();
 
@@ -112,21 +112,24 @@ export const StockList: React.FC<StockListProps> = ({ barcode }) => {
         : item.Stock! > 10
         ? "text-green-500"
         : "text-orange-500";
+    const itemKey = `${item.Id ?? item.Name}`;
+    const hasImage = Boolean(item.Image || item.Images?.[0]);
+    const hasImageError = imageErrorsByProduct[itemKey];
 
     return (
       <div key={item.Id} className="flex items-center p-4 bg-white border-b">
-        {(item.Image || item.Images?.[0]) ? (
+        {hasImage && !hasImageError ? (
           <div className="relative w-24 h-16 mr-4">
-            {loading && (
-              <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-                <div className="spinner-border text-white" role="status"></div>
-              </div>
-            )}
             <img
               src={item.Image || item.Images?.[0] || ""}
               alt={item.Name}
               className="w-full h-full object-cover rounded"
-              onLoad={() => setLoading(false)}
+              onError={() =>
+                setImageErrorsByProduct((prev) => ({
+                  ...prev,
+                  [itemKey]: true,
+                }))
+              }
             />
           </div>
         ) : (

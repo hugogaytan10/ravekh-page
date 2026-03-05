@@ -12,7 +12,6 @@ type LoginResponse = {
 
 type RegisterPayload = {
   Role: "CLIENTE";
-  Business_Id: number;
   Name: string;
   Email: string;
   Password: string;

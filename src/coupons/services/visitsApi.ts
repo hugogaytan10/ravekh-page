@@ -18,14 +18,19 @@ const getVisitHistoryByUserId = async (userId: number): Promise<Visits[]> => {
   }
   return response.json() as Promise<Visits[]>;
 };
-const redeemVisitQr = async (token: string, userId: number, signal?: AbortSignal) => {
+
+const redeemVisitQr = async (
+  token: string,
+  userId: number,
+  options?: { signal?: AbortSignal; regenerateDynamicQr?: boolean },
+) => {
   const response = await fetch(`${URL}visits/qr/redeem`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
     body: JSON.stringify({ token, userId, regenerateDynamicQr: true }),
-    signal,
+    signal: options?.signal,
   });
 
   if (!response.ok) {
@@ -36,8 +41,4 @@ const redeemVisitQr = async (token: string, userId: number, signal?: AbortSignal
   return response.json() as Promise<{ visitCreated: boolean; couponGenerated: boolean }>;
 };
 
-export {
-    getVisitsByUserId,
-    getVisitHistoryByUserId,
-    redeemVisitQr,
-}
+export { getVisitsByUserId, getVisitHistoryByUserId, redeemVisitQr };
