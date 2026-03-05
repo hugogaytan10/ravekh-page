@@ -1,7 +1,7 @@
 
 import React, { useRef, useEffect, useContext, useState, useMemo } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
 import { LandingPage } from "../LandingPage/LandingPage";
 import { BlogMain } from "../Blog/BlogMain";
 import { MainArticulosIA } from "../Blog/ArticulosIA/MainArticulosIA";
@@ -28,14 +28,12 @@ import { RavekhPos } from "../RavekhPos/RavekhPos";
 import { LoginPage } from "../../coupons/pages/LoginPage";
 import { RegisterPage } from "../../coupons/pages/RegisterPage";
 import { HomePage } from "../../coupons/pages/HomePage";
-import { CouponsPage } from "../../coupons/pages/CouponsPage";
 import { MyCouponsPage } from "../../coupons/pages/MyCouponsPage";
 import { SettingsPage } from "../../coupons/pages/SettingsPage";
 import { ScanPage } from "../../coupons/pages/ScanPage";
 import { SuccessPage } from "../../coupons/pages/SuccessPage";
 import { ChangeName } from "../../coupons/pages/ChangeName";
 import { DeleteAccountPage } from "../../coupons/pages/DeleteAccountPage";
-import { VisitHistoryPage } from "../../coupons/pages/VisitHistoryPage";
 import { VisitRedeemPage } from "../../coupons/pages/VisitRedeemPage";
 import { CouponQrPage } from "../../coupons/pages/CouponQrPage";
 import { CouponCongratsPage } from "../../coupons/pages/CouponCongratsPage";
@@ -144,7 +142,10 @@ import { MainCategoria } from "../CatalogoWeb/Categoria";
 import { CatalogSearchInput } from "../CatalogoWeb/CatalogSearchInput";
 import { CatalogSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/CatalogSettings";
 import { EditEmployee } from "../CatalogoWeb/PuntoVenta/Employees/EditEmployee";
+//importaciones para cupones
 
+import { MainCoupons, VisitsNavigator, CouponsNavigator } from "../CatalogoWeb/Cupones";
+import CuponesEdit from "../CatalogoWeb/Cupones/screens/CuponesEdit";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -433,13 +434,15 @@ export const Rutas = () => {
       "/close-session",
       "/sales-tax-settings",
       "/cupones",
+      "/cuponespv",
       "/cupones/home",
       "/cupones/login",
       "/cupones/registro",
       "/cupones/ajustes",
       "/cupones/eliminar-cuenta",
-      "/cupones/visitas",
-      "/cupones/cupones",
+      "/cuponespv/visitas",
+      "/cuponespv/cupones",
+      "/cuponespv/editar/:CouponId",
       "/cupones/mis-cupones",
       "/cupones/cambio-nombre",
       "/cupones/qr",
@@ -509,7 +512,7 @@ export const Rutas = () => {
       "/finish",
       "/add-product",
       "/select-caterory-sales",
-      "/add-category-sales", 
+      "/add-category-sales",
       "/main-products",
       "/add-product-products",
       "/select-category-product",
@@ -757,9 +760,8 @@ export const Rutas = () => {
 
         <div className="drawer-content flex flex-col min-w-full relative hidden" id="menuIconoCatalogo">
           <div
-            className={`fixed top-0 left-0 right-0 z-40 bg-[var(--bg-primary)] catalog-header ${
-              isCatalogHeaderCollapsed ? "is-collapsed" : ""
-            }`}
+            className={`fixed top-0 left-0 right-0 z-40 bg-[var(--bg-primary)] catalog-header ${isCatalogHeaderCollapsed ? "is-collapsed" : ""
+              }`}
           >
             <div className="max-w-screen-xl mx-auto px-4 pt-6 pb-4 catalog-header__content bg-[var(--bg-primary)]">
               <div className={`flex items-center gap-3 ${isPedidoInfo ? "justify-start" : "justify-between"}`}>
@@ -891,13 +893,19 @@ export const Rutas = () => {
           <Route path="/politicaAgenda" element={<PoliticaPrivacidadAgenda />} />
           <Route path="/RavekhPos" element={<RavekhPos />} />
           <Route path="/cupones" element={<LoginPage />} />
+          <Route path="/cuponespv" element={<MainCoupons />}>
+            <Route index element={<Navigate to="visitas" replace />} />
+            <Route path="visitas/*" element={<VisitsNavigator />} />
+            <Route path="cupones/*" element={<CouponsNavigator />} />
+            <Route path="editar/:CouponId" element={<CuponesEdit />} />
+          </Route>
           <Route path="/cupones/registro" element={<RegisterPage />} />
+          <Route path="/cuponespv/editar/:CouponId" element={<CuponesEdit />} />
+          <Route path="cupones/editar/:CouponId" element={<CuponesEdit />} />
           <Route path="/cupones/home" element={<HomePage />} />
-          <Route path="/cupones/cupones" element={<CouponsPage />} />
           <Route path="/cupones/mis-cupones" element={<MyCouponsPage />} />
           <Route path="/cupones/ajustes" element={<SettingsPage />} />
           <Route path="/cupones/eliminar-cuenta" element={<DeleteAccountPage />} />
-          <Route path="/cupones/visitas" element={<VisitHistoryPage />} />
           <Route path="/cupones/admin/escanear" element={<ScanPage />} />
           <Route path="/cupones/admin/confirmado" element={<SuccessPage />} />
           <Route path="/visit/redeem" element={<VisitRedeemPage />} />

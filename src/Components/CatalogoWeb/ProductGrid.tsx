@@ -4,8 +4,8 @@ import { motion } from "framer-motion";
 import { Producto } from "./Modelo/Producto";
 import { getBaseVariantKey } from "./VariantSelectionModal";
 import cartIcon from "../../assets/cart-outline.svg";
-import trashIcon from "../../assets/trash.svg";
-
+import {Trash} from "../../assets/POS/trash";
+import { EyeIcon } from "../../assets/Cupones/icons/EyeIcon";
 interface ProductGridProps {
   products: Producto[];
   telefono: string | null;
@@ -17,21 +17,6 @@ interface ProductGridProps {
   onDecrement?: (product: Producto) => void | Promise<void>;
 }
 
-const EyeIcon = () => (
-  <svg
-    aria-hidden="true"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className="h-4 w-4"
-  >
-    <path d="M2 12s4-6 10-6 10 6 10 6-4 6-10 6-10-6-10-6Z" />
-    <circle cx="12" cy="12" r="3" />
-  </svg>
-);
 
 const ProductCard = memo(
   ({
@@ -324,7 +309,7 @@ const ProductCard = memo(
                     className="h-7 w-7 rounded-full bg-black/5 flex items-center justify-center transition-transform duration-150 ease-out active:scale-95"
                     aria-label={`Eliminar ${product.Name} del carrito`}
                   >
-                    <img src={trashIcon} alt="" className="h-4 w-4" />
+                    <Trash width={16} height={16} />
                   </button>
                 )}
                 <span className="text-sm font-semibold">
