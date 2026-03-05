@@ -29,6 +29,7 @@ import {
   syncDraftColors,
   calculateVariantChanges,
 } from "./variantUtils";
+import { OperationResultModal } from "./OperationResultModal";
 
 export const EditProduct: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -59,6 +60,14 @@ export const EditProduct: React.FC = () => {
   const [available, setAvailable] = useState<boolean>(true);
   const [variantDrafts, setVariantDrafts] = useState<VariantDraft[]>([]);
   const [originalVariants, setOriginalVariants] = useState<Variant[]>([]);
+  const [feedbackModal, setFeedbackModal] = useState({
+    isVisible: false,
+    title: "",
+    message: "",
+    error: "",
+    isSuccess: false,
+  });
+  const [navigateAfterModal, setNavigateAfterModal] = useState(false);
   const formLoadedRef = useRef(false);
   const accentColor = colorSelected || context.store.Color || ThemeLight.secondaryColor;
 
@@ -228,8 +237,44 @@ export const EditProduct: React.FC = () => {
     setVariantDrafts((prev) => syncDraftColors(prev, accentColor));
   }, [accentColor]);
 
+  const resetFormState = () => {
+    formLoadedRef.current = false;
+    setProductName("");
+    setPrice("");
+    setCost("");
+    setBarcode("");
+    setStock("");
+    setMinStock("");
+    setOptStock("");
+    setPromoPrice("");
+    setDescription("");
+    setUnitType("Unidad");
+    setColorSelected(context.store.Color || ThemeLight.secondaryColor);
+    setIsAvailableForSale(true);
+    setIsDisplayedInStore(true);
+    setAvailable(true);
+    setMainImage(null);
+    setGalleryImages([]);
+    setVariantDrafts([]);
+    setOriginalVariants([]);
+    context.setCategorySelected({ Id: 0, Name: "", Color: "", Business_Id: 0 } as Category);
+    context.setProductFormState(null);
+  };
+
   const handleSave = async () => {
     if (isSaving) {
+      return;
+    }
+
+    if (!productName.trim()) {
+      setNavigateAfterModal(false);
+      setFeedbackModal({
+        isVisible: true,
+        title: "Falta información obligatoria",
+        message: "El nombre del producto es obligatorio.",
+        error: "",
+        isSuccess: false,
+      });
       return;
     }
 
@@ -277,7 +322,19 @@ export const EditProduct: React.FC = () => {
         Volume: unitType !== "Unidad",
       };
 
-      await updateProduct(product, context.user.Token); // This line is missing in the original code
+      const updateResult = await updateProduct(product, context.user.Token);
+
+      if (!updateResult.success) {
+        setNavigateAfterModal(false);
+        setFeedbackModal({
+          isVisible: true,
+          title: "No se pudo actualizar el producto",
+          message: updateResult.message,
+          error: updateResult.error || "",
+          isSuccess: false,
+        });
+        return;
+      }
 
       if (product.Id && context.user?.Token) {
         try {
@@ -318,15 +375,17 @@ export const EditProduct: React.FC = () => {
       }
 
       context.setStockFlag(!context.stockFlag); // This line is missing in the original code
-      context.setCategorySelected({ Id: 0, Name: "", Color: "", Business_Id: 0 } as Category); // This line is missing in the original code
-      context.setProductFormState(null);
-      setMainImage(null);
-      setGalleryImages([]);
-      setVariantDrafts([]);
-      setOriginalVariants([]);
-      formLoadedRef.current = false;
+      resetFormState();
       context.setShowNavBarBottom(true); // This line is missing in the original code
-      navigate("/main-products/items");
+
+      setNavigateAfterModal(true);
+      setFeedbackModal({
+        isVisible: true,
+        title: "Producto actualizado",
+        message: updateResult.message,
+        error: "",
+        isSuccess: true,
+      });
     } catch (error) {
       console.error("Error saving product:", error);
     } finally {
@@ -336,15 +395,30 @@ export const EditProduct: React.FC = () => {
   };
 
   const handleDelete = () => {
-    deleteProduct(parseInt(productId!), context.user.Token).then(() => {
+    deleteProduct(parseInt(productId!), context.user.Token).then((result) => {
+      if (!result.success) {
+        setNavigateAfterModal(false);
+        setFeedbackModal({
+          isVisible: true,
+          title: "No se pudo eliminar el producto",
+          message: result.message,
+          error: result.error || "",
+          isSuccess: false,
+        });
+        return;
+      }
+
       context.setStockFlag(!context.stockFlag);
-      context.setProductFormState(null);
-      setMainImage(null);
-      setGalleryImages([]);
-      setVariantDrafts([]);
-      setOriginalVariants([]);
-      formLoadedRef.current = false;
-      navigate(-1);
+      resetFormState();
+
+      setNavigateAfterModal(true);
+      setFeedbackModal({
+        isVisible: true,
+        title: "Producto eliminado",
+        message: result.message,
+        error: "",
+        isSuccess: true,
+      });
     });
   };
 
@@ -356,7 +430,28 @@ export const EditProduct: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col bg-gray-100 container-add-product">
+    <div className="flex flex-col bg-gray-100 text-gray-800 container-add-product">
+      <OperationResultModal
+        isVisible={feedbackModal.isVisible}
+        title={feedbackModal.title}
+        message={feedbackModal.message}
+        error={feedbackModal.error}
+        isSuccess={feedbackModal.isSuccess}
+        onClose={() => {
+          setFeedbackModal({
+            isVisible: false,
+            title: "",
+            message: "",
+            error: "",
+            isSuccess: false,
+          });
+
+          if (navigateAfterModal) {
+            setNavigateAfterModal(false);
+            navigate("/main-products/items");
+          }
+        }}
+      />
       {/* Header */}
       <header
         className="flex items-center px-4 py-3 text-white "
@@ -364,12 +459,7 @@ export const EditProduct: React.FC = () => {
       >
         <button
           onClick={() => {
-            context.setProductFormState(null);
-            formLoadedRef.current = false;
-            setMainImage(null);
-            setGalleryImages([]);
-            setVariantDrafts([]);
-            setOriginalVariants([]);
+            resetFormState();
             navigate(-1);
             context.setShowNavBarBottom(true);
           }}

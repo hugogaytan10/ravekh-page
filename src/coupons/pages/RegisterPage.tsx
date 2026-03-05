@@ -67,7 +67,7 @@ const RegisterPage: React.FC = () => {
     try {
       const registerResponse = await registerCupones({
         Role: "CLIENTE",
-        Business_Id: 1,
+
         Name: normalizedName,
         Email: normalizedEmail,
         Password: normalizedPassword,
@@ -79,7 +79,6 @@ const RegisterPage: React.FC = () => {
         persistCuponesAuthSession({
           Role: "CLIENTE",
           Id: registerUserId,
-          Business_Id: 1,
           Name: normalizedName,
         });
 
