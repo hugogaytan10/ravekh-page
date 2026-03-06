@@ -6,11 +6,32 @@ import { CartPos } from '../../Model/CarPos';
 import { getVariantsByProductId } from '../../Products/Petitions';
 import { VariantModalState, VariantOption } from '../variantTypes';
 
-const buildVariantOptions = (variants: Variant[]): VariantOption[] =>
-  variants.map((variant, index) => ({
+const BASE_VARIANT_INTERNAL_ID = 0;
+
+const buildVariantOptions = (product: Item, variants: Variant[]): VariantOption[] => {
+  const baseOption: VariantOption = {
+    __internalId: BASE_VARIANT_INTERNAL_ID,
+    Id: BASE_VARIANT_INTERNAL_ID,
+    Product_Id: product.Id,
+    Description: 'Producto base',
+    Barcode: product.Barcode ?? null,
+    Color: product.Color ?? null,
+    Price: product.Price ?? null,
+    PromotionPrice: product.PromotionPrice ?? null,
+    CostPerItem: product.CostPerItem ?? null,
+    Stock: product.Stock ?? null,
+    ExpDate: product.ExpDate ?? null,
+    MinStock: product.MinStock ?? null,
+    OptStock: product.OptStock ?? null,
+  };
+
+  const variantOptions = variants.map((variant, index) => ({
     ...variant,
     __internalId: variant.Id ?? -(index + 1),
   }));
+
+  return [baseOption, ...variantOptions];
+};
 
 type UseVariantSelectionOptions = {
   onProductTap?: (product: Item) => void;
@@ -72,7 +93,7 @@ export const useVariantSelection = ({
           ...prevCart,
           {
             Id: product.Id,
-            Name: variant?.Description
+            Name: variant?.Description && variant.Id !== BASE_VARIANT_INTERNAL_ID
               ? `${product.Name} - ${variant.Description}`
               : product.Name,
             Price: resolvedPrice,
@@ -108,7 +129,7 @@ export const useVariantSelection = ({
         : [];
 
       if (inlineVariants.length > 0) {
-        setVariantOptions(buildVariantOptions(inlineVariants));
+        setVariantOptions(buildVariantOptions(product, inlineVariants));
         setCurrentProduct(product);
         setSelectedVariantIds(new Set());
         setSelectedVariantQuantities(new Map());
@@ -128,7 +149,7 @@ export const useVariantSelection = ({
           context.user.Token,
         );
         if (Array.isArray(fetchedVariants) && fetchedVariants.length > 0) {
-          setVariantOptions(buildVariantOptions(fetchedVariants));
+          setVariantOptions(buildVariantOptions(product, fetchedVariants));
           setCurrentProduct(product);
           setSelectedVariantIds(new Set());
           setSelectedVariantQuantities(new Map());
@@ -188,20 +209,32 @@ export const useVariantSelection = ({
     if (!currentProduct) {
       return;
     }
-    const selectedVariants = variantOptions.filter(variant =>
+
+    const selectedOptions = variantOptions.filter(variant =>
       selectedVariantIds.has(variant.__internalId),
     );
-    if (selectedVariants.length === 0) {
+
+    if (selectedOptions.length === 0) {
       return;
     }
 
-    selectedVariants.forEach(variant =>
+    selectedOptions.forEach(option => {
+      if (option.__internalId === BASE_VARIANT_INTERNAL_ID) {
+        addItemToCart(
+          currentProduct,
+          undefined,
+          selectedVariantQuantities.get(option.__internalId),
+        );
+        return;
+      }
+
       addItemToCart(
         currentProduct,
-        variant,
-        selectedVariantQuantities.get(variant.__internalId),
-      ),
-    );
+        option,
+        selectedVariantQuantities.get(option.__internalId),
+      );
+    });
+
     closeModal();
   }, [
     addItemToCart,

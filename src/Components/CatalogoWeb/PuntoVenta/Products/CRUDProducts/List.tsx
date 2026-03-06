@@ -41,6 +41,7 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
   const [importErrors, setImportErrors] = useState<string[]>([]);
+  const [imageErrorsByProduct, setImageErrorsByProduct] = useState<Record<string, boolean>>({});
   const context = useContext(AppContext);
   const navigation = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -422,6 +423,9 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
 
   const renderItem = (item: Product) => {
     const isHelper = context.user?.Role === "AYUDANTE";
+    const itemKey = `${item.Id ?? item.Name}`;
+    const hasImage = Boolean(item.Image || item.Images?.[0]);
+    const hasImageError = imageErrorsByProduct[itemKey];
 
     return (
       <button
@@ -434,11 +438,17 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
         }}
         disabled={isHelper}
       >
-        {(item.Image || item.Images?.[0]) ? (
+        {hasImage && !hasImageError ? (
           <img
             src={item.Image || item.Images?.[0] || ""}
             alt={item.Name}
             className="w-24 h-full object-cover rounded mr-4"
+            onError={() =>
+              setImageErrorsByProduct((prev) => ({
+                ...prev,
+                [itemKey]: true,
+              }))
+            }
           />
         ) : (
           <div

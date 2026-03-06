@@ -1,5 +1,4 @@
-import React, { useContext, useRef } from 'react';
-import { AppContext } from '../../../Context/AppContext';
+import React, { useRef, useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Item } from '../../Model/Item';
 
@@ -22,6 +21,11 @@ const Card: React.FC<CardProps> = ({ Name, Image, Price, Id, Barcode, Color, For
   const navigate = useNavigate();
 
   const showName = Name.length > 12 ? `${Name.substring(0, 12)}...` : Name;
+  const [hasImageError, setHasImageError] = useState(false);
+
+  useEffect(() => {
+    setHasImageError(false);
+  }, [Image]);
 
   const AddItemToCart = () => {
     const product = { Id, Name, Image, Price, Barcode };
@@ -36,11 +40,17 @@ const Card: React.FC<CardProps> = ({ Name, Image, Price, Id, Barcode, Color, For
       className="relative bg-white rounded-lg shadow-md w-1/4 h-40 mb-4 flex flex-col items-center"
       onClick={AddItemToCart}
     >
-      {Image ? (
-        <img src={Image} alt={Name} className="w-full h-full object-cover rounded-t-lg" />
+      {Image && !hasImageError ? (
+        <img
+          src={Image}
+          alt={Name}
+          className="w-full h-full object-cover rounded-t-lg"
+          onError={() => setHasImageError(true)}
+        />
       ) : (
         <div
-          className={`w-full h-full flex flex-col items-center justify-center rounded-t-lg bg-[${Color || '#ccc'}]`}
+          className="w-full h-full flex flex-col items-center justify-center rounded-t-lg"
+          style={{ backgroundColor: Color || "#ccc" }}
         >
           <span className="text-white text-center text-sm font-semibold">{showName}</span>
           {Price > 0 && <span className="text-white mt-1 text-xs">${Price}</span>}

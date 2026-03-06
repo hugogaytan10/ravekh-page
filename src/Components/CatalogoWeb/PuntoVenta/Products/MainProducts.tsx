@@ -34,7 +34,7 @@ export const MainProducts: React.FC = () => {
   }, [location.pathname, context]);
 
   return (
-    <div className="flex flex-col min-h-screen bg-gray-100">
+    <div className="flex flex-col min-h-screen bg-gray-100 text-gray-800 main-products-shell">
       {/* Header */}
       <header
         className="py-2 text-white flex items-center justify-center z-100"

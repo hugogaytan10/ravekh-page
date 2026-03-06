@@ -514,10 +514,10 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   useEffect(() => {
     (async () => {
       try {
-        if (idBusiness === "26") {
+        /*if (idBusiness === "26") {
           window.location.href = "https://mrcongelados.com/";
           return;
-        }
+        }*/
 
         if (idBusiness == "92") {
           setNotPay(true);

@@ -214,3 +214,43 @@
     }
    
 }
+
+
+@media (prefers-color-scheme: dark) {
+  .container {
+    background-color: #ffffff;
+    box-shadow: 0 14px 28px rgba(0,0,0,0.25), 0 10px 10px rgba(0,0,0,0.22);
+  }
+
+  .form-login {
+    background-color: #ffffff;
+    color: #111827;
+  }
+
+  .form-login h1,
+  .form-login span,
+  .form-login a {
+    color: #111827;
+  }
+
+  .input-login {
+    background-color: #ffffff;
+    color: #111827;
+    border: 1px solid #d1d5db;
+  }
+
+  .input-login::placeholder {
+    color: #6b7280;
+  }
+
+  .input-login:focus {
+    outline: none;
+    border-color: #8b5cf6;
+    box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.25);
+  }
+
+  .btn-crear-cuenta {
+    color: #111827;
+    border-color: #9ca3af;
+  }
+}
