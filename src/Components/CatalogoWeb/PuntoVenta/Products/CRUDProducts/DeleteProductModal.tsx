@@ -1,5 +1,5 @@
 import React from "react";
-import { Trash } from "../../../../../assets/POS/trash";
+import { Trash } from "../../../../../assets/POS/Trash";
 
 interface DeleteProductModalProps {
   isVisible: boolean; // Prop para mostrar u ocultar el modal

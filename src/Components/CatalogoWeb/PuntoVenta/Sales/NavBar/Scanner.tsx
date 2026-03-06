@@ -2,7 +2,7 @@ import React, { useEffect, useState, useContext } from "react";
 import { AppContext } from "../../../Context/AppContext";
 import { Item } from "../../Model/Item";
 import { Settings } from "../../../../../assets/POS/Settings";
-import { Trash } from "../../../../../assets/POS/trash";
+import { Trash } from "../../../../../assets/POS/Trash";
 import { CartPos } from "../../Model/CarPos";
 import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
 import { getProductsByBusiness } from "../../../Petitions";

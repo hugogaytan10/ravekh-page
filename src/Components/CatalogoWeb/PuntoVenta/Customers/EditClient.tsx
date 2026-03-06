@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppContext } from "../../Context/AppContext";
 import { updateCustomer, getCustomerById, deleteCustomer } from "./Petitions";
-import { Trash } from "../../../../assets/POS/trash";
+import { Trash } from "../../../../assets/POS/Trash";
 import { ChevronBack } from "../../../../assets/POS/ChevronBack";
 
 export const EditClient = () => {

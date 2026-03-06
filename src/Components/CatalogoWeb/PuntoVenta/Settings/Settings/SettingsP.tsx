@@ -10,7 +10,7 @@ import Stongs from "../../../../../assets/POS/Stongs";
 import Store from "../../../../../assets/POS/Store";
 import Ticket from "../../../../../assets/POS/Ticket";
 import { ChevronGo } from "../../../../../assets/POS/ChevronGo";
-import { Trash } from "../../../../../assets/POS/trash";
+import { Trash } from "../../../../../assets/POS/Trash";
 import { ThemeLight } from "../../Theme/Theme";
 import { MoreIcon } from "../../../../../assets/POS/MoreIcon";
 import People from "../../../../../assets/POS/People";

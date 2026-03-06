@@ -6,7 +6,7 @@ import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
 import { ThemeLight } from "../../Theme/Theme";
 import { deleteCategory, updateCategory } from "../../Sales/Petitions";
 import { Category } from "../../Model/Category";
-import { Trash } from "../../../../../assets/POS/trash";
+import { Trash } from "../../../../../assets/POS/Trash";
 import { DeleteCategoryModal } from "./DeleteCategoryModal";
 
 export const EditCategory: React.FC = () => {
