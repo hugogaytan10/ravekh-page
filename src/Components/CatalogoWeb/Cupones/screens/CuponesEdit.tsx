@@ -9,7 +9,7 @@ import { Coupon } from "../types";
 import { deleteCoupon, getCouponById, updateCoupon } from "../Petitions";
 import { hasCuponesSession } from "../../../../coupons/services/session";
 import { formatDateTime, getCouponId, mergeDateAndTime, parseValidDate, toDatetimeLocalValue } from "../shared/couponsUtils";
-import {Trash} from "../../../../assets/POS/trash";
+import {Trash} from "../../../../assets/POS/Trash";
 
 const fromBackendDate = (value?: string): string => {
   const parsed = parseValidDate(value);
