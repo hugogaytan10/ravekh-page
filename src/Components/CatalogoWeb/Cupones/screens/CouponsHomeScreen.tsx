@@ -83,16 +83,6 @@ export const CouponsHomeScreen: React.FC = () => {
             />
           </div>
         </section>
-
-        <section>
-          <h3 className="text-[15px] font-semibold text-[#565656] mb-3">Escanear cupones</h3>
-          <CardAction
-            title="Escanear cupón"
-            subtitle="Escanea para validar"
-            icon={<ScannerIcon stroke={accentColor} />}
-            onClick={() => navigate("escanear", { state: { hideMainCouponsTabs: true } })}
-          />
-        </section>
       </div>
     </div>
   );

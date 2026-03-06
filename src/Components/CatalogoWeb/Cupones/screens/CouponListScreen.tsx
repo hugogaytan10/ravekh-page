@@ -9,7 +9,7 @@ import { URL } from "../../Const/Const";
 import { getCouponId, parseValidDate } from "../shared/couponsUtils";
 import { getCouponsByBusiness } from "../Petitions";
 import { Coupon } from "../types";
-import { CouponIcon } from "../icons/CouponIcon";
+import { CouponIcon } from "../../../../assets/Cupones/icons/CouponIcon";
 
 export const CouponListScreen: React.FC = () => {
   const navigate = useNavigate();
