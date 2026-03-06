@@ -90,18 +90,6 @@ export const VisitsHomeScreen: React.FC = () => {
             icon={<GridIcon stroke="#565656" />}
             onClick={() => navigate("qr-dinamico")}
           />
-          <ActionRow
-            title="Modo offline"
-            subtitle="Crear QR y tenlos listos offline"
-            icon={<OfflineIcon />}
-            onClick={() => navigate("generar/offline")}
-          />
-          <ActionRow
-            title="QRs offline activos"
-            subtitle="Consulta e imprime los QRs disponibles"
-            icon={<OfflineIcon />}
-            onClick={() => navigate("qrs-activos/offline")}
-          />
         </section>
       </div>
     </div>
