@@ -16,7 +16,7 @@ import { ChevronBack } from "../../../../../assets/POS/ChevronBack";
 import { ChevronGo } from "../../../../../assets/POS/ChevronGo";
 import ImageIcon from "../../../../../assets/POS/ImageIcon";
 import { InputBasic } from "../../Utilities/InputBasic";
-import { Trash } from "../../../../../assets/POS/Trash";
+import { Trash } from "../../../../../assets/POS/trash";
 import { ThemeLight } from "../../Theme/Theme";
 import { DeleteProductModal } from "./DeleteProductModal";
 import { Category } from "../../Model/Category";

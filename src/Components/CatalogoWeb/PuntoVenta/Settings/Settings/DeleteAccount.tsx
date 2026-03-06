@@ -1,5 +1,5 @@
 import React, { useContext, useState } from "react";
-import { Trash } from "../../../../../assets/POS/Trash";
+import { Trash } from "../../../../../assets/POS/trash";
 import Check from "../../../../../assets/POS/Check";
 import { ThemeLight } from "../../Theme/Theme";
 import { Header } from "../../Utilities/Header";

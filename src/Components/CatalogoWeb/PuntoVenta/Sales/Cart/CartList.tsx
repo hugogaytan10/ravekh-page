@@ -1,7 +1,7 @@
 import React, { useCallback, useContext, useEffect, useState } from 'react';
 import { getTaxes } from '../Petitions';
 import { Tax } from '../../Model/Tax';
-import {Trash} from '../../../../../assets/POS/Trash';
+import {Trash} from '../../../../../assets/POS/trash';
 import './CartList.css'; // Archivo CSS para estilos
 import { AppContext } from '../../../Context/AppContext';
 import { CartPos } from '../../Model/CarPos';

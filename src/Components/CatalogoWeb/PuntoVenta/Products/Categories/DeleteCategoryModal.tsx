@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Trash } from "../../../../../assets/POS/Trash";
+import { Trash } from "../../../../../assets/POS/trash";
 
 interface DeleteCategoryModalProps {
   isVisible: boolean;
