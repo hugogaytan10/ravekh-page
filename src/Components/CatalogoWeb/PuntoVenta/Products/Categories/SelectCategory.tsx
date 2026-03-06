@@ -65,7 +65,7 @@ export const SelectCategory: React.FC = () => {
 
         {/* Crear Nueva Categoría */}
         <button
-          onClick={() => navigate("/add-category-product")}
+          onClick={() => navigate("/add-category-sales")}
           className="flex items-center justify-start space-x-3 p-4 bg-gray-100 rounded"
         >
           <PlusIcon width={20} height={20} color={context.store.Color} />
