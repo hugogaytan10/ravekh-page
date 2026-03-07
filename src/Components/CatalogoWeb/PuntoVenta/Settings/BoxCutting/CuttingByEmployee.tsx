@@ -50,7 +50,7 @@ export const CuttingByEmployee: React.FC = () => {
         style={{ backgroundColor: context.store.Color || "#3B82F6" }}
       >
         <button onClick={() => navigate(-1)}>
-          <ChevronBack  />
+          <ChevronBack />
         </button>
         <h1 className="text-lg font-semibold">
           Historial de Cortes
@@ -58,7 +58,7 @@ export const CuttingByEmployee: React.FC = () => {
       </header>
 
       <div className="flex flex-col p-4">
-        {cuts.length > 0 ? (
+        {cuts && cuts.length > 0 ? (
           <ul className="space-y-4">
             {cuts.map((cut) => (
               <li
