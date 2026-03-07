@@ -38,9 +38,32 @@ export const getProductsByBusiness = async (idBusiness: string) => {
     }
 }
 
+const getProductStoreVisitTracker = () => {
+    if (typeof window === 'undefined') {
+        return new Set<string>();
+    }
+
+    const trackerKey = '__ravekhProductStoreVisitByBusiness__';
+    const tracker = (window as unknown as { [key: string]: Set<string> })[trackerKey];
+
+    if (tracker) {
+        return tracker;
+    }
+
+    (window as unknown as { [key: string]: Set<string> })[trackerKey] = new Set<string>();
+    return (window as unknown as { [key: string]: Set<string> })[trackerKey];
+};
+
 export const getProductsByBusinessWithStock = async (idBusiness: string, limit: string, page: number) => {
     try {
-        const response = await fetch(`${URL}products/showstore/stockgtzero/${idBusiness}/1?page=${page}`, {
+        const businessKey = String(idBusiness).trim();
+        const productStoreVisitByBusiness = getProductStoreVisitTracker();
+
+        // Backend actualmente fuerza visit >= 1 con Math.max, por eso usamos 2 para llamadas subsecuentes.
+        const visit = productStoreVisitByBusiness.has(businessKey) ? 2 : 1;
+        productStoreVisitByBusiness.add(businessKey);
+
+        const response = await fetch(`${URL}products/showstore/stockgtzero/${idBusiness}/1?page=${page}&visit=${visit}`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
