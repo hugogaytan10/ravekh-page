@@ -36,7 +36,7 @@ export const AddClient = () => {
     setIsSaving(false);
 
     if (ok) {
-      navigate(-1);
+      navigate("/clients");
     }
   };
 
@@ -46,7 +46,7 @@ export const AddClient = () => {
         className="flex items-center justify-between p-4"
         style={{ backgroundColor: store?.Color || "#3B82F6" }}
       >
-        <button onClick={() => navigate(-1)} className="text-white">
+        <button onClick={() => navigate("/clients")} className="text-white">
           <ChevronBack />
         </button>
         <h1 className="text-xl font-bold text-white">Agregar Cliente</h1>
