@@ -118,6 +118,7 @@ import { ClientSelect } from "../CatalogoWeb/PuntoVenta/Customers/ClientSelect";
 import { Client } from "../CatalogoWeb/PuntoVenta/Customers/Client";
 import { OrdersByCustomer } from "../CatalogoWeb/PuntoVenta/Customers/OrdersByCustomer";
 import { EditClient } from "../CatalogoWeb/PuntoVenta/Customers/EditClient";
+import { AddClient } from "../CatalogoWeb/PuntoVenta/Customers/AddClient";
 
 // Importaciones para el punto de venta - Employees
 import { Employees } from "../CatalogoWeb/PuntoVenta/Employees/Employees";
@@ -998,6 +999,8 @@ export const Rutas = () => {
           <Route path="/clients" element={<Client />} />
           <Route path="/orders-by-customer/:customerId/:period" element={<OrdersByCustomer />} />
           <Route path="/edit-customer/:id" element={<EditClient />} />
+          <Route path="/add-client" element={<AddClient />} />
+          <Route path="/add-client-sales" element={<AddClient />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/edit-employee/:id" element={<EditEmployee />} />
           <Route path="/new-employee" element={<NewEmployee />} />
