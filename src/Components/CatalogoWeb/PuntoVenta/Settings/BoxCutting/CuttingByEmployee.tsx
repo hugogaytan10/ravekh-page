@@ -23,7 +23,7 @@ export const CuttingByEmployee: React.FC = () => {
     });
 
     getCutsByEmployee(context.user.Token, employeeId).then((data) => {
-      setCuts(data);
+      setCuts(Array.isArray(data) ? data : []);
     });
   }, [employeeId, context.user.Token]);
 
@@ -36,11 +36,11 @@ export const CuttingByEmployee: React.FC = () => {
       Date: new Date(),
     };
 
-    setCuts((prev) => [...prev, newCut]);
+    setCuts((prev) => [...(Array.isArray(prev) ? prev : []), newCut]);
     insertCut(context.user.Token, newCut);
     setShowModal(false);
     setAmountInCash(0);
-    navigate(-1);
+    navigate("/box-cutting");
   };
 
   return (
@@ -49,8 +49,8 @@ export const CuttingByEmployee: React.FC = () => {
         className="flex items-center gap-4 p-4 text-white"
         style={{ backgroundColor: context.store.Color || "#3B82F6" }}
       >
-        <button onClick={() => navigate(-1)}>
-          <ChevronBack />
+        <button onClick={() => navigate("/box-cutting")}>
+          <ChevronBack  />
         </button>
         <h1 className="text-lg font-semibold">
           Historial de Cortes
