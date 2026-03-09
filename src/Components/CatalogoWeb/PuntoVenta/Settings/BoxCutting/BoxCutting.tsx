@@ -40,7 +40,7 @@ export const BoxCutting: React.FC = () => {
         <button
           onClick={() => {
             context.setShowNavBarBottom(true);
-            navigate(-1)}}
+            navigate("/more")}}
           className="p-2 bg-transparent rounded-full hover:bg-blue-100"
         >
           {/* Reemplazar con el componente SVG ChevronBack */}

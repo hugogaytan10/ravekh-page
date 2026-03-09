@@ -33,7 +33,7 @@ export const UpdateStoreInfo: React.FC = () => {
       updatedStore
     );
 
-    navigate(-1); // Volver a la pantalla anterior
+    navigate("/main-store-online"); // Volver a la pantalla anterior
   };
 
   return (
@@ -44,7 +44,7 @@ export const UpdateStoreInfo: React.FC = () => {
         style={{ backgroundColor: context.store.Color || "#3B82F6" }}
       >
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/main-store-online")}
           className="p-2 rounded-full text-black"
         >
           <ChevronBack />

@@ -40,7 +40,7 @@ export const EditCategory: React.FC = () => {
         context.user.Token
     );
     context.setStockFlag(!context.stockFlag);
-    navigate(-1); // Regresa a la página anterior
+    navigate("/main-products/items"); // Regresa a la página anterior
   };
 
   const handleDeleteCategory = async () => {
@@ -53,7 +53,7 @@ export const EditCategory: React.FC = () => {
     setIsDeleting(false);
     if (success) {
       context.setStockFlag(!context.stockFlag);
-      navigate(-1);
+      navigate("/main-products/items");
     }
   };
 
@@ -68,7 +68,7 @@ export const EditCategory: React.FC = () => {
       >
         <button
           onClick={() => {
-            navigate(-1);
+            navigate("/main-products/items");
             context.setShowNavBarBottom(false);
           }}
           className="mr-auto"

@@ -51,7 +51,7 @@ export const EditClient = () => {
       Sex: sex || "M",
       CanPayLater: permitirPagarDespues,
     };
-    updateCustomer(updatedCustomer, user?.Token).then(() => navigate(-1));
+    updateCustomer(updatedCustomer, user?.Token).then(() => navigate("/clients"));
   };
 
   const handleDelete = () => {
@@ -67,7 +67,7 @@ export const EditClient = () => {
         className="flex items-center justify-between p-4"
         style={{ backgroundColor: store?.Color || "#3B82F6" }}
       >
-        <button onClick={() => navigate(-1)} className="text-white">
+        <button onClick={() => navigate("/clients")} className="text-white">
           <ChevronBack />
         </button>
         <h1 className="text-xl font-bold text-white">Editar Cliente</h1>

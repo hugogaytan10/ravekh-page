@@ -38,7 +38,7 @@ export const QuantityNextSell: React.FC = () => {
     setTimeout(() => {
       context.setShowNavBarBottom(true); // Muestra la barra de navegación inferior
       setIsLoading(false); // Finaliza la carga
-      navigate(-1); // Navega hacia atrás
+      navigate("/MainSales"); // Navega hacia atrás
     }, 500);
   };
 
@@ -52,7 +52,7 @@ export const QuantityNextSell: React.FC = () => {
         <button
           onClick={() => {
             context.setShowNavBarBottom(true); // Muestra la barra de navegación inferior
-            navigate(-1);
+            navigate("/MainSales");
           }} // Navega hacia atrás
         >
           <ChevronBack />

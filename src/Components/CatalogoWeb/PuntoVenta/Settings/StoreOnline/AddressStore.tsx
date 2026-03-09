@@ -32,7 +32,7 @@ export const AddressStore: React.FC = () => {
       <div className="flex items-center w-full mb-8">
         <button
           className="mr-4"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/main-store-online")}
           aria-label="Go back"
         >
           <svg

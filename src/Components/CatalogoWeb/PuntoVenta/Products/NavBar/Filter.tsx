@@ -18,7 +18,7 @@ export const Filter: React.FC = () => {
     context.setFilterProduct(filters); // Actualizar filtros en el contexto
     context.setShowNavBarBottom(true); // Mostrar barra de navegación inferior
     context.setStockFlag(!context.stockFlag); // Desencadenar actualización
-    navigate(-1); // Volver a la pantalla anterior
+    navigate("/main-products/items"); // Volver a la pantalla anterior
   };
 
   // Resetear filtros
@@ -47,7 +47,7 @@ export const Filter: React.FC = () => {
         <button
           onClick={() => {
             context.setShowNavBarBottom(true);
-            navigate(-1);
+            navigate("/main-products/items");
           }}
           className="rotate-45"
         >

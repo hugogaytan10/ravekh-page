@@ -61,7 +61,7 @@ export const PaymentTypeScreen: React.FC = () => {
       <div className="payment-type-screen-header" style={{ backgroundColor: context.store.Color }}>
         <button
           className="payment-type-screen-back-button"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/MainCart")}
         >
           <ChevronBack />
           <span className="payment-type-screen-header-title">Carrito</span>

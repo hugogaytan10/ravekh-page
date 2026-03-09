@@ -50,7 +50,7 @@ export const SelectCategory: React.FC = () => {
         }}
       >
         <button
-          onClick={() => {navigate(-1); context.setShowNavBarBottom(true);} }
+          onClick={() => {navigate("/main-products/items"); context.setShowNavBarBottom(true);} }
           className="mr-2 text-white text-lg flex items-center"
         >
           <ChevronBack />

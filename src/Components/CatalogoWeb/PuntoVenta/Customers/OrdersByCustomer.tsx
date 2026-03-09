@@ -106,7 +106,7 @@ export const OrdersByCustomer: React.FC = () => {
         style={{ backgroundColor: context.store?.Color || "#3B82F6" }}
       >
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/clients")}
           className="p-2 rounded-full hover:bg-blue-700"
         >
           <ChevronBack />

@@ -460,7 +460,7 @@ export const EditProduct: React.FC = () => {
         <button
           onClick={() => {
             resetFormState();
-            navigate(-1);
+            navigate("/main-products/items");
             context.setShowNavBarBottom(true);
           }}
           className="mr-auto"
