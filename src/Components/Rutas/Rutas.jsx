@@ -38,6 +38,7 @@ import { VisitRedeemPage } from "../../coupons/pages/VisitRedeemPage";
 import { CouponQrPage } from "../../coupons/pages/CouponQrPage";
 import { CouponCongratsPage } from "../../coupons/pages/CouponCongratsPage";
 import { CouponClaimPage } from "../../coupons/pages/CouponClaimPage";
+import { CouponsPage } from "../../coupons/pages/CouponsPage";
 
 // Importaciones para el punto de venta - Login
 import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
@@ -911,6 +912,7 @@ export const Rutas = () => {
           <Route path="/visit/redeem" element={<VisitRedeemPage />} />
           <Route path="/cupones/cambio-nombre" element={<ChangeName />} />
           <Route path="/cupones/qr" element={<CouponQrPage />} />
+          <Route path="/cupones/cupones" element={<CouponsPage />} />
           <Route path="/cupones/:couponId" element={<CouponClaimPage />} />
           <Route path="/cupones/nuevo" element={<CouponCongratsPage />} />
           <Route path="/blog" element={<BlogMain />} />
