@@ -16,6 +16,7 @@ export const MainCoupons: React.FC = () => {
   const hideMainCouponsTabs =
     (location.state as { hideMainCouponsTabs?: boolean } | null)?.hideMainCouponsTabs === true;
   const hiddenTabsRoutes = [
+    "/cuponespv/cupones/lista",
     "/cuponespv/visitas/qr-dinamico",
     "/cuponespv/visitas/generar/",
     "/cuponespv/visitas/qrs-activos/online",
