@@ -10,7 +10,20 @@ export const Filter: React.FC = () => {
 
   // Alternar estado del filtro
   const toggleSwitch = (filterName: string) => {
-    setFilters((prev) => ({ ...prev, [filterName]: !prev[filterName] }));
+    setFilters((prev) => {
+      const nextValue = !prev[filterName as keyof typeof prev];
+
+      // En ordenar, solo debe quedar una opción activa a la vez
+      if (filterName === "orderAsc") {
+        return { ...prev, orderAsc: nextValue, orderDesc: false };
+      }
+
+      if (filterName === "orderDesc") {
+        return { ...prev, orderDesc: nextValue, orderAsc: false };
+      }
+
+      return { ...prev, [filterName]: nextValue };
+    });
   };
 
   // Aplicar filtros y actualizar el estado global
@@ -38,7 +51,7 @@ export const Filter: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col bg-gray-100 min-h-screen">
+    <div className="flex flex-col bg-white text-gray-900 min-h-screen">
       {/* Header */}
       <header
         className="h-16 flex items-center justify-between px-4 bg-blue-600 text-white"
@@ -60,8 +73,8 @@ export const Filter: React.FC = () => {
       </header>
 
       {/* Filtros de Stock */}
-      <section className="bg-white p-4 rounded-md mt-4 mx-4 shadow-sm">
-        <h2 className="text-lg font-semibold mb-4">Stock</h2>
+      <section className="bg-white p-4 rounded-md mt-4 mx-4 shadow-sm border border-gray-200">
+        <h2 className="text-lg font-semibold mb-4 text-gray-900">Stock</h2>
         <div className="space-y-4">
           {[
             { label: "No maneja stock", filter: "NoMaganeStock" },
@@ -70,7 +83,7 @@ export const Filter: React.FC = () => {
             { label: "Expirado", filter: "ExpDate" },
           ].map(({ label, filter }) => (
             <div key={filter} className="flex items-center justify-between">
-              <span className="text-gray-700">{label}</span>
+              <span className="text-gray-800">{label}</span>
               <input
                 type="checkbox"
                 checked={filters[filter]}
@@ -83,15 +96,15 @@ export const Filter: React.FC = () => {
       </section>
 
       {/* Filtros de Orden */}
-      <section className="bg-white p-4 rounded-md mt-4 mx-4 shadow-sm">
-        <h2 className="text-lg font-semibold mb-4">Ordenar por</h2>
+      <section className="bg-white p-4 rounded-md mt-4 mx-4 shadow-sm border border-gray-200">
+        <h2 className="text-lg font-semibold mb-4 text-gray-900">Ordenar por</h2>
         <div className="space-y-4">
           {[
             { label: "Ascendente (A-Z)", filter: "orderAsc" },
             { label: "Descendente (Z-A)", filter: "orderDesc" },
           ].map(({ label, filter }) => (
             <div key={filter} className="flex items-center justify-between">
-              <span className="text-gray-700">{label}</span>
+              <span className="text-gray-800">{label}</span>
               <input
                 type="checkbox"
                 checked={filters[filter]}
@@ -104,7 +117,7 @@ export const Filter: React.FC = () => {
       </section>
 
       {/* Footer */}
-      <footer className="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-md">
+      <footer className="fixed bottom-0 left-0 right-0 bg-white p-4 shadow-md border-t border-gray-200">
         <button
           onClick={applyFilters}
           className="w-full bg-blue-600 text-white py-3 rounded-md text-lg font-medium"
