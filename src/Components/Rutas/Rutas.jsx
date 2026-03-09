@@ -143,6 +143,7 @@ import { MainCategoria } from "../CatalogoWeb/Categoria";
 import { CatalogSearchInput } from "../CatalogoWeb/CatalogSearchInput";
 import { CatalogSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/CatalogSettings";
 import { EditEmployee } from "../CatalogoWeb/PuntoVenta/Employees/EditEmployee";
+import { loginToServer } from "../CatalogoWeb/PuntoVenta/Login/Peticiones";
 //importaciones para cupones
 
 import { MainCoupons, VisitsNavigator, CouponsNavigator } from "../CatalogoWeb/Cupones";
@@ -177,6 +178,7 @@ export const Rutas = () => {
   const [color, setcolor] = useState("");
   const [nombre, setnombre] = useState("");
   const [idBusiness, setidbusiness] = useState("")
+  const [isAuthHydrated, setIsAuthHydrated] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isCatalogHeaderCollapsed, setIsCatalogHeaderCollapsed] = useState(false);
   const [filterDraft, setFilterDraft] = useState({
@@ -462,6 +464,41 @@ export const Rutas = () => {
   }, [location.pathname]);
 
   useEffect(() => {
+    const hydrateAuthFromStorage = async () => {
+      if (context.user?.Token) {
+        setIsAuthHydrated(true);
+        return;
+      }
+
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) {
+        setIsAuthHydrated(true);
+        return;
+      }
+
+      try {
+        const { email, password } = JSON.parse(storedUser);
+
+        if (!email) {
+          setIsAuthHydrated(true);
+          return;
+        }
+
+        const data = await loginToServer(email, password);
+        if (!data?.message && data?.Token) {
+          context.setUser(data);
+        }
+      } catch {
+        // no-op: si no se puede hidratar, dejamos que la validación normal redirija
+      } finally {
+        setIsAuthHydrated(true);
+      }
+    };
+
+    hydrateAuthFromStorage();
+  }, [context.user?.Token]);
+
+  useEffect(() => {
     const protectedRoutes = [
       "/mainsales",
       "/maincart",
@@ -567,6 +604,10 @@ export const Rutas = () => {
     const currentPath = location.pathname.toLowerCase().replace(/\/+$/, "");
 
     // Validar rutas dinámicas con parámetros
+    if (!isAuthHydrated) {
+      return;
+    }
+
     if (
       protectedRoutes.some(route =>
         currentPath.startsWith(route.replace(/:\w+/g, ""))
@@ -576,7 +617,7 @@ export const Rutas = () => {
       context.setShowNavBarBottom(false);
       navigate("/");
     }
-  }, [location, navigate, context.cartPos]);
+  }, [location, navigate, context.cartPos, context.user.Token, isAuthHydrated]);
   /*
     useEffect(() => {
       let timeout;

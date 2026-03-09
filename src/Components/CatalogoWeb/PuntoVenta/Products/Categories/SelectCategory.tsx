@@ -21,6 +21,15 @@ export const SelectCategory: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
+
+    if (!context.user?.Business_Id || !context.user?.Token) {
+      setCategories([]);
+      setIsLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
     setIsLoading(true);
     getCategoriesByBusiness(
       context.user.Business_Id.toString(),
@@ -28,7 +37,7 @@ export const SelectCategory: React.FC = () => {
     )
       .then((data) => {
         if (isMounted) {
-          setCategories(data);
+          setCategories(Array.isArray(data) ? data : []);
         }
       })
       .finally(() => {
@@ -39,7 +48,7 @@ export const SelectCategory: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [context.stockFlag, context.user.Business_Id, context.user.Token]);
+  }, [context.stockFlag, context.user?.Business_Id, context.user?.Token]);
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
