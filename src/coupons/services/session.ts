@@ -7,6 +7,7 @@ const USER_ID_KEY = "cupones-user-id";
 const BUSINESS_ID_KEY = "cupones-business-id";
 const TOKEN_KEY = "cupones-token";
 const PENDING_VISIT_TOKEN_KEY = "cupones-pending-visit-token";
+const PENDING_COUPON_CLAIM_KEY = "cupones-pending-coupon-claim";
 
 const setCuponesSession = (isActive: boolean) => {
   if (isActive) {
@@ -82,14 +83,35 @@ const clearPendingVisitRedeemToken = () => {
   localStorage.removeItem(PENDING_VISIT_TOKEN_KEY);
 };
 
+const setPendingCouponClaimId = (couponId?: number) => {
+  if (isValidNumericId(couponId)) {
+    localStorage.setItem(PENDING_COUPON_CLAIM_KEY, String(couponId));
+  } else {
+    localStorage.removeItem(PENDING_COUPON_CLAIM_KEY);
+  }
+};
+
+const getPendingCouponClaimId = () => {
+  const value = localStorage.getItem(PENDING_COUPON_CLAIM_KEY);
+  const parsed = value ? Number(value) : NaN;
+  return isValidNumericId(parsed) ? parsed : null;
+};
+
+const clearPendingCouponClaimId = () => {
+  localStorage.removeItem(PENDING_COUPON_CLAIM_KEY);
+};
+
 export {
   clearPendingVisitRedeemToken,
+  clearPendingCouponClaimId,
   getCuponesBusinessId,
   getCuponesToken,
   getCuponesUserId,
   getCuponesUserName,
+  getPendingCouponClaimId,
   getPendingVisitRedeemToken,
   hasCuponesSession,
+  setPendingCouponClaimId,
   setPendingVisitRedeemToken,
   setCuponesBusinessId,
   setCuponesSession,

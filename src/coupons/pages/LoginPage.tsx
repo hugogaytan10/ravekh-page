@@ -7,7 +7,14 @@ import carterita from "../../assets/Cupones/carterita.png";
 import papitas from "../../assets/Cupones/papitas.png";
 import { AutoImageCarousel } from "../components/AutoImageCarousel";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
-import { getPendingVisitRedeemToken, setCuponesSession, setPendingVisitRedeemToken } from "../services/session";
+import {
+  clearPendingCouponClaimId,
+  getPendingCouponClaimId,
+  getPendingVisitRedeemToken,
+  setCuponesSession,
+  setPendingCouponClaimId,
+  setPendingVisitRedeemToken,
+} from "../services/session";
 import { loginCupones } from "../services/couponsApi";
 import { persistCuponesAuthSession } from "../services/authSession";
 
@@ -19,19 +26,23 @@ const LoginPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const { theme } = useCouponsTheme();
-  const tokenFromQuery = new URLSearchParams(location.search).get("token")?.trim() ?? "";
-  const effectiveToken = tokenFromQuery || getPendingVisitRedeemToken();
 
-  const tokenFromUrl = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return (params.get("token") ?? "").trim();
-  }, [location.search]);
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const tokenFromQuery = queryParams.get("token")?.trim() ?? "";
+  const couponIdFromQuery = Number(queryParams.get("couponId"));
+  const effectiveToken = tokenFromQuery || getPendingVisitRedeemToken();
+  const effectivePendingCouponId =
+    Number.isInteger(couponIdFromQuery) && couponIdFromQuery > 0 ? couponIdFromQuery : getPendingCouponClaimId();
 
   useEffect(() => {
-    if (tokenFromUrl) {
-      setPendingVisitRedeemToken(tokenFromUrl);
+    if (tokenFromQuery) {
+      setPendingVisitRedeemToken(tokenFromQuery);
     }
-  }, [tokenFromUrl]);
+
+    if (Number.isInteger(couponIdFromQuery) && couponIdFromQuery > 0) {
+      setPendingCouponClaimId(couponIdFromQuery);
+    }
+  }, [tokenFromQuery, couponIdFromQuery]);
 
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     event.currentTarget.style.boxShadow = `0 0 0 4px ${theme.accent}40`;
@@ -61,6 +72,12 @@ const LoginPage: React.FC = () => {
 
       if (role === "ADMINISTRADOR") {
         navigate("/cupones/admin");
+        return;
+      }
+
+      if (effectivePendingCouponId) {
+        clearPendingCouponClaimId();
+        navigate(`/cupones/${effectivePendingCouponId}?autoclaim=1`, { replace: true });
         return;
       }
 
@@ -131,11 +148,17 @@ const LoginPage: React.FC = () => {
             type="button"
             className="ml-1 font-bold"
             style={{ color: theme.accent }}
-            onClick={() =>
-              navigate(
-                effectiveToken ? `/cupones/registro?token=${encodeURIComponent(effectiveToken)}` : "/cupones/registro",
-              )
-            }
+            onClick={() => {
+              const params = new URLSearchParams();
+              if (effectiveToken) {
+                params.set("token", effectiveToken);
+              }
+              if (effectivePendingCouponId) {
+                params.set("couponId", String(effectivePendingCouponId));
+              }
+              const suffix = params.toString();
+              navigate(`/cupones/registro${suffix ? `?${suffix}` : ""}`);
+            }}
           >
             puedes crearla
           </button>
@@ -150,7 +173,7 @@ const LoginPage: React.FC = () => {
           }}
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Iniciando sesión..." : "Iniciar sesión"}
+          {isSubmitting ? "Ingresando..." : "Iniciar sesión"}
         </button>
       </div>
 

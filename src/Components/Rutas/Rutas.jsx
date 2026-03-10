@@ -147,6 +147,7 @@ import { EditEmployee } from "../CatalogoWeb/PuntoVenta/Employees/EditEmployee";
 
 import { MainCoupons, VisitsNavigator, CouponsNavigator } from "../CatalogoWeb/Cupones";
 import CuponesEdit from "../CatalogoWeb/Cupones/screens/CuponesEdit";
+import { VisitHistoryPage } from "../../coupons/pages/VisitHistoryPage";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -900,6 +901,7 @@ export const Rutas = () => {
             <Route path="cupones/*" element={<CouponsNavigator />} />
             <Route path="editar/:CouponId" element={<CuponesEdit />} />
           </Route>
+          <Route path="/cupones/visitas" element={<VisitHistoryPage />} />
           <Route path="/cupones/registro" element={<RegisterPage />} />
           <Route path="/cuponespv/editar/:CouponId" element={<CuponesEdit />} />
           <Route path="cupones/editar/:CouponId" element={<CuponesEdit />} />
