@@ -77,6 +77,9 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
   const pendingStripeOrderKey = "pendingStripeOrder";
   const processedStripeSessionKey = "processedStripeSessionId";
   const stripeDebugLogsKey = "stripeDebugLogs";
+  const catalogBusinessId =
+    idBussiness || localStorage.getItem("idBusiness") || localStorage.getItem("cartBusinessId");
+  const catalogHomeRoute = catalogBusinessId ? `/catalogo/${catalogBusinessId}` : "/";
 
   const logStripeDebug = (message: string, data?: unknown) => {
     try {
@@ -148,7 +151,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
       item.PromotionPrice > 0 &&
       item.PromotionPrice < item.Price;
     const unitPrice = hasPromo ? item.PromotionPrice : item.Price;
-    return total + unitPrice  * (item.Quantity || 1);
+    return total + unitPrice * (item.Quantity || 1);
   }, 0);
   const buildAddress = () => {
     if (deliveryMethod !== "domicilio") return "Recoger en tienda";
@@ -163,7 +166,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
 
     return parts.length ? parts.join(", ") : "Entrega a domicilio";
   };
- 
+
   const buildOrderPayload = () => {
     const fullAddress = buildAddress();
     const fallbackBusinessId = idBussiness || localStorage.getItem("idBusiness") || "0";
@@ -186,44 +189,66 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     return { order, orderDetails };
   };
 
+  const money = (value: number) =>
+    new Intl.NumberFormat("es-MX", {
+      style: "currency",
+      currency: "MXN",
+      maximumFractionDigits: 2,
+    }).format(value);
+
+  const clean = (s?: string) => (s ?? "").toString().trim();
+
   const buildWhatsappMessage = () => {
-    const addressText =
-      deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled
-        ? `Dirección: ${buildAddress()}`
-        : "";
+    const lines: string[] = [];
 
-    const contactText = shippingOptions.ContactInformation
-      ? `Nombre: ${nombre}
-      Email: ${email || "No proporcionado"}
-      Teléfono: ${clientPhoneNumber}`
-      : "";
+    lines.push("*Pedido nuevo 🧾*");
+    lines.push("");
 
-    const paymentText = shippingOptions.PaymentMetod
-      ? `Método de pago: ${paymentMethod}`
-      : "";
+    lines.push("*Productos:*");
+    cart.forEach((p, idx) => {
+      const qty = p.Quantity ?? 1;
+      const name = clean(p.Name);
+      const variant = clean(p.VariantDescription);
+      const unit = Number(p.Price) || 0;
+      const subtotal = qty * unit;
 
-    const shippingText = shippingOptions.ShippingMetod
-      ? `Método de entrega: ${
-          deliveryMethod === "domicilio" ? "Entrega a domicilio" : "Recoger en tienda"
+      lines.push(
+        `${idx + 1}) ${name}${variant ? ` (${variant})` : ""} — ${qty} × ${money(unit)} = ${money(subtotal)}`
+      );
+    });
+
+    lines.push("");
+    lines.push(`*Total:* ${money(totalPrecio)}`);
+
+    if (shippingOptions.ShippingMetod) {
+      lines.push(
+        `*Entrega:* ${deliveryMethod === "domicilio" ? "Entrega a domicilio" : "Recoger en tienda"
         }`
-      : "";
+      );
+    }
 
-    const mensaje = `Hola, he hecho un pedido con los siguientes productos:
-        ${cart
-          .map(
-            (producto) =>
-              `${producto.Name}${
-                producto.VariantDescription ? ` (${producto.VariantDescription})` : ""
-              } x ${producto.Quantity || 1} $${(producto.Quantity || 1) * producto.Price}`
-          )
-          .join("\\n")}
-        Total: $${totalPrecio.toFixed(2)}
-        ${shippingText}
-        ${paymentText}
-        ${contactText}
-        ${addressText}`.trim();
+    if (shippingOptions.PaymentMetod) {
+      lines.push(`*Pago:* ${clean(paymentMethod)}`);
+    }
 
-    return mensaje;
+    if (shippingOptions.ContactInformation) {
+      lines.push("");
+      lines.push("*Cliente:*");
+      lines.push(`• Nombre: ${clean(nombre) || "No proporcionado"}`);
+      lines.push(`• Teléfono: ${clean(clientPhoneNumber) || "No proporcionado"}`);
+      lines.push(`• Email: ${clean(email) || "No proporcionado"}`);
+    }
+
+    if (deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled) {
+      const addr = clean(buildAddress());
+      if (addr) {
+        lines.push("");
+        lines.push("*Dirección:*");
+        lines.push(addr);
+      }
+    }
+
+    return lines.join("\n");
   };
 
   const storePendingStripeOrder = () => {
@@ -340,9 +365,9 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
 
       const businessId = idBussiness || localStorage.getItem("idBusiness");
       if (businessId) {
-       window.location.assign(`/catalogo/${businessId}?payment=success`);
+        window.location.assign(`/catalogo/${businessId}?payment=success`);
       } else {
-       window.location.assign("/?payment=success");
+        window.location.assign("/?payment=success");
       }
     } catch (error: any) {
       setStripeError(error?.message || "No se pudo confirmar el pago.");
@@ -615,7 +640,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     const arrowIcon = document.getElementById("backCatalogo");
     arrowIcon?.classList.remove("hidden");
   }, []);
- 
+
   // Función para validar los campos
   const validate = () => {
     const newErrors: {
@@ -707,9 +732,9 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
       window.open(url, "_blank");
       const businessId = idBussiness || localStorage.getItem("idBusiness");
       if (businessId) {
-       //window.location.assign(`/catalogo/${businessId}`);
+        //window.location.assign(`/catalogo/${businessId}`);
       } else {
-       // window.location.assign("/");
+        // window.location.assign("/");
       }
     } else {
       console.log("Formulario inválido, mostrando errores.");
@@ -953,9 +978,8 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
           <meta name="theme-color" content={themeColor} />
         </Helmet>
         <div
-          className={`pt-28 ${isCartView ? "pb-32" : "pb-24"} px-4 ${
-            isCartView ? "max-w-6xl" : "max-w-xl"
-          } mx-auto min-h-screen bg-[var(--bg-primary)]`}
+          className={`pt-28 ${isCartView ? "pb-32" : "pb-24"} px-4 ${isCartView ? "max-w-6xl" : "max-w-xl"
+            } mx-auto min-h-screen bg-[var(--bg-primary)]`}
         >
           {/* Resumen del pedido */}
           <h1 className="text-2xl font-semibold mt-6 mb-6 text-center text-[var(--text-primary)]">
@@ -973,7 +997,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                       producto.PromotionPrice > 0 &&
                       producto.PromotionPrice < producto.Price;
                     const unitPrice = hasPromo ? producto.PromotionPrice : producto.Price;
-                    const totalLine = ((unitPrice ? unitPrice : 1)   * (producto.Quantity || 1)).toFixed(2);
+                    const totalLine = ((unitPrice ? unitPrice : 1) * (producto.Quantity || 1)).toFixed(2);
 
                     return (
                       <div
@@ -1072,7 +1096,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => navigate(-1)}
+                    onClick={() => navigate(catalogHomeRoute)}
                     className="mt-4 w-full rounded-full bg-[var(--action-disabled)] text-[var(--text-primary)] py-4 text-lg font-semibold"
                   >
                     Seguir comprando
@@ -1081,342 +1105,334 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
               </div>
             </div>
           )}
-            {isCartView && cart.length > 0 && (
-              <div className="flex justify-center mt-6">
-                <span
-                  onClick={() => {
-                    setShowModal(true);
-                  }}
-                  className="text-[var(--state-error)] cursor-pointer hover:underline text-sm"
-                >
-                  Limpiar Carrito
-                </span>
-              </div>
-            )}
-
-          {/* Formulario para el nombre y contacto */}
-          {!isCartView && (
-          <form onSubmit={handleSubmit}>
-            {shippingOptions.ContactInformation && (
-            <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
-              <button
-                type="button"
-                onClick={() => setOpenSection((prev) => (prev === "contact" ? null : "contact"))}
-                className="w-full flex items-center justify-between"
+          {isCartView && cart.length > 0 && (
+            <div className="flex justify-center mt-6">
+              <span
+                onClick={() => {
+                  setShowModal(true);
+                }}
+                className="text-[var(--state-error)] cursor-pointer hover:underline text-sm"
               >
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-                  Información de contacto
-                </h2>
-                <span
-                  className={`text-[var(--text-secondary)] transition-transform ${
-                    openSection === "contact" ? "rotate-180" : ""
-                  }`}
-                >
-                  ▾
-                </span>
-              </button>
-              <div
-                className={`overflow-hidden transition-all duration-200 ease-out ${
-                  openSection === "contact"
-                    ? "max-h-[900px] opacity-100 translate-y-0"
-                    : "max-h-0 opacity-0 -translate-y-2"
-                }`}
-              >
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div ref={fieldRefs.nombre} className="flex flex-col">
-                  <label className="text-sm text-[var(--text-secondary)]">Nombre completo</label>
-                  <input
-                    type="text"
-                    value={nombre}
-                    onChange={(e) => setNombre(e.target.value)}
-                    className={`bg-[var(--bg-subtle)] w-full p-3 border ${errors.nombre ? "border-[var(--state-error)]" : "border-[var(--border-default)]"
-                      } rounded-[var(--radius-md)] focus:outline-none`}
-                    placeholder="Introduce tu nombre"
-                  />
-                  {errors.nombre && (
-                    <span className="text-[var(--state-error)] text-sm mt-1">
-                      {errors.nombre}
-                    </span>
-                  )}
-                </div>
-                <div ref={fieldRefs.email} className="flex flex-col">
-                  <label className="text-sm text-[var(--text-secondary)]">Email (opcional)</label>
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className={`bg-[var(--bg-subtle)] w-full p-3 border ${errors.email ? "border-[var(--state-error)]" : "border-[var(--border-default)]"
-                      } rounded-[var(--radius-md)] focus:outline-none`}
-                    placeholder="Introduce tu email"
-                  />
-                  {errors.email && (
-                    <span className="text-[var(--state-error)] text-sm mt-1">
-                      {errors.email}
-                    </span>
-                  )}
-                </div>
-                <div ref={fieldRefs.clientPhoneNumber} className="md:col-span-2 flex flex-col">
-                  <label className="text-sm text-[var(--text-secondary)]">Teléfono móvil</label>
-                  <input
-                    type="text"
-                    value={clientPhoneNumber}
-                    onChange={(e) => setClientPhoneNumber(e.target.value)}
-                    className={`bg-[var(--bg-subtle)] w-full p-3 border ${errors.clientPhoneNumber
-                      ? "border-[var(--state-error)]"
-                      : "border-[var(--border-default)]"
-                      } rounded-[var(--radius-md)] focus:outline-none`}
-                    placeholder="Introduce tu teléfono"
-                  />
-                  {errors.clientPhoneNumber && (
-                    <span className="text-[var(--state-error)] text-sm mt-1">
-                      {errors.clientPhoneNumber}
-                    </span>
-                  )}
-                </div>
-              </div>
-              </div>
-            </div>)}
-          {/* Método de entrega */}
-          {shippingOptions.ShippingMetod && (
-            <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
-              <button
-                type="button"
-                onClick={() => setOpenSection((prev) => (prev === "delivery" ? null : "delivery"))}
-                className="w-full flex items-center justify-between"
-              >
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-                  Método de entrega
-                </h2>
-                <span
-                  className={`text-[var(--text-secondary)] transition-transform ${
-                    openSection === "delivery" ? "rotate-180" : ""
-                  }`}
-                >
-                  ▾
-                </span>
-              </button>
-              <div
-                className={`overflow-hidden transition-all duration-200 ease-out ${
-                  openSection === "delivery"
-                    ? "max-h-[500px] opacity-100 translate-y-0"
-                    : "max-h-0 opacity-0 -translate-y-2"
-                }`}
-              >
-                <div ref={fieldRefs.deliveryMethod} className="mt-4 flex items-center mb-4">
-                  <FiTruck className="text-[var(--text-muted)] mr-2" size={20} />
-                  <label className="text-sm text-[var(--text-secondary)]">
-                    Seleccione el método de entrega
-                  </label>
-                </div>
-                <select
-                  value={deliveryMethod}
-                  onChange={(e) => setDeliveryMethod(e.target.value)}
-                  className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)] focus:outline-none"
-                >
-                  <option value="domicilio">Entrega a domicilio</option>
-                  <option value="recoger">Recoger en tienda</option>
-                </select>
-                {errors.deliveryMethod && (
-                  <span className="text-[var(--state-error)] text-sm mt-2 block">
-                    {errors.deliveryMethod}
-                  </span>
-                )}
-              </div>
+                Limpiar Carrito
+              </span>
             </div>
           )}
 
-            {deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled && (
-              <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
-                <button
-                  type="button"
-                  onClick={() => setOpenSection((prev) => (prev === "address" ? null : "address"))}
-                  className="w-full flex items-center justify-between"
-                >
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-                    Dirección de entrega
-                  </h2>
-                  <span
-                    className={`text-[var(--text-secondary)] transition-transform ${
-                      openSection === "address" ? "rotate-180" : ""
-                    }`}
+          {/* Formulario para el nombre y contacto */}
+          {!isCartView && (
+            <form onSubmit={handleSubmit}>
+              {shippingOptions.ContactInformation && (
+                <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setOpenSection((prev) => (prev === "contact" ? null : "contact"))}
+                    className="w-full flex items-center justify-between"
                   >
-                    ▾
-                  </span>
-                </button>
-
-                <div
-                  className={`overflow-hidden transition-all duration-200 ease-out ${
-                    openSection === "address"
-                      ? "max-h-[900px] opacity-100 translate-y-0"
-                      : "max-h-0 opacity-0 -translate-y-2"
-                  }`}
-                >
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {shippingOptions.Street && (
-                    <div ref={fieldRefs.calle} className="flex flex-col">
-                      <label className="text-sm text-[var(--text-secondary)]">Calle</label>
-                      <input
-                        type="text"
-                        value={calle}
-                        onChange={(e) => setCalle(e.target.value)}
-                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
-                        placeholder="Introduce tu calle"
-                      />
-                      {errors.calle && (
-                        <span className="text-[var(--state-error)] text-sm mt-1">
-                          {errors.calle}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {shippingOptions.ZipCode && (
-                    <div ref={fieldRefs.codigoPostal} className="flex flex-col">
-                      <label className="text-sm text-[var(--text-secondary)]">Código Postal</label>
-                      <input
-                        type="text"
-                        value={codigoPostal}
-                        onChange={(e) => setCodigoPostal(e.target.value)}
-                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
-                        placeholder="Código Postal"
-                      />
-                      {errors.codigoPostal && (
-                        <span className="text-[var(--state-error)] text-sm mt-1">
-                          {errors.codigoPostal}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {shippingOptions.City && (
-                    <div ref={fieldRefs.municipio} className="flex flex-col">
-                      <label className="text-sm text-[var(--text-secondary)]">Municipio</label>
-                      <input
-                        type="text"
-                        value={municipio}
-                        onChange={(e) => setMunicipio(e.target.value)}
-                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
-                        placeholder="Municipio"
-                      />
-                      {errors.municipio && (
-                        <span className="text-[var(--state-error)] text-sm mt-1">
-                          {errors.municipio}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {shippingOptions.State && (
-                    <div ref={fieldRefs.estado} className="flex flex-col">
-                      <label className="text-sm text-[var(--text-secondary)]">Estado</label>
-                      <input
-                        type="text"
-                        value={estado}
-                        onChange={(e) => setEstado(e.target.value)}
-                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
-                        placeholder="Estado"
-                      />
-                      {errors.estado && (
-                        <span className="text-[var(--state-error)] text-sm mt-1">
-                          {errors.estado}
-                        </span>
-                      )}
-                    </div>
-                  )}
-
-                  {shippingOptions.References && (
-                    <div className="md:col-span-2 flex flex-col">
-                      <label className="text-sm text-[var(--text-secondary)]">Referencia (opcional)</label>
-                      <input
-                        type="text"
-                        value={referencia}
-                        onChange={(e) => setReferencia(e.target.value)}
-                        className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
-                        placeholder="Introduce una referencia (opcional)"
-                      />
-                    </div>
-                  )}
-                </div>
-                </div>
-              </div>
-            )}
-
-            {/* Método de pago */}
-            {shippingOptions.PaymentMetod && (
-              <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
-                <button
-                  type="button"
-                  onClick={() => setOpenSection((prev) => (prev === "payment" ? null : "payment"))}
-                  className="w-full flex items-center justify-between"
-                >
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">
-                    Método de pago
-                  </h2>
-                  <span
-                    className={`text-[var(--text-secondary)] transition-transform ${
-                      openSection === "payment" ? "rotate-180" : ""
-                    }`}
+                    <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                      Información de contacto
+                    </h2>
+                    <span
+                      className={`text-[var(--text-secondary)] transition-transform ${openSection === "contact" ? "rotate-180" : ""
+                        }`}
+                    >
+                      ▾
+                    </span>
+                  </button>
+                  <div
+                    className={`overflow-hidden transition-all duration-200 ease-out ${openSection === "contact"
+                        ? "max-h-[900px] opacity-100 translate-y-0"
+                        : "max-h-0 opacity-0 -translate-y-2"
+                      }`}
                   >
-                    ▾
-                  </span>
-                </button>
-                <div
-                  className={`overflow-hidden transition-all duration-200 ease-out ${
-                    openSection === "payment"
-                      ? "max-h-[500px] opacity-100 translate-y-0"
-                      : "max-h-0 opacity-0 -translate-y-2"
-                  }`}
-                >
-                  <div ref={fieldRefs.paymentMethod} className="mt-4 flex items-center mb-4">
-                    <FiCreditCard className="text-[var(--text-muted)] mr-2" size={20} />
-                    <label className="text-sm text-[var(--text-secondary)]">Seleccione un método de pago</label>
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div ref={fieldRefs.nombre} className="flex flex-col">
+                        <label className="text-sm text-[var(--text-secondary)]">Nombre completo</label>
+                        <input
+                          type="text"
+                          value={nombre}
+                          onChange={(e) => setNombre(e.target.value)}
+                          className={`bg-[var(--bg-subtle)] w-full p-3 border ${errors.nombre ? "border-[var(--state-error)]" : "border-[var(--border-default)]"
+                            } rounded-[var(--radius-md)] focus:outline-none`}
+                          placeholder="Introduce tu nombre"
+                        />
+                        {errors.nombre && (
+                          <span className="text-[var(--state-error)] text-sm mt-1">
+                            {errors.nombre}
+                          </span>
+                        )}
+                      </div>
+                      <div ref={fieldRefs.email} className="flex flex-col">
+                        <label className="text-sm text-[var(--text-secondary)]">Email (opcional)</label>
+                        <input
+                          type="email"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className={`bg-[var(--bg-subtle)] w-full p-3 border ${errors.email ? "border-[var(--state-error)]" : "border-[var(--border-default)]"
+                            } rounded-[var(--radius-md)] focus:outline-none`}
+                          placeholder="Introduce tu email"
+                        />
+                        {errors.email && (
+                          <span className="text-[var(--state-error)] text-sm mt-1">
+                            {errors.email}
+                          </span>
+                        )}
+                      </div>
+                      <div ref={fieldRefs.clientPhoneNumber} className="md:col-span-2 flex flex-col">
+                        <label className="text-sm text-[var(--text-secondary)]">Teléfono móvil</label>
+                        <input
+                          type="text"
+                          value={clientPhoneNumber}
+                          onChange={(e) => setClientPhoneNumber(e.target.value)}
+                          className={`bg-[var(--bg-subtle)] w-full p-3 border ${errors.clientPhoneNumber
+                            ? "border-[var(--state-error)]"
+                            : "border-[var(--border-default)]"
+                            } rounded-[var(--radius-md)] focus:outline-none`}
+                          placeholder="Introduce tu teléfono"
+                        />
+                        {errors.clientPhoneNumber && (
+                          <span className="text-[var(--state-error)] text-sm mt-1">
+                            {errors.clientPhoneNumber}
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <select
-                    value={paymentMethod}
-                    onChange={(e) => setPaymentMethod(e.target.value)}
-                    className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)] focus:outline-none"
+                </div>)}
+              {/* Método de entrega */}
+              {shippingOptions.ShippingMetod && (
+                <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setOpenSection((prev) => (prev === "delivery" ? null : "delivery"))}
+                    className="w-full flex items-center justify-between"
                   >
-                    <option value="transferencia">Transferencia bancaria</option>
-                    <option value="dinero">Dinero en efectivo</option>
-                    <option value="tarjeta" disabled={!canUseStripe}>
-                      {canUseStripe
-                        ? "Tarjeta de crédito o débito"
-                        : "Tarjeta de crédito o débito (no disponible)"}
-                    </option>
-                    <option value="enlace">Enlace de pago</option>
-                  </select>
-                  {errors.paymentMethod && (
-                    <span className="text-[var(--state-error)] text-sm mt-2 block">
-                      {errors.paymentMethod}
+                    <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                      Método de entrega
+                    </h2>
+                    <span
+                      className={`text-[var(--text-secondary)] transition-transform ${openSection === "delivery" ? "rotate-180" : ""
+                        }`}
+                    >
+                      ▾
                     </span>
-                  )}
-                  {stripeError && (
-                    <span className="text-[var(--state-error)] text-sm mt-2 block">
-                      {stripeError}
-                    </span>
-                  )}
+                  </button>
+                  <div
+                    className={`overflow-hidden transition-all duration-200 ease-out ${openSection === "delivery"
+                        ? "max-h-[500px] opacity-100 translate-y-0"
+                        : "max-h-0 opacity-0 -translate-y-2"
+                      }`}
+                  >
+                    <div ref={fieldRefs.deliveryMethod} className="mt-4 flex items-center mb-4">
+                      <FiTruck className="text-[var(--text-muted)] mr-2" size={20} />
+                      <label className="text-sm text-[var(--text-secondary)]">
+                        Seleccione el método de entrega
+                      </label>
+                    </div>
+                    <select
+                      value={deliveryMethod}
+                      onChange={(e) => setDeliveryMethod(e.target.value)}
+                      className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)] focus:outline-none"
+                    >
+                      <option value="domicilio">Entrega a domicilio</option>
+                      <option value="recoger">Recoger en tienda</option>
+                    </select>
+                    {errors.deliveryMethod && (
+                      <span className="text-[var(--state-error)] text-sm mt-2 block">
+                        {errors.deliveryMethod}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {/* Botón para continuar */}
-            <div className="mt-8 flex flex-col gap-4">
-              <button
-                type="submit"
-                className="w-full rounded-full bg-[var(--action-primary)] text-white py-4 text-lg font-semibold shadow-sm disabled:opacity-70"
-                disabled={isStripeLoading}
-              >
-                {isStripeLoading ? "Abriendo Stripe..." : "Preparar pedido"}
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/catalogo/pedido")}
-                className="w-full rounded-full bg-[var(--action-disabled)] text-white py-4 text-lg font-semibold"
-              >
-                Seguir comprando
-              </button>
-            </div>
-          </form>
+              {deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled && (
+                <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setOpenSection((prev) => (prev === "address" ? null : "address"))}
+                    className="w-full flex items-center justify-between"
+                  >
+                    <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                      Dirección de entrega
+                    </h2>
+                    <span
+                      className={`text-[var(--text-secondary)] transition-transform ${openSection === "address" ? "rotate-180" : ""
+                        }`}
+                    >
+                      ▾
+                    </span>
+                  </button>
+
+                  <div
+                    className={`overflow-hidden transition-all duration-200 ease-out ${openSection === "address"
+                        ? "max-h-[900px] opacity-100 translate-y-0"
+                        : "max-h-0 opacity-0 -translate-y-2"
+                      }`}
+                  >
+                    <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {shippingOptions.Street && (
+                        <div ref={fieldRefs.calle} className="flex flex-col">
+                          <label className="text-sm text-[var(--text-secondary)]">Calle</label>
+                          <input
+                            type="text"
+                            value={calle}
+                            onChange={(e) => setCalle(e.target.value)}
+                            className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
+                            placeholder="Introduce tu calle"
+                          />
+                          {errors.calle && (
+                            <span className="text-[var(--state-error)] text-sm mt-1">
+                              {errors.calle}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {shippingOptions.ZipCode && (
+                        <div ref={fieldRefs.codigoPostal} className="flex flex-col">
+                          <label className="text-sm text-[var(--text-secondary)]">Código Postal</label>
+                          <input
+                            type="text"
+                            value={codigoPostal}
+                            onChange={(e) => setCodigoPostal(e.target.value)}
+                            className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
+                            placeholder="Código Postal"
+                          />
+                          {errors.codigoPostal && (
+                            <span className="text-[var(--state-error)] text-sm mt-1">
+                              {errors.codigoPostal}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {shippingOptions.City && (
+                        <div ref={fieldRefs.municipio} className="flex flex-col">
+                          <label className="text-sm text-[var(--text-secondary)]">Municipio</label>
+                          <input
+                            type="text"
+                            value={municipio}
+                            onChange={(e) => setMunicipio(e.target.value)}
+                            className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
+                            placeholder="Municipio"
+                          />
+                          {errors.municipio && (
+                            <span className="text-[var(--state-error)] text-sm mt-1">
+                              {errors.municipio}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {shippingOptions.State && (
+                        <div ref={fieldRefs.estado} className="flex flex-col">
+                          <label className="text-sm text-[var(--text-secondary)]">Estado</label>
+                          <input
+                            type="text"
+                            value={estado}
+                            onChange={(e) => setEstado(e.target.value)}
+                            className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
+                            placeholder="Estado"
+                          />
+                          {errors.estado && (
+                            <span className="text-[var(--state-error)] text-sm mt-1">
+                              {errors.estado}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {shippingOptions.References && (
+                        <div className="md:col-span-2 flex flex-col">
+                          <label className="text-sm text-[var(--text-secondary)]">Referencia (opcional)</label>
+                          <input
+                            type="text"
+                            value={referencia}
+                            onChange={(e) => setReferencia(e.target.value)}
+                            className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)]"
+                            placeholder="Introduce una referencia (opcional)"
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Método de pago */}
+              {shippingOptions.PaymentMetod && (
+                <div className="bg-[var(--bg-surface)] p-5 rounded-[var(--radius-lg)] border border-[var(--border-default)] shadow-sm mt-6">
+                  <button
+                    type="button"
+                    onClick={() => setOpenSection((prev) => (prev === "payment" ? null : "payment"))}
+                    className="w-full flex items-center justify-between"
+                  >
+                    <h2 className="text-lg font-semibold text-[var(--text-primary)]">
+                      Método de pago
+                    </h2>
+                    <span
+                      className={`text-[var(--text-secondary)] transition-transform ${openSection === "payment" ? "rotate-180" : ""
+                        }`}
+                    >
+                      ▾
+                    </span>
+                  </button>
+                  <div
+                    className={`overflow-hidden transition-all duration-200 ease-out ${openSection === "payment"
+                        ? "max-h-[500px] opacity-100 translate-y-0"
+                        : "max-h-0 opacity-0 -translate-y-2"
+                      }`}
+                  >
+                    <div ref={fieldRefs.paymentMethod} className="mt-4 flex items-center mb-4">
+                      <FiCreditCard className="text-[var(--text-muted)] mr-2" size={20} />
+                      <label className="text-sm text-[var(--text-secondary)]">Seleccione un método de pago</label>
+                    </div>
+                    <select
+                      value={paymentMethod}
+                      onChange={(e) => setPaymentMethod(e.target.value)}
+                      className="bg-[var(--bg-subtle)] w-full p-3 border border-[var(--border-default)] rounded-[var(--radius-md)] focus:outline-none"
+                    >
+                      <option value="transferencia">Transferencia bancaria</option>
+                      <option value="dinero">Dinero en efectivo</option>
+                      <option value="tarjeta" disabled={!canUseStripe}>
+                        {canUseStripe
+                          ? "Tarjeta de crédito o débito"
+                          : "Tarjeta de crédito o débito (no disponible)"}
+                      </option>
+                      <option value="enlace">Enlace de pago</option>
+                    </select>
+                    {errors.paymentMethod && (
+                      <span className="text-[var(--state-error)] text-sm mt-2 block">
+                        {errors.paymentMethod}
+                      </span>
+                    )}
+                    {stripeError && (
+                      <span className="text-[var(--state-error)] text-sm mt-2 block">
+                        {stripeError}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Botón para continuar */}
+              <div className="mt-8 flex flex-col gap-4">
+                <button
+                  type="submit"
+                  className="w-full rounded-full bg-[var(--action-primary)] text-white py-4 text-lg font-semibold shadow-sm disabled:opacity-70"
+                  disabled={isStripeLoading}
+                >
+                  {isStripeLoading ? "Abriendo Stripe..." : "Preparar pedido"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate(catalogHomeRoute)}
+                  className="w-full rounded-full bg-[var(--action-disabled)] text-white py-4 text-lg font-semibold"
+                >
+                  Seguir comprando
+                </button>
+              </div>
+            </form>
           )}
 
           {!isCartView && (

@@ -43,7 +43,8 @@ export const PaymentScreen: React.FC = () => {
         ...context.ticketDetail,
         payment: paymentAmount,
       });
-      navigate("/finish");
+      const saleToken = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+      navigate("/finish", { state: { saleToken } });
     }
   };
 

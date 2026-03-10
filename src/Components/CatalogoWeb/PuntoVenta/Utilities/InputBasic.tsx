@@ -18,7 +18,7 @@ export const InputBasic: React.FC<InputBasicProps> = ({
       placeholder={placeholder}
       value={value} // Ya se asegura de que sea una cadena válida
       onChange={(e) => onChange(e)} // Propagamos directamente el evento
-      className="w-11/12 bg-gray-100 p-4 rounded-lg mb-4 text-base text-gray-800 input-basic"
+      className="w-11/12 bg-gray-100 p-4 rounded-lg mb-4 text-base text-gray-800 placeholder:text-gray-500 input-basic"
     />
   );
 };

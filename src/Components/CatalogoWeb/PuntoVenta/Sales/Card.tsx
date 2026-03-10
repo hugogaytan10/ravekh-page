@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { FixedSizeGrid } from "react-window";
 import { Item } from "../Model/Item";
 import "./Css/ProductList.css";
@@ -12,21 +12,56 @@ interface CardProps {
 
 const Card: React.FC<CardProps> = React.memo(({ product, handleAddItem, storeColor }) => {
   const { Name, Image, Price, PromotionPrice, Color, ForSale } = product;
+  const imageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [isImageLoading, setIsImageLoading] = useState(!!Image); // Solo inicia en true si hay imagen
   const [hasImageError, setHasImageError] = useState(false);
 
+  const failedImagesRef = useRef<Set<string>>(new Set());
+
   const handleLoad = useCallback(() => {
+    if (imageTimeoutRef.current) {
+      clearTimeout(imageTimeoutRef.current);
+      imageTimeoutRef.current = null;
+    }
     setIsImageLoading(false);
   }, []);
 
   const handleError = useCallback(() => {
+    if (Image) {
+      failedImagesRef.current.add(Image);
+    }
+    if (imageTimeoutRef.current) {
+      clearTimeout(imageTimeoutRef.current);
+      imageTimeoutRef.current = null;
+    }
     setIsImageLoading(false);
     setHasImageError(true);
-  }, []);
+  }, [Image]);
 
   useEffect(() => {
-    setHasImageError(false);
-    setIsImageLoading(!!Image);
+    if (imageTimeoutRef.current) {
+      clearTimeout(imageTimeoutRef.current);
+      imageTimeoutRef.current = null;
+    }
+
+    const hasCachedError = Image ? failedImagesRef.current.has(Image) : false;
+    setHasImageError(hasCachedError);
+    setIsImageLoading(Boolean(Image && !hasCachedError));
+
+    if (Image && !hasCachedError) {
+      imageTimeoutRef.current = setTimeout(() => {
+        failedImagesRef.current.add(Image);
+        setIsImageLoading(false);
+        setHasImageError(true);
+      }, 5000);
+    }
+
+    return () => {
+      if (imageTimeoutRef.current) {
+        clearTimeout(imageTimeoutRef.current);
+        imageTimeoutRef.current = null;
+      }
+    };
   }, [Image]);
 
   if (!ForSale) return null;
@@ -57,7 +92,7 @@ const Card: React.FC<CardProps> = React.memo(({ product, handleAddItem, storeCol
       ) : (
         <div
           className="no-image-container"
-          style={{ backgroundColor: storeColor || Color || "#ccc" }}
+          style={{ backgroundColor: Color || storeColor || "#ccc" }}
         >
           <p className="no-image-text">{Name}</p>
         </div>
