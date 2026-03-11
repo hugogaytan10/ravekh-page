@@ -24,8 +24,68 @@ type ScannedCouponPayload = {
   UserId: number;
 };
 
+
+type Html5QrcodeInstance = {
+  start: (
+    cameraConfig: { facingMode: string } | string,
+    configuration: { fps?: number; qrbox?: number | { width: number; height: number } },
+    onSuccess: (decodedText: string) => void,
+    onError?: (errorMessage: string) => void,
+  ) => Promise<void>;
+  stop: () => Promise<void>;
+  scanFile: (imageFile: File, showImage?: boolean) => Promise<string>;
+  clear: () => Promise<void>;
+};
+
+type Html5QrcodeConstructor = new (elementId: string) => Html5QrcodeInstance;
+
 const getBarcodeDetector = (): BarcodeDetectorConstructor | undefined => {
   return (window as Window & { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector;
+};
+
+const getHtml5Qrcode = (): Html5QrcodeConstructor | undefined => {
+  return (window as Window & { Html5Qrcode?: Html5QrcodeConstructor }).Html5Qrcode;
+};
+
+let html5QrScriptPromise: Promise<void> | null = null;
+
+const loadHtml5QrScript = async (): Promise<void> => {
+  if (getHtml5Qrcode()) return;
+
+  if (!html5QrScriptPromise) {
+    html5QrScriptPromise = new Promise<void>((resolve, reject) => {
+      const existingScript = document.querySelector<HTMLScriptElement>(
+        'script[data-ravekh-html5qr="true"]',
+      );
+
+      if (existingScript) {
+        existingScript.addEventListener("load", () => resolve(), { once: true });
+        existingScript.addEventListener(
+          "error",
+          () => reject(new Error("No se pudo cargar el escáner alternativo para iOS.")),
+          { once: true },
+        );
+        return;
+      }
+
+      const script = document.createElement("script");
+      script.src = "https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js";
+      script.async = true;
+      script.dataset.ravekhHtml5qr = "true";
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error("No se pudo cargar el escáner alternativo para iOS."));
+      document.body.appendChild(script);
+    });
+  }
+
+  await html5QrScriptPromise;
+};
+
+const isIOSDevice = (): boolean => {
+  if (typeof navigator === "undefined") return false;
+
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
 };
 
 const isHttpLink = (value: string): boolean => {
@@ -46,6 +106,7 @@ const CouponScanScreen: React.FC = () => {
   const token = context.user?.Token;
 
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const htmlScannerRef = useRef<Html5QrcodeInstance | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const frameRef = useRef<number | null>(null);
   const lastProcessedRawRef = useRef<string>("");
@@ -61,6 +122,8 @@ const CouponScanScreen: React.FC = () => {
   const [isScannerProcessing, setIsScannerProcessing] = useState(false);
   const [isScanLoading, setIsScanLoading] = useState(false);
   const [scannerPermissionGranted, setScannerPermissionGranted] = useState<boolean | null>(null);
+  const [requiresManualCameraStart, setRequiresManualCameraStart] = useState(false);
+  const [usingHtml5Scanner, setUsingHtml5Scanner] = useState(false);
 
   const [scannedCoupon, setScannedCoupon] = useState<Coupon | null>(null);
   const [scannedUserId, setScannedUserId] = useState<number | null>(null);
@@ -227,6 +290,122 @@ const CouponScanScreen: React.FC = () => {
       if (videoRef.current) {
         videoRef.current.srcObject = null;
       }
+
+      if (htmlScannerRef.current) {
+        htmlScannerRef.current.stop().catch(() => undefined);
+        htmlScannerRef.current.clear().catch(() => undefined);
+        htmlScannerRef.current = null;
+      }
+    };
+
+    const getCameraStream = async (): Promise<MediaStream> => {
+      const prefersIOS = isIOSDevice();
+      const attempts: MediaStreamConstraints[] = prefersIOS
+        ? [
+            { video: { facingMode: "environment" }, audio: false },
+            { video: true, audio: false },
+          ]
+        : [
+            { video: { facingMode: { ideal: "environment" } }, audio: false },
+            { video: true, audio: false },
+          ];
+
+      let latestError: unknown;
+
+      for (const constraints of attempts) {
+        try {
+          return await navigator.mediaDevices.getUserMedia(constraints);
+        } catch (error) {
+          latestError = error;
+        }
+      }
+
+      throw latestError;
+    };
+
+    const attachAndPlayVideo = async (stream: MediaStream) => {
+      const video = videoRef.current;
+      if (!video) {
+        setCameraError("No se encontró el visor de cámara.");
+        return;
+      }
+
+      video.srcObject = stream;
+      video.playsInline = true;
+      video.muted = true;
+      video.setAttribute("playsinline", "true");
+      video.setAttribute("webkit-playsinline", "true");
+
+      try {
+        await video.play();
+        setRequiresManualCameraStart(false);
+      } catch {
+        setRequiresManualCameraStart(true);
+      }
+    };
+
+    const waitForHtml5ReaderContainer = async (): Promise<boolean> => {
+      for (let tries = 0; tries < 10; tries += 1) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+        if (document.getElementById("coupon-scan-html5-reader")) {
+          return true;
+        }
+      }
+
+      return false;
+    };
+
+    const startCameraPreviewOnly = async () => {
+      const stream = await getCameraStream();
+
+      if (cancelled) {
+        stream.getTracks().forEach((track) => track.stop());
+        return;
+      }
+
+      streamRef.current = stream;
+      setScannerPermissionGranted(true);
+      await attachAndPlayVideo(stream);
+      setIsReady(true);
+    };
+
+    const startHtml5Scanner = async (): Promise<boolean> => {
+      try {
+        await loadHtml5QrScript();
+        const Html5Qrcode = getHtml5Qrcode();
+
+        if (!Html5Qrcode) {
+          return false;
+        }
+
+        setUsingHtml5Scanner(true);
+        setIsReady(false);
+
+        const hasContainer = await waitForHtml5ReaderContainer();
+        if (!hasContainer || cancelled) {
+          setUsingHtml5Scanner(false);
+          return false;
+        }
+
+        const scanner = new Html5Qrcode("coupon-scan-html5-reader");
+        htmlScannerRef.current = scanner;
+
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 220, height: 220 } },
+          (decodedText) => {
+            void handleReadScannedQr(decodedText);
+          },
+        );
+
+        setScannerPermissionGranted(true);
+        setIsReady(true);
+        return true;
+      } catch (error) {
+        setUsingHtml5Scanner(false);
+        setScanError(error instanceof Error ? error.message : "No se pudo iniciar el escáner alternativo.");
+        return false;
+      }
     };
 
     const startScanner = async () => {
@@ -257,10 +436,19 @@ const CouponScanScreen: React.FC = () => {
           return;
         }
 
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" } },
-          audio: false,
-        });
+        const BarcodeDetectorApi = getBarcodeDetector();
+        if (!BarcodeDetectorApi) {
+          const started = await startHtml5Scanner();
+          if (!started) {
+            setUsingHtml5Scanner(false);
+            setScanError("No se pudo iniciar escaneo automático. Puedes usar cámara o escanear desde imagen.");
+            await startCameraPreviewOnly();
+          }
+          return;
+        }
+
+        setUsingHtml5Scanner(false);
+        const stream = await getCameraStream();
 
         if (cancelled) {
           stream.getTracks().forEach((track) => track.stop());
@@ -270,26 +458,8 @@ const CouponScanScreen: React.FC = () => {
         streamRef.current = stream;
         setScannerPermissionGranted(true);
 
-        const video = videoRef.current;
-        if (!video) {
-          setCameraError("No se encontró el visor de cámara.");
-          return;
-        }
-
-        video.srcObject = stream;
-        video.playsInline = true;
-        video.muted = true;
-        await video.play();
+        await attachAndPlayVideo(stream);
         setIsReady(true);
-
-        const BarcodeDetectorApi = getBarcodeDetector();
-
-        if (!BarcodeDetectorApi) {
-          setScanError(
-            "Tu navegador abrió la cámara, pero no soporta escaneo automático. Usa la opción de imagen.",
-          );
-          return;
-        }
 
         const detector = new BarcodeDetectorApi({ formats: ["qr_code"] });
 
@@ -340,6 +510,23 @@ const CouponScanScreen: React.FC = () => {
     };
   }, []);
 
+  const handleManualCameraStart = async () => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    try {
+      await video.play();
+      setRequiresManualCameraStart(false);
+      setCameraError("");
+    } catch (error) {
+      setCameraError(
+        error instanceof Error
+          ? error.message
+          : "No se pudo iniciar la cámara. Toca nuevamente para intentarlo.",
+      );
+    }
+  };
+
   const handleImageScan = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -349,7 +536,22 @@ const CouponScanScreen: React.FC = () => {
 
       const BarcodeDetectorApi = getBarcodeDetector();
       if (!BarcodeDetectorApi) {
-        setScanError("Este navegador no permite escanear QR automáticamente desde imagen.");
+        await loadHtml5QrScript();
+        const Html5Qrcode = getHtml5Qrcode();
+        if (!Html5Qrcode) {
+          setScanError("Este navegador no permite escanear QR automáticamente desde imagen.");
+          return;
+        }
+
+        const imageScanner = new Html5Qrcode("coupon-scan-html5-image-reader");
+        const code = (await imageScanner.scanFile(file, false)).trim();
+        await imageScanner.clear();
+
+        if (code) {
+          await handleReadScannedQr(code);
+        } else {
+          setScanError("No se detectó un QR en la imagen seleccionada.");
+        }
         return;
       }
 
@@ -391,12 +593,28 @@ const CouponScanScreen: React.FC = () => {
         <section className="rounded-xl border border-gray-200 bg-white p-4 mb-4">
           <p className="text-[14px] text-[#6A6A6A] mb-3">Apunta la cámara al código QR del cupón.</p>
           <div className="relative overflow-hidden rounded-xl bg-black h-[280px]">
-            <video ref={videoRef} className="h-full w-full object-cover" playsInline muted />
+            {usingHtml5Scanner ? (
+              <div id="coupon-scan-html5-reader" className="h-full w-full" />
+            ) : (
+              <video ref={videoRef} className="h-full w-full object-cover" playsInline muted autoPlay />
+            )}
+            <div id="coupon-scan-html5-image-reader" className="hidden" />
             {!isReady && !cameraError ? (
               <div className="absolute inset-0 flex items-center justify-center text-sm text-white/80">
                 Activando cámara...
               </div>
             ) : null}
+            {!usingHtml5Scanner && requiresManualCameraStart && (
+              <div className="absolute inset-0 flex items-center justify-center bg-black/60 px-4 text-center">
+                <button
+                  type="button"
+                  onClick={handleManualCameraStart}
+                  className="rounded-lg bg-white px-4 py-2 text-sm font-semibold text-[#565656]"
+                >
+                  Iniciar cámara
+                </button>
+              </div>
+            )}
           </div>
 
           {scannerPermissionGranted === false && !cameraError ? (
