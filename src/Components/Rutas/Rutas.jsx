@@ -378,6 +378,14 @@ export const Rutas = () => {
 
   // Función para determinar si se debe mostrar el navbar
   const shouldShowNavbar = useMemo(() => {
+    const normalizedPath = decodeURIComponent(location.pathname)
+      .toLowerCase()
+      .replace(/\/+$/, "") || "/";
+
+    if (normalizedPath.startsWith("/catalogo") || normalizedPath.startsWith("/categoria")) {
+      return false;
+    }
+
     const hiddenRoutes = [
       "/login-punto-venta",
       "/MainSales",
@@ -429,6 +437,7 @@ export const Rutas = () => {
       "/new-employee",
       "/client-select",
       "/dashboard",
+      "/mainfinances",
       "/AddRegister",
       "/delete-account",
       "/settings-p",
@@ -452,14 +461,21 @@ export const Rutas = () => {
       "/cupones/:couponId"
     ];
 
-    const path = location.pathname.toLowerCase(); // Asegúrate de trabajar con minúsculas
-    return !hiddenRoutes.some(route => {
-      const decodedPath = decodeURIComponent(location.pathname); // Decodificar ruta
+    return !hiddenRoutes.some((route) => {
+      const normalizedRoute = route.toLowerCase().replace(/\/+$/, "") || "/";
+
+      if (!normalizedRoute.includes(":")) {
+        return (
+          normalizedPath === normalizedRoute ||
+          normalizedPath.startsWith(`${normalizedRoute}/`)
+        );
+      }
+
       const routeRegex = new RegExp(
-        `^${route.replace(/:\w+/g, "[\\p{L}\\p{N}\\p{M}]+")}$`,
+        `^${normalizedRoute.replace(/:\w+/g, "[\\p{L}\\p{N}\\p{M}]+")}$`,
         "iu"
       );
-      return routeRegex.test(decodedPath);
+      return routeRegex.test(normalizedPath);
     });
   }, [location.pathname]);
 
