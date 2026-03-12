@@ -1,0 +1,21 @@
+import { MainProducts } from "../../../../Components/CatalogoWeb/PuntoVenta/Products/MainProducts";
+import { AddProduct } from "../../../../Components/CatalogoWeb/PuntoVenta/Products/CRUDProducts/AddProduct";
+import { SelectCategory } from "../../../../Components/CatalogoWeb/PuntoVenta/Products/Categories/SelectCategory";
+import { EditProduct } from "../../../../Components/CatalogoWeb/PuntoVenta/Products/CRUDProducts/EditProduct";
+import { EditCategory } from "../../../../Components/CatalogoWeb/PuntoVenta/Products/Categories/EditCaterogy";
+import { List } from "../../../../Components/CatalogoWeb/PuntoVenta/Products/CRUDProducts/List";
+import { StockProducts } from "../../../../Components/CatalogoWeb/PuntoVenta/Products/Stock/StockProducts";
+import { SearchProductScreen } from "../../../../Components/CatalogoWeb/PuntoVenta/Products/NavBar/SearchProductScreen";
+import { Filter } from "../../../../Components/CatalogoWeb/PuntoVenta/Products/NavBar/Filter";
+import { KeyboardStock } from "../../../../Components/CatalogoWeb/PuntoVenta/Products/Stock/KeyBoardStock";
+
+export const PosMainProductsPage = () => <MainProducts />;
+export const PosAddProductProductsPage = () => <AddProduct />;
+export const PosSelectCategoryProductPage = () => <SelectCategory />;
+export const PosEditProductPage = () => <EditProduct />;
+export const PosEditCategoryPage = () => <EditCategory />;
+export const PosProductsListPage = () => <List />;
+export const PosStockProductsPage = () => <StockProducts />;
+export const PosSearchProductProductsPage = () => <SearchProductScreen />;
+export const PosProductsFilterPage = () => <Filter />;
+export const PosKeyboardProductPage = () => <KeyboardStock />;
