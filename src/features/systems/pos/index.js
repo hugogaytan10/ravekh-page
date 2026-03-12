@@ -14,6 +14,18 @@ import {
   getPosSalesRoute,
 } from "../../pos";
 
+const posRouteGroups = [
+  posFeatureRoutes,
+  posSalesFeatureRoutes,
+  posProductsFeatureRoutes,
+  posFinanceFeatureRoutes,
+  posReportsFeatureRoutes,
+  posSettingsFeatureRoutes,
+  posCustomersFeatureRoutes,
+  posEmployeesFeatureRoutes,
+  posDashboardFeatureRoutes,
+];
+
 export {
   posFeatureRoutes,
   posSalesFeatureRoutes,
@@ -33,15 +45,5 @@ export {
 export const posSystem = {
   key: "pos",
   label: "Sistema POS",
-  routes: [
-    ...posFeatureRoutes,
-    ...posSalesFeatureRoutes,
-    ...posProductsFeatureRoutes,
-    ...posFinanceFeatureRoutes,
-    ...posReportsFeatureRoutes,
-    ...posSettingsFeatureRoutes,
-    ...posCustomersFeatureRoutes,
-    ...posEmployeesFeatureRoutes,
-    ...posDashboardFeatureRoutes,
-  ],
+  routes: posRouteGroups.flat(),
 };

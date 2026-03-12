@@ -8,7 +8,7 @@ export const posReportsRoutesModel = {
   cashIncome: "/cash-income/:period/:businessId",
   bestSelling: "/best-selling/:period/:businessId",
   bestCategorySelling: "/best-category-selling/:period/:businessId",
-};
+} as const;
 
 export const posReportsRouteKeys = Object.freeze({
   main: "main",
@@ -20,4 +20,6 @@ export const posReportsRouteKeys = Object.freeze({
   cashIncome: "cashIncome",
   bestSelling: "bestSelling",
   bestCategorySelling: "bestCategorySelling",
-});
+} as const);
+
+export type PosReportsRouteKey = keyof typeof posReportsRoutesModel;

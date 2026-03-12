@@ -9,7 +9,7 @@ export const posProductsRoutesModel = {
   searchProduct: "/search-product-products",
   filter: "/products-filter",
   keyboardProduct: "/keyboardProduct/:productId/:currentStock",
-};
+} as const;
 
 export const posProductsRouteKeys = Object.freeze({
   main: "main",
@@ -22,4 +22,6 @@ export const posProductsRouteKeys = Object.freeze({
   searchProduct: "searchProduct",
   filter: "filter",
   keyboardProduct: "keyboardProduct",
-});
+} as const);
+
+export type PosProductsRouteKey = keyof typeof posProductsRoutesModel;
