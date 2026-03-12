@@ -17,6 +17,7 @@ Mantener el comportamiento actual en producción mientras se migra de forma incr
 - `src/features/coupon-visits`: feature para el sistema de cupones/visitas con rutas migradas al router paralelo.
 - `src/features/catalog-web`: feature para catálogo web con rutas de listado, detalle, categoría y pedido.
 - `src/features/pos`: feature para POS con rutas base de marketing, login, creación y venta.
+- `src/features/systems`: nueva capa de organización para separar sistemas de negocio (cupones/visitas, catálogo web y POS) sin romper compatibilidad.
 
 ## Estructura objetivo
 
@@ -31,6 +32,28 @@ src/
       service/
       index.js
 ```
+
+## Capa de sistemas (nuevo)
+
+Para separar mejor los productos de negocio y migrar gradualmente, se agregó una organización por sistemas:
+
+```txt
+src/
+  features/
+    systems/
+      coupon-visits/
+      catalog-web/
+      pos/
+      model/systemsRegistry.js
+      page/systemRoutes.js
+      index.js
+```
+
+Esta capa funciona como **fachada**:
+
+- Centraliza el registro de sistemas en `systemsRegistry`.
+- Centraliza sus rutas en `systemRoutes`.
+- Re-exporta APIs públicas sin acoplar `app/router` a los internals de cada sistema.
 
 ## Reglas de migración incremental
 
@@ -91,10 +114,13 @@ Para seguir mejorando sin romper producción, el plan recomendado queda así:
    - ✅ Se ajustó el comportamiento mobile del formulario de contacto para evitar fricción al enviar.
 2. **Cupones/Visitas (`src/features/coupon-visits`)**
    - Mantener rutas y flujos de backoffice/claim/redeem dentro de la feature.
+   - Mover validaciones y reglas compartidas al `model/` de la feature cuando aún estén dispersas.
 3. **Catálogo Web (`src/features/catalog-web`)**
    - Separar listado, detalle, categoría y pedido en páginas de la feature.
+   - Normalizar adaptadores de petición/respuesta en `service/` para aislar cambios de API.
 4. **POS (`src/features/pos`)**
    - Aislar marketing, auth y venta para avanzar hacia módulos internos más pequeños.
+   - Dividir rutas por subdominio (onboarding, caja, reportes) cuando la migración avance.
 
 ### Regla práctica para el siguiente PR
 

@@ -5,3 +5,4 @@ export * as blogFeature from "./blog";
 export * as couponVisitsFeature from "./coupon-visits";
 export * as catalogWebFeature from "./catalog-web";
 export * as posFeature from "./pos";
+export * as systemsFeature from "./systems";

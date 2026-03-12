@@ -28,6 +28,27 @@ src/features/
 - `hooks/`: hooks específicos de la feature.
 - `index.js`: API pública de la feature (único punto de exportación externo).
 
+## Separación por sistemas de negocio
+
+Para los dominios más grandes (cupones/visitas, catálogo web y POS), ahora existe una capa de fachada en `src/features/systems`:
+
+```text
+src/features/systems/
+  coupon-visits/
+  catalog-web/
+  pos/
+  model/systemsRegistry.js
+  page/systemRoutes.js
+  index.js
+```
+
+### ¿Qué resuelve esta capa?
+
+- Declara explícitamente los sistemas activos del negocio.
+- Permite centralizar rutas multi-feature (`systemRoutes`).
+- Evita que `app/router` deba importar cada sistema de forma aislada.
+- Facilita migración gradual sin renombrar ni mover todo de golpe.
+
 ## Entry paralelo para migración
 
 - `npm run dev`: mantiene el flujo legacy actual.
@@ -53,6 +74,7 @@ src/features/
 - No mezclar lógica de UI con acceso a datos.
 - Mantener `service` sin dependencias de React/UI.
 - Minimizar side effects dentro de componentes presentacionales.
+- Para sistemas grandes, usar `features/systems/*` como punto de coordinación y no como lugar para lógica UI.
 
 ## Definición de terminado (DoD) por migración
 
