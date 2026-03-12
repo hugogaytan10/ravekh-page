@@ -1,15 +1,4 @@
 import { getPosDashboardRoute } from "./getPosDashboardRoute";
+import { createFeatureRoutesBuilder } from "../../service/routeFactory";
 
-export const buildPosDashboardFeatureRoutes = (routePageMap) => {
-  return Object.entries(routePageMap)
-    .map(([routeKey, element]) => {
-      const path = getPosDashboardRoute(routeKey);
-
-      if (!path) {
-        return null;
-      }
-
-      return { path, element };
-    })
-    .filter(Boolean);
-};
+export const buildPosDashboardFeatureRoutes = createFeatureRoutesBuilder(getPosDashboardRoute);

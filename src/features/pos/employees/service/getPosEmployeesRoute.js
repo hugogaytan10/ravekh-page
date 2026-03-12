@@ -1,5 +1,4 @@
 import { posEmployeesRoutesModel } from "../model/posEmployeesRoutes";
+import { createRouteGetter } from "../../service/routeFactory";
 
-export const getPosEmployeesRoute = (routeKey) => {
-  return posEmployeesRoutesModel[routeKey] ?? null;
-};
+export const getPosEmployeesRoute = createRouteGetter(posEmployeesRoutesModel);

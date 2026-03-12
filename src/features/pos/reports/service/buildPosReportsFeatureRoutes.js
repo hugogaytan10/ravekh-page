@@ -1,15 +1,4 @@
 import { getPosReportsRoute } from "./getPosReportsRoute";
+import { createFeatureRoutesBuilder } from "../../service/routeFactory";
 
-export const buildPosReportsFeatureRoutes = (routePageMap) => {
-  return Object.entries(routePageMap)
-    .map(([routeKey, element]) => {
-      const path = getPosReportsRoute(routeKey);
-
-      if (!path) {
-        return null;
-      }
-
-      return { path, element };
-    })
-    .filter(Boolean);
-};
+export const buildPosReportsFeatureRoutes = createFeatureRoutesBuilder(getPosReportsRoute);

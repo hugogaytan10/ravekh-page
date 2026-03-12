@@ -1,15 +1,4 @@
 import { getPosEmployeesRoute } from "./getPosEmployeesRoute";
+import { createFeatureRoutesBuilder } from "../../service/routeFactory";
 
-export const buildPosEmployeesFeatureRoutes = (routePageMap) => {
-  return Object.entries(routePageMap)
-    .map(([routeKey, element]) => {
-      const path = getPosEmployeesRoute(routeKey);
-
-      if (!path) {
-        return null;
-      }
-
-      return { path, element };
-    })
-    .filter(Boolean);
-};
+export const buildPosEmployeesFeatureRoutes = createFeatureRoutesBuilder(getPosEmployeesRoute);

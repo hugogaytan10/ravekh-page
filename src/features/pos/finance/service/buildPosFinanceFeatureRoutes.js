@@ -1,15 +1,4 @@
 import { getPosFinanceRoute } from "./getPosFinanceRoute";
+import { createFeatureRoutesBuilder } from "../../service/routeFactory";
 
-export const buildPosFinanceFeatureRoutes = (routePageMap) => {
-  return Object.entries(routePageMap)
-    .map(([routeKey, element]) => {
-      const path = getPosFinanceRoute(routeKey);
-
-      if (!path) {
-        return null;
-      }
-
-      return { path, element };
-    })
-    .filter(Boolean);
-};
+export const buildPosFinanceFeatureRoutes = createFeatureRoutesBuilder(getPosFinanceRoute);

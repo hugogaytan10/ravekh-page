@@ -1,15 +1,4 @@
 import { getPosSettingsRoute } from "./getPosSettingsRoute";
+import { createFeatureRoutesBuilder } from "../../service/routeFactory";
 
-export const buildPosSettingsFeatureRoutes = (routePageMap) => {
-  return Object.entries(routePageMap)
-    .map(([routeKey, element]) => {
-      const path = getPosSettingsRoute(routeKey);
-
-      if (!path) {
-        return null;
-      }
-
-      return { path, element };
-    })
-    .filter(Boolean);
-};
+export const buildPosSettingsFeatureRoutes = createFeatureRoutesBuilder(getPosSettingsRoute);
