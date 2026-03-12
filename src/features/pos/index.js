@@ -6,20 +6,23 @@ export { buildPosFeatureRoutes } from "./service/buildPosFeatureRoutes";
 export { PosAuthPage } from "./page/PosAuthPage";
 export { loginToServer, signUpToServer } from "./service/posAuthService";
 
-export { posSalesFeatureRoutes } from "./page/PosSalesFeatureRoutes";
-export { posSalesRoutesModel } from "./model/posSalesRoutes";
-export { posSalesRouteKeys } from "./model/posSalesRoutes";
-export { getPosSalesRoute } from "./service/getPosSalesRoute";
-export { buildPosSalesFeatureRoutes } from "./service/buildPosSalesFeatureRoutes";
-export { PosSalesPage } from "./page/PosSalesPage";
-export { PosCartPage } from "./page/PosCartPage";
-export { PosDiscountScreenPage } from "./page/PosDiscountScreenPage";
-export { PosPaymentTypeScreenPage } from "./page/PosPaymentTypeScreenPage";
-export { PosPaymentScreenPage } from "./page/PosPaymentScreenPage";
-export { PosFinishScreenPage } from "./page/PosFinishScreenPage";
-export { PosAddProductSalesPage } from "./page/PosAddProductSalesPage";
-export { PosCategoriasScreenSalesPage } from "./page/PosCategoriasScreenSalesPage";
-export { PosAddCategoriesSalesPage } from "./page/PosAddCategoriesSalesPage";
-export { PosScannerSalesPage } from "./page/PosScannerSalesPage";
-export { PosSearchScreenSalesPage } from "./page/PosSearchScreenSalesPage";
-export { PosQuantityNextSellPage } from "./page/PosQuantityNextSellPage";
+export {
+  posSalesFeatureRoutes,
+  posSalesRoutesModel,
+  posSalesRouteKeys,
+  getPosSalesRoute,
+  buildPosSalesFeatureRoutes,
+  usePosSalesFeatureRoutes,
+  PosSalesPage,
+  PosCartPage,
+  PosDiscountScreenPage,
+  PosPaymentTypeScreenPage,
+  PosPaymentScreenPage,
+  PosFinishScreenPage,
+  PosAddProductSalesPage,
+  PosCategoriasScreenSalesPage,
+  PosAddCategoriesSalesPage,
+  PosScannerSalesPage,
+  PosSearchScreenSalesPage,
+  PosQuantityNextSellPage,
+} from "./sales";

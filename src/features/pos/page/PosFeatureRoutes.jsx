@@ -1,8 +1,8 @@
 import { PosAuthPage } from "./PosAuthPage";
-import { PosCartPage } from "./PosCartPage";
 import { PosCreateStorePage } from "./PosCreateStorePage";
 import { PosMarketingPage } from "./PosMarketingPage";
-import { PosSalesPage } from "./PosSalesPage";
+import { PosCartPage } from "../sales/page/PosCartPage";
+import { PosSalesPage } from "../sales/page/PosSalesPage";
 import { buildPosFeatureRoutes } from "../service/buildPosFeatureRoutes";
 import { posRouteKeys } from "../model/posRoutes";
 

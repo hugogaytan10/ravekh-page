@@ -109,4 +109,4 @@ Esto evita inconsistencias de estructura y acelera migraciones pequeñas por dom
 - ✅ Servicio de autenticación centralizado en `src/features/pos/service/posAuthService.ts`.
 - ✅ Wrapper legacy mantenido en `src/Components/CatalogoWeb/PuntoVenta/Login/*` para no romper rutas existentes.
 - ✅ Rutas principales de ventas POS (`MainSales`, `MainCart`, checkout y flujos de scanner/búsqueda) ya delegan a páginas de `src/features/pos` manteniendo componentes legacy como adaptadores internos.
-- 🔜 Siguiente paso recomendado: mover `create-store`, `sales` y `settings` con el mismo patrón (`page/interface/service/model/hooks`).
+- ✅ Ventas POS se reorganizó por subdominios en `src/features/pos/sales` y `src/features/pos/sales/products` para separar flujo de checkout y catálogo de productos.

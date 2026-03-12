@@ -6,11 +6,11 @@ import { PosDiscountScreenPage } from "./PosDiscountScreenPage";
 import { PosPaymentTypeScreenPage } from "./PosPaymentTypeScreenPage";
 import { PosPaymentScreenPage } from "./PosPaymentScreenPage";
 import { PosFinishScreenPage } from "./PosFinishScreenPage";
-import { PosAddProductSalesPage } from "./PosAddProductSalesPage";
-import { PosCategoriasScreenSalesPage } from "./PosCategoriasScreenSalesPage";
-import { PosAddCategoriesSalesPage } from "./PosAddCategoriesSalesPage";
-import { PosScannerSalesPage } from "./PosScannerSalesPage";
-import { PosSearchScreenSalesPage } from "./PosSearchScreenSalesPage";
+import { PosAddProductSalesPage } from "../products/page/PosAddProductSalesPage";
+import { PosCategoriasScreenSalesPage } from "../products/page/PosCategoriasScreenSalesPage";
+import { PosAddCategoriesSalesPage } from "../products/page/PosAddCategoriesSalesPage";
+import { PosScannerSalesPage } from "../products/page/PosScannerSalesPage";
+import { PosSearchScreenSalesPage } from "../products/page/PosSearchScreenSalesPage";
 import { PosQuantityNextSellPage } from "./PosQuantityNextSellPage";
 
 const posSalesPageByRouteKey = {
