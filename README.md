@@ -12,6 +12,11 @@ Mantener el comportamiento actual en producción mientras se migra de forma incr
 - `src/features`: nuevo espacio para módulos aislados por dominio.
 - `src/features/legal`: ejemplo real de feature ya migrada parcialmente.
 - `src/features/landing`: nueva feature para la landing principal, conectada con wrapper legacy en `src/Components/LandingPage`.
+<<<<<<< ours
+- `src/features/contact`: feature para el formulario de contacto, integrada en paralelo con wrapper legacy en `src/Components/Contacto`.
+=======
+- `src/features/blog`: feature inicial del blog (page/interface/hook/model/service) conectada vía wrapper legacy en `src/Components/Blog/BlogMain`.
+>>>>>>> theirs
 
 ## Estructura objetivo
 
@@ -44,12 +49,24 @@ src/
 5. Publicar entrada en `page` y conectar desde rutas existentes.
 6. Validar `npm run lint` y `npm run build`.
 
+## Ejecutar la versión nueva (arquitectura por features)
+
+Además del entry legacy (`npm run dev`), puedes levantar el entry experimental basado en features:
+
+```bash
+npm run new
+```
+
+Este comando abre `index.new.html` usando `src/new-main.jsx` y el router de `src/app`.
+
 ## Crear una nueva feature
 
 Se agregó un script para crear el esqueleto estándar:
 
 ```bash
 npm run feature:new -- nombre-feature
+# alias corto
+npm run new -- nombre-feature
 ```
 
 Esto crea automáticamente las carpetas `hooks`, `interface`, `model`, `page`, `service` y un `index.js` inicial en `src/features/nombre-feature`.

@@ -5,7 +5,7 @@ import { Wireframe } from "../../../Components/Wireframe/Wireframe";
 import { Design } from "../../../Components/Design/Design";
 import { Desarrollo } from "../../../Components/Desarrollo/Desarrollo";
 import { Caracteristicas } from "../../../Components/Caracteristicas/Caracteristicas";
-import { Contacto } from "../../../Components/Contacto/Contacto";
+import { ContactPage } from "../../contact";
 import { Footer } from "../../../Components/Footer/Footer";
 
 export const landingSectionsModel = [
@@ -20,7 +20,7 @@ export const landingSectionsModel = [
     id: "contacto",
     endColor: "30,30,30",
     Component: function ContactSection() {
-      return <Contacto catalogo={false} />;
+      return <ContactPage catalogo={false} />;
     },
   },
   { id: "footer", endColor: null, Component: Footer },

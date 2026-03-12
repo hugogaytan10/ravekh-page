@@ -28,6 +28,11 @@ src/features/
 - `hooks/`: hooks específicos de la feature.
 - `index.js`: API pública de la feature (único punto de exportación externo).
 
+## Entry paralelo para migración
+
+- `npm run dev`: mantiene el flujo legacy actual.
+- `npm run new`: levanta el entry paralelo (`src/new-main.jsx`) para validar rutas migradas por features sin romper lo existente.
+
 ## Estrategia de migración incremental
 
 1. **Congelar rutas legacy**: no mover todo de golpe.
@@ -64,6 +69,8 @@ Puedes crear una feature base con:
 
 ```bash
 npm run feature:new -- nombre-feature
+# alias corto
+npm run new -- nombre-feature
 ```
 
 Esto evita inconsistencias de estructura y acelera migraciones pequeñas por dominio.
