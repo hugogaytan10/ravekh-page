@@ -44,19 +44,21 @@ import { CouponsPage } from "../../coupons/pages/CouponsPage";
 import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
 import { InitialCustomizeApp } from "../CatalogoWeb/PuntoVenta/Login/CustomizeApp";
 
-// Importaciones para el punto de venta - Sales
-import { MainSales } from "../CatalogoWeb/PuntoVenta/Sales/MainSales";
-import { MainCart } from "../CatalogoWeb/PuntoVenta/Sales/Cart/Cart";
-import { DiscountScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/DiscountScreen";
-import { PaymentTypeScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/PaymentTypeScreen";
-import { PaymentScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/PaymentScreen";
-import { FinishScreen } from "../CatalogoWeb/PuntoVenta/Sales/Cart/FinishScreen";
-import { AddProductSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddProductSales";
-import { CategoriasScreenSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/CategoriasScreenSales";
-import { AddCategoriesSales } from "../CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddCategories";
-import { Scanner } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/Scanner";
-import { SearchScreen } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/SearchScreen";
-import { QuantityNextSell } from "../CatalogoWeb/PuntoVenta/Sales/NavBar/QuantityNextSell";
+// Importaciones para el punto de venta - Sales (feature)
+import {
+  PosSalesPage,
+  PosCartPage,
+  PosDiscountScreenPage,
+  PosPaymentTypeScreenPage,
+  PosPaymentScreenPage,
+  PosFinishScreenPage,
+  PosAddProductSalesPage,
+  PosCategoriasScreenSalesPage,
+  PosAddCategoriesSalesPage,
+  PosScannerSalesPage,
+  PosSearchScreenSalesPage,
+  PosQuantityNextSellPage,
+} from "../../features/pos";
 
 // Importaciones para el punto de venta - Products
 import { MainProducts } from "../CatalogoWeb/PuntoVenta/Products/MainProducts";
@@ -942,16 +944,16 @@ export const Rutas = () => {
           {/* RUTAS PARA EL PUNTO DE VENTA */}
           <Route path="/login-punto-venta" element={<AuthPage />} />
           <Route path="/create-store" element={<InitialCustomizeApp />} />
-          <Route path="/MainSales" element={<MainSales />} />
-          <Route path="/MainCart" element={<MainCart />} />
+          <Route path="/MainSales" element={<PosSalesPage />} />
+          <Route path="/MainCart" element={<PosCartPage />} />
           <Route path="/categoria/:idCategoria" element={<MainCategoria />} />
-          <Route path="/DiscountScreen" element={<DiscountScreen />} />
-          <Route path="/payment-type" element={<PaymentTypeScreen />} />
-          <Route path="/payment" element={<PaymentScreen />} />
-          <Route path="/finish" element={<FinishScreen />} />
-          <Route path="/add-product" element={<AddProductSales />} />
-          <Route path="/select-caterory-sales" element={<CategoriasScreenSales />} />
-          <Route path="/add-category-sales" element={<AddCategoriesSales />} />
+          <Route path="/DiscountScreen" element={<PosDiscountScreenPage />} />
+          <Route path="/payment-type" element={<PosPaymentTypeScreenPage />} />
+          <Route path="/payment" element={<PosPaymentScreenPage />} />
+          <Route path="/finish" element={<PosFinishScreenPage />} />
+          <Route path="/add-product" element={<PosAddProductSalesPage />} />
+          <Route path="/select-caterory-sales" element={<PosCategoriasScreenSalesPage />} />
+          <Route path="/add-category-sales" element={<PosAddCategoriesSalesPage />} />
           <Route path="/main-products" element={<MainProducts />}>
             <Route path="items" element={<List />} />
             <Route path="stock" element={<StockProducts />} />
@@ -961,10 +963,10 @@ export const Rutas = () => {
           <Route path="select-category-product" element={<SelectCategory />} />
           <Route path="/edit-product/:productId" element={<EditProduct />} />
           <Route path="/edit-category" element={<EditCategory />} />
-          <Route path="/scanner-sales" element={<Scanner />} />
-          <Route path="/search-product" element={<SearchScreen />} />
+          <Route path="/scanner-sales" element={<PosScannerSalesPage />} />
+          <Route path="/search-product" element={<PosSearchScreenSalesPage />} />
           <Route path="/search-product-products" element={<SearchProductScreen />} />
-          <Route path="/next-quantity-sell" element={<QuantityNextSell />} />
+          <Route path="/next-quantity-sell" element={<PosQuantityNextSellPage />} />
           <Route path="/products-filter" element={<Filter />} />
           <Route path="/keyboardProduct/:productId/:currentStock" element={<KeyboardStock />} />
           <Route path="/main-reports" element={<MainReports />} />

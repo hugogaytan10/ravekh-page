@@ -102,3 +102,11 @@ npm run new -- nombre-feature
 ```
 
 Esto evita inconsistencias de estructura y acelera migraciones pequeñas por dominio.
+
+### Progreso de migración POS (actual)
+
+- ✅ Autenticación POS (`/login-punto-venta`) ya corre desde `src/features/pos`.
+- ✅ Servicio de autenticación centralizado en `src/features/pos/service/posAuthService.ts`.
+- ✅ Wrapper legacy mantenido en `src/Components/CatalogoWeb/PuntoVenta/Login/*` para no romper rutas existentes.
+- ✅ Rutas principales de ventas POS (`MainSales`, `MainCart`, checkout y flujos de scanner/búsqueda) ya delegan a páginas de `src/features/pos` manteniendo componentes legacy como adaptadores internos.
+- 🔜 Siguiente paso recomendado: mover `create-store`, `sales` y `settings` con el mismo patrón (`page/interface/service/model/hooks`).
