@@ -1,5 +1,5 @@
-import { MainSales } from "../../../Components/CatalogoWeb/PuntoVenta/Sales/MainSales";
+import { PosSalesView } from "../interface/PosSalesView";
 
 export const PosSalesPage = () => {
-  return <MainSales />;
+  return <PosSalesView />;
 };

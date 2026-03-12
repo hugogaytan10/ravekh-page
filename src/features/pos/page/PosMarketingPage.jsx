@@ -1,5 +1,5 @@
-import { RavekhPos } from "../../../Components/RavekhPos/RavekhPos";
+import { PosMarketingView } from "../interface/PosMarketingView";
 
 export const PosMarketingPage = () => {
-  return <RavekhPos />;
+  return <PosMarketingView />;
 };

@@ -1,5 +1,5 @@
-import { AuthPage } from "../../../Components/CatalogoWeb/PuntoVenta/Login/AuthPage";
+import { PosAuthView } from "../interface/PosAuthView";
 
 export const PosAuthPage = () => {
-  return <AuthPage />;
+  return <PosAuthView />;
 };

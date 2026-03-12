@@ -5,3 +5,11 @@ export const posRoutesModel = {
   sales: "/MainSales",
   cart: "/MainCart",
 };
+
+export const posRouteKeys = Object.freeze({
+  marketing: "marketing",
+  login: "login",
+  createStore: "createStore",
+  sales: "sales",
+  cart: "cart",
+});
