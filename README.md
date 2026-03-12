@@ -11,6 +11,7 @@ Mantener el comportamiento actual en producción mientras se migra de forma incr
 - `src/Components`: código legacy que sigue siendo fuente principal de rutas/pantallas.
 - `src/features`: nuevo espacio para módulos aislados por dominio.
 - `src/features/legal`: ejemplo real de feature ya migrada parcialmente.
+- `src/features/landing`: nueva feature para la landing principal, conectada con wrapper legacy en `src/Components/LandingPage`.
 
 ## Estructura objetivo
 
