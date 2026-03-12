@@ -39,3 +39,14 @@
     padding: 2.5rem;
   }
 }
+
+
+.contact-form-shell--compact {
+  padding: 1.25rem 1rem;
+}
+
+@media (min-width: 768px) {
+  .contact-form-shell--compact {
+    padding: 2rem;
+  }
+}

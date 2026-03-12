@@ -1,7 +1,7 @@
 import { URL } from "../../../Components/CatalogoWeb/Const/Const";
 
 export const sendContactMessage = async (payload) => {
-  const response = await fetch(`${URL}contacto/sendinfo`, {
+  const response = await fetch(`${URL}contacto/ravekhPage`, {
     method: "POST",
     mode: "cors",
     headers: {

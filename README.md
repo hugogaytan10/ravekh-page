@@ -81,3 +81,22 @@ Esto crea automáticamente las carpetas `hooks`, `interface`, `model`, `page`, `
 ---
 
 Para más detalle de la estrategia, revisar `src/features/README.md`.
+
+## Hoja de ruta por dominios (migración gradual)
+
+Para seguir mejorando sin romper producción, el plan recomendado queda así:
+
+1. **Landing (`src/features/landing`)**
+   - Consolidar UX responsive y desacoplar secciones por dominio visual.
+   - ✅ Se ajustó el comportamiento mobile del formulario de contacto para evitar fricción al enviar.
+2. **Cupones/Visitas (`src/features/coupon-visits`)**
+   - Mantener rutas y flujos de backoffice/claim/redeem dentro de la feature.
+3. **Catálogo Web (`src/features/catalog-web`)**
+   - Separar listado, detalle, categoría y pedido en páginas de la feature.
+4. **POS (`src/features/pos`)**
+   - Aislar marketing, auth y venta para avanzar hacia módulos internos más pequeños.
+
+### Regla práctica para el siguiente PR
+
+Cuando migres un flujo nuevo, mueve primero la lógica a `service`/`model`, luego hooks, y al final UI.
+Así evitas refactors grandes y reduces riesgo en producción.

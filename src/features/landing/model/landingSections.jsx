@@ -36,6 +36,12 @@ export const landingSectionsModel = [
     minHeightClassName: "min-h-screen",
     Component: PackagesSection,
   },
-  { id: "contacto", endColor: "30,30,30", bgClassName: "bg-[#1e1e1e]", Component: ContactSection },
+  {
+    id: "contacto",
+    endColor: "30,30,30",
+    bgClassName: "bg-[#1e1e1e]",
+    minHeightClassName: "min-h-[75vh] md:h-screen",
+    Component: ContactSection,
+  },
   { id: "footer", endColor: null, bgClassName: "bg-black", Component: FooterSection },
 ];

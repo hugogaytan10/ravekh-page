@@ -18,7 +18,7 @@ export const LandingFeaturePage = () => {
 
       <div
         ref={containerRef}
-        className="h-screen flex flex-col overflow-y-scroll snap-y snap-mandatory scrollbar-hidden"
+        className="h-screen flex flex-col overflow-y-scroll  snap-y snap-mandatory scrollbar-hidden"
       >
         <LandingSections sections={landingSectionsModel} />
         <FloatingWhatsAppButton />
