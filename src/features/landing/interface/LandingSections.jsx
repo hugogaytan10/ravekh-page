@@ -1,8 +1,9 @@
-
 export const LandingSections = ({ sections }) => {
-  return sections.map(({ id, endColor, Component }) => (
+  return sections.map(({ id, endColor, bgClassName = "bg-transparent", minHeightClassName = "h-screen", Component }) => (
     <section
-      className="h-screen snap-start w-full"
+      id={`landing-${id}`}
+      aria-label={`Sección ${id}`}
+      className={`${minHeightClassName} snap-start w-full transition-colors duration-500 ${bgClassName}`}
       data-endcolor={endColor ?? undefined}
       key={id}
     >

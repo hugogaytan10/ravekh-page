@@ -10,12 +10,19 @@ Mantener el comportamiento actual en producción mientras se migra de forma incr
 
 - `src/Components`: código legacy que sigue siendo fuente principal de rutas/pantallas.
 - `src/features`: nuevo espacio para módulos aislados por dominio.
-- `src/features/legal`: ejemplo real de feature ya migrada parcialmente.
-- `src/features/landing`: nueva feature para la landing principal, conectada con wrapper legacy en `src/Components/LandingPage`.
+- `src/features/legal`: feature migrada para políticas de privacidad.
+- `src/features/blog`: feature base del blog (page/interface/hook/model/service) conectada vía wrapper legacy.
+- `src/features/contact`: feature para formulario de contacto, integrada con wrapper legacy.
 <<<<<<< ours
-- `src/features/contact`: feature para el formulario de contacto, integrada en paralelo con wrapper legacy en `src/Components/Contacto`.
+- `src/features/landing`: feature completa para la landing page, orquestando todas las secciones desde su propio módulo.
+- `src/features/coupon-visits`: feature inicial para el sistema de cupones/visitas.
+- `src/features/catalog-web`: feature inicial para el sistema de catálogo web.
+- `src/features/pos`: feature inicial para el sistema POS.
 =======
-- `src/features/blog`: feature inicial del blog (page/interface/hook/model/service) conectada vía wrapper legacy en `src/Components/Blog/BlogMain`.
+- `src/features/landing`: feature completa para la landing page, incluyendo secciones de muestra y paquetes, con control de colores/estilos por sección.
+- `src/features/coupon-visits`: feature para el sistema de cupones/visitas con rutas migradas al router paralelo.
+- `src/features/catalog-web`: feature para catálogo web con rutas de listado, detalle, categoría y pedido.
+- `src/features/pos`: feature para POS con rutas base de marketing, login, creación y venta.
 >>>>>>> theirs
 
 ## Estructura objetivo
