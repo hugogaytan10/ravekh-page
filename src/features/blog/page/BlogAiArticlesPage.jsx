@@ -1,5 +1,5 @@
-import { MainArticulosIA } from "../../../Components/Blog/ArticulosIA/MainArticulosIA";
+import { BlogAiArticlesView } from "../interface/BlogAiArticlesView";
 
 export const BlogAiArticlesPage = () => {
-  return <MainArticulosIA />;
+  return <BlogAiArticlesView />;
 };

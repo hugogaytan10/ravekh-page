@@ -49,6 +49,12 @@ src/features/systems/
 - Evita que `app/router` deba importar cada sistema de forma aislada.
 - Facilita migración gradual sin renombrar ni mover todo de golpe.
 
+## Avance actual sugerido
+
+- Mantener wrappers legacy en `src/Components/*` que delegan en `features/*/page/*`.
+- Mover primero UI legado a `interface/` (como adaptadores), y dejar `page/` solo para composición/ruta.
+- Después, extraer datos y reglas a `service/` y `model/` para terminar de desacoplar cada feature.
+
 ## Entry paralelo para migración
 
 - `npm run dev`: mantiene el flujo legacy actual.

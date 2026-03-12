@@ -1,5 +1,5 @@
-import { MainArticulosReactNative } from "../../../Components/Blog/ArticulosReactNative/MainArticulosReactNative";
+import { BlogReactNativeArticlesView } from "../interface/BlogReactNativeArticlesView";
 
 export const BlogReactNativeArticlesPage = () => {
-  return <MainArticulosReactNative />;
+  return <BlogReactNativeArticlesView />;
 };

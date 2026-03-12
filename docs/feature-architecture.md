@@ -40,6 +40,7 @@ src/
 - **Legal/privacy-policy** migrada a `src/features/legal`.
 - **Blog** y **Contact** ya tienen estructura base por feature y wrappers legacy.
 - **Blog** ahora define sus rutas internas (`/blog`, artículos IA y React Native) desde `src/features/blog/page/BlogFeatureRoutes.jsx` para seguir migrando sin tocar el router legacy.
+- **Blog** inició separación `page` vs `interface`: las páginas de artículos ahora orquestan vistas desde `src/features/blog/interface`, manteniendo wrappers legacy sin romper rutas.
 - Se agregaron features iniciales para separar dominios:
   - `src/features/coupon-visits`
   - `src/features/catalog-web`

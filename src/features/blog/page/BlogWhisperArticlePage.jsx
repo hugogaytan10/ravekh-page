@@ -1,5 +1,5 @@
-import { ArticuloWhisper } from "../../../Components/Blog/ArticulosIA/ArticuloWhisper/ArticuloWhisper";
+import { BlogWhisperArticleView } from "../interface/BlogWhisperArticleView";
 
 export const BlogWhisperArticlePage = () => {
-  return <ArticuloWhisper />;
+  return <BlogWhisperArticleView />;
 };
