@@ -22,6 +22,10 @@ export const posSettingsRoutesModel = {
   phoneStore: "/phone-store",
   referenceStore: "/reference-store",
   startedStore: "/started-store",
+  tables: "/tables",
+  addTable: "/add-table",
+  editTable: "/edit-table/:tableId",
+  exportReports: "/export-reports",
 } as const;
 
 export const posSettingsRouteKeys = Object.freeze({
@@ -48,6 +52,10 @@ export const posSettingsRouteKeys = Object.freeze({
   phoneStore: "phoneStore",
   referenceStore: "referenceStore",
   startedStore: "startedStore",
+  tables: "tables",
+  addTable: "addTable",
+  editTable: "editTable",
+  exportReports: "exportReports",
 } as const);
 
 export type PosSettingsRouteKey = keyof typeof posSettingsRoutesModel;

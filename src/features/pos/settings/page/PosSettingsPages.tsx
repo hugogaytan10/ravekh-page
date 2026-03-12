@@ -21,6 +21,7 @@ import { NameStore } from "../../../../Components/CatalogoWeb/PuntoVenta/Setting
 import { PhoneStore } from "../../../../Components/CatalogoWeb/PuntoVenta/Settings/StoreOnline/PhoneStore";
 import { ReferenceStore } from "../../../../Components/CatalogoWeb/PuntoVenta/Settings/StoreOnline/ReferenceStore";
 import { StartedStore } from "../../../../Components/CatalogoWeb/PuntoVenta/Settings/StoreOnline/StartedStore";
+import { PosAddTableView, PosEditTableView, PosExportReportsView, PosTablesView } from "../interface/PosSettingsAdvancedViews";
 
 export const PosMainSettingsPage = () => <MainSettings />;
 export const PosCatalogSettingsPage = () => <CatalogSettings />;
@@ -45,3 +46,7 @@ export const PosNameStorePage = () => <NameStore />;
 export const PosPhoneStorePage = () => <PhoneStore />;
 export const PosReferenceStorePage = () => <ReferenceStore />;
 export const PosStartedStorePage = () => <StartedStore />;
+export const PosTablesPage = () => <PosTablesView />;
+export const PosAddTablePage = () => <PosAddTableView />;
+export const PosEditTablePage = () => <PosEditTableView />;
+export const PosExportReportsPage = () => <PosExportReportsView />;

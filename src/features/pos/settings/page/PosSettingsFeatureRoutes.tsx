@@ -24,6 +24,10 @@ import {
   PosPhoneStorePage,
   PosReferenceStorePage,
   PosStartedStorePage,
+  PosTablesPage,
+  PosAddTablePage,
+  PosEditTablePage,
+  PosExportReportsPage,
 } from "./PosSettingsPages";
 
 const posSettingsPageByRouteKey = {
@@ -50,6 +54,10 @@ const posSettingsPageByRouteKey = {
   [posSettingsRouteKeys.phoneStore]: <PosPhoneStorePage />,
   [posSettingsRouteKeys.referenceStore]: <PosReferenceStorePage />,
   [posSettingsRouteKeys.startedStore]: <PosStartedStorePage />,
+  [posSettingsRouteKeys.tables]: <PosTablesPage />,
+  [posSettingsRouteKeys.addTable]: <PosAddTablePage />,
+  [posSettingsRouteKeys.editTable]: <PosEditTablePage />,
+  [posSettingsRouteKeys.exportReports]: <PosExportReportsPage />,
 };
 
 export const posSettingsFeatureRoutes = buildPosSettingsFeatureRoutes(posSettingsPageByRouteKey);
