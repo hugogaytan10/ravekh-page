@@ -1,8 +1,3 @@
-import { BlogFeaturePage } from "../../../features/blog";
+import { blogFeatureRoutes } from "../../../features/blog";
 
-export const blogRoutes = [
-  {
-    path: "/blog",
-    element: <BlogFeaturePage />,
-  },
-];
+export const blogRoutes = blogFeatureRoutes;
