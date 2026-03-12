@@ -1,12 +1,12 @@
 # Arquitectura basada en features
 
-Este directorio permite migrar el proyecto **de forma gradual** sin romper el flujo actual en `src/Components`.
+Este directorio permite migrar el proyecto **de forma gradual** sin romper el flujo actual de `src/Components`.
 
 ## Objetivo
 
-Mantener el código actual funcionando mientras cada dominio nuevo (o refactor) vive dentro de `src/features/<feature-name>` con una estructura consistente.
+Mantener la app funcionando mientras cada dominio nuevo (o refactor) vive dentro de `src/features/<feature-name>` con una estructura consistente y mantenible.
 
-## Estructura recomendada por feature
+## Estructura estándar por feature
 
 ```text
 src/features/
@@ -19,39 +19,51 @@ src/features/
     index.js
 ```
 
-### Responsabilidades
+### Responsabilidades por carpeta
 
-- `page/`: contenedores de pantalla/ruta.
-- `interface/`: componentes de UI de la feature (presentacionales).
-- `service/`: llamadas API, adaptadores, utilidades de dominio.
-- `model/`: modelos, mocks, esquemas o constantes de dominio.
+- `page/`: contenedores de pantalla/ruta (composición de la feature).
+- `interface/`: UI presentacional, sin lógica de negocio compleja.
+- `service/`: API clients, adaptadores, mapeos de datos, utilidades de infraestructura.
+- `model/`: tipos, modelos, constantes y reglas de dominio.
 - `hooks/`: hooks específicos de la feature.
-- `index.js`: API pública de la feature (exportaciones controladas).
+- `index.js`: API pública de la feature (único punto de exportación externo).
 
 ## Estrategia de migración incremental
 
 1. **Congelar rutas legacy**: no mover todo de golpe.
-2. **Crear una feature nueva** para cada módulo nuevo o refactor.
-3. **Usar wrappers de compatibilidad** en `src/Components` cuando sea necesario.
+2. **Crear una feature por cada dominio nuevo o refactor aislado**.
+3. **Usar wrappers de compatibilidad** en `src/Components` cuando aplique.
 4. **Migrar por capas** en este orden:
    - `model` y `service`
    - `hooks`
    - `interface`
    - `page`
-5. **Actualizar imports** para depender de `features/<feature>/index.js` y no de rutas internas.
+5. **Actualizar imports** para depender de `features/<feature>/index.js`.
 6. **Eliminar código legacy** solo cuando no existan referencias activas.
 
-## Criterios de calidad
+## Buenas prácticas clave
 
-- Evitar imports cruzados entre features (usar `shared/` para utilidades comunes).
-- Mantener componentes de `interface/` sin lógica de negocio compleja.
-- Mantener `service/` sin dependencias de UI.
-- En cada migración, conservar comportamiento y estilos actuales primero; optimizar después.
+- Evitar imports cruzados entre features.
+- Si algo es compartido, promoverlo a una zona común (`shared/` o `app/`).
+- No mezclar lógica de UI con acceso a datos.
+- Mantener `service` sin dependencias de React/UI.
+- Minimizar side effects dentro de componentes presentacionales.
 
-## Checklist para cada migración
+## Definición de terminado (DoD) por migración
 
 - [ ] Existe `index.js` como API pública.
 - [ ] La feature compila sin dependencias cíclicas.
 - [ ] La ruta legacy sigue funcionando (si aplica).
-- [ ] Se validó build/lint.
-- [ ] Se documentó el alcance en el PR.
+- [ ] Se validó `npm run lint`.
+- [ ] Se validó `npm run build`.
+- [ ] Se documentó alcance y riesgos en el PR.
+
+## Scaffold rápido
+
+Puedes crear una feature base con:
+
+```bash
+npm run feature:new -- nombre-feature
+```
+
+Esto evita inconsistencias de estructura y acelera migraciones pequeñas por dominio.
