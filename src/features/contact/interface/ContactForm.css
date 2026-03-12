@@ -1,0 +1,41 @@
+.contact-form-shell {
+  background: rgba(15, 23, 42, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 2rem 1.25rem;
+  backdrop-filter: blur(4px);
+}
+
+.contact-submit-button,
+.contact-close-modal-button {
+  font-family: "Raleway", sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  color: #fff;
+  border: 0;
+  cursor: pointer;
+  min-width: 220px;
+  height: 44px;
+  padding: 0 24px;
+  border-radius: 999px;
+  transition: transform 150ms ease, opacity 150ms ease;
+  background: linear-gradient(94.23deg, #0070ff 12.41%, #6d47ff 52.55%, #eb00ff 89.95%);
+}
+
+.contact-submit-button:hover,
+.contact-close-modal-button:hover {
+  transform: translateY(-1px);
+  opacity: 0.95;
+}
+
+.contact-submit-button:active,
+.contact-close-modal-button:active {
+  transform: translateY(0);
+}
+
+@media (min-width: 768px) {
+  .contact-form-shell {
+    padding: 2.5rem;
+  }
+}

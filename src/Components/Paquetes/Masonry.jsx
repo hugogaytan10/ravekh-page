@@ -20,7 +20,7 @@ const paquetes = [
       "1 revision para cambios",
       "Mantenimiento cada 6 meses (10% del valor del paquete)"
     ],
-    price: "$3,600MXN"
+    price: "$6,500 MXN"
   },
   {
     paquete: "Pagina en expanción",
@@ -40,7 +40,7 @@ const paquetes = [
       "3 revisiones para cambios",
       "Mantenimiento cada 6 meses (10% del valor del paquete)"
     ],
-    price: "$4,890MXN",
+    price: "$12,000 MXN",
     link: "https://66d10704c5941bc4825d47e9--loquacious-wisp-42eadd.netlify.app/",
   },
   {
@@ -68,7 +68,7 @@ const paquetes = [
       "Mantenimiento cada 6 meses (10% del valor del paquete)",
       "Capacitación completa"
     ],
-    price: "$8,290MXN",
+    price: "$18,000 MXN",
     link: "https://66d10704c5941bc4825d47e9--loquacious-wisp-42eadd.netlify.app/",
   },
   /*{

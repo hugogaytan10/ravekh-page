@@ -36,19 +36,11 @@ src/
 
 ## Estado actual
 
-<<<<<<< ours
-- **Landing** consolidada como feature con sus secciones orquestadas desde `src/features/landing`.
-=======
 - **Landing** consolidada como feature con secciones completas (incluyendo muestra y paquetes) y configuración de estilos/colores por sección.
->>>>>>> theirs
 - **Legal/privacy-policy** migrada a `src/features/legal`.
 - **Blog** y **Contact** ya tienen estructura base por feature y wrappers legacy.
 - Se agregaron features iniciales para separar dominios:
   - `src/features/coupon-visits`
   - `src/features/catalog-web`
   - `src/features/pos`
-<<<<<<< ours
-- El router paralelo de `src/app` ya apunta a estas features para pruebas progresivas (`npm run new`).
-=======
 - El router paralelo de `src/app` ahora consume definiciones de rutas desde las propias features para pruebas progresivas (`npm run new`).
->>>>>>> theirs

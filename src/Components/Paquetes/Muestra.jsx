@@ -49,9 +49,6 @@ export const Paquetes = () => {
 
   return (
     <div className="w-full  min-h-screen ">
-      <h3 className="text-center text-2xl font-bold md:text-3xl block w-full mt-10 mb-10">
-        Desarrollo WEB
-      </h3>
       <PaquetesCards/>
     </div>
   );

@@ -17,6 +17,11 @@
     transition: border-color 0.3s ease-in-out;
 }
 
+.google-textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
 .google-input:focus,
 .google-input:not(:placeholder-shown) {
     border-color: #4285f4;
