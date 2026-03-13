@@ -160,7 +160,7 @@ export const Rutas = () => {
     location.pathname === "/catalogo/pedido";
 
   //lista de rutas donde NO queremos mostrar el menú
-  const hiddenNavBarRoutes = ["/login-punto-venta", "/MainSales"];
+  const hiddenNavBarRoutes = ["/login-punto-venta", "/sistema/pos/login", "/MainSales"];
 
   const menuIconRef = useRef(null);
   const slideDownRef = useRef(null);
@@ -381,6 +381,7 @@ export const Rutas = () => {
   const shouldShowNavbar = useMemo(() => {
     const hiddenRoutes = [
       "/login-punto-venta",
+      "/sistema/pos/login",
       "/MainSales",
       "/MainCart",
       "/DiscountScreen",
@@ -896,6 +897,8 @@ export const Rutas = () => {
           <Route path="/politica" element={<PoliticaPrivacidad />} />
           <Route path="/politicaAgenda" element={<PoliticaPrivacidadAgenda />} />
           <Route path="/RavekhPos" element={<RavekhPos />} />
+          <Route path="/sistema/pos" element={<Navigate to="/sistema/pos/login" replace />} />
+          <Route path="/sistema/pos/login" element={<AuthPage />} />
           <Route path="/cupones" element={<LoginPage />} />
           <Route path="/cuponespv" element={<MainCoupons />}>
             <Route index element={<Navigate to="visitas" replace />} />

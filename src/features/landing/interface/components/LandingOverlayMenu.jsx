@@ -12,7 +12,7 @@ const sectionItems = [
 
 const routeItems = [
   { label: "Blog", to: "/blog" },
-  { label: "Punto de Venta", to: "/sistema/pos" },
+  { label: "Punto de Venta", to: "/sistema/pos/login" },
   { label: "Cupones", to: "/sistema/cupones" },
   { label: "Política de Privacidad", to: "/politica-privacidad" },
 ];
