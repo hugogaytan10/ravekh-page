@@ -82,6 +82,19 @@ npm run new
 
 Este comando abre `index.new.html` usando `src/new-main.jsx` y el router de `src/app`.
 
+
+## Auditorías para migración de POS
+
+Para validar que el POS nuevo por features siga ordenado y conviviendo con el legacy sin romper rutas:
+
+```bash
+npm run pos:audit
+npm run pos:coexistence-audit
+```
+
+- `pos:audit`: revisa carpetas mínimas por módulo y archivos `.js/.jsx` pendientes de migración en `src/features/pos`.
+- `pos:coexistence-audit`: revisa convivencia entre `src/Components/CatalogoWeb/PuntoVenta` y `src/features/pos`, incluyendo rutas duplicadas.
+
 ## Crear una nueva feature
 
 Se agregó un script para crear el esqueleto estándar:
