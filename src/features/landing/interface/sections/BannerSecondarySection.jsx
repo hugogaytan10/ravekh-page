@@ -1,5 +1,4 @@
-import { BannerSecundario } from "../../../../Components/BannerSecundario/BannerSecundario";
+import { processSectionsModel } from "../../model/processSections";
+import { ProcessSection } from "./ProcessSection";
 
-export const BannerSecondarySection = () => {
-  return <BannerSecundario />;
-};
+export const BannerSecondarySection = () => <ProcessSection content={processSectionsModel.analysis} />;

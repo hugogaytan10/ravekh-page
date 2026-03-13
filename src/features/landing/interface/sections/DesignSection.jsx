@@ -1,5 +1,4 @@
-import { Design } from "../../../../Components/Design/Design";
+import { processSectionsModel } from "../../model/processSections";
+import { ProcessSection } from "./ProcessSection";
 
-export const DesignSection = () => {
-  return <Design />;
-};
+export const DesignSection = () => <ProcessSection content={processSectionsModel.design} />;

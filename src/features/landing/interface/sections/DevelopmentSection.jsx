@@ -1,5 +1,4 @@
-import { Desarrollo } from "../../../../Components/Desarrollo/Desarrollo";
+import { processSectionsModel } from "../../model/processSections";
+import { ProcessSection } from "./ProcessSection";
 
-export const DevelopmentSection = () => {
-  return <Desarrollo />;
-};
+export const DevelopmentSection = () => <ProcessSection content={processSectionsModel.development} />;

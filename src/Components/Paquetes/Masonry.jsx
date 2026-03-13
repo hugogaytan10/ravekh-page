@@ -20,7 +20,7 @@ const paquetes = [
       "1 revision para cambios",
       "Mantenimiento cada 6 meses (10% del valor del paquete)"
     ],
-    price: "$6,500 MXN"
+    price: "$4,500 MXN"
   },
   {
     paquete: "Pagina en expanción",

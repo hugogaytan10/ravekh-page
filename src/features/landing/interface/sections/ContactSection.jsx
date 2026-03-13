@@ -1,5 +1,5 @@
-import { Contacto } from "../../../../Components/Contacto/Contacto";
+import { ContactPage } from "../../../contact";
 
 export const ContactSection = () => {
-  return <Contacto catalogo={false} compact />;
+  return <ContactPage catalogo={false} compact />;
 };

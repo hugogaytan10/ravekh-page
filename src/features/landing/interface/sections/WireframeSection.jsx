@@ -1,5 +1,4 @@
-import { Wireframe } from "../../../../Components/Wireframe/Wireframe";
+import { processSectionsModel } from "../../model/processSections";
+import { ProcessSection } from "./ProcessSection";
 
-export const WireframeSection = () => {
-  return <Wireframe />;
-};
+export const WireframeSection = () => <ProcessSection content={processSectionsModel.wireframe} />;
