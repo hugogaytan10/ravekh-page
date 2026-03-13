@@ -3,6 +3,7 @@ import { Helmet, HelmetProvider } from "react-helmet-async";
 import { useLandingStatusBar } from "../hooks/useLandingStatusBar";
 import { LandingSections } from "../interface/LandingSections";
 import { FloatingWhatsAppButton } from "../interface/FloatingWhatsAppButton";
+import { LandingOverlayMenu } from "../interface/components/LandingOverlayMenu";
 import { landingSectionsModel } from "../model/landingSections";
 import "../interface/styles/landingPage.css";
 
@@ -18,8 +19,9 @@ export const LandingFeaturePage = () => {
 
       <div
         ref={containerRef}
-        className="h-screen flex flex-col overflow-y-scroll  snap-y snap-mandatory scrollbar-hidden"
+        className="h-screen flex flex-col overflow-y-scroll snap-y snap-mandatory scrollbar-hidden"
       >
+        <LandingOverlayMenu containerRef={containerRef} />
         <LandingSections sections={landingSectionsModel} />
         <FloatingWhatsAppButton />
       </div>
