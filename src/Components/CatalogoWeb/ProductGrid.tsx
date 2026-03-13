@@ -3,7 +3,7 @@ import { NavLink } from "react-router-dom";
 import { motion } from "framer-motion";
 import { Producto } from "./Modelo/Producto";
 import { getBaseVariantKey } from "./VariantSelectionModal";
-import cartIcon from "../../assets/cart-outline.svg";
+import cartIcon from "../../assets/POS/Car";
 import {Trash} from "../../assets/POS/trash";
 import { EyeIcon } from "../../assets/Cupones/icons/EyeIcon";
 interface ProductGridProps {
