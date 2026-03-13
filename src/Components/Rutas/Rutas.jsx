@@ -129,7 +129,7 @@ import { CatalogSearchInput } from "../CatalogoWeb/CatalogSearchInput";
 import { CatalogSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/CatalogSettings";
 import { EditEmployee } from "../CatalogoWeb/PuntoVenta/Employees/EditEmployee";
 import { catalogWebFeatureRoutes } from "../../features/catalog-web";
-import { couponsFeatureRoutes } from "../../features/coupons";
+import { couponVisitsFeatureRoutes } from "../../features/coupon-visits";
 //importaciones para cupones
 
 export const Rutas = () => {
@@ -902,8 +902,8 @@ export const Rutas = () => {
           <Route path="/RavekhPos" element={<RavekhPos />} />
           <Route path="/sistema/pos" element={<Navigate to="/sistema/pos/login" replace />} />
           <Route path="/sistema/pos/login" element={<AuthPage />} />
-          {couponsFeatureRoutes.map((route, index) =>
-            renderFeatureRoute(route, `coupons-${index}`)
+          {couponVisitsFeatureRoutes.map((route, index) =>
+            renderFeatureRoute(route, `coupon-visits-${index}`)
           )}
           <Route path="/blog" element={<BlogMain />} />
           <Route path="/blog/articulosIA" element={<MainArticulosIA />} />
