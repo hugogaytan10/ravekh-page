@@ -168,6 +168,7 @@ export const Rutas = () => {
   //agregados de marco
   const slideRef = useRef(null);
   const [categories, setCategories] = useState([])
+  const [availableCategoryIds, setAvailableCategoryIds] = useState([]);
 
 
   //togle para el catalogo
@@ -192,6 +193,14 @@ export const Rutas = () => {
   const clampPrice = (value) => Math.min(priceMaxDefault, Math.max(priceMinDefault, value));
   const priceMinValue = filterDraft.priceMin ?? priceMinDefault;
   const priceMaxValue = filterDraft.priceMax ?? priceMaxDefault;
+  const visibleCategories = useMemo(() => {
+    if (!Array.isArray(availableCategoryIds) || availableCategoryIds.length === 0) {
+      return categories;
+    }
+
+    const allowedIds = new Set(availableCategoryIds.map((id) => Number(id)));
+    return categories.filter((category) => allowedIds.has(Number(category?.Id)));
+  }, [availableCategoryIds, categories]);
 
 
   // Nueva referencia para el POS
@@ -269,6 +278,39 @@ export const Rutas = () => {
         );
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    const syncAvailableCategoryIds = () => {
+      const raw = localStorage.getItem("catalogAvailableCategoryIds");
+      if (!raw) {
+        setAvailableCategoryIds([]);
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(raw);
+        const normalized = Array.isArray(parsed)
+          ? parsed
+            .map((id) => Number(id))
+            .filter((id) => Number.isFinite(id))
+          : [];
+        setAvailableCategoryIds(normalized);
+      } catch {
+        setAvailableCategoryIds([]);
+      }
+    };
+
+    syncAvailableCategoryIds();
+    const handleUpdate = () => syncAvailableCategoryIds();
+
+    window.addEventListener("catalogAvailableCategoryIdsUpdated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+
+    return () => {
+      window.removeEventListener("catalogAvailableCategoryIdsUpdated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -889,7 +931,7 @@ export const Rutas = () => {
                         Todo
                       </NavLink>
                     )}
-                    {categories.map((category) => (
+                    {visibleCategories.map((category) => (
                       <NavLink
                         key={category.Id}
                         to={`/categoria/${category.Id}`}
