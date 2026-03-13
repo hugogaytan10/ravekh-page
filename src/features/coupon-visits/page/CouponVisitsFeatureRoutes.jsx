@@ -18,6 +18,7 @@ import { CouponsPage } from "../../../coupons/pages/CouponsPage";
 import { VisitHistoryPage } from "../../../coupons/pages/VisitHistoryPage";
 
 export const couponVisitsFeatureRoutes = [
+  { path: "/sistema/cupones", element: <Navigate to="/cupones" replace /> },
   { path: "/cupones", element: <LoginPage /> },
   { path: "/cupones/registro", element: <RegisterPage /> },
   { path: "/cupones/home", element: <HomePage /> },

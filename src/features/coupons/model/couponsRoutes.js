@@ -1,4 +1,5 @@
 export const couponsRoutesModel = {
+  systemEntry: "/sistema/cupones",
   login: "/cupones",
   register: "/cupones/registro",
   home: "/cupones/home",
@@ -15,12 +16,13 @@ export const couponsRoutesModel = {
   congrats: "/cupones/nuevo",
   visitHistory: "/cupones/visitas",
   editCouponPv: "/cuponespv/editar/:CouponId",
-  editCouponApp: "cupones/editar/:CouponId",
+  editCouponApp: "/cupones/editar/:CouponId",
   pvRoot: "/cuponespv",
 };
 
 export const couponsRouteKeys = Object.freeze({
   login: "login",
+  systemEntry: "systemEntry",
   register: "register",
   home: "home",
   myCoupons: "myCoupons",

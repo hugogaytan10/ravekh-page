@@ -40,6 +40,10 @@ const couponsPageByRouteKey = {
 
 export const couponsFeatureRoutes = [
   {
+    path: couponsRoutesModel.systemEntry,
+    element: <Navigate to={couponsRoutesModel.login} replace />,
+  },
+  {
     path: couponsRoutesModel.pvRoot,
     element: <MainCoupons />,
     children: [

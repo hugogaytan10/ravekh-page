@@ -1,5 +1,6 @@
 export const couponVisitsRoutesModel = {
   customer: {
+    systemEntry: "/sistema/cupones",
     login: "/cupones",
     register: "/cupones/registro",
     home: "/cupones/home",
