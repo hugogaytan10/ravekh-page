@@ -3,6 +3,7 @@ export { posRoutesModel } from "./model/posRoutes";
 export { posRouteKeys } from "./model/posRoutes";
 export { getPosRoute } from "./service/getPosRoute";
 export { buildPosFeatureRoutes } from "./service/buildPosFeatureRoutes";
+export { posFeatureRouteAliases } from "./page/PosFeatureRoutes";
 export { PosAuthPage } from "./page/PosAuthPage";
 export { loginToServer, signUpToServer } from "./service/posAuthService";
 

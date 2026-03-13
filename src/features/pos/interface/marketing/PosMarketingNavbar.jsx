@@ -34,7 +34,7 @@ export const PosMarketingNavbar = ({
 
         <div className="hidden lg:block">
           <a
-            href="/login-punto-venta"
+            href="/sistema/pos/login"
             className="rounded-full bg-[#6D01D1] px-6 py-2 text-sm font-semibold text-white shadow-md transition hover:bg-[#5500B4]"
           >
             Entrar

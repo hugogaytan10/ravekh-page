@@ -8,6 +8,7 @@ import {
   posCustomersFeatureRoutes,
   posEmployeesFeatureRoutes,
   posDashboardFeatureRoutes,
+  posFeatureRouteAliases,
   posRoutesModel,
   posSalesRoutesModel,
   getPosRoute,
@@ -16,6 +17,7 @@ import {
 
 const posRouteGroups = [
   posFeatureRoutes,
+  posFeatureRouteAliases,
   posSalesFeatureRoutes,
   posProductsFeatureRoutes,
   posFinanceFeatureRoutes,
@@ -36,6 +38,7 @@ export {
   posCustomersFeatureRoutes,
   posEmployeesFeatureRoutes,
   posDashboardFeatureRoutes,
+  posFeatureRouteAliases,
   posRoutesModel,
   posSalesRoutesModel,
   getPosRoute,
