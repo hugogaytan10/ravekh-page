@@ -13,9 +13,6 @@ import { gsap, TimelineMax } from "gsap";
 import { ArticuloValeLaPenaReact } from "../Blog/ArticulosReactNative/ArticuloValeLaPenaReact/ArticuloValeLaPenaReact";
 import { Muestra } from "../Muestra/Muestra";
 import { Paquetes } from "../Paquetes/Muestra";
-import { MainCatalogo } from "../CatalogoWeb/MainCatalogo";
-import { DetalleProducto } from "../CatalogoWeb/DetalleProducto";
-import { Pedido } from "../CatalogoWeb/Pedido";
 import { AppContext } from "../CatalogoWeb/Context/AppContext";
 import cart from "../../assets/cart-outline.svg";
 import arrow from "../../assets/back.svg";
@@ -25,20 +22,6 @@ import { PoliticaPrivacidad } from "../PoliticaPrivacidad/PoliticaPrivacidad";
 import { PoliticaPrivacidadAgenda } from "../PoliticaPrivacidad/PoliticaPrivacidadAgenda";
 //importaciones para el catalogo web
 import { RavekhPos } from "../RavekhPos/RavekhPos";
-import { LoginPage } from "../../coupons/pages/LoginPage";
-import { RegisterPage } from "../../coupons/pages/RegisterPage";
-import { HomePage } from "../../coupons/pages/HomePage";
-import { MyCouponsPage } from "../../coupons/pages/MyCouponsPage";
-import { SettingsPage } from "../../coupons/pages/SettingsPage";
-import { ScanPage } from "../../coupons/pages/ScanPage";
-import { SuccessPage } from "../../coupons/pages/SuccessPage";
-import { ChangeName } from "../../coupons/pages/ChangeName";
-import { DeleteAccountPage } from "../../coupons/pages/DeleteAccountPage";
-import { VisitRedeemPage } from "../../coupons/pages/VisitRedeemPage";
-import { CouponQrPage } from "../../coupons/pages/CouponQrPage";
-import { CouponCongratsPage } from "../../coupons/pages/CouponCongratsPage";
-import { CouponClaimPage } from "../../coupons/pages/CouponClaimPage";
-import { CouponsPage } from "../../coupons/pages/CouponsPage";
 
 // Importaciones para el punto de venta - Login
 import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
@@ -145,11 +128,10 @@ import { MainCategoria } from "../CatalogoWeb/Categoria";
 import { CatalogSearchInput } from "../CatalogoWeb/CatalogSearchInput";
 import { CatalogSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/CatalogSettings";
 import { EditEmployee } from "../CatalogoWeb/PuntoVenta/Employees/EditEmployee";
+import { catalogWebFeatureRoutes } from "../../features/catalog-web";
+import { couponsFeatureRoutes } from "../../features/coupons";
 //importaciones para cupones
 
-import { MainCoupons, VisitsNavigator, CouponsNavigator } from "../CatalogoWeb/Cupones";
-import CuponesEdit from "../CatalogoWeb/Cupones/screens/CuponesEdit";
-import { VisitHistoryPage } from "../../coupons/pages/VisitHistoryPage";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -682,6 +664,27 @@ export const Rutas = () => {
     localStorage.setItem("catalogFilters", JSON.stringify(next));
     setFilterDraft(next);
   };
+
+  const renderFeatureRoute = (route, keyPrefix = "feature") => {
+    const routeKey = `${keyPrefix}-${route.path ?? "index"}-${route.index ? "index" : "path"}`;
+
+    if (route.children?.length) {
+      return (
+        <Route key={routeKey} path={route.path} element={route.element}>
+          {route.children.map((childRoute, childIndex) =>
+            renderFeatureRoute(childRoute, `${routeKey}-${childIndex}`)
+          )}
+        </Route>
+      );
+    }
+
+    if (route.index) {
+      return <Route key={routeKey} index element={route.element} />;
+    }
+
+    return <Route key={routeKey} path={route.path} element={route.element} />;
+  };
+
   return (
     <div className="drawer ">
       <input id="my-drawer-3" type="checkbox" className="drawer-toggle" />
@@ -899,29 +902,9 @@ export const Rutas = () => {
           <Route path="/RavekhPos" element={<RavekhPos />} />
           <Route path="/sistema/pos" element={<Navigate to="/sistema/pos/login" replace />} />
           <Route path="/sistema/pos/login" element={<AuthPage />} />
-          <Route path="/cupones" element={<LoginPage />} />
-          <Route path="/cuponespv" element={<MainCoupons />}>
-            <Route index element={<Navigate to="visitas" replace />} />
-            <Route path="visitas/*" element={<VisitsNavigator />} />
-            <Route path="cupones/*" element={<CouponsNavigator />} />
-            <Route path="editar/:CouponId" element={<CuponesEdit />} />
-          </Route>
-          <Route path="/cupones/visitas" element={<VisitHistoryPage />} />
-          <Route path="/cupones/registro" element={<RegisterPage />} />
-          <Route path="/cuponespv/editar/:CouponId" element={<CuponesEdit />} />
-          <Route path="cupones/editar/:CouponId" element={<CuponesEdit />} />
-          <Route path="/cupones/home" element={<HomePage />} />
-          <Route path="/cupones/mis-cupones" element={<MyCouponsPage />} />
-          <Route path="/cupones/ajustes" element={<SettingsPage />} />
-          <Route path="/cupones/eliminar-cuenta" element={<DeleteAccountPage />} />
-          <Route path="/cupones/admin/escanear" element={<ScanPage />} />
-          <Route path="/cupones/admin/confirmado" element={<SuccessPage />} />
-          <Route path="/visit/redeem" element={<VisitRedeemPage />} />
-          <Route path="/cupones/cambio-nombre" element={<ChangeName />} />
-          <Route path="/cupones/qr" element={<CouponQrPage />} />
-          <Route path="/cupones/cupones" element={<CouponsPage />} />
-          <Route path="/cupones/:couponId" element={<CouponClaimPage />} />
-          <Route path="/cupones/nuevo" element={<CouponCongratsPage />} />
+          {couponsFeatureRoutes.map((route, index) =>
+            renderFeatureRoute(route, `coupons-${index}`)
+          )}
           <Route path="/blog" element={<BlogMain />} />
           <Route path="/blog/articulosIA" element={<MainArticulosIA />} />
           <Route
@@ -937,13 +920,9 @@ export const Rutas = () => {
             element={<ArticuloValeLaPenaReact />}
           />
           {/*RUTAS PARA EL CATALOGO WEB */}
-          <Route path="/catalogo/:idBusiness" element={<MainCatalogo />} />
-          <Route
-            path="/catalogo/producto/:idProducto/:telefono"
-            element={<DetalleProducto />}
-          />
-          <Route path="/catalogo/pedido" element={<Pedido view="cart" />} />
-          <Route path="/catalogo/pedido-info" element={<Pedido view="info" />} />
+          {catalogWebFeatureRoutes.map((route, index) =>
+            renderFeatureRoute(route, `catalog-web-${index}`)
+          )}
           {/* RUTAS PARA EL PUNTO DE VENTA */}
           <Route path="/login-punto-venta" element={<AuthPage />} />
           <Route path="/create-store" element={<InitialCustomizeApp />} />
