@@ -12,5 +12,9 @@ import { couponVisitsRoutesModel } from "../model/couponVisitsRoutes";
  * @returns {string | null}
  */
 export const getCouponVisitsRoute = (routeKey, scope = "customer") => {
-  return couponVisitsRoutesModel[scope]?.[routeKey] ?? null;
+  if (couponVisitsRoutesModel[scope]?.[routeKey]) {
+    return couponVisitsRoutesModel[scope][routeKey];
+  }
+
+  return Object.values(couponVisitsRoutesModel).find((scopeRoutes) => scopeRoutes?.[routeKey])?.[routeKey] ?? null;
 };

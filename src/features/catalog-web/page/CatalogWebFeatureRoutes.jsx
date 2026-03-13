@@ -1,12 +1,19 @@
-import { MainCatalogo } from "../../../Components/CatalogoWeb/MainCatalogo";
-import { DetalleProducto } from "../../../Components/CatalogoWeb/DetalleProducto";
-import { Pedido } from "../../../Components/CatalogoWeb/Pedido";
-import { MainCategoria } from "../../../Components/CatalogoWeb/Categoria";
+import { catalogWebRouteKeys, catalogWebRoutesModel } from "../model/catalogWebRoutes";
+import { CatalogWebPage } from "./CatalogWebPage";
+import { CatalogProductDetailPage } from "./CatalogProductDetailPage";
+import { CatalogOrderPage } from "./CatalogOrderPage";
+import { CatalogOrderInfoPage } from "./CatalogOrderInfoPage";
+import { CatalogCategoryPage } from "./CatalogCategoryPage";
 
-export const catalogWebFeatureRoutes = [
-  { path: "/catalogo/:idBusiness", element: <MainCatalogo /> },
-  { path: "/catalogo/producto/:idProducto/:telefono", element: <DetalleProducto /> },
-  { path: "/catalogo/pedido", element: <Pedido view="cart" /> },
-  { path: "/catalogo/pedido-info", element: <Pedido view="info" /> },
-  { path: "/categoria/:idCategoria", element: <MainCategoria /> },
-];
+const catalogWebPageByRouteKey = {
+  [catalogWebRouteKeys.home]: <CatalogWebPage />,
+  [catalogWebRouteKeys.productDetail]: <CatalogProductDetailPage />,
+  [catalogWebRouteKeys.order]: <CatalogOrderPage />,
+  [catalogWebRouteKeys.orderInfo]: <CatalogOrderInfoPage />,
+  [catalogWebRouteKeys.category]: <CatalogCategoryPage />,
+};
+
+export const catalogWebFeatureRoutes = Object.entries(catalogWebPageByRouteKey).map(([routeKey, element]) => ({
+  path: catalogWebRoutesModel[routeKey],
+  element,
+}));
