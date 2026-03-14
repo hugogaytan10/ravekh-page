@@ -1,5 +1,5 @@
 import React, { useContext, useEffect, useState, useRef } from "react";
-import "../../../legacy/pos/login.css";
+import "./PosAuthView.css";
 //import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import { useNavigate } from "react-router-dom";
 import { loginToServer } from "../service/posAuthService";

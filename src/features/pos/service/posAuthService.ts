@@ -1,6 +1,5 @@
 import { POS_API_BASE_URL } from "../../../shared/config/api";
-import { Store } from "../../../legacy/pos/auth";
-import { User } from "../../../legacy/pos/auth";
+import type { Store, User } from "../model/posAuthModels";
 
 export const loginToServer = async (email: string, password: string | null) => {
   try {
