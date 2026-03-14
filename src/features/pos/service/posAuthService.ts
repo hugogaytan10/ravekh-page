@@ -1,10 +1,10 @@
-import { POS_URL } from "../../../legacy/constants/api";
+import { POS_API_BASE_URL } from "../../../shared/config/api";
 import { Store } from "../../../legacy/pos/auth";
 import { User } from "../../../legacy/pos/auth";
 
 export const loginToServer = async (email: string, password: string | null) => {
   try {
-    const response = await fetch(`${POS_URL}login`, {
+    const response = await fetch(`${POS_API_BASE_URL}login`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -25,7 +25,7 @@ export const signUpToServer = async (
   deviceToken: string,
 ) => {
   try {
-    const response = await fetch(`${POS_URL}business`, {
+    const response = await fetch(`${POS_API_BASE_URL}business`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

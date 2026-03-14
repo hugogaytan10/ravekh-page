@@ -1,7 +1,7 @@
-import { URL } from "../../../legacy/constants/api";
+import { API_BASE_URL } from "../../../shared/config/api";
 
 export const sendContactMessage = async (payload) => {
-  const response = await fetch(`${URL}contacto/ravekhPage`, {
+  const response = await fetch(`${API_BASE_URL}contacto/ravekhPage`, {
     method: "POST",
     mode: "cors",
     headers: {
