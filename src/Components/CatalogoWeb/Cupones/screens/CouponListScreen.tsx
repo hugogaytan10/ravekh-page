@@ -2,10 +2,9 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../../Context/AppContext";
 import { ThemeLight } from "../../PuntoVenta/Theme/Theme";
-import { ChevronBack } from "../../../../assets/POS/ChevronBack";
 import { FeedbackModal } from "../components/FeedbackModal";
 
-import { URL } from "../../Const/Const";
+import { WEB_COUPONS_DOMAIN } from "../shared/constants";
 import { getCouponId, parseValidDate } from "../shared/couponsUtils";
 import { getCouponsByBusiness } from "../Petitions";
 import { Coupon } from "../types";
@@ -72,7 +71,7 @@ export const CouponListScreen: React.FC = () => {
     loadCoupons(false);
   }, [businessId, token]);
 
-  const couponsDomain = URL || window.location.origin;
+  const couponsDomain = WEB_COUPONS_DOMAIN;
 
   const groupedCoupons = useMemo(() => {
     const now = new Date();
@@ -204,18 +203,7 @@ export const CouponListScreen: React.FC = () => {
     <div className="min-h-full" style={{ backgroundColor: ThemeLight.backgrounColor }}>
       <div className="mx-auto max-w-xl px-5 py-5">
         <header className="mb-5 flex items-center justify-between gap-3">
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={handleBack}
-              className="rounded-full p-1 transition hover:bg-gray-200"
-              aria-label="Regresar"
-            >
-              <ChevronBack width={24} height={24} />
-            </button>
-            <h1 className="text-[18px] font-semibold text-[#565656]">Lista de cupones</h1>
-          </div>
-
+          <h1 className="text-[18px] font-semibold text-[#565656]">Lista de cupones</h1>
           <button
             type="button"
             onClick={() => loadCoupons(true)}
