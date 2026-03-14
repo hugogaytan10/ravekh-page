@@ -96,6 +96,21 @@ npm run new
 Este comando abre `index.new.html` usando `src/new-main.jsx` y el router de `src/app`.
 
 
+
+## Modo independiente (sin dependencia a legacy)
+
+Para validar y ejecutar una versión del proyecto **100% desacoplada del legacy**:
+
+```bash
+npm run features:independence
+npm run new:independent
+```
+
+- `features:independence`: falla si detecta imports hacia `src/legacy` dentro del perfil independiente (entry + router/provider independientes y features `landing`/`legal`).
+- `new:independent`: levanta `index.independent.html` con `src/independent-main.jsx`, usando un router limitado a rutas independientes (`landing` + `legal`).
+
+Este modo te permite migrar feature por feature sin arrastrar dependencias heredadas en el nuevo entry point.
+
 ## Auditorías para migración de POS
 
 Para validar que el POS nuevo por features siga ordenado y conviviendo con el legacy sin romper rutas:
