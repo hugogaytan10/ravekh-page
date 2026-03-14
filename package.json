@@ -14,7 +14,9 @@
     "pos:coexistence-audit": "node scripts/audit-pos-coexistence.mjs",
     "features:boundaries": "node scripts/audit-feature-boundaries.mjs",
     "features:independence": "node scripts/audit-feature-independence.mjs",
-    "new:independent": "vite --open /index.independent.html"
+    "new:independent": "vite --open /index.independent.html",
+    "pos:boundaries": "node scripts/audit-pos-boundaries.mjs",
+    "new:pos": "vite --config vite.new.config.js --open /sistema/pos"
   },
   "dependencies": {
     "axios": "^1.6.5",

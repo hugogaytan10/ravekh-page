@@ -154,10 +154,22 @@ Para validar que el POS nuevo por features siga ordenado y conviviendo con el le
 ```bash
 npm run pos:audit
 npm run pos:coexistence-audit
+npm run pos:boundaries
 ```
 
 - `pos:audit`: revisa carpetas mínimas por módulo y archivos `.js/.jsx` pendientes de migración en `src/features/pos`.
 - `pos:coexistence-audit`: revisa convivencia entre `src/Components/CatalogoWeb/PuntoVenta` y `src/features/pos`, incluyendo rutas duplicadas.
+- `pos:boundaries`: falla si `src/features/pos` o `src/features/systems/pos` importan `src/Components/*` directo.
+
+## Probar el POS en la estructura moderna
+
+Para abrir la app moderna directamente en el flujo de POS:
+
+```bash
+npm run new:pos
+```
+
+Este comando levanta el router moderno (`src/app`) y abre la URL `/sistema/pos` para validar el sistema POS sin depender del router legacy.
 
 ## Crear una nueva feature
 
