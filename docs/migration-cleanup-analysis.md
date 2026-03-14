@@ -64,6 +64,11 @@ Implicación: hay deuda de naming/estructura; conviene consolidar en un solo mó
 3. **Mantener wrappers explícitos** con etiqueta `TODO(migration)` y fecha objetivo.
 4. **Consolidar naming de cupones** (`coupon-visits` vs `coupons`) para reducir ambigüedad.
 
+### Avance aplicado
+
+- `features/coupon-visits` ahora reutiliza la implementación de rutas de `features/coupons` y mantiene
+  una API de compatibilidad para evitar ruptura de imports mientras se completa el renombrado.
+
 ## Checklist recomendado antes de borrar legacy
 
 ### Fase A — Estabilizar rutas
