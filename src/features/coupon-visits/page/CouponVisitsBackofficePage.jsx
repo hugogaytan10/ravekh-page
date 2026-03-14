@@ -1,4 +1,4 @@
-import { MainCoupons } from "../../../Components/CatalogoWeb/Cupones";
+import { MainCoupons } from "../../../legacy/coupons";
 
 export const CouponVisitsBackofficePage = () => {
   return <MainCoupons />;

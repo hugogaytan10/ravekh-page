@@ -1,6 +1,6 @@
-import { Employees } from "../../../../Components/CatalogoWeb/PuntoVenta/Employees/Employees";
-import { EditEmployee } from "../../../../Components/CatalogoWeb/PuntoVenta/Employees/EditEmployee";
-import { NewEmployee } from "../../../../Components/CatalogoWeb/PuntoVenta/Employees/NewEmployee";
+import { Employees } from "../../../../legacy/pos/employees";
+import { EditEmployee } from "../../../../legacy/pos/employees";
+import { NewEmployee } from "../../../../legacy/pos/employees";
 
 export const PosEmployeesPage = () => <Employees />;
 export const PosEditEmployeePage = () => <EditEmployee />;

@@ -1,0 +1,9 @@
+export { default as HeroSection } from "../../Components/RavekhPos/components/HeroSection";
+export { default as FeaturesSection } from "../../Components/RavekhPos/components/FeaturesSection";
+export { default as InventorySection } from "../../Components/RavekhPos/components/InventorySection";
+export { default as ReportsSection } from "../../Components/RavekhPos/components/ReportsSection";
+export { default as OnlineShopSection } from "../../Components/RavekhPos/components/OnlineShopSection";
+export { default as LoyaltySection } from "../../Components/RavekhPos/components/LoyaltySection";
+export { default as PricingSection } from "../../Components/RavekhPos/components/PricingSection";
+export { default as TestimonialsSection } from "../../Components/RavekhPos/components/TestimonialsSection";
+export { default as Footer } from "../../Components/RavekhPos/components/Footer";

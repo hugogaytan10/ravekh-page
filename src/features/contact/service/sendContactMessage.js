@@ -1,4 +1,4 @@
-import { URL } from "../../../Components/CatalogoWeb/Const/Const";
+import { URL } from "../../../legacy/constants/api";
 
 export const sendContactMessage = async (payload) => {
   const response = await fetch(`${URL}contacto/ravekhPage`, {

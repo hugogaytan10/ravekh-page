@@ -1,4 +1,4 @@
-import { ArticuloValeLaPenaReact } from "../../../Components/Blog/ArticulosReactNative/ArticuloValeLaPenaReact/ArticuloValeLaPenaReact";
+import { ArticuloValeLaPenaReact } from "../../../legacy/blog";
 
 export const BlogReactNativeWorthItView = () => {
   return <ArticuloValeLaPenaReact />;

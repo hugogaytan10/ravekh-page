@@ -1,4 +1,4 @@
-import { Scanner } from "../../../../../Components/CatalogoWeb/PuntoVenta/Sales/NavBar/Scanner";
+import { Scanner } from "../../../../../legacy/pos/sales";
 
 export const PosScannerSalesView = () => {
   return <Scanner />;

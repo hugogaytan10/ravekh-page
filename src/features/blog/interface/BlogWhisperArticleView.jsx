@@ -1,4 +1,4 @@
-import { ArticuloWhisper } from "../../../Components/Blog/ArticulosIA/ArticuloWhisper/ArticuloWhisper";
+import { ArticuloWhisper } from "../../../legacy/blog";
 
 export const BlogWhisperArticleView = () => {
   return <ArticuloWhisper />;

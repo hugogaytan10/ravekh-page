@@ -1,4 +1,4 @@
-import { AddProductSales } from "../../../../../Components/CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddProductSales";
+import { AddProductSales } from "../../../../../legacy/pos/sales";
 
 export const PosAddProductSalesView = () => {
   return <AddProductSales />;

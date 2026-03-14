@@ -1,0 +1,12 @@
+export { MainSales } from "../../Components/CatalogoWeb/PuntoVenta/Sales/MainSales";
+export { MainCart } from "../../Components/CatalogoWeb/PuntoVenta/Sales/Cart/Cart";
+export { PaymentScreen } from "../../Components/CatalogoWeb/PuntoVenta/Sales/Cart/PaymentScreen";
+export { FinishScreen } from "../../Components/CatalogoWeb/PuntoVenta/Sales/Cart/FinishScreen";
+export { PaymentTypeScreen } from "../../Components/CatalogoWeb/PuntoVenta/Sales/Cart/PaymentTypeScreen";
+export { DiscountScreen } from "../../Components/CatalogoWeb/PuntoVenta/Sales/Cart/DiscountScreen";
+export { QuantityNextSell } from "../../Components/CatalogoWeb/PuntoVenta/Sales/NavBar/QuantityNextSell";
+export { SearchScreen } from "../../Components/CatalogoWeb/PuntoVenta/Sales/NavBar/SearchScreen";
+export { Scanner } from "../../Components/CatalogoWeb/PuntoVenta/Sales/NavBar/Scanner";
+export { AddCategoriesSales } from "../../Components/CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddCategories";
+export { AddProductSales } from "../../Components/CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddProductSales";
+export { CategoriasScreenSales } from "../../Components/CatalogoWeb/PuntoVenta/Sales/CRUDSales/CategoriasScreenSales";

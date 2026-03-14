@@ -1,4 +1,4 @@
-import { AddCategoriesSales } from "../../../../../Components/CatalogoWeb/PuntoVenta/Sales/CRUDSales/AddCategories";
+import { AddCategoriesSales } from "../../../../../legacy/pos/sales";
 
 export const PosAddCategoriesSalesView = () => {
   return <AddCategoriesSales />;

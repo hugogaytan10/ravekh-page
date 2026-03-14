@@ -1,4 +1,4 @@
-import { CategoriasScreenSales } from "../../../../../Components/CatalogoWeb/PuntoVenta/Sales/CRUDSales/CategoriasScreenSales";
+import { CategoriasScreenSales } from "../../../../../legacy/pos/sales";
 
 export const PosCategoriasScreenSalesView = () => {
   return <CategoriasScreenSales />;

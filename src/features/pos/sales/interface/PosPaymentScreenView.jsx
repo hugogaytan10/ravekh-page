@@ -1,4 +1,4 @@
-import { PaymentScreen } from "../../../../Components/CatalogoWeb/PuntoVenta/Sales/Cart/PaymentScreen";
+import { PaymentScreen } from "../../../../legacy/pos/sales";
 
 export const PosPaymentScreenView = () => {
   return <PaymentScreen />;

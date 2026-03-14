@@ -1,4 +1,4 @@
-import { MainArticulosIA } from "../../../Components/Blog/ArticulosIA/MainArticulosIA";
+import { MainArticulosIA } from "../../../legacy/blog";
 
 export const BlogAiArticlesView = () => {
   return <MainArticulosIA />;

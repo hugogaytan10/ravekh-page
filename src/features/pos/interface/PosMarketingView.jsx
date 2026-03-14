@@ -1,13 +1,15 @@
-import HeroSection from "../../../Components/RavekhPos/components/HeroSection";
-import FeaturesSection from "../../../Components/RavekhPos/components/FeaturesSection";
-import InventorySection from "../../../Components/RavekhPos/components/InventorySection";
-import ReportsSection from "../../../Components/RavekhPos/components/ReportsSection";
-import OnlineShopSection from "../../../Components/RavekhPos/components/OnlineShopSection";
-import LoyaltySection from "../../../Components/RavekhPos/components/LoyaltySection";
-import PricingSection from "../../../Components/RavekhPos/components/PricingSection";
-import TestimonialsSection from "../../../Components/RavekhPos/components/TestimonialsSection";
-import Footer from "../../../Components/RavekhPos/components/Footer";
-import { Contacto } from "../../../Components/Contacto/Contacto";
+import {
+  HeroSection,
+  FeaturesSection,
+  InventorySection,
+  ReportsSection,
+  OnlineShopSection,
+  LoyaltySection,
+  PricingSection,
+  TestimonialsSection,
+  Footer,
+} from "../../../legacy/pos/marketing";
+import { Contacto } from "../../../legacy/contact";
 import { posMarketingNavigationItems } from "../model/posMarketingNavigation";
 import { usePosMarketingNavigation } from "../hooks/usePosMarketingNavigation";
 import { PosMarketingNavbar } from "./marketing/PosMarketingNavbar";

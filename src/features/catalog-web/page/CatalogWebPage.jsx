@@ -1,4 +1,4 @@
-import { MainCatalogo } from "../../../Components/CatalogoWeb/MainCatalogo";
+import { MainCatalogo } from "../../../legacy/catalog";
 
 export const CatalogWebPage = () => {
   return <MainCatalogo />;

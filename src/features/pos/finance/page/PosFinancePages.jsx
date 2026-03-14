@@ -1,5 +1,5 @@
-import { MainFinances } from "../../../../Components/CatalogoWeb/PuntoVenta/Finance/MainFinances";
-import { Register } from "../../../../Components/CatalogoWeb/PuntoVenta/Finance/Register/Register";
+import { MainFinances } from "../../../../legacy/pos/finance";
+import { Register } from "../../../../legacy/pos/finance";
 
 export const PosMainFinancesPage = () => <MainFinances />;
 export const PosAddRegisterPage = () => <Register />;

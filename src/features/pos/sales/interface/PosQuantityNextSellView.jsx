@@ -1,4 +1,4 @@
-import { QuantityNextSell } from "../../../../Components/CatalogoWeb/PuntoVenta/Sales/NavBar/QuantityNextSell";
+import { QuantityNextSell } from "../../../../legacy/pos/sales";
 
 export const PosQuantityNextSellView = () => {
   return <QuantityNextSell />;

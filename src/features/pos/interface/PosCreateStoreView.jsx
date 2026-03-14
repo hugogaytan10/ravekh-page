@@ -1,4 +1,4 @@
-import { InitialCustomizeApp } from "../../../Components/CatalogoWeb/PuntoVenta/Login/CustomizeApp";
+import { InitialCustomizeApp } from "../../../legacy/pos/auth";
 
 export const PosCreateStoreView = () => {
   return <InitialCustomizeApp />;

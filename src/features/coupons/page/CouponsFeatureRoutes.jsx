@@ -1,6 +1,5 @@
 import { Navigate } from "react-router-dom";
-import { MainCoupons, VisitsNavigator, CouponsNavigator } from "../../../Components/CatalogoWeb/Cupones";
-import CuponesEdit from "../../../Components/CatalogoWeb/Cupones/screens/CuponesEdit";
+import { MainCoupons, VisitsNavigator, CouponsNavigator, CuponesEdit } from "../../../legacy/coupons";
 import { LoginPage } from "../../../coupons/pages/LoginPage";
 import { RegisterPage } from "../../../coupons/pages/RegisterPage";
 import { HomePage } from "../../../coupons/pages/HomePage";

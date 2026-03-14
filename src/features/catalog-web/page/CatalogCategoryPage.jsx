@@ -1,4 +1,4 @@
-import { MainCategoria } from "../../../Components/CatalogoWeb/Categoria";
+import { MainCategoria } from "../../../legacy/catalog";
 
 export const CatalogCategoryPage = () => {
   return <MainCategoria />;

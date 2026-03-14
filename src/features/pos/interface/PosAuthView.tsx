@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useState, useRef } from "react";
-import "../../../Components/CatalogoWeb/PuntoVenta/Login/Login.css";
+import "../../../legacy/pos/login.css";
 //import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 import { useNavigate } from "react-router-dom";
 import { loginToServer } from "../service/posAuthService";
 import { usePosSession } from "../hooks/usePosSession";
-import { AppContext } from "../../../Components/CatalogoWeb/Context/AppContext";
+import { AppContext } from "../../../legacy/providers/appContext";
 export const PosAuthView: React.FC = () => {
   const context = useContext(AppContext);
   const navigate = useNavigate();

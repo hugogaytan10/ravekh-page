@@ -1,0 +1,10 @@
+export { MainProducts } from "../../Components/CatalogoWeb/PuntoVenta/Products/MainProducts";
+export { AddProduct } from "../../Components/CatalogoWeb/PuntoVenta/Products/CRUDProducts/AddProduct";
+export { SelectCategory } from "../../Components/CatalogoWeb/PuntoVenta/Products/Categories/SelectCategory";
+export { EditProduct } from "../../Components/CatalogoWeb/PuntoVenta/Products/CRUDProducts/EditProduct";
+export { EditCategory } from "../../Components/CatalogoWeb/PuntoVenta/Products/Categories/EditCaterogy";
+export { List } from "../../Components/CatalogoWeb/PuntoVenta/Products/CRUDProducts/List";
+export { StockProducts } from "../../Components/CatalogoWeb/PuntoVenta/Products/Stock/StockProducts";
+export { SearchProductScreen } from "../../Components/CatalogoWeb/PuntoVenta/Products/NavBar/SearchProductScreen";
+export { Filter } from "../../Components/CatalogoWeb/PuntoVenta/Products/NavBar/Filter";
+export { KeyboardStock } from "../../Components/CatalogoWeb/PuntoVenta/Products/Stock/KeyBoardStock";

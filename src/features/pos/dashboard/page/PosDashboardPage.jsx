@@ -1,3 +1,3 @@
-import { Dashboard } from "../../../../Components/CatalogoWeb/PuntoVenta/Dashboard/Dashboard";
+import { Dashboard } from "../../../../legacy/pos/dashboard";
 
 export const PosDashboardPage = () => <Dashboard />;

@@ -1,4 +1,4 @@
-import { Pedido } from "../../../Components/CatalogoWeb/Pedido";
+import { Pedido } from "../../../legacy/catalog";
 
 export const CatalogOrderPage = () => {
   return <Pedido view="cart" />;

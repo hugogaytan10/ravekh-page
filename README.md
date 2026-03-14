@@ -33,6 +33,19 @@ src/
       index.js
 ```
 
+
+## Desacople del proyecto por features respecto al legacy
+
+Se agregó una capa de **adaptadores legacy** en `src/legacy/*` para que `src/app` y `src/features` no importen directamente desde `src/Components`.
+
+- `src/features` y `src/app` ahora dependen de adaptadores (`src/legacy`) y no de rutas internas del legacy.
+- Esto permite reemplazar implementaciones legacy por versiones nativas de features sin cambiar el consumo en el nuevo router.
+- Puedes validar la regla con:
+
+```bash
+npm run features:boundaries
+```
+
 ## Capa de sistemas (nuevo)
 
 Para separar mejor los productos de negocio y migrar gradualmente, se agregó una organización por sistemas:

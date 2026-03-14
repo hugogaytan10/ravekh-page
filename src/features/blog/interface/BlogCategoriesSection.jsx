@@ -1,4 +1,4 @@
-import { CategoriasBlog } from "../../../Components/Blog/CategoriasBlog";
+import { CategoriasBlog } from "../../../legacy/blog";
 
 export const BlogCategoriesSection = () => {
   return <CategoriasBlog />;

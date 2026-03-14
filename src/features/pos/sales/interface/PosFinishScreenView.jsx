@@ -1,4 +1,4 @@
-import { FinishScreen } from "../../../../Components/CatalogoWeb/PuntoVenta/Sales/Cart/FinishScreen";
+import { FinishScreen } from "../../../../legacy/pos/sales";
 
 export const PosFinishScreenView = () => {
   return <FinishScreen />;

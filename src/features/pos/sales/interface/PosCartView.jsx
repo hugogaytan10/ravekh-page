@@ -1,4 +1,4 @@
-import { MainCart } from "../../../../Components/CatalogoWeb/PuntoVenta/Sales/Cart/Cart";
+import { MainCart } from "../../../../legacy/pos/sales";
 
 export const PosCartView = () => {
   return <MainCart />;
