@@ -46,7 +46,7 @@ export const ClientSelect: React.FC = () => {
 
   const selectClient = (client) => {
     setCustomer(client);
-    navigate(-1);
+    navigate("/MainCart");
   };
 
   const renderAddClientButton = () => {
@@ -79,7 +79,7 @@ export const ClientSelect: React.FC = () => {
         style={{ backgroundColor: store.Color }}
       >
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/MainCart")}
           className="mr-4 text-xl font-bold"
         >
           <ChevronBack />

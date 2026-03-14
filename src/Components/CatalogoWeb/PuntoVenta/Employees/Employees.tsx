@@ -74,7 +74,7 @@ export const Employees: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-white text-gray-900">
       {/* Header */}
       <header
         className="flex items-center justify-between p-2"
@@ -82,7 +82,7 @@ export const Employees: React.FC = () => {
       >
         <button onClick={() => {
             context.setShowNavBarBottom(true); // hacer visible la barra de navegación inferior 
-            navigate(-1)}} className="text-white">
+            navigate("/more")}} className="text-white">
           <ChevronBack />
         </button>
         <h1 className="text-xl font-bold text-white text-center">Empleados</h1>
@@ -100,7 +100,7 @@ export const Employees: React.FC = () => {
         <input
           type="text"
           placeholder="Buscar empleados"
-          className= "bg-white w-full p-3 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500"
+          className= "bg-white text-gray-900 w-full p-3 border rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
         />

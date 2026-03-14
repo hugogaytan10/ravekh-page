@@ -97,7 +97,7 @@ export const CatalogSettings: React.FC = () => {
         body: JSON.stringify(payload),
       });
 
-      navigate(-1); // equivalente a goBack()
+      navigate("/more"); // equivalente a goBack()
     } catch (error) {
       console.error("Error al guardar los ajustes de catálogo:", error);
     } finally {

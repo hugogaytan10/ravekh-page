@@ -64,7 +64,7 @@ export const OrdersScreen: React.FC = () => {
       >
         <button
           className="mr-4 p-2 rounded-full bg-opacity-20"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/main-store-online")}
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"

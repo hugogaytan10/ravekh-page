@@ -118,6 +118,7 @@ import { ClientSelect } from "../CatalogoWeb/PuntoVenta/Customers/ClientSelect";
 import { Client } from "../CatalogoWeb/PuntoVenta/Customers/Client";
 import { OrdersByCustomer } from "../CatalogoWeb/PuntoVenta/Customers/OrdersByCustomer";
 import { EditClient } from "../CatalogoWeb/PuntoVenta/Customers/EditClient";
+import { AddClient } from "../CatalogoWeb/PuntoVenta/Customers/AddClient";
 
 // Importaciones para el punto de venta - Employees
 import { Employees } from "../CatalogoWeb/PuntoVenta/Employees/Employees";
@@ -142,6 +143,7 @@ import { MainCategoria } from "../CatalogoWeb/Categoria";
 import { CatalogSearchInput } from "../CatalogoWeb/CatalogSearchInput";
 import { CatalogSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/CatalogSettings";
 import { EditEmployee } from "../CatalogoWeb/PuntoVenta/Employees/EditEmployee";
+import { loginToServer } from "../CatalogoWeb/PuntoVenta/Login/Peticiones";
 //importaciones para cupones
 
 import { MainCoupons, VisitsNavigator, CouponsNavigator } from "../CatalogoWeb/Cupones";
@@ -166,6 +168,7 @@ export const Rutas = () => {
   //agregados de marco
   const slideRef = useRef(null);
   const [categories, setCategories] = useState([])
+  const [availableCategoryIds, setAvailableCategoryIds] = useState([]);
 
 
   //togle para el catalogo
@@ -176,6 +179,7 @@ export const Rutas = () => {
   const [color, setcolor] = useState("");
   const [nombre, setnombre] = useState("");
   const [idBusiness, setidbusiness] = useState("")
+  const [isAuthHydrated, setIsAuthHydrated] = useState(false);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [isCatalogHeaderCollapsed, setIsCatalogHeaderCollapsed] = useState(false);
   const [filterDraft, setFilterDraft] = useState({
@@ -189,6 +193,14 @@ export const Rutas = () => {
   const clampPrice = (value) => Math.min(priceMaxDefault, Math.max(priceMinDefault, value));
   const priceMinValue = filterDraft.priceMin ?? priceMinDefault;
   const priceMaxValue = filterDraft.priceMax ?? priceMaxDefault;
+  const visibleCategories = useMemo(() => {
+    if (!Array.isArray(availableCategoryIds) || availableCategoryIds.length === 0) {
+      return categories;
+    }
+
+    const allowedIds = new Set(availableCategoryIds.map((id) => Number(id)));
+    return categories.filter((category) => allowedIds.has(Number(category?.Id)));
+  }, [availableCategoryIds, categories]);
 
 
   // Nueva referencia para el POS
@@ -266,6 +278,39 @@ export const Rutas = () => {
         );
     }
   }, [location.pathname]);
+
+  useEffect(() => {
+    const syncAvailableCategoryIds = () => {
+      const raw = localStorage.getItem("catalogAvailableCategoryIds");
+      if (!raw) {
+        setAvailableCategoryIds([]);
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(raw);
+        const normalized = Array.isArray(parsed)
+          ? parsed
+            .map((id) => Number(id))
+            .filter((id) => Number.isFinite(id))
+          : [];
+        setAvailableCategoryIds(normalized);
+      } catch {
+        setAvailableCategoryIds([]);
+      }
+    };
+
+    syncAvailableCategoryIds();
+    const handleUpdate = () => syncAvailableCategoryIds();
+
+    window.addEventListener("catalogAvailableCategoryIdsUpdated", handleUpdate);
+    window.addEventListener("storage", handleUpdate);
+
+    return () => {
+      window.removeEventListener("catalogAvailableCategoryIdsUpdated", handleUpdate);
+      window.removeEventListener("storage", handleUpdate);
+    };
+  }, []);
 
   useEffect(() => {
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
@@ -375,6 +420,14 @@ export const Rutas = () => {
 
   // Función para determinar si se debe mostrar el navbar
   const shouldShowNavbar = useMemo(() => {
+    const normalizedPath = decodeURIComponent(location.pathname)
+      .toLowerCase()
+      .replace(/\/+$/, "") || "/";
+
+    if (normalizedPath.startsWith("/catalogo") || normalizedPath.startsWith("/categoria")) {
+      return false;
+    }
+
     const hiddenRoutes = [
       "/login-punto-venta",
       "/MainSales",
@@ -426,6 +479,7 @@ export const Rutas = () => {
       "/new-employee",
       "/client-select",
       "/dashboard",
+      "/mainfinances",
       "/AddRegister",
       "/delete-account",
       "/settings-p",
@@ -449,16 +503,58 @@ export const Rutas = () => {
       "/cupones/:couponId"
     ];
 
-    const path = location.pathname.toLowerCase(); // Asegúrate de trabajar con minúsculas
-    return !hiddenRoutes.some(route => {
-      const decodedPath = decodeURIComponent(location.pathname); // Decodificar ruta
+    return !hiddenRoutes.some((route) => {
+      const normalizedRoute = route.toLowerCase().replace(/\/+$/, "") || "/";
+
+      if (!normalizedRoute.includes(":")) {
+        return (
+          normalizedPath === normalizedRoute ||
+          normalizedPath.startsWith(`${normalizedRoute}/`)
+        );
+      }
+
       const routeRegex = new RegExp(
-        `^${route.replace(/:\w+/g, "[\\p{L}\\p{N}\\p{M}]+")}$`,
+        `^${normalizedRoute.replace(/:\w+/g, "[\\p{L}\\p{N}\\p{M}]+")}$`,
         "iu"
       );
-      return routeRegex.test(decodedPath);
+      return routeRegex.test(normalizedPath);
     });
   }, [location.pathname]);
+
+  useEffect(() => {
+    const hydrateAuthFromStorage = async () => {
+      if (context.user?.Token) {
+        setIsAuthHydrated(true);
+        return;
+      }
+
+      const storedUser = localStorage.getItem("user");
+      if (!storedUser) {
+        setIsAuthHydrated(true);
+        return;
+      }
+
+      try {
+        const { email, password } = JSON.parse(storedUser);
+
+        if (!email) {
+          setIsAuthHydrated(true);
+          return;
+        }
+
+        const data = await loginToServer(email, password);
+        if (!data?.message && data?.Token) {
+          context.setUser(data);
+        }
+      } catch {
+        // no-op: si no se puede hidratar, dejamos que la validación normal redirija
+      } finally {
+        setIsAuthHydrated(true);
+      }
+    };
+
+    hydrateAuthFromStorage();
+  }, [context.user?.Token]);
 
   useEffect(() => {
     const protectedRoutes = [
@@ -566,6 +662,10 @@ export const Rutas = () => {
     const currentPath = location.pathname.toLowerCase().replace(/\/+$/, "");
 
     // Validar rutas dinámicas con parámetros
+    if (!isAuthHydrated) {
+      return;
+    }
+
     if (
       protectedRoutes.some(route =>
         currentPath.startsWith(route.replace(/:\w+/g, ""))
@@ -575,7 +675,7 @@ export const Rutas = () => {
       context.setShowNavBarBottom(false);
       navigate("/");
     }
-  }, [location, navigate, context.cartPos]);
+  }, [location, navigate, context.cartPos, context.user.Token, isAuthHydrated]);
   /*
     useEffect(() => {
       let timeout;
@@ -831,7 +931,7 @@ export const Rutas = () => {
                         Todo
                       </NavLink>
                     )}
-                    {categories.map((category) => (
+                    {visibleCategories.map((category) => (
                       <NavLink
                         key={category.Id}
                         to={`/categoria/${category.Id}`}
@@ -998,6 +1098,8 @@ export const Rutas = () => {
           <Route path="/clients" element={<Client />} />
           <Route path="/orders-by-customer/:customerId/:period" element={<OrdersByCustomer />} />
           <Route path="/edit-customer/:id" element={<EditClient />} />
+          <Route path="/add-client" element={<AddClient />} />
+          <Route path="/add-client-sales" element={<AddClient />} />
           <Route path="/employees" element={<Employees />} />
           <Route path="/edit-employee/:id" element={<EditEmployee />} />
           <Route path="/new-employee" element={<NewEmployee />} />

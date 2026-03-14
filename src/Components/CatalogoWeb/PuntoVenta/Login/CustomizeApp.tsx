@@ -157,7 +157,7 @@ export const InitialCustomizeApp: React.FC<{ navigation: any }> = ({
         }}
         onClick={() => {
           context.setShowNavBarBottom(true);
-          navigate(-1);
+          navigate("/create-store");
         }}
       >
         <button className="mr-2">

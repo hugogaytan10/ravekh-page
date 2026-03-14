@@ -30,7 +30,7 @@ export const MainStoreOnline: React.FC = () => {
   const userRole = context.user?.Role || "";
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-white text-gray-900">
       {/* Header */}
       <div
         className="flex items-center px-4 py-3"
@@ -72,38 +72,38 @@ export const MainStoreOnline: React.FC = () => {
       </div>
 
       {/* Options */}
-      <div className="flex flex-col gap-4 px-4">
+      <div className="flex flex-col gap-4 px-4 text-gray-900">
         {userRole !== "AYUDANTE" && (
           <>
             <button
-              className="flex items-center gap-3 bg-gray-100 p-4 rounded-md shadow-sm"
+              className="flex items-center gap-3 bg-white text-gray-900 p-4 rounded-md shadow-sm border border-gray-200"
               onClick={() => handleOptionPress("/orders")}
             >
               <span className="text-2xl">📦</span>
               <div>
-                <h2 className="text-lg font-semibold text-left">Ver órdenes</h2>
+                <h2 className="text-lg font-semibold text-left text-gray-900">Ver órdenes</h2>
                 <p className="text-sm text-gray-600 text-left">Gestionar y ver todas las órdenes</p>
               </div>
             </button>
             <button
-              className="flex items-center gap-3 bg-gray-100 p-4 rounded-md shadow-sm"
+              className="flex items-center gap-3 bg-white text-gray-900 p-4 rounded-md shadow-sm border border-gray-200"
               onClick={() => handleOptionPress("/update-store-info")}
             >
               <span className="text-2xl">🛠️</span>
               <div>
-                <h2 className="text-lg font-semibold text-left">Modificar información de la tienda</h2>
+                <h2 className="text-lg font-semibold text-left text-gray-900">Modificar información de la tienda</h2>
                 <p className="text-sm text-left text-gray-600">Nombre, dirección, teléfono</p>
               </div>
             </button>
             <button
-              className="flex items-center gap-3 bg-gray-100 p-4 rounded-md shadow-sm"
+              className="flex items-center gap-3 bg-white text-gray-900 p-4 rounded-md shadow-sm border border-gray-200"
               onClick={() =>{
                 context.setShowNavBarBottom(false);
                 handleOptionPress("/main-products/items")}}
             >
               <span className="text-2xl">🛍️</span>
               <div>
-                <h2 className="text-lg font-semibold text-left">Productos en tienda</h2>
+                <h2 className="text-lg font-semibold text-left text-gray-900">Productos en tienda</h2>
                 <p className="text-sm text-gray-600 text-left">Agregar o eliminar productos</p>
               </div>
             </button>
