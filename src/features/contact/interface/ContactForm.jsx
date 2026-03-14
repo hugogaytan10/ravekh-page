@@ -1,5 +1,5 @@
 /* eslint-disable react/prop-types */
-import { GoogleInput } from "../../../legacy/contact";
+import { GoogleInput } from "./GoogleInput";
 import "./ContactForm.css";
 
 const CONTACT_FIELDS = [

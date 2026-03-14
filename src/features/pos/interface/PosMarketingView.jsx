@@ -9,7 +9,7 @@ import {
   TestimonialsSection,
   Footer,
 } from "../../../legacy/pos/marketing";
-import { Contacto } from "../../../legacy/contact";
+import { ContactPage } from "../../contact";
 import { posMarketingNavigationItems } from "../model/posMarketingNavigation";
 import { usePosMarketingNavigation } from "../hooks/usePosMarketingNavigation";
 import { PosMarketingNavbar } from "./marketing/PosMarketingNavbar";
@@ -53,7 +53,7 @@ export const PosMarketingView = () => {
         <TestimonialsSection />
       </section>
       <section id="contacto">
-        <Contacto catalogo />
+        <ContactPage catalogo />
       </section>
       <Footer />
     </div>
