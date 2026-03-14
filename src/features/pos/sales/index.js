@@ -1,4 +1,4 @@
-export { posSalesFeatureRoutes } from "./page/PosSalesFeatureRoutes";
+export { posSalesFeatureRoutes, posSalesFeatureRouteAliases } from "./page/PosSalesFeatureRoutes";
 export { posSalesRoutesModel } from "./model/posSalesRoutes";
 export { posSalesRouteKeys } from "./model/posSalesRoutes";
 export { getPosSalesRoute } from "./service/getPosSalesRoute";

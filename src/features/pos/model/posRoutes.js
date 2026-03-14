@@ -1,7 +1,7 @@
 export const posRoutesModel = {
-  marketing: "/RavekhPos",
-  login: "/login-punto-venta",
-  createStore: "/create-store",
+  marketing: "/sistema/pos",
+  login: "/sistema/pos/login",
+  createStore: "/sistema/pos/crear-tienda",
 };
 
 export const posRouteKeys = Object.freeze({

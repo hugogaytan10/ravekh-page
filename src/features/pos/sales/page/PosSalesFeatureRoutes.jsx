@@ -1,3 +1,4 @@
+import { Navigate } from "react-router-dom";
 import { posSalesRouteKeys } from "../model/posSalesRoutes";
 import { buildPosSalesFeatureRoutes } from "../service/buildPosSalesFeatureRoutes";
 import { PosSalesPage } from "./PosSalesPage";
@@ -29,3 +30,18 @@ const posSalesPageByRouteKey = {
 };
 
 export const posSalesFeatureRoutes = buildPosSalesFeatureRoutes(posSalesPageByRouteKey);
+
+export const posSalesFeatureRouteAliases = [
+  { path: "/MainSales", element: <Navigate to="/sistema/pos/ventas" replace /> },
+  { path: "/MainCart", element: <Navigate to="/sistema/pos/ventas/carrito" replace /> },
+  { path: "/DiscountScreen", element: <Navigate to="/sistema/pos/ventas/descuento" replace /> },
+  { path: "/payment-type", element: <Navigate to="/sistema/pos/ventas/tipo-pago" replace /> },
+  { path: "/payment", element: <Navigate to="/sistema/pos/ventas/pago" replace /> },
+  { path: "/finish", element: <Navigate to="/sistema/pos/ventas/finalizar" replace /> },
+  { path: "/add-product", element: <Navigate to="/sistema/pos/ventas/productos/agregar" replace /> },
+  { path: "/select-caterory-sales", element: <Navigate to="/sistema/pos/ventas/categorias" replace /> },
+  { path: "/add-category-sales", element: <Navigate to="/sistema/pos/ventas/categorias/agregar" replace /> },
+  { path: "/scanner-sales", element: <Navigate to="/sistema/pos/ventas/scanner" replace /> },
+  { path: "/search-product", element: <Navigate to="/sistema/pos/ventas/buscar-producto" replace /> },
+  { path: "/next-quantity-sell", element: <Navigate to="/sistema/pos/ventas/cantidad" replace /> },
+];

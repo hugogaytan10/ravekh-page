@@ -15,19 +15,15 @@ export const posFeatureRoutes = buildPosFeatureRoutes(posPageByRouteKey);
 
 export const posFeatureRouteAliases = [
   {
-    path: "/sistema/pos",
-    element: <PosMarketingPage />,
-  },
-  {
-    path: "/sistema/pos/login",
-    element: <PosAuthPage />,
-  },
-  {
-    path: "/sistema/pos/crear-tienda",
-    element: <PosCreateStorePage />,
-  },
-  {
     path: "/RavekhPos",
     element: <Navigate to="/sistema/pos" replace />,
+  },
+  {
+    path: "/login-punto-venta",
+    element: <Navigate to="/sistema/pos/login" replace />,
+  },
+  {
+    path: "/create-store",
+    element: <Navigate to="/sistema/pos/crear-tienda" replace />,
   },
 ];

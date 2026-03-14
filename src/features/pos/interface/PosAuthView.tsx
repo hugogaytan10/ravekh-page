@@ -4,6 +4,8 @@ import "./PosAuthView.css";
 import { useNavigate } from "react-router-dom";
 import { loginToServer } from "../service/posAuthService";
 import { usePosSession } from "../hooks/usePosSession";
+import { getPosRoute } from "../service/getPosRoute";
+import { getPosSalesRoute } from "../sales/service/getPosSalesRoute";
 import { AppContext } from "../../../shared/providers/appContext";
 export const PosAuthView: React.FC = () => {
   const context = useContext(AppContext);
@@ -85,7 +87,7 @@ export const PosAuthView: React.FC = () => {
         saveSession({ email, password });
         /*console.log("data inicio: ", dataSignUp);
         console.log("setUser: ", context.user);*/
-        navigate("/create-store");
+        navigate(getPosRoute("createStore"));
       //}
     }
   };
@@ -103,7 +105,7 @@ export const PosAuthView: React.FC = () => {
       saveSession({ email, password });
       context.setUser(dataLogin);
       context.setShowNavBarBottom(true);
-      navigate("/MainSales");
+      navigate(getPosSalesRoute("main"));
     
     }
   };
@@ -145,7 +147,7 @@ export const PosAuthView: React.FC = () => {
         } else {
           context.setUser(data);
           context.setShowNavBarBottom(true);
-          navigate("/MainSales");
+          navigate(getPosSalesRoute("main"));
         }
       });
     }

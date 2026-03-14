@@ -25,16 +25,11 @@
   - /sistema/pos/login
 - Feature POS (`src/features/pos/page/PosFeatureRoutes.jsx`):
   - /RavekhPos
-  - /sistema/pos
-  - /sistema/pos/crear-tienda
-  - /sistema/pos/login
 
 ## Riesgos de coexistencia
 
 - Rutas duplicadas detectadas (mismo path en ambos lados):
   - /RavekhPos
-  - /sistema/pos
-  - /sistema/pos/login
 
 ## Recomendación de migración segura
 

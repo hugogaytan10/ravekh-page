@@ -1,6 +1,7 @@
 import {
   posFeatureRoutes,
   posSalesFeatureRoutes,
+  posSalesFeatureRouteAliases,
   posProductsFeatureRoutes,
   posFinanceFeatureRoutes,
   posReportsFeatureRoutes,
@@ -19,6 +20,7 @@ const posRouteGroups = [
   posFeatureRoutes,
   posFeatureRouteAliases,
   posSalesFeatureRoutes,
+  posSalesFeatureRouteAliases,
   posProductsFeatureRoutes,
   posFinanceFeatureRoutes,
   posReportsFeatureRoutes,
@@ -31,6 +33,7 @@ const posRouteGroups = [
 export {
   posFeatureRoutes,
   posSalesFeatureRoutes,
+  posSalesFeatureRouteAliases,
   posProductsFeatureRoutes,
   posFinanceFeatureRoutes,
   posReportsFeatureRoutes,

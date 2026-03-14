@@ -26,6 +26,7 @@ export {
   PosScannerSalesPage,
   PosSearchScreenSalesPage,
   PosQuantityNextSellPage,
+  posSalesFeatureRouteAliases,
 } from "./sales";
 
 export {
