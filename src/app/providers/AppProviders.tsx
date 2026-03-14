@@ -1,5 +1,5 @@
 import { PropsWithChildren } from "react";
-import { AppProvider } from "../../legacy/providers/appContext";
+import { AppProvider } from "../../shared/providers/appContext";
 import { ThemeProvider } from "./ThemeProvider";
 
 export const AppProviders = ({ children }: PropsWithChildren) => {

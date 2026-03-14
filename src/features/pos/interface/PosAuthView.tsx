@@ -4,7 +4,7 @@ import "../../../legacy/pos/login.css";
 import { useNavigate } from "react-router-dom";
 import { loginToServer } from "../service/posAuthService";
 import { usePosSession } from "../hooks/usePosSession";
-import { AppContext } from "../../../legacy/providers/appContext";
+import { AppContext } from "../../../shared/providers/appContext";
 export const PosAuthView: React.FC = () => {
   const context = useContext(AppContext);
   const navigate = useNavigate();
