@@ -7,6 +7,7 @@ import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { getCuponesUserId, getCuponesUserName, hasCuponesSession } from "../services/session";
 import type { Coupon } from "../models/coupon";
+import {WEB_COUPONS_DOMAIN} from "../../Components/CatalogoWeb/Cupones/shared/constants";
 
 const CouponQrPage: React.FC = () => {
   const navigate = useNavigate();
@@ -41,7 +42,7 @@ const CouponQrPage: React.FC = () => {
       userId: String(userId || 0),
     });
 
-    return `${window.location.origin}/cupones/reclamo-web?${params.toString()}`;
+    return `${WEB_COUPONS_DOMAIN}/cupones/reclamo-web?${params.toString()}`;
   }, [coupon.Id, userId]);
 
   const renderQrSvg = (payload: string) => {
