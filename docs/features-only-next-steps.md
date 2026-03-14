@@ -11,7 +11,7 @@ Este plan convierte la meta de "features-only" en pasos operativos para que `src
 ## Estado actual de avance
 
 - ✅ `src/main.jsx` ya renderiza `src/app` (`AppProviders` + `RouterProvider`) en lugar de `src/App.jsx` legacy.
-- ⏳ Sigue pendiente eliminar dependencias a `src/legacy/*` (por ejemplo providers/adaptadores temporales).
+- ✅ Se eliminó la dependencia de providers hacia `src/legacy/*` en el entry principal (queda migración pendiente por dominios y adaptadores).
 
 ## Estructura objetivo para sistemas
 

@@ -76,9 +76,9 @@ Esta capa funciona como **fachada**:
 
 ### Bloqueadores actuales
 
-1. **Entry principal ya migrado, pero providers siguen en transición**
-   - `src/main.jsx` ya usa `src/app` (`AppProviders` + `RouterProvider`) como entry principal.
-   - Aún existe dependencia temporal en `src/legacy/providers/appContext`, que debe retirarse para completar independencia.
+1. **Entry principal y providers del perfil nuevo ya desacoplados**
+   - `src/main.jsx` usa `src/app` (`AppProviders` + `RouterProvider`) como entry principal.
+   - `src/shared/providers/appContext` ahora es implementación propia y ya no depende de `src/legacy/providers/appContext`.
 
 2. **Rutas con convivencia/duplicación en dominios grandes**
    - POS y cupones todavía conviven entre router legacy y router por features.
