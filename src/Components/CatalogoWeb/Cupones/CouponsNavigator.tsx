@@ -3,6 +3,7 @@ import { Route, Routes } from "react-router-dom";
 import { CouponsHomeScreen } from "./screens/CouponsHomeScreen";
 import { CouponCreateScreen } from "./screens/CouponCreateScreen";
 import { CouponListScreen } from "./screens/CouponListScreen";
+import { CouponScanScreen } from "./screens/CouponScanScreen";
 
 import CuponesEdit from "./screens/CuponesEdit";
 
@@ -12,6 +13,7 @@ export const CouponsNavigator: React.FC = () => {
       <Route index element={<CouponsHomeScreen />} />
       <Route path="crear" element={<CouponCreateScreen />} />
       <Route path="lista" element={<CouponListScreen />} />
+      <Route path="scanear" element={<CouponScanScreen />} />
       <Route path="editar/:CouponId" element={<CuponesEdit />} />
     </Routes>
   );

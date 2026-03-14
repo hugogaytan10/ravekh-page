@@ -9,7 +9,13 @@ import { AutoImageCarousel } from "../components/AutoImageCarousel";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { loginCupones, registerCupones } from "../services/couponsApi";
 import { parseNumericId, persistCuponesAuthSession } from "../services/authSession";
-import { getPendingVisitRedeemToken, setPendingVisitRedeemToken } from "../services/session";
+import {
+  clearPendingCouponClaimId,
+  getPendingCouponClaimId,
+  getPendingVisitRedeemToken,
+  setPendingCouponClaimId,
+  setPendingVisitRedeemToken,
+} from "../services/session";
 
 const RegisterPage: React.FC = () => {
   const navigate = useNavigate();
@@ -20,19 +26,23 @@ const RegisterPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const { theme } = useCouponsTheme();
-  const tokenFromQuery = new URLSearchParams(location.search).get("token")?.trim() ?? "";
-  const effectiveToken = tokenFromQuery || getPendingVisitRedeemToken();
 
-  const tokenFromUrl = useMemo(() => {
-    const params = new URLSearchParams(location.search);
-    return (params.get("token") ?? "").trim();
-  }, [location.search]);
+  const queryParams = useMemo(() => new URLSearchParams(location.search), [location.search]);
+  const tokenFromQuery = queryParams.get("token")?.trim() ?? "";
+  const couponIdFromQuery = Number(queryParams.get("couponId"));
+  const effectiveToken = tokenFromQuery || getPendingVisitRedeemToken();
+  const effectivePendingCouponId =
+    Number.isInteger(couponIdFromQuery) && couponIdFromQuery > 0 ? couponIdFromQuery : getPendingCouponClaimId();
 
   useEffect(() => {
-    if (tokenFromUrl) {
-      setPendingVisitRedeemToken(tokenFromUrl);
+    if (tokenFromQuery) {
+      setPendingVisitRedeemToken(tokenFromQuery);
     }
-  }, [tokenFromUrl]);
+
+    if (Number.isInteger(couponIdFromQuery) && couponIdFromQuery > 0) {
+      setPendingCouponClaimId(couponIdFromQuery);
+    }
+  }, [tokenFromQuery, couponIdFromQuery]);
 
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {
     event.currentTarget.style.boxShadow = `0 0 0 4px ${theme.accent}40`;
@@ -67,7 +77,6 @@ const RegisterPage: React.FC = () => {
     try {
       const registerResponse = await registerCupones({
         Role: "CLIENTE",
-
         Name: normalizedName,
         Email: normalizedEmail,
         Password: normalizedPassword,
@@ -82,6 +91,12 @@ const RegisterPage: React.FC = () => {
           Name: normalizedName,
         });
 
+        if (effectivePendingCouponId) {
+          clearPendingCouponClaimId();
+          navigate(`/cupones/${effectivePendingCouponId}?autoclaim=1`, { replace: true });
+          return;
+        }
+
         if (effectiveToken) {
           navigate(`/visit/redeem?token=${encodeURIComponent(effectiveToken)}`);
           return;
@@ -93,6 +108,12 @@ const RegisterPage: React.FC = () => {
 
       const loginResponse = await loginCupones({ Email: normalizedEmail, Password: normalizedPassword });
       persistCuponesAuthSession(loginResponse);
+
+      if (effectivePendingCouponId) {
+        clearPendingCouponClaimId();
+        navigate(`/cupones/${effectivePendingCouponId}?autoclaim=1`, { replace: true });
+        return;
+      }
 
       if (effectiveToken) {
         navigate(`/visit/redeem?token=${encodeURIComponent(effectiveToken)}`);
@@ -182,7 +203,17 @@ const RegisterPage: React.FC = () => {
             type="button"
             className="ml-1 font-bold"
             style={{ color: theme.accent }}
-            onClick={() => navigate(`/cupones${effectiveToken ? `?token=${encodeURIComponent(effectiveToken)}` : ""}`)}
+            onClick={() => {
+              const params = new URLSearchParams();
+              if (effectiveToken) {
+                params.set("token", effectiveToken);
+              }
+              if (effectivePendingCouponId) {
+                params.set("couponId", String(effectivePendingCouponId));
+              }
+              const suffix = params.toString();
+              navigate(`/cupones${suffix ? `?${suffix}` : ""}`);
+            }}
           >
             inicia sesión
           </button>

@@ -6,6 +6,7 @@ interface TrashProps {
   fill?: string;
 }
 
+
 export const Trash: React.FC<TrashProps> = ({ width = 40, height = 40, fill = '#8A20EC' }) => {
   return (
       <svg width={width} height={height} viewBox="0 0 60 60" fill="none">

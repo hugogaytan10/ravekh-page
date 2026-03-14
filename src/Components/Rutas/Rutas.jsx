@@ -39,6 +39,7 @@ import { CouponQrPage } from "../../coupons/pages/CouponQrPage";
 import { CouponCongratsPage } from "../../coupons/pages/CouponCongratsPage";
 import { CouponClaimPage } from "../../coupons/pages/CouponClaimPage";
 import { CouponWebRedeemPage } from "../../coupons/pages/CouponWebRedeemPage";
+import { CouponsPage } from "../../coupons/pages/CouponsPage";
 
 // Importaciones para el punto de venta - Login
 import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
@@ -149,6 +150,7 @@ import { loginToServer } from "../CatalogoWeb/PuntoVenta/Login/Peticiones";
 
 import { MainCoupons, VisitsNavigator, CouponsNavigator } from "../CatalogoWeb/Cupones";
 import CuponesEdit from "../CatalogoWeb/Cupones/screens/CuponesEdit";
+import { VisitHistoryPage } from "../../coupons/pages/VisitHistoryPage";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -1000,6 +1002,7 @@ export const Rutas = () => {
             <Route path="cupones/*" element={<CouponsNavigator />} />
             <Route path="editar/:CouponId" element={<CuponesEdit />} />
           </Route>
+          <Route path="/cupones/visitas" element={<VisitHistoryPage />} />
           <Route path="/cupones/registro" element={<RegisterPage />} />
           <Route path="/cuponespv/editar/:CouponId" element={<CuponesEdit />} />
           <Route path="cupones/editar/:CouponId" element={<CuponesEdit />} />
@@ -1013,6 +1016,7 @@ export const Rutas = () => {
           <Route path="/cupones/cambio-nombre" element={<ChangeName />} />
           <Route path="/cupones/qr" element={<CouponQrPage />} />
           <Route path="/cupones/reclamo-web" element={<CouponWebRedeemPage />} />
+          <Route path="/cupones/cupones" element={<CouponsPage />} />
           <Route path="/cupones/:couponId" element={<CouponClaimPage />} />
           <Route path="/cupones/nuevo" element={<CouponCongratsPage />} />
           <Route path="/blog" element={<BlogMain />} />
