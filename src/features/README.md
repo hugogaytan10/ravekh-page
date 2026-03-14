@@ -82,6 +82,30 @@ src/features/systems/
 - Minimizar side effects dentro de componentes presentacionales.
 - Para sistemas grandes, usar `features/systems/*` como punto de coordinación y no como lugar para lógica UI.
 
+
+## Pendientes explícitos para cerrar migración a features-only
+
+Para poder borrar `src/Components` de forma segura, cada dominio debe cumplir **todos** los puntos:
+
+1. **Ownership de rutas**
+   - Cada path debe tener una sola fuente de verdad en `features/*` o `features/systems/*`.
+   - Evitar doble registro legacy + feature para la misma ruta.
+
+2. **Sin dependencia runtime en legacy**
+   - No imports a `src/Components/*` desde features.
+   - Los adaptadores en `src/legacy/*` deben quedar temporales y con fecha objetivo de retiro.
+
+3. **Capa por feature completa**
+   - `service/model/hooks/interface/page` presentes y usados por la propia feature.
+   - `index.js` como API pública única para consumo externo.
+
+4. **Verificación mínima antes de borrar**
+   - `npm run features:boundaries`
+   - `npm run build`
+   - Smoke test de rutas críticas del dominio
+
+> Recomendación: eliminar legacy **por dominio** (no en bloque) para reducir riesgo.
+
 ## Definición de terminado (DoD) por migración
 
 - [ ] Existe `index.js` como API pública.

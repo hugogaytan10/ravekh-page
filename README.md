@@ -14,7 +14,8 @@ Mantener el comportamiento actual en producción mientras se migra de forma incr
 - `src/features/blog`: feature base del blog (page/interface/hook/model/service) conectada vía wrapper legacy.
 - `src/features/contact`: feature para formulario de contacto, integrada con wrapper legacy.
 - `src/features/landing`: feature completa para la landing page, incluyendo secciones de muestra y paquetes, con control de colores/estilos por sección.
-- `src/features/coupon-visits`: feature para el sistema de cupones/visitas con rutas migradas al router paralelo.
+- `src/features/coupon-visits`: alias de compatibilidad para el dominio de cupones/visitas (la implementación canónica vive en `src/features/coupons`).
+- `src/features/coupons`: implementación canónica del dominio cupones/visitas (rutas, modelos y resolución de rutas).
 - `src/features/catalog-web`: feature para catálogo web con rutas de listado, detalle, categoría y pedido.
 - `src/features/pos`: feature para POS con rutas base de marketing, login, creación y venta.
 - `src/features/systems`: nueva capa de organización para separar sistemas de negocio (cupones/visitas, catálogo web y POS) sin romper compatibilidad.
@@ -67,6 +68,41 @@ Esta capa funciona como **fachada**:
 - Centraliza el registro de sistemas en `systemsRegistry`.
 - Centraliza sus rutas en `systemRoutes`.
 - Re-exporta APIs públicas sin acoplar `app/router` a los internals de cada sistema.
+
+
+## Qué falta para poder eliminar legacy (`src/Components`)
+
+> Meta: llegar a un estado donde `npm run dev` y el router principal ya no dependan de `src/Components/*`.
+
+### Bloqueadores actuales
+
+1. **Entry principal sigue legacy**
+   - `src/main.jsx` → `src/App.jsx` → `src/Components/Rutas/Rutas.jsx`.
+   - Mientras esto siga así, no se puede eliminar `src/Components`.
+
+2. **Rutas con convivencia/duplicación en dominios grandes**
+   - POS y cupones todavía conviven entre router legacy y router por features.
+   - Debe existir un solo owner por ruta antes de borrar archivos heredados.
+
+3. **Features aún consumen wrappers/adaptadores legacy**
+   - Hay pantallas/flows que todavía dependen de `src/legacy/*` o de wrappers en `src/Components/*`.
+   - Cada dependencia debe migrarse a `interface/service/model` nativos de la feature.
+
+### Criterio de salida (Definition of Done para borrar legacy por dominio)
+
+- [ ] El dominio ya no se importa desde `src/Components/*`.
+- [ ] El dominio ya no se importa desde `src/legacy/*` (o el adaptador queda sin consumidores).
+- [ ] Las rutas del dominio se registran solo desde `src/features/*` o `src/features/systems/*`.
+- [ ] `npm run features:boundaries` en verde.
+- [ ] `npm run build` en verde.
+- [ ] Smoke test manual de navegación del dominio migrado.
+
+### Orden recomendado para terminar la migración
+
+1. **Cupones/visitas**: mantener `coupon-visits` solo como alias temporal y mover consumidores a `features/coupons`.
+2. **Catálogo web**: reemplazar wrappers de página por implementación propia de feature.
+3. **POS**: cerrar rutas duplicadas y terminar migración de subdominios (sales/reports/settings).
+4. **Switch final**: hacer que `npm run dev` use el router de features y, después, eliminar legacy por dominio.
 
 ## Reglas de migración incremental
 
