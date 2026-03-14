@@ -1,5 +1,3 @@
-import { MainCoupons } from "../../../legacy/coupons";
+import { CouponsBackofficePage } from "../../coupons";
 
-export const CouponVisitsBackofficePage = () => {
-  return <MainCoupons />;
-};
+export const CouponVisitsBackofficePage = CouponsBackofficePage;

@@ -1,5 +1,3 @@
-import { LoginPage } from "../../../coupons/pages/LoginPage";
+import { CouponsEntryPage } from "../../coupons";
 
-export const CouponVisitsEntryPage = () => {
-  return <LoginPage />;
-};
+export const CouponVisitsEntryPage = CouponsEntryPage;
