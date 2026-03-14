@@ -31,7 +31,7 @@ export const CustomizeApp: React.FC<{ navigation: any }> = ({ navigation }) => {
         );
         if (data) {
           context.setStore({ ...context.store, Logo: uriPhoto, Color: color });
-          navigate(-1);
+          navigate("/more");
         }
       }
     } catch (e) {
@@ -57,7 +57,7 @@ export const CustomizeApp: React.FC<{ navigation: any }> = ({ navigation }) => {
         }}
         onClick={() => {
           context.setShowNavBarBottom(true);
-          navigate(-1);
+          navigate("/more");
         }}
       >
         <button className="mr-2">

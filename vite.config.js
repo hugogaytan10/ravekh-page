@@ -1,23 +1,29 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
-import svgr from 'vite-plugin-svgr';
+import svgr from 'vite-plugin-svgr'
 
-
-// https://vitejs.dev/config/
+// https://vite.dev/config/
 export default defineConfig({
   resolve: {
     alias: {
-      "qrcode.react": "/src/qrcode-react-shim.tsx",
+      'qrcode.react': '/src/qrcode-react-shim.tsx',
     },
   },
-  plugins: [react(),  svgr({
-    svgrOptions: {
-      exportAsDefault: true, // Configura la exportación como "default"
-      icon: true, // Esto permite manejar SVGs como íconos automáticamente
-    },
-  }),],
+  plugins: [
+    react(),
+    svgr({
+      svgrOptions: {
+        exportAsDefault: true,
+        icon: true,
+      },
+    }),
+  ],
   server: {
-    host: true, // Permite que el servidor escuche en todas las interfaces de red
-    port: 5173, // Puerto en el que correrá tu servidor (puedes cambiarlo si lo necesitas)
-  }
+    host: '0.0.0.0',
+    port: 5173,
+    strictPort: true,
+    allowedHosts: [
+      'malachi-overeducative-tai.ngrok-free.dev',
+    ],
+  },
 })

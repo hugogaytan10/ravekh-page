@@ -147,6 +147,25 @@ const claimCoupon = async (payload: ClaimCouponPayload): Promise<unknown> => {
   return (await parseJsonOrNull<unknown>(response)) ?? null;
 };
 
+const redeemCouponByUser = async (couponId: number, userId: number): Promise<unknown> => {
+  if (!isValidId(couponId) || !isValidId(userId)) {
+    throw new Error("Datos inválidos para reclamar el cupón.");
+  }
+
+  const response = await fetch(`${URL}couponhasusers/coupon/${couponId}/user/${userId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw await buildHttpError(response, "No se pudo procesar el reclamo del cupón.");
+  }
+
+  return (await parseJsonOrNull<unknown>(response)) ?? null;
+};
+
 const getCouponsDisponibilityByUser = async (userId: number): Promise<Coupon[]> => {
   const relations = await getCouponDisponibility(userId);
   if (!relations || relations.length === 0) {
@@ -248,6 +267,7 @@ export {
   getCouponsByUser,
   getCouponsDisponibilityByUser,
   loginCupones,
+  redeemCouponByUser,
   registerCupones,
   updateCoupon,
 };

@@ -71,7 +71,7 @@ export const Client = () => {
   );
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-white text-gray-900">
       <header
         className="flex items-center justify-between px-2 bg-blue-600 text-white border-none z-50"
         style={{ backgroundColor: store?.Color || "#3B82F6" }}
@@ -87,7 +87,7 @@ export const Client = () => {
         </button>
         <h1 className="text-xl font-bold">Clientes</h1>
         <button
-          className="bg-white text-blue-600 font-semibold py-2 px-4 rounded-full shadow hover:bg-gray-100"
+          className="bg-white text-blue-600 font-semibold py-2 px-4 rounded-full shadow hover:bg-gray-100 border border-gray-100"
           onClick={() => navigate("/add-client")}
         >
           Agregar Cliente

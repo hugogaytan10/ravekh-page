@@ -100,7 +100,7 @@ export const NewEmployee: React.FC = () => {
       if (response.ok) {
         setModalMessage("Empleado agregado exitosamente.");
         setModalVisible(true);
-        navigate(-1);
+        navigate("/employees");
       } else {
         setModalMessage("Error al agregar el empleado.");
         setModalVisible(true);
@@ -116,13 +116,13 @@ export const NewEmployee: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
+    <div className="min-h-screen bg-white text-gray-900">
       <header
         className="flex items-center justify-between px-4 py-2 bg-blue-600 text-white"
         style={{ backgroundColor: context.store.Color || "#3B82F6" }}
       >
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/employees")}
           className=" text-blue-600 font-semibold p-1  rounded-full shadow hover:bg-gray-100"
         >
           <ChevronBack />
@@ -155,7 +155,7 @@ export const NewEmployee: React.FC = () => {
       </div>
 
       {selectedTab === "info" && (
-        <div className="bg-white shadow-md rounded-lg p-6 mx-4 mt-4">
+        <div className="bg-white shadow-md rounded-lg p-6 mx-4 mt-4 border border-gray-100">
           <div className="mb-4">
             <label className="block text-sm font-medium text-gray-700">Nombre</label>
             <input
@@ -163,7 +163,7 @@ export const NewEmployee: React.FC = () => {
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Nombre completo"
-              className="bg-white h-10 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="bg-white text-gray-900 h-10 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
             {errors.name && <p className="text-red-500 text-sm mt-1">{errors.name}</p>}
           </div>
@@ -175,7 +175,7 @@ export const NewEmployee: React.FC = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="Email"
-              className="bg-white h-10 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="bg-white text-gray-900 h-10 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
             {errors.email && <p className="text-red-500 text-sm mt-1">{errors.email}</p>}
           </div>
@@ -187,7 +187,7 @@ export const NewEmployee: React.FC = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Contraseña"
-              className="bg-white h-10 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="bg-white text-gray-900 h-10 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
             {errors.password && <p className="text-red-500 text-sm mt-1">{errors.password}</p>}
           </div>
@@ -199,7 +199,7 @@ export const NewEmployee: React.FC = () => {
               value={pin}
               onChange={(e) => setPin(e.target.value)}
               placeholder="PIN de 4 dígitos"
-              className="bg-white h-10 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+              className="bg-white text-gray-900 h-10 mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
             />
             {errors.pin && <p className="text-red-500 text-sm mt-1">{errors.pin}</p>}
           </div>
@@ -218,7 +218,7 @@ export const NewEmployee: React.FC = () => {
       )}
 
       {selectedTab === "roles" && (
-        <div className="bg-white shadow-md rounded-lg p-6 mx-4 mt-4">
+        <div className="bg-white shadow-md rounded-lg p-6 mx-4 mt-4 border border-gray-100">
           <h2 className="text-lg font-bold mb-4">Selecciona un rol</h2>
           {roles.map((roleOption) => (
             <div
@@ -239,7 +239,7 @@ export const NewEmployee: React.FC = () => {
 
       {modalVisible && (
         <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-4/5 md:w-1/3">
+          <div className="bg-white text-gray-900 p-6 rounded-lg shadow-lg w-4/5 md:w-1/3">
             <p className="text-center mb-4">{modalMessage}</p>
             <button
               onClick={() => setModalVisible(false)}

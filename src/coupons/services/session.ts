@@ -6,6 +6,7 @@ const USER_NAME_KEY = "cupones-name";
 const USER_ID_KEY = "cupones-user-id";
 const BUSINESS_ID_KEY = "cupones-business-id";
 const TOKEN_KEY = "cupones-token";
+const ROLE_KEY = "cupones-role";
 const PENDING_VISIT_TOKEN_KEY = "cupones-pending-visit-token";
 const PENDING_COUPON_CLAIM_KEY = "cupones-pending-coupon-claim";
 
@@ -67,6 +68,18 @@ const setCuponesToken = (token?: string) => {
 
 const getCuponesToken = () => localStorage.getItem(TOKEN_KEY) ?? "";
 
+const setCuponesRole = (role?: string) => {
+  const normalizedRole = role?.trim();
+
+  if (normalizedRole) {
+    localStorage.setItem(ROLE_KEY, normalizedRole);
+  } else {
+    localStorage.removeItem(ROLE_KEY);
+  }
+};
+
+const getCuponesRole = () => localStorage.getItem(ROLE_KEY) ?? "";
+
 const setPendingVisitRedeemToken = (token?: string) => {
   const normalizedToken = token?.trim();
 
@@ -105,6 +118,7 @@ export {
   clearPendingVisitRedeemToken,
   clearPendingCouponClaimId,
   getCuponesBusinessId,
+  getCuponesRole,
   getCuponesToken,
   getCuponesUserId,
   getCuponesUserName,
@@ -114,6 +128,7 @@ export {
   setPendingCouponClaimId,
   setPendingVisitRedeemToken,
   setCuponesBusinessId,
+  setCuponesRole,
   setCuponesSession,
   setCuponesToken,
   setCuponesUserId,

@@ -43,7 +43,7 @@ export const OrderDetailScreen: React.FC = () => {
     updateOrderStatus(orderId || "", "ENTREGADO", context.user.Token).then(
       () => {
         context.setCart(cart);
-        navigate(-1);
+        navigate("/orders");
       }
     );
   };
@@ -51,7 +51,7 @@ export const OrderDetailScreen: React.FC = () => {
   const handleRejectOrder = () => {
     updateOrderStatus(orderId || "", "CANCELADO", context.user.Token).then(
       () => {
-        navigate(-1);
+        navigate("/orders");
       }
     );
   };
@@ -71,7 +71,7 @@ export const OrderDetailScreen: React.FC = () => {
       <header className="flex items-center bg-gray-800 text-white py-4 px-6">
         <button
           onClick={() => {
-            navigate(-1);
+            navigate("/orders");
           }}
           className="mr-4 text-white"
         >

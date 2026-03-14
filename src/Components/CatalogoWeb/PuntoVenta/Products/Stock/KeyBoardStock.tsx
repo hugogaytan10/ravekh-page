@@ -35,7 +35,7 @@ export const KeyboardStock: React.FC = () => {
       if (res) {
         context.setShowNavBarBottom(true); // Muestra la barra de navegación inferior
         context.setStockFlag((prev) => !prev); // Actualiza el estado de stock
-        navigate(-1); // Navega hacia atrás
+        navigate("/main-products/items"); // Navega hacia atrás
       }
     });
   };

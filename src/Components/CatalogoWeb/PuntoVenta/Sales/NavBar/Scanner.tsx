@@ -129,7 +129,7 @@ export const Scanner: React.FC = () => {
         <button
           onClick={() => {
             context.setShowNavBarBottom(true);
-            navigate(-1);
+            navigate("/MainSales");
           }}
         >
           <ChevronBack />

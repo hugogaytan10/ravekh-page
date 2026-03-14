@@ -47,7 +47,7 @@ export const StartedStore: React.FC = () => {
       >
         <button
           className="p-2 rounded-full bg-primary-light"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/main-store-online")}
         >
           <ChevronBack /*strokeColor="#fff"*/ />
         </button>

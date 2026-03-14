@@ -556,6 +556,7 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
           localStorage.setItem("nombre", dataBusiness.Name || "");
 
           setPlan(dataBusiness.Plan);
+          localStorage.setItem("plan", dataBusiness.Plan || "");
 
           context.setPhoneNumber(dataBusiness.PhoneNumber || null);
           localStorage.setItem("telefono", dataBusiness.PhoneNumber || "");
