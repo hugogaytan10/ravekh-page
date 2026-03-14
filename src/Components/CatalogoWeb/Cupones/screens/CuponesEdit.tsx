@@ -8,6 +8,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { Coupon } from "../types";
 import { deleteCoupon, getCouponById, updateCoupon } from "../Petitions";
 import { hasCuponesSession } from "../../../../coupons/services/session";
+import { WEB_COUPONS_DOMAIN } from "../shared/constants";
 import { formatDateTime, getCouponId, mergeDateAndTime, parseValidDate, toDatetimeLocalValue } from "../shared/couponsUtils";
 import {Trash} from "../../../../assets/POS/Trash";
 
@@ -74,6 +75,20 @@ const CuponesEdit: React.FC = () => {
   const [feedbackMessage, setFeedbackMessage] = useState("");
 
   const dateInputRef = useRef<HTMLInputElement | null>(null);
+
+  const couponsDomain = WEB_COUPONS_DOMAIN || window.location.origin;
+  const couponLink = useMemo(() => {
+    if (!coupon) {
+      return "";
+    }
+
+    const resolvedId = getCouponId(coupon) || couponId;
+    const suffix = resolvedId || coupon.QR?.trim();
+
+    return suffix ? `${couponsDomain}/cupones/${suffix}` : "";
+  }, [coupon, couponId, couponsDomain]);
+
+  const qrDisplayValue = useMemo(() => couponLink || coupon?.QR?.trim() || "", [coupon?.QR, couponLink]);
 
   const showFeedback = (title: string, message: string) => {
     setFeedbackTitle(title);
@@ -163,7 +178,7 @@ const CuponesEdit: React.FC = () => {
       const mergedDate = parsedValidDate ? mergeDateAndTime(parsedValidDate) : "";
       const payload: Coupon = {
         Business_Id: Number(coupon.Business_Id) || businessId,
-        QR: coupon.QR,
+        QR: coupon.QR?.trim() || couponLink,
         Description: description.trim(),
         LimitUsers: Number(limitUsers),
         ...(mergedDate ? { Valid: formatDateTime(new Date(mergedDate)) } : {}),
@@ -175,6 +190,7 @@ const CuponesEdit: React.FC = () => {
         ...payload,
         ...updatedCouponData,
         ...(getCouponId(updated) ? { Id: getCouponId(updated) } : {}),
+        QR: (updatedCouponData as Partial<Coupon>).QR || payload.QR,
       });
 
       setCoupon(normalized);
@@ -328,10 +344,10 @@ const CuponesEdit: React.FC = () => {
               </div>
 
               {/* QR */}
-              {!!coupon.QR && (
+              {!!qrDisplayValue && (
                 <div className="rounded-3xl border border-black/10 bg-white p-4">
                   <div className="flex justify-center">
-                    <QRCodeSVG value={coupon.QR} size={140} level="M" />
+                    <QRCodeSVG value={qrDisplayValue} size={140} level="M" />
                   </div>
                 </div>
               )}

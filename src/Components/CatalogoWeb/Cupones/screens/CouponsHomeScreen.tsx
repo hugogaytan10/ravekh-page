@@ -79,7 +79,13 @@ export const CouponsHomeScreen: React.FC = () => {
               title="Cupones activos"
               subtitle="Consulta tus cupones"
               icon={<GridIcon stroke={accentColor} />}
-              onClick={() => navigate("lista")}
+              onClick={() => navigate("lista", { state: { hideMainCouponsTabs: true } })}
+            />
+            <CardAction
+              title="Scannear QR"
+              subtitle="Escanea un cupón desde cámara"
+              icon={<ScannerIcon stroke={accentColor} />}
+              onClick={() => navigate("scanear")}
             />
           </div>
         </section>
