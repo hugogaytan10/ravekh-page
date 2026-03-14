@@ -1,6 +1,7 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import App from './App.jsx'
+import { AppProviders } from './app/providers/AppProviders'
+import { RouterProvider } from './app/providers/RouterProvider'
 import './index.css'
 
 const root = document.documentElement
@@ -19,6 +20,8 @@ if (!storedTheme) {
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
-    <App />
+    <AppProviders>
+      <RouterProvider />
+    </AppProviders>
   </React.StrictMode>,
 )

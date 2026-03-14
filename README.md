@@ -72,13 +72,13 @@ Esta capa funciona como **fachada**:
 
 ## Qué falta para poder eliminar legacy (`src/Components`)
 
-> Meta: llegar a un estado donde `npm run dev` y el router principal ya no dependan de `src/Components/*`.
+> Meta: llegar a un estado donde `npm run dev` y el router principal ya no dependan de `src/Components/*` ni de `src/legacy/*`.
 
 ### Bloqueadores actuales
 
-1. **Entry principal sigue legacy**
-   - `src/main.jsx` → `src/App.jsx` → `src/Components/Rutas/Rutas.jsx`.
-   - Mientras esto siga así, no se puede eliminar `src/Components`.
+1. **Entry principal ya migrado, pero providers siguen en transición**
+   - `src/main.jsx` ya usa `src/app` (`AppProviders` + `RouterProvider`) como entry principal.
+   - Aún existe dependencia temporal en `src/legacy/providers/appContext`, que debe retirarse para completar independencia.
 
 2. **Rutas con convivencia/duplicación en dominios grandes**
    - POS y cupones todavía conviven entre router legacy y router por features.
@@ -102,7 +102,7 @@ Esta capa funciona como **fachada**:
 1. **Cupones/visitas**: mantener `coupon-visits` solo como alias temporal y mover consumidores a `features/coupons`.
 2. **Catálogo web**: reemplazar wrappers de página por implementación propia de feature.
 3. **POS**: cerrar rutas duplicadas y terminar migración de subdominios (sales/reports/settings).
-4. **Switch final**: hacer que `npm run dev` use el router de features y, después, eliminar legacy por dominio.
+4. **Switch final de independencia**: retirar `src/legacy/*` de providers/rutas y, después, eliminar legacy por dominio.
 
 ## Reglas de migración incremental
 
@@ -123,7 +123,7 @@ Esta capa funciona como **fachada**:
 
 ## Ejecutar la versión nueva (arquitectura por features)
 
-Además del entry legacy (`npm run dev`), puedes levantar el entry experimental basado en features:
+`npm run dev` ya usa el router de features (`src/app`). Puedes mantener `npm run new` como entry paralelo de validación durante la transición:
 
 ```bash
 npm run new
@@ -181,6 +181,8 @@ Esto crea automáticamente las carpetas `hooks`, `interface`, `model`, `page`, `
 ---
 
 Para más detalle de la estrategia, revisar `src/features/README.md`.
+
+Para un plan operativo paso a paso, revisar `docs/features-only-next-steps.md`.
 
 ## Hoja de ruta por dominios (migración gradual)
 
