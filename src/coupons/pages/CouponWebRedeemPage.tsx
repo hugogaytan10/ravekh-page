@@ -89,7 +89,7 @@ const CouponWebRedeemPage: React.FC = () => {
         <header className="flex items-center gap-3 pt-8 px-1" style={{ color: theme.textPrimary }}>
           <button
             type="button"
-            onClick={() => navigate("/cupones/home")}
+            onClick={() => navigate("/more")}
             className="h-12 w-12 rounded-2xl border flex items-center justify-center shadow-[0_12px_24px_rgba(0,0,0,0.12)]"
             style={{ backgroundColor: theme.surface, borderColor: theme.border }}
           >
