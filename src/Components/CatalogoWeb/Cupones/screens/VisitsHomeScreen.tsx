@@ -47,7 +47,7 @@ export const VisitsHomeScreen: React.FC = () => {
 
   const handleBack = () => {
     if (window.history.length > 1) {
-      navigate("/cuponespv");
+      navigate("/more");
       return;
     }
 
