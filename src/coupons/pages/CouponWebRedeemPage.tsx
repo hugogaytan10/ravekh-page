@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
-import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { redeemCouponByUser } from "../services/couponsApi";
 import { getCuponesRole, getCuponesUserName, hasCuponesSession } from "../services/session";
@@ -23,7 +22,10 @@ const CouponWebRedeemPage: React.FC = () => {
 
   useEffect(() => {
     if (!hasCuponesSession()) {
-      navigate("/cupones", { replace: true, state: { redirectTo: window.location.pathname + window.location.search } });
+      navigate("/login-punto-venta", {
+        replace: true,
+        state: { redirectTo: window.location.pathname + window.location.search }
+      });
       return;
     }
 
@@ -127,8 +129,6 @@ const CouponWebRedeemPage: React.FC = () => {
             </p>
           </section>
         </main>
-
-        <CuponesNav active="cupones" />
       </div>
     </div>
   );

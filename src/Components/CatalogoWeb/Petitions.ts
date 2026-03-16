@@ -3,6 +3,54 @@ import { Order } from "../CatalogoWeb/Modelo/Order";
 import { OrderDetails } from "../CatalogoWeb/Modelo/OrderDetails";
 import { Variant } from "./PuntoVenta/Model/Variant";
 
+const syncAvailableCategoryIds = (response: any, businessId?: string) => {
+    if (typeof window === "undefined") return;
+
+    const rawIds = response?.pagination?.categoryIdsWithImages;
+    const incomingIds = Array.isArray(rawIds)
+        ? rawIds
+              .map((id: unknown) => Number(id))
+              .filter((id: number) => Number.isFinite(id))
+        : [];
+
+    const activeBusinessId =
+        String(businessId ?? window.localStorage.getItem("idBusiness") ?? "").trim() || "global";
+
+    let categoriesByBusiness: Record<string, number[]> = {};
+    try {
+        const raw = window.localStorage.getItem("catalogAvailableCategoryIdsByBusiness");
+        const parsed = raw ? JSON.parse(raw) : {};
+        if (parsed && typeof parsed === "object") {
+            categoriesByBusiness = parsed as Record<string, number[]>;
+        }
+    } catch {
+        categoriesByBusiness = {};
+    }
+
+    const existingIds = Array.isArray(categoriesByBusiness[activeBusinessId])
+        ? categoriesByBusiness[activeBusinessId]
+              .map((id: unknown) => Number(id))
+              .filter((id: number) => Number.isFinite(id))
+        : [];
+
+    const mergedIds = Array.from(new Set([...existingIds, ...incomingIds]));
+    categoriesByBusiness[activeBusinessId] = mergedIds;
+
+    window.localStorage.setItem(
+        "catalogAvailableCategoryIdsByBusiness",
+        JSON.stringify(categoriesByBusiness)
+    );
+    window.localStorage.setItem(
+        "catalogAvailableCategoryIds",
+        JSON.stringify(mergedIds)
+    );
+    window.dispatchEvent(
+        new CustomEvent("catalogAvailableCategoryIdsUpdated", {
+            detail: mergedIds,
+        })
+    );
+};
+
 type CheckoutLineItem = {
     price_data: {
         currency: string;
@@ -71,6 +119,7 @@ export const getProductsByBusinessWithStock = async (idBusiness: string, limit: 
             body: JSON.stringify({ Limit: limit }),
         })
         const data = await response.json();
+        syncAvailableCategoryIds(data, idBusiness);
         if (data) {
             return data;
         }
@@ -229,6 +278,7 @@ export const getProductsByCategoryIdAndDisponibilty = async (
             body: JSON.stringify({ Limit: limit ?? "" }),
         });
         const data = await response.json();
+        syncAvailableCategoryIds(data);
         return data;
     }catch(error){
         console.log(error);

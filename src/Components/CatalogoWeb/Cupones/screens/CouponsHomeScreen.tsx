@@ -76,6 +76,12 @@ export const CouponsHomeScreen: React.FC = () => {
               icon={<GridIcon stroke={accentColor} />}
               onClick={() => navigate("lista")}
             />
+            <CardAction
+              title="Scannear QR"
+              subtitle="Escanea un cupón desde cámara"
+              icon={<ScannerIcon stroke={accentColor} />}
+              onClick={() => navigate("scanear")}
+            />
           </div>
         </section>
       </div>

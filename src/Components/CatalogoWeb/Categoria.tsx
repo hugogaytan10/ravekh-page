@@ -31,6 +31,7 @@ export const MainCategoria: React.FC = () => {
     const [themeColor, setThemeColor] = useState("#F9FAFB");
     const catalogoId =
         (context.idBussiness !== "0" ? context.idBussiness : localStorage.getItem("idBusiness")) ?? "";
+    const catalogLimit = localStorage.getItem("plan") ?? "";
 
     const cartVariantQuantities = useMemo(() => {
         const map: Record<number, number> = {};
@@ -55,7 +56,7 @@ export const MainCategoria: React.FC = () => {
             setLoadingProducts(true);
             const response = await getProductsByCategoryIdAndDisponibilty(
                 idCategoria,
-                "",
+                catalogLimit,
                 pageToFetch
             );
 
@@ -86,7 +87,7 @@ export const MainCategoria: React.FC = () => {
         } finally {
             setLoadingProducts(false);
         }
-    }, [idCategoria]);
+    }, [idCategoria, catalogLimit]);
 
     useEffect(() => {
         if (idCategoria) {

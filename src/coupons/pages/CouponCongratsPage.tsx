@@ -1,12 +1,31 @@
 import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { hasCuponesSession } from "../services/session";
 
 const CouponCongratsPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { theme } = useCouponsTheme();
+
+  const customState = location.state as
+    | {
+        title?: string;
+        message?: string;
+        primaryLabel?: string;
+        primaryTo?: string;
+        secondaryLabel?: string;
+        secondaryTo?: string;
+      }
+    | null;
+
+  const title = customState?.title || "Felicidades";
+  const message = customState?.message || "Has obtenido un nuevo cupón";
+  const primaryLabel = customState?.primaryLabel || "Continuar acumulando";
+  const primaryTo = customState?.primaryTo || "/cupones/home";
+  const secondaryLabel = customState?.secondaryLabel || "Ver mi QR";
+  const secondaryTo = customState?.secondaryTo || "/cupones/qr";
 
   useEffect(() => {
     if (!hasCuponesSession()) {
@@ -42,10 +61,10 @@ const CouponCongratsPage: React.FC = () => {
 
         <main className="mt-6 flex flex-col items-center text-center">
           <h1 className="text-3xl font-extrabold" style={{ color: theme.textPrimary }}>
-            Felicidades
+            {title}
           </h1>
           <p className="mt-3 text-sm" style={{ color: theme.textMuted }}>
-            Has obtenido un nuevo cupón
+            {message}
           </p>
 
           <div className="mt-10">
@@ -57,17 +76,17 @@ const CouponCongratsPage: React.FC = () => {
               type="button"
               className="w-full rounded-full px-4 py-3 text-sm font-bold shadow-[0_12px_24px_rgba(0,0,0,0.18)]"
               style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-              onClick={() => navigate("/cupones/home")}
+              onClick={() => navigate(primaryTo)}
             >
-              Continuar acumulando
+              {primaryLabel}
             </button>
             <button
               type="button"
               className="text-sm font-semibold"
               style={{ color: theme.textMuted }}
-              onClick={() => navigate("/cupones/qr")}
+              onClick={() => navigate(secondaryTo)}
             >
-              Ver mi QR
+              {secondaryLabel}
             </button>
           </div>
         </main>
