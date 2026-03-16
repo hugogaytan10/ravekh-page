@@ -55,7 +55,7 @@ export const CouponCreateScreen: React.FC = () => {
 
   const handleBack = () => {
     if (window.history.length > 1) {
-      navigate("/cuponespv");
+      navigate("/cuponespv/cupones");
       return;
     }
 
