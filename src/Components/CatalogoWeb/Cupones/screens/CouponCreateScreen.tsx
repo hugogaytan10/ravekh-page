@@ -55,7 +55,7 @@ export const CouponCreateScreen: React.FC = () => {
 
   const handleBack = () => {
     if (window.history.length > 1) {
-      navigate("/cuponespv");
+      navigate("/cuponespv/cupones");
       return;
     }
 
@@ -224,7 +224,7 @@ ${couponLink}`;
               type="datetime-local"
               value={validDateTime}
               onChange={(event) => setValidDateTime(event.target.value)}
-              className="w-full border border-gray-300 rounded-xl px-3 py-2 text-[#111827] font-semibold"
+              className="w-full max-w-full min-w-0 border border-gray-300 rounded-xl px-3 py-2 text-sm text-[#111827] font-semibold"
             />
           </div>
 
