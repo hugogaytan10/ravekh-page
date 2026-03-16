@@ -1,11 +1,17 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import cuponsito from "../../assets/Cupones/cuponsito.png";
 import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import type { Coupon } from "../models/coupon";
 import { claimCoupon, getCouponById } from "../services/couponsApi";
-import { getCuponesUserId, getCuponesUserName, hasCuponesSession } from "../services/session";
+import {
+  clearPendingCouponClaimId,
+  getCuponesUserId,
+  getCuponesUserName,
+  hasCuponesSession,
+  setPendingCouponClaimId,
+} from "../services/session";
 
 const TicketIcon: React.FC<{ className?: string }> = ({ className }) => (
   <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth="1.8">
@@ -16,6 +22,7 @@ const TicketIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 const CouponClaimPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const { couponId } = useParams<{ couponId: string }>();
   const { theme } = useCouponsTheme();
   const userName = getCuponesUserName();
@@ -23,12 +30,12 @@ const CouponClaimPage: React.FC = () => {
 
   const parsedCouponId = useMemo(() => Number(couponId), [couponId]);
   const isValidCouponId = Number.isInteger(parsedCouponId) && parsedCouponId > 0;
+  const autoClaimEnabled = useMemo(() => new URLSearchParams(location.search).get("autoclaim") === "1", [location.search]);
 
   const [coupon, setCoupon] = useState<Coupon | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isClaiming, setIsClaiming] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-  const [infoMessage, setInfoMessage] = useState("");
 
   useEffect(() => {
     let isMounted = true;
@@ -42,7 +49,6 @@ const CouponClaimPage: React.FC = () => {
 
       setIsLoading(true);
       setErrorMessage("");
-      setInfoMessage("");
 
       try {
         const currentCoupon = await getCouponById(parsedCouponId);
@@ -71,7 +77,7 @@ const CouponClaimPage: React.FC = () => {
       }
     };
 
-    fetchCoupon();
+    void fetchCoupon();
 
     return () => {
       isMounted = false;
@@ -79,23 +85,41 @@ const CouponClaimPage: React.FC = () => {
   }, [isValidCouponId, parsedCouponId]);
 
   const onClaimCoupon = async () => {
-    if (!coupon || !userId) {
+    if (!coupon || !userId || isClaiming) {
       return;
     }
 
     setIsClaiming(true);
     setErrorMessage("");
-    setInfoMessage("");
 
     try {
       await claimCoupon({ Coupon_Id: coupon.Id, User_Id: userId });
-      setInfoMessage("Cupón reclamado correctamente. Ya lo puedes ver en Mis cupones.");
+      clearPendingCouponClaimId();
+      navigate("/cupones/nuevo", {
+        replace: true,
+        state: {
+          title: "¡Felicidades!",
+          message: "Has canjeado tu cupón exitosamente.",
+          primaryLabel: "Ver mis cupones",
+          primaryTo: "/cupones/mis-cupones",
+          secondaryLabel: "Ir al inicio",
+          secondaryTo: "/cupones/home",
+        },
+      });
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "No se pudo reclamar el cupón.");
     } finally {
       setIsClaiming(false);
     }
   };
+
+  useEffect(() => {
+    if (!autoClaimEnabled || !coupon || !userId || isLoading || isClaiming) {
+      return;
+    }
+
+    void onClaimCoupon();
+  }, [autoClaimEnabled, coupon, userId, isLoading]);
 
   return (
     <div
@@ -146,8 +170,6 @@ const CouponClaimPage: React.FC = () => {
 
             {errorMessage ? <p className="text-sm font-semibold text-red-500">{errorMessage}</p> : null}
 
-            {infoMessage ? <p className="text-sm font-semibold text-emerald-500">{infoMessage}</p> : null}
-
             {!isLoading && !errorMessage && coupon ? (
               <div className="flex items-center gap-4">
                 <div
@@ -166,7 +188,10 @@ const CouponClaimPage: React.FC = () => {
                       type="button"
                       className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold shadow-[0_6px_14px_rgba(0,0,0,0.18)]"
                       style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-                      onClick={() => navigate("/cupones", { state: { redirectTo: `/cupones/${coupon.Id}` } })}
+                      onClick={() => {
+                        setPendingCouponClaimId(coupon.Id);
+                        navigate(`/cupones?couponId=${coupon.Id}`);
+                      }}
                     >
                       Inicia sesión para reclamar
                     </button>
@@ -175,7 +200,9 @@ const CouponClaimPage: React.FC = () => {
                       type="button"
                       className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold shadow-[0_6px_14px_rgba(0,0,0,0.18)]"
                       style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-                      onClick={onClaimCoupon}
+                      onClick={() => {
+                        void onClaimCoupon();
+                      }}
                       disabled={isClaiming}
                     >
                       {isClaiming ? "Reclamando..." : "Reclamar cupón"}
