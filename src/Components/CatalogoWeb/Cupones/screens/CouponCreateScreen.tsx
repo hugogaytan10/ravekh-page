@@ -220,12 +220,14 @@ ${couponLink}`;
 
           <div>
             <label className="mb-2 block text-sm font-semibold text-[#565656]">Fecha límite de cupón</label>
-            <input
-              type="datetime-local"
-              value={validDateTime}
-              onChange={(event) => setValidDateTime(event.target.value)}
-              className="w-full border border-gray-300 rounded-xl px-3 py-2 text-[#111827] font-semibold"
-            />
+            <div className="w-full overflow-hidden rounded-xl border border-gray-300 bg-white">
+              <input
+                type="datetime-local"
+                value={validDateTime}
+                onChange={(event) => setValidDateTime(event.target.value)}
+                className="block w-full min-w-0 border-0 bg-transparent px-3 py-2 text-sm text-[#111827] font-semibold outline-none"
+              />
+            </div>
           </div>
 
           {generatedCoupon?.QR && (
