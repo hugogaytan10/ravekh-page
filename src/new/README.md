@@ -11,6 +11,7 @@ This directory introduces a **new, decoupled architecture** that will coexist wi
   - `model`
   - `services`
   - `api`
+  - `pages`
 - Use class-based design to separate responsibilities.
 
 ## Systems included
@@ -27,6 +28,14 @@ This directory introduces a **new, decoupled architecture** that will coexist wi
   - Focused on order registration and tax retrieval for checkout scenarios.
 - `reporting-insights`
   - Focused on sales summaries and income series by period.
+- `business-settings`
+  - Focused on business configuration, tax updates, and table activation settings.
+- `online-order-tracking`
+  - Focused on online order listing, details, and status updates.
+- `export-reporting`
+  - Focused on optimized report export by scope and period through reusable queries.
+- `cash-closing-management`
+  - Focused on employee cash-closing lifecycle, current closing checks, and history.
 
 ## Legacy analysis used for the design
 
@@ -46,6 +55,26 @@ This directory introduces a **new, decoupled architecture** that will coexist wi
   - API adapter (`LoyaltyApi`)
   - Domain model (`RewardCoupon`)
   - Business service (`RewardService`)
+- POS business settings requests from `src/Components/CatalogoWeb/PuntoVenta/Settings/Settings/Petitions.ts` were split into:
+  - API adapter (`PosBusinessSettingsApi`)
+  - Domain model (`BusinessSettings`)
+  - Business service (`BusinessSettingsService`)
+  - Presentation page model (`BusinessSettingsPage`)
+- POS online order requests from `src/Components/CatalogoWeb/PuntoVenta/Settings/StoreOnline/Petitions.ts` were split into:
+  - API adapter (`PosOnlineOrderApi`)
+  - Domain model (`OnlineOrder`)
+  - Business service (`OnlineOrderService`)
+  - Presentation page model (`OnlineOrderTrackingPage`)
+- POS export reports requests from `src/Components/CatalogoWeb/PuntoVenta/Settings/ExportReports/Petitions.ts` were split into:
+  - API adapter (`PosExportReportApi`)
+  - Domain model (`ExportReport`, `ExportReportItem`)
+  - Business service (`ExportReportService`)
+  - Presentation page model (`ExportReportPage`)
+- POS cash-closing requests from `src/Components/CatalogoWeb/PuntoVenta/Settings/BoxCutting/Petitions.ts` were split into:
+  - API adapter (`PosCashClosingApi`)
+  - Domain model (`CashClosing`)
+  - Business service (`CashClosingService`)
+  - Presentation page model (`CashClosingPage`)
 
 ## Composition root
 
