@@ -20,6 +20,8 @@ This directory introduces a **new, decoupled architecture** that will coexist wi
 - `catalog`
 - `loyalty`
 
+Each feature in every system now includes all architecture layers: `api`, `interface`, `model`, `services`, and `pages`.
+
 ## POS features currently migrated
 
 - `sales-management`
@@ -36,6 +38,10 @@ This directory introduces a **new, decoupled architecture** that will coexist wi
   - Focused on optimized report export by scope and period through reusable queries.
 - `cash-closing-management`
   - Focused on employee cash-closing lifecycle, current closing checks, and history.
+- `dashboard-analytics`
+  - Focused on KPI comparisons, top-selling products/categories, and daily customer growth.
+- `finance-tracking`
+  - Focused on income/expense lifecycle, monthly overview, and transaction registration.
 
 ## Legacy analysis used for the design
 
@@ -75,6 +81,16 @@ This directory introduces a **new, decoupled architecture** that will coexist wi
   - Domain model (`CashClosing`)
   - Business service (`CashClosingService`)
   - Presentation page model (`CashClosingPage`)
+- POS dashboard requests from `src/Components/CatalogoWeb/PuntoVenta/Dashboard/Petitions.ts` were split into:
+  - API adapter (`PosDashboardApi`)
+  - Domain model (`DashboardSnapshot`, `ComparisonMetric`, `TopSellingItem`)
+  - Business service (`DashboardAnalyticsService`)
+  - Presentation page model (`DashboardAnalyticsPage`)
+- POS finance requests from `src/Components/CatalogoWeb/PuntoVenta/Finance/Petitions.ts` were split into:
+  - API adapter (`PosFinanceApi`)
+  - Domain model (`FinanceOverview`, `FinanceEntry`)
+  - Business service (`FinanceTrackingService`)
+  - Presentation page model (`FinanceTrackingPage`)
 
 ## Composition root
 

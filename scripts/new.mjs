@@ -7,14 +7,17 @@ const requiredPaths = [
   "src/new/systems/pos/sales-management/interface/IProductRepository.ts",
   "src/new/systems/pos/sales-management/model/Product.ts",
   "src/new/systems/pos/sales-management/services/ProductService.ts",
+  "src/new/systems/pos/sales-management/pages/SalesManagementPage.ts",
   "src/new/systems/pos/order-processing/api/PosOrderApi.ts",
   "src/new/systems/pos/order-processing/interface/IOrderRepository.ts",
   "src/new/systems/pos/order-processing/model/Order.ts",
   "src/new/systems/pos/order-processing/services/OrderService.ts",
+  "src/new/systems/pos/order-processing/pages/OrderProcessingPage.ts",
   "src/new/systems/pos/reporting-insights/api/PosReportingApi.ts",
   "src/new/systems/pos/reporting-insights/interface/IReportingRepository.ts",
   "src/new/systems/pos/reporting-insights/model/SalesReport.ts",
   "src/new/systems/pos/reporting-insights/services/ReportingService.ts",
+  "src/new/systems/pos/reporting-insights/pages/ReportingInsightsPage.ts",
   "src/new/systems/pos/business-settings/api/PosBusinessSettingsApi.ts",
   "src/new/systems/pos/business-settings/interface/IBusinessSettingsRepository.ts",
   "src/new/systems/pos/business-settings/model/BusinessSettings.ts",
@@ -25,8 +28,6 @@ const requiredPaths = [
   "src/new/systems/pos/online-order-tracking/model/OnlineOrder.ts",
   "src/new/systems/pos/online-order-tracking/services/OnlineOrderService.ts",
   "src/new/systems/pos/online-order-tracking/pages/OnlineOrderTrackingPage.ts",
-<<<<<<< ours
-=======
   "src/new/systems/pos/export-reporting/api/PosExportReportApi.ts",
   "src/new/systems/pos/export-reporting/interface/IExportReportRepository.ts",
   "src/new/systems/pos/export-reporting/model/ExportReport.ts",
@@ -37,15 +38,26 @@ const requiredPaths = [
   "src/new/systems/pos/cash-closing-management/model/CashClosing.ts",
   "src/new/systems/pos/cash-closing-management/services/CashClosingService.ts",
   "src/new/systems/pos/cash-closing-management/pages/CashClosingPage.ts",
->>>>>>> theirs
+  "src/new/systems/pos/dashboard-analytics/api/PosDashboardApi.ts",
+  "src/new/systems/pos/dashboard-analytics/interface/IDashboardRepository.ts",
+  "src/new/systems/pos/dashboard-analytics/model/DashboardMetrics.ts",
+  "src/new/systems/pos/dashboard-analytics/services/DashboardAnalyticsService.ts",
+  "src/new/systems/pos/dashboard-analytics/pages/DashboardAnalyticsPage.ts",
+  "src/new/systems/pos/finance-tracking/api/PosFinanceApi.ts",
+  "src/new/systems/pos/finance-tracking/interface/IFinanceRepository.ts",
+  "src/new/systems/pos/finance-tracking/model/FinanceEntry.ts",
+  "src/new/systems/pos/finance-tracking/services/FinanceTrackingService.ts",
+  "src/new/systems/pos/finance-tracking/pages/FinanceTrackingPage.ts",
   "src/new/systems/catalog/product-publishing/api/CatalogApi.ts",
   "src/new/systems/catalog/product-publishing/interface/ICatalogRepository.ts",
   "src/new/systems/catalog/product-publishing/model/CatalogProduct.ts",
   "src/new/systems/catalog/product-publishing/services/CatalogService.ts",
+  "src/new/systems/catalog/product-publishing/pages/CatalogPublishingPage.ts",
   "src/new/systems/loyalty/rewards-management/api/LoyaltyApi.ts",
   "src/new/systems/loyalty/rewards-management/interface/IRewardRepository.ts",
   "src/new/systems/loyalty/rewards-management/model/RewardCoupon.ts",
   "src/new/systems/loyalty/rewards-management/services/RewardService.ts",
+  "src/new/systems/loyalty/rewards-management/pages/RewardsManagementPage.ts",
   "src/new/index.ts",
 ];
 
@@ -60,8 +72,6 @@ if (missing.length > 0) {
 console.log("Modern feature-based architecture is ready.");
 console.log("Systems: pos, catalog, loyalty.");
 console.log("Layers per feature: interface, model, services, api, pages.");
-<<<<<<< ours
-console.log("POS features: sales-management, order-processing, reporting-insights, business-settings, online-order-tracking.");
-=======
-console.log("POS features: sales-management, order-processing, reporting-insights, business-settings, online-order-tracking, export-reporting, cash-closing-management.");
->>>>>>> theirs
+console.log(
+  "POS features: sales-management, order-processing, reporting-insights, business-settings, online-order-tracking, export-reporting, cash-closing-management, dashboard-analytics, finance-tracking.",
+);
