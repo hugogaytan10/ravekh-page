@@ -7,6 +7,14 @@ const requiredPaths = [
   "src/new/systems/pos/sales-management/interface/IProductRepository.ts",
   "src/new/systems/pos/sales-management/model/Product.ts",
   "src/new/systems/pos/sales-management/services/ProductService.ts",
+  "src/new/systems/pos/order-processing/api/PosOrderApi.ts",
+  "src/new/systems/pos/order-processing/interface/IOrderRepository.ts",
+  "src/new/systems/pos/order-processing/model/Order.ts",
+  "src/new/systems/pos/order-processing/services/OrderService.ts",
+  "src/new/systems/pos/reporting-insights/api/PosReportingApi.ts",
+  "src/new/systems/pos/reporting-insights/interface/IReportingRepository.ts",
+  "src/new/systems/pos/reporting-insights/model/SalesReport.ts",
+  "src/new/systems/pos/reporting-insights/services/ReportingService.ts",
   "src/new/systems/catalog/product-publishing/api/CatalogApi.ts",
   "src/new/systems/catalog/product-publishing/interface/ICatalogRepository.ts",
   "src/new/systems/catalog/product-publishing/model/CatalogProduct.ts",
@@ -29,3 +37,4 @@ if (missing.length > 0) {
 console.log("Modern feature-based architecture is ready.");
 console.log("Systems: pos, catalog, loyalty.");
 console.log("Layers per feature: interface, model, services, api.");
+console.log("POS features: sales-management, order-processing, reporting-insights.");

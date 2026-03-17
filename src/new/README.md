@@ -19,12 +19,29 @@ This directory introduces a **new, decoupled architecture** that will coexist wi
 - `catalog`
 - `loyalty`
 
-## Legacy analysis used for the initial design
+## POS features currently migrated
+
+- `sales-management`
+  - Focused on product retrieval and product creation for POS sales flows.
+- `order-processing`
+  - Focused on order registration and tax retrieval for checkout scenarios.
+- `reporting-insights`
+  - Focused on sales summaries and income series by period.
+
+## Legacy analysis used for the design
 
 - POS product requests from `src/Components/CatalogoWeb/PuntoVenta/Sales/Petitions.ts` were split into:
   - API adapter (`PosProductApi`)
   - Domain model (`Product`)
   - Business service (`ProductService`)
+- POS cart and checkout requests from `src/Components/CatalogoWeb/PuntoVenta/Sales/Cart/Petitions.ts` were split into:
+  - API adapter (`PosOrderApi`)
+  - Domain model (`Order`, `OrderLine`, `TaxRule`)
+  - Business service (`OrderService`)
+- POS reports requests from `src/Components/CatalogoWeb/PuntoVenta/Reports/Petitions.ts` were split into:
+  - API adapter (`PosReportingApi`)
+  - Domain model (`SalesReport`, `SalesSummary`, `IncomePoint`)
+  - Business service (`ReportingService`)
 - Loyalty coupon requests from `src/Components/CatalogoWeb/Cupones/Petitions.ts` were split into:
   - API adapter (`LoyaltyApi`)
   - Domain model (`RewardCoupon`)
@@ -42,4 +59,4 @@ Run:
 npm run new
 ```
 
-It verifies that the new feature structure exists and is ready for incremental migration.
+It verifies that the base feature structure exists and is ready for incremental migration.
