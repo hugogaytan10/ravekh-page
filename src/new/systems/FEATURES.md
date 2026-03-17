@@ -18,14 +18,25 @@ Every feature uses the same modules:
 - `services`: use-cases and business rules.
 - `pages`: orchestration layer for UI-facing view models.
 
-## Current POS migration track
+## Current migration map
 
-Legacy code remains in production while feature modules are rebuilt incrementally in TypeScript.
+Legacy code remains active while feature modules are rebuilt incrementally in TypeScript.
+
+### POS
 
 - `sales-management`
 - `customer-management`
 - `employee-management`
-- other POS features will follow the same contract.
+- `inventory-management`
+- existing POS features will continue migrating with the same contract.
+
+### Catalog
+
+- `product-publishing`
+
+### Loyalty
+
+- `rewards-management`
 
 ## Rules for scalability
 
@@ -33,3 +44,4 @@ Legacy code remains in production while feature modules are rebuilt incrementall
 - Keep transport mapping inside API adapters only.
 - Prefer composition through interfaces to avoid coupling.
 - Reuse existing contracts and endpoint patterns from legacy before adding new backend paths.
+- Build small, composable features to keep code size low and optimize maintainability.
