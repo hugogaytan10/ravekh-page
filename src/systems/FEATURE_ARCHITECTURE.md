@@ -10,6 +10,8 @@ This directory now follows a **feature-first** structure per system.
 
 Each system contains `features/<feature-name>` folders with the same internal layout:
 
+Current POS migration now includes `sales`, `employees`, `products`, `finance`, `settings`, `customers`, and `orders`.
+
 - `api/` for external integration adapters
 - `interface/` for dependency contracts
 - `model/` for feature entities and DTOs
