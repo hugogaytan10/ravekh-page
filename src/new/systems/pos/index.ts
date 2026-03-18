@@ -31,3 +31,5 @@ export * from "./tax-management/services/SalesTaxService";
 
 export * from "./features/payment-method-management/pages/PaymentMethodManagementPage";
 export * from "./features/payment-method-management/services/PaymentMethodService";
+export * from "./features/branding-customization/pages/BrandingCustomizationPage";
+export * from "./features/branding-customization/services/BrandingService";

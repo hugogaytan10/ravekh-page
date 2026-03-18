@@ -5,6 +5,7 @@ This folder contains POS features that already follow the feature-first structur
 ## Active feature modules in this folder
 
 - `payment-method-management`
+- `branding-customization`
 
 Each feature module must include these layers:
 

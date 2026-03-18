@@ -83,6 +83,11 @@ const requiredPaths = [
   "src/new/systems/pos/features/payment-method-management/model/PaymentMethod.ts",
   "src/new/systems/pos/features/payment-method-management/services/PaymentMethodService.ts",
   "src/new/systems/pos/features/payment-method-management/pages/PaymentMethodManagementPage.ts",
+  "src/new/systems/pos/features/branding-customization/api/PosBrandingApi.ts",
+  "src/new/systems/pos/features/branding-customization/interface/IBrandingRepository.ts",
+  "src/new/systems/pos/features/branding-customization/model/BrandingProfile.ts",
+  "src/new/systems/pos/features/branding-customization/services/BrandingService.ts",
+  "src/new/systems/pos/features/branding-customization/pages/BrandingCustomizationPage.ts",
   "src/new/systems/catalog/product-publishing/api/CatalogApi.ts",
   "src/new/systems/catalog/product-publishing/interface/ICatalogRepository.ts",
   "src/new/systems/catalog/product-publishing/model/CatalogProduct.ts",
@@ -112,6 +117,5 @@ console.log("Modern feature-based architecture is ready.");
 console.log("Systems: pos, catalog, loyalty.");
 console.log("Layers per feature: interface, model, services, api, pages.");
 console.log(
-  "POS features: sales-management, order-processing, reporting-insights, business-settings, table-zone-management, online-order-tracking, export-reporting, cash-closing-management, dashboard-analytics, finance-tracking, customer-management, employee-management, inventory-management, auth-onboarding.",
-  "POS features: sales-management, order-processing, reporting-insights, business-settings, table-zone-management, tax-management, payment-method-management, online-order-tracking, export-reporting, cash-closing-management, dashboard-analytics, finance-tracking, customer-management, employee-management, inventory-management, auth-onboarding.",
+  "POS features: sales-management, order-processing, reporting-insights, business-settings, table-zone-management, tax-management, payment-method-management, branding-customization, online-order-tracking, export-reporting, cash-closing-management, dashboard-analytics, finance-tracking, customer-management, employee-management, inventory-management, auth-onboarding.",
 );

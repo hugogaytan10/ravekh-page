@@ -56,6 +56,8 @@ Each feature in every system now includes all architecture layers: `api`, `inter
   - Focused on business tax loading, tax upsert lifecycle, and tax deactivation for sales settings.
 - `payment-method-management`
   - Focused on global payment toggles and channel-level enablement with business rules for safe defaults.
+- `branding-customization`
+  - Focused on business branding profile (name, address, phone, logo, color, references) with strict save validation.
 
 ## Legacy analysis used for the design
 
@@ -125,6 +127,11 @@ Each feature in every system now includes all architecture layers: `api`, `inter
   - Domain model (`PaymentMethodSettings`, `PaymentMethod`)
   - Business service (`PaymentMethodService`)
   - Presentation page model (`PaymentMethodManagementPage`)
+- POS branding customization behavior from `src/Components/CatalogoWeb/PuntoVenta/Login/CustomizeApp.tsx` and `src/Components/CatalogoWeb/PuntoVenta/Settings/Settings/Petitions.ts` was split into:
+  - API adapter (`PosBrandingApi`)
+  - Domain model (`BrandingProfile`)
+  - Business service (`BrandingService`)
+  - Presentation page model (`BrandingCustomizationPage`)
 
 ## Composition root
 
@@ -132,6 +139,7 @@ Use `src/new/index.ts` as the entry point for new modules through `ModernSystems
 
 Factory coverage now includes POS sales, order processing, reporting, business settings, table-zone management, online orders, export reports, cash closing, dashboard analytics, finance tracking, customer management, employee management, inventory management, and auth onboarding.
 Factory coverage now includes POS sales, order processing, reporting, business settings, table-zone management, tax management, payment method management, online orders, export reports, cash closing, dashboard analytics, finance tracking, customer management, employee management, inventory management, and auth onboarding.
+Factory coverage now includes POS sales, order processing, reporting, business settings, table-zone management, tax management, payment method management, branding customization, online orders, export reports, cash closing, dashboard analytics, finance tracking, customer management, employee management, inventory management, and auth onboarding.
 
 ## Validation command
 

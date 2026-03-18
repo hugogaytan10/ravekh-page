@@ -39,7 +39,9 @@ Legacy code remains active while feature modules are rebuilt incrementally in Ty
 - `finance-tracking`
 - `auth-onboarding` is focused on login and business registration flows decoupled from UI state management.
 - `payment-method-management`
+- `branding-customization`
 - existing POS features will continue migrating with the same contract.
+  - `branding-customization` is focused on business name/address/phone/logo/color/references updates with strict validation.
 
 ### Catalog
 

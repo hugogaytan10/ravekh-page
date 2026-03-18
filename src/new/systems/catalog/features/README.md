@@ -1,15 +1,17 @@
 # Catalog Features
 
-This folder is the feature root for the Catalog system.
+This folder is the feature-first entry point for the catalog system.
 
-## Active features
+## Current feature modules
 
-- `product-publishing` (legacy-compatible feature that remains outside this folder during transition)
+- `product-publishing`
 
-New Catalog features must follow the same layered contract:
+Each feature is expected to contain:
 
 - `interface`
 - `model`
 - `services`
 - `api`
 - `pages`
+
+Legacy-compatible features can stay in `src/new/systems/catalog/<feature-name>` until migration is completed.
