@@ -18,4 +18,9 @@ Every feature follows the same structure:
 - `services`: Business use cases.
 - `pages`: UI entry points.
 
+## POS migration status
+
+- `products`: modernized.
+- `sales`: modernized bootstrap and category filtering.
+
 This design keeps responsibilities decoupled and allows incremental migration while legacy code remains active.
