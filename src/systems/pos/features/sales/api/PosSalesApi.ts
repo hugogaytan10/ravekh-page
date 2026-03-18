@@ -1,53 +1,47 @@
 import { HttpClient } from "../../../../shared/api/HttpClient";
-import type { SalesGateway } from "../interfaces/SalesContracts";
-import type { BusinessProfile, BusinessTax, SalesCategory, SalesProduct } from "../models/SalesModels";
-import { SalesMapper } from "./SalesMapper";
+import { failure, success, type Result } from "../../../../shared/model/Result";
+import type { IProductRepository } from "../interfaces/IProductRepository";
+import {
+  mapLegacyProductDto,
+  type LegacyProductDto,
+  type Product,
+} from "../model/Product";
 
-export class PosSalesApi implements SalesGateway {
-  constructor(private readonly httpClient: HttpClient) {}
+const POS_API_BASE_URL = "https://apipos.ravekh.com/api/";
 
-  async getProducts(token: string, businessId: string): Promise<SalesProduct[]> {
-    const [nullStock, stockGtZero] = await Promise.all([
-      this.httpClient.request<unknown[]>(`products/stocknull/${businessId}`, { token }),
-      this.httpClient.request<unknown[]>(`products/stockgtzero/${businessId}`, { token }),
-    ]);
+export class PosSalesApi implements IProductRepository {
+  private readonly client: HttpClient;
 
-    const catalog = [...(Array.isArray(nullStock) ? nullStock : []), ...(Array.isArray(stockGtZero) ? stockGtZero : [])]
-      .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"));
+  constructor(token: string) {
+    this.client = new HttpClient({
+      baseUrl: POS_API_BASE_URL,
+      token,
+    });
+  }
 
-    const uniqueById = new Map<number, SalesProduct>();
+  public async getAvailableProducts(userId: number): Promise<Result<Product[]>> {
+    try {
+      const [nullStock, stockGtZero] = await Promise.all([
+        this.client.get<LegacyProductDto[]>(`products/stocknull/${userId}`),
+        this.client.get<LegacyProductDto[]>(`products/stockgtzero/${userId}`),
+      ]);
 
-    for (const product of catalog) {
-      const mapped = SalesMapper.productFromLegacy(product);
-      uniqueById.set(mapped.id, mapped);
+      const deduped = [...nullStock, ...stockGtZero].reduce<Map<number, Product>>(
+        (accumulator, rawProduct) => {
+          const product = mapLegacyProductDto(rawProduct);
+          accumulator.set(product.id, product);
+          return accumulator;
+        },
+        new Map<number, Product>(),
+      );
+
+      return success([...deduped.values()]);
+    } catch (error) {
+      return failure(
+        error instanceof Error
+          ? error.message
+          : "Unable to load products from POS API.",
+      );
     }
-
-    return [...uniqueById.values()];
-  }
-
-  async getCategories(token: string, businessId: string): Promise<SalesCategory[]> {
-    const response = await this.httpClient.request<unknown[]>(`categories/business/${businessId}`, { token });
-
-    return (Array.isArray(response) ? response : [])
-      .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
-      .map((item) => SalesMapper.categoryFromLegacy(item));
-  }
-
-  async getBusiness(token: string, businessId: string): Promise<BusinessProfile | null> {
-    const response = await this.httpClient.request<unknown>(`business/${businessId}`, { token });
-
-    if (!response || typeof response !== "object") {
-      return null;
-    }
-
-    return SalesMapper.businessFromLegacy(response as Record<string, unknown>);
-  }
-
-  async getTaxes(token: string, businessId: string): Promise<BusinessTax[]> {
-    const response = await this.httpClient.request<unknown[]>(`taxes/business/${businessId}`, { token });
-
-    return (Array.isArray(response) ? response : [])
-      .filter((item): item is Record<string, unknown> => Boolean(item && typeof item === "object"))
-      .map((item) => SalesMapper.taxFromLegacy(item));
   }
 }

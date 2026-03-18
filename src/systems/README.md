@@ -1,28 +1,26 @@
-# Modern Systems Architecture
+# Feature-First Systems Architecture
 
-This folder contains the new feature-based architecture used to migrate from the legacy implementation.
+This folder introduces a new modular architecture that can coexist with the legacy code until migration is complete.
 
 ## Systems
 
-- `pos`: Point of sale system.
-- `catalog`: Catalog and ecommerce system.
-- `loyalty`: Loyalty and rewards system.
+- `pos`: Point-of-sale domain.
+- `catalog`: Public and internal catalog domain.
+- `loyalty`: Loyalty and rewards domain.
 
-## Feature layout
+## Standard feature layout
 
-Every feature follows the same structure:
+Each feature follows the same structure:
 
-- `interfaces`: Contracts and ports.
-- `models`: Domain models.
-- `api`: Infrastructure adapters and mappers.
-- `services`: Business use cases.
-- `pages`: UI entry points.
+- `api`: Infrastructure adapters that talk to external services.
+- `interfaces`: Contracts used by services and pages.
+- `model`: Domain entities and DTO mappers.
+- `services`: Application use cases with business rules.
+- `pages`: UI entry points that consume services.
 
-## POS migration status
+## Migration notes
 
-- `products`: modernized.
-- `sales`: modernized bootstrap and category filtering.
-- `customers`: modernized customer CRUD and order history queries.
-- `finance`: modernized income/expense overview and record creation.
-
-This design keeps responsibilities decoupled and allows incremental migration while legacy code remains active.
+1. Keep legacy modules in place to prevent runtime regressions.
+2. Move one feature at a time, starting with POS sales.
+3. Reuse DTO mappers to normalize legacy payloads.
+4. Keep services independent from fetch/axios for testability.

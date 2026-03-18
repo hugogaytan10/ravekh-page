@@ -1,3 +1,3 @@
-export * from "./pos";
-export * from "./catalog";
-export * from "./loyalty";
+export * as PosSystem from "./pos";
+export * as CatalogSystem from "./catalog";
+export * as LoyaltySystem from "./loyalty";

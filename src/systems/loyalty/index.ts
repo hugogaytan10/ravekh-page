@@ -1,1 +1,1 @@
-export * from "./features/rewards";
+export * as RewardsFeature from "./features/rewards";

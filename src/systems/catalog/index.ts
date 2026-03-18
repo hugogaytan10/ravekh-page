@@ -1,1 +1,1 @@
-export * from "./features/products";
+export * as ProductsFeature from "./features/products";

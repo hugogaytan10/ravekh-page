@@ -1,37 +1,50 @@
-export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
-
-export interface RequestOptions {
-  method?: HttpMethod;
+export interface HttpClientConfig {
+  baseUrl: string;
   token?: string;
-  body?: unknown;
-  headers?: Record<string, string>;
+  timeoutMs?: number;
 }
 
 export class HttpClient {
-  constructor(private readonly baseUrl: string) {}
+  private readonly baseUrl: string;
+  private readonly token?: string;
+  private readonly timeoutMs: number;
 
-  async request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-    const { method = "GET", token, body, headers = {} } = options;
+  constructor(config: HttpClientConfig) {
+    this.baseUrl = config.baseUrl;
+    this.token = config.token;
+    this.timeoutMs = config.timeoutMs ?? 8_000;
+  }
 
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      method,
-      headers: {
-        "Content-Type": "application/json",
-        ...(token ? { token } : {}),
-        ...headers,
-      },
-      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-    });
+  public async get<TResponse>(path: string): Promise<TResponse> {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), this.timeoutMs);
 
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => "");
-      throw new Error(`Request failed: ${response.status} ${response.statusText}. ${errorBody}`);
+    try {
+      const response = await fetch(`${this.baseUrl}${path}`, {
+        method: "GET",
+        headers: this.buildHeaders(),
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with status ${response.status}`);
+      }
+
+      return (await response.json()) as TResponse;
+    } finally {
+      clearTimeout(timeout);
+    }
+  }
+
+  private buildHeaders(): HeadersInit {
+    const headers: HeadersInit = {
+      "Content-Type": "application/json",
+    };
+
+    if (this.token) {
+      headers.token = this.token;
     }
 
-    if (response.status === 204) {
-      return undefined as T;
-    }
-
-    return (await response.json()) as T;
+    return headers;
   }
 }
