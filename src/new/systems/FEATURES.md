@@ -38,6 +38,7 @@ Legacy code remains active while feature modules are rebuilt incrementally in Ty
 - `dashboard-analytics`
 - `finance-tracking`
 - `auth-onboarding` is focused on login and business registration flows decoupled from UI state management.
+- `payment-method-management`
 - existing POS features will continue migrating with the same contract.
 
 ### Catalog

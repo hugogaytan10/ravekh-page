@@ -28,3 +28,6 @@ export * from "./table-zone-management/pages/TableZoneManagementPage";
 export * from "./table-zone-management/services/TableZoneService";
 export * from "./tax-management/pages/SalesTaxSettingsPage";
 export * from "./tax-management/services/SalesTaxService";
+
+export * from "./features/payment-method-management/pages/PaymentMethodManagementPage";
+export * from "./features/payment-method-management/services/PaymentMethodService";

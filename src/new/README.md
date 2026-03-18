@@ -54,6 +54,8 @@ Each feature in every system now includes all architecture layers: `api`, `inter
   - Focused on table-zone listing, table-zone upsert operations, and business-level table-order activation.
 - `tax-management`
   - Focused on business tax loading, tax upsert lifecycle, and tax deactivation for sales settings.
+- `payment-method-management`
+  - Focused on global payment toggles and channel-level enablement with business rules for safe defaults.
 
 ## Legacy analysis used for the design
 
@@ -118,13 +120,18 @@ Each feature in every system now includes all architecture layers: `api`, `inter
   - Domain model (`AuthSession`)
   - Business service (`AuthOnboardingService`)
   - Presentation page model (`AuthOnboardingPage`)
+- POS payment method screen behavior from `src/Components/CatalogoWeb/PuntoVenta/Settings/Settings/PaymentMethods.tsx` was split into:
+  - API adapter (`PosPaymentMethodApi`)
+  - Domain model (`PaymentMethodSettings`, `PaymentMethod`)
+  - Business service (`PaymentMethodService`)
+  - Presentation page model (`PaymentMethodManagementPage`)
 
 ## Composition root
 
 Use `src/new/index.ts` as the entry point for new modules through `ModernSystemsFactory`.
 
 Factory coverage now includes POS sales, order processing, reporting, business settings, table-zone management, online orders, export reports, cash closing, dashboard analytics, finance tracking, customer management, employee management, inventory management, and auth onboarding.
-Factory coverage now includes POS sales, order processing, reporting, business settings, table-zone management, tax management, online orders, export reports, cash closing, dashboard analytics, finance tracking, customer management, employee management, inventory management, and auth onboarding.
+Factory coverage now includes POS sales, order processing, reporting, business settings, table-zone management, tax management, payment method management, online orders, export reports, cash closing, dashboard analytics, finance tracking, customer management, employee management, inventory management, and auth onboarding.
 
 ## Validation command
 
