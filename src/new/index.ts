@@ -1,37 +1,46 @@
 import { FetchHttpClient } from "./core/api/FetchHttpClient";
 import { CatalogApi } from "./systems/catalog/product-publishing/api/CatalogApi";
-import { CatalogPublishingPage } from "./systems/catalog/product-publishing/pages/CatalogPublishingPage";
-import { CatalogService } from "./systems/catalog/product-publishing/services/CatalogService";
 import { LoyaltyApi } from "./systems/loyalty/rewards-management/api/LoyaltyApi";
-import { RewardsManagementPage } from "./systems/loyalty/rewards-management/pages/RewardsManagementPage";
-import { RewardService } from "./systems/loyalty/rewards-management/services/RewardService";
 import { PosBusinessSettingsApi } from "./systems/pos/business-settings/api/PosBusinessSettingsApi";
-import { BusinessSettingsPage } from "./systems/pos/business-settings/pages/BusinessSettingsPage";
-import { BusinessSettingsService } from "./systems/pos/business-settings/services/BusinessSettingsService";
 import { PosCashClosingApi } from "./systems/pos/cash-closing-management/api/PosCashClosingApi";
-import { CashClosingPage } from "./systems/pos/cash-closing-management/pages/CashClosingPage";
-import { CashClosingService } from "./systems/pos/cash-closing-management/services/CashClosingService";
+import { PosCustomerApi } from "./systems/pos/customer-management/api/PosCustomerApi";
 import { PosDashboardApi } from "./systems/pos/dashboard-analytics/api/PosDashboardApi";
-import { DashboardAnalyticsPage } from "./systems/pos/dashboard-analytics/pages/DashboardAnalyticsPage";
-import { DashboardAnalyticsService } from "./systems/pos/dashboard-analytics/services/DashboardAnalyticsService";
+import { PosEmployeeApi } from "./systems/pos/employee-management/api/PosEmployeeApi";
 import { PosExportReportApi } from "./systems/pos/export-reporting/api/PosExportReportApi";
-import { ExportReportPage } from "./systems/pos/export-reporting/pages/ExportReportPage";
-import { ExportReportService } from "./systems/pos/export-reporting/services/ExportReportService";
 import { PosFinanceApi } from "./systems/pos/finance-tracking/api/PosFinanceApi";
-import { FinanceTrackingPage } from "./systems/pos/finance-tracking/pages/FinanceTrackingPage";
-import { FinanceTrackingService } from "./systems/pos/finance-tracking/services/FinanceTrackingService";
+import { PosInventoryApi } from "./systems/pos/inventory-management/api/PosInventoryApi";
 import { PosOnlineOrderApi } from "./systems/pos/online-order-tracking/api/PosOnlineOrderApi";
-import { OnlineOrderTrackingPage } from "./systems/pos/online-order-tracking/pages/OnlineOrderTrackingPage";
-import { OnlineOrderService } from "./systems/pos/online-order-tracking/services/OnlineOrderService";
 import { PosOrderApi } from "./systems/pos/order-processing/api/PosOrderApi";
-import { OrderProcessingPage } from "./systems/pos/order-processing/pages/OrderProcessingPage";
-import { OrderService } from "./systems/pos/order-processing/services/OrderService";
 import { PosReportingApi } from "./systems/pos/reporting-insights/api/PosReportingApi";
-import { ReportingInsightsPage } from "./systems/pos/reporting-insights/pages/ReportingInsightsPage";
-import { ReportingService } from "./systems/pos/reporting-insights/services/ReportingService";
 import { PosProductApi } from "./systems/pos/sales-management/api/PosProductApi";
-import { SalesManagementPage } from "./systems/pos/sales-management/pages/SalesManagementPage";
-import { ProductService } from "./systems/pos/sales-management/services/ProductService";
+import {
+  BusinessSettingsPage,
+  BusinessSettingsService,
+  CashClosingPage,
+  CashClosingService,
+  CustomerManagementPage,
+  CustomerService,
+  DashboardAnalyticsPage,
+  DashboardAnalyticsService,
+  EmployeeManagementPage,
+  EmployeeService,
+  ExportReportPage,
+  ExportReportService,
+  FinanceTrackingPage,
+  FinanceTrackingService,
+  InventoryManagementPage,
+  InventoryService,
+  OnlineOrderTrackingPage,
+  OnlineOrderService,
+  OrderProcessingPage,
+  OrderService,
+  ReportingInsightsPage,
+  ReportingService,
+  SalesManagementPage,
+  ProductService,
+} from "./systems/pos";
+import { CatalogPublishingPage, CatalogService } from "./systems/catalog";
+import { RewardsManagementPage, RewardService } from "./systems/loyalty";
 
 export class ModernSystemsFactory {
   private readonly httpClient: FetchHttpClient;
@@ -110,6 +119,30 @@ export class ModernSystemsFactory {
 
   createPosFinanceTrackingPage(): FinanceTrackingPage {
     return new FinanceTrackingPage(this.createPosFinanceTrackingService());
+  }
+
+  createPosCustomerService(): CustomerService {
+    return new CustomerService(new PosCustomerApi(this.httpClient));
+  }
+
+  createPosCustomerPage(): CustomerManagementPage {
+    return new CustomerManagementPage(this.createPosCustomerService());
+  }
+
+  createPosEmployeeService(): EmployeeService {
+    return new EmployeeService(new PosEmployeeApi(this.httpClient));
+  }
+
+  createPosEmployeePage(): EmployeeManagementPage {
+    return new EmployeeManagementPage(this.createPosEmployeeService());
+  }
+
+  createPosInventoryService(): InventoryService {
+    return new InventoryService(new PosInventoryApi(this.httpClient));
+  }
+
+  createPosInventoryPage(): InventoryManagementPage {
+    return new InventoryManagementPage(this.createPosInventoryService());
   }
 
   createCatalogService(): CatalogService {

@@ -28,6 +28,12 @@ Legacy code remains active while feature modules are rebuilt incrementally in Ty
 - `customer-management`
 - `employee-management`
 - `inventory-management`
+- `business-settings`
+- `online-order-tracking`
+- `export-reporting`
+- `cash-closing-management`
+- `dashboard-analytics`
+- `finance-tracking`
 - existing POS features will continue migrating with the same contract.
 
 ### Catalog

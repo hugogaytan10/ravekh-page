@@ -42,6 +42,12 @@ Each feature in every system now includes all architecture layers: `api`, `inter
   - Focused on KPI comparisons, top-selling products/categories, and daily customer growth.
 - `finance-tracking`
   - Focused on income/expense lifecycle, monthly overview, and transaction registration.
+- `customer-management`
+  - Focused on customer CRUD, search filtering, and pay-later policy visibility.
+- `employee-management`
+  - Focused on employee CRUD, role normalization, and access policy checks.
+- `inventory-management`
+  - Focused on inventory listing, low-stock detection, and stock updates.
 
 ## Legacy analysis used for the design
 
@@ -95,6 +101,8 @@ Each feature in every system now includes all architecture layers: `api`, `inter
 ## Composition root
 
 Use `src/new/index.ts` as the entry point for new modules through `ModernSystemsFactory`.
+
+Factory coverage now includes POS sales, order processing, reporting, business settings, online orders, export reports, cash closing, dashboard analytics, finance tracking, customer management, employee management, and inventory management.
 
 ## Validation command
 

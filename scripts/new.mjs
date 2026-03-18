@@ -48,6 +48,21 @@ const requiredPaths = [
   "src/new/systems/pos/finance-tracking/model/FinanceEntry.ts",
   "src/new/systems/pos/finance-tracking/services/FinanceTrackingService.ts",
   "src/new/systems/pos/finance-tracking/pages/FinanceTrackingPage.ts",
+  "src/new/systems/pos/customer-management/api/PosCustomerApi.ts",
+  "src/new/systems/pos/customer-management/interface/ICustomerRepository.ts",
+  "src/new/systems/pos/customer-management/model/Customer.ts",
+  "src/new/systems/pos/customer-management/services/CustomerService.ts",
+  "src/new/systems/pos/customer-management/pages/CustomerManagementPage.ts",
+  "src/new/systems/pos/employee-management/api/PosEmployeeApi.ts",
+  "src/new/systems/pos/employee-management/interface/IEmployeeRepository.ts",
+  "src/new/systems/pos/employee-management/model/Employee.ts",
+  "src/new/systems/pos/employee-management/services/EmployeeService.ts",
+  "src/new/systems/pos/employee-management/pages/EmployeeManagementPage.ts",
+  "src/new/systems/pos/inventory-management/api/PosInventoryApi.ts",
+  "src/new/systems/pos/inventory-management/interface/IInventoryRepository.ts",
+  "src/new/systems/pos/inventory-management/model/InventoryItem.ts",
+  "src/new/systems/pos/inventory-management/services/InventoryService.ts",
+  "src/new/systems/pos/inventory-management/pages/InventoryManagementPage.ts",
   "src/new/systems/catalog/product-publishing/api/CatalogApi.ts",
   "src/new/systems/catalog/product-publishing/interface/ICatalogRepository.ts",
   "src/new/systems/catalog/product-publishing/model/CatalogProduct.ts",
@@ -58,6 +73,10 @@ const requiredPaths = [
   "src/new/systems/loyalty/rewards-management/model/RewardCoupon.ts",
   "src/new/systems/loyalty/rewards-management/services/RewardService.ts",
   "src/new/systems/loyalty/rewards-management/pages/RewardsManagementPage.ts",
+  "src/new/systems/index.ts",
+  "src/new/systems/pos/index.ts",
+  "src/new/systems/catalog/index.ts",
+  "src/new/systems/loyalty/index.ts",
   "src/new/index.ts",
 ];
 
@@ -73,5 +92,5 @@ console.log("Modern feature-based architecture is ready.");
 console.log("Systems: pos, catalog, loyalty.");
 console.log("Layers per feature: interface, model, services, api, pages.");
 console.log(
-  "POS features: sales-management, order-processing, reporting-insights, business-settings, online-order-tracking, export-reporting, cash-closing-management, dashboard-analytics, finance-tracking.",
+  "POS features: sales-management, order-processing, reporting-insights, business-settings, online-order-tracking, export-reporting, cash-closing-management, dashboard-analytics, finance-tracking, customer-management, employee-management, inventory-management.",
 );
