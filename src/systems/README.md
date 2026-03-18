@@ -22,5 +22,7 @@ Every feature follows the same structure:
 
 - `products`: modernized.
 - `sales`: modernized bootstrap and category filtering.
+- `customers`: modernized customer CRUD and order history queries.
+- `finance`: modernized income/expense overview and record creation.
 
 This design keeps responsibilities decoupled and allows incremental migration while legacy code remains active.
