@@ -50,6 +50,10 @@ Each feature in every system now includes all architecture layers: `api`, `inter
   - Focused on inventory listing, low-stock detection, and stock updates.
 - `auth-onboarding`
   - Focused on login and sign-up onboarding flows with validation and decoupled API mapping.
+- `table-zone-management`
+  - Focused on table-zone listing, table-zone upsert operations, and business-level table-order activation.
+- `tax-management`
+  - Focused on business tax loading, tax upsert lifecycle, and tax deactivation for sales settings.
 
 ## Legacy analysis used for the design
 
@@ -69,6 +73,16 @@ Each feature in every system now includes all architecture layers: `api`, `inter
   - API adapter (`LoyaltyApi`)
   - Domain model (`RewardCoupon`)
   - Business service (`RewardService`)
+- POS tax settings requests from `src/Components/CatalogoWeb/PuntoVenta/Settings/Settings/SalesTaxSettings.tsx` and `src/Components/CatalogoWeb/PuntoVenta/Settings/Settings/Petitions.ts` were split into:
+  - API adapter (`PosSalesTaxApi`)
+  - Domain model (`SalesTax`)
+  - Business service (`SalesTaxService`)
+  - Presentation page model (`SalesTaxSettingsPage`)
+- POS table-order requests from `src/Components/CatalogoWeb/PuntoVenta/Settings/Settings/Petitions.ts` and `src/Components/CatalogoWeb/PuntoVenta/Settings/Tables/TableOrders.tsx` were split into:
+  - API adapter (`PosTableZoneApi`)
+  - Domain model (`TableZone`)
+  - Business service (`TableZoneService`)
+  - Presentation page model (`TableZoneManagementPage`)
 - POS business settings requests from `src/Components/CatalogoWeb/PuntoVenta/Settings/Settings/Petitions.ts` were split into:
   - API adapter (`PosBusinessSettingsApi`)
   - Domain model (`BusinessSettings`)
@@ -109,7 +123,8 @@ Each feature in every system now includes all architecture layers: `api`, `inter
 
 Use `src/new/index.ts` as the entry point for new modules through `ModernSystemsFactory`.
 
-Factory coverage now includes POS sales, order processing, reporting, business settings, online orders, export reports, cash closing, dashboard analytics, finance tracking, customer management, employee management, inventory management, and auth onboarding.
+Factory coverage now includes POS sales, order processing, reporting, business settings, table-zone management, online orders, export reports, cash closing, dashboard analytics, finance tracking, customer management, employee management, inventory management, and auth onboarding.
+Factory coverage now includes POS sales, order processing, reporting, business settings, table-zone management, tax management, online orders, export reports, cash closing, dashboard analytics, finance tracking, customer management, employee management, inventory management, and auth onboarding.
 
 ## Validation command
 

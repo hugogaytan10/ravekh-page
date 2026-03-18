@@ -14,6 +14,8 @@ import { PosOrderApi } from "./systems/pos/order-processing/api/PosOrderApi";
 import { PosReportingApi } from "./systems/pos/reporting-insights/api/PosReportingApi";
 import { PosProductApi } from "./systems/pos/sales-management/api/PosProductApi";
 import { PosAuthOnboardingApi } from "./systems/pos/auth-onboarding/api/PosAuthOnboardingApi";
+import { PosTableZoneApi } from "./systems/pos/table-zone-management/api/PosTableZoneApi";
+import { PosSalesTaxApi } from "./systems/pos/tax-management/api/PosSalesTaxApi";
 import {
   AuthOnboardingPage,
   AuthOnboardingService,
@@ -41,6 +43,10 @@ import {
   ReportingService,
   SalesManagementPage,
   ProductService,
+  TableZoneManagementPage,
+  TableZoneService,
+  SalesTaxService,
+  SalesTaxSettingsPage,
 } from "./systems/pos";
 import { CatalogPublishingPage, CatalogService } from "./systems/catalog";
 import { RewardsManagementPage, RewardService } from "./systems/loyalty";
@@ -154,6 +160,22 @@ export class ModernSystemsFactory {
 
   createPosAuthOnboardingPage(): AuthOnboardingPage {
     return new AuthOnboardingPage(this.createPosAuthOnboardingService());
+  }
+
+  createPosTableZoneService(): TableZoneService {
+    return new TableZoneService(new PosTableZoneApi(this.httpClient));
+  }
+
+  createPosTableZonePage(): TableZoneManagementPage {
+    return new TableZoneManagementPage(this.createPosTableZoneService());
+  }
+
+  createPosSalesTaxService(): SalesTaxService {
+    return new SalesTaxService(new PosSalesTaxApi(this.httpClient));
+  }
+
+  createPosSalesTaxPage(): SalesTaxSettingsPage {
+    return new SalesTaxSettingsPage(this.createPosSalesTaxService());
   }
 
   createCatalogService(): CatalogService {

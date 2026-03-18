@@ -24,3 +24,7 @@ export * from "./inventory-management/pages/InventoryManagementPage";
 export * from "./inventory-management/services/InventoryService";
 export * from "./auth-onboarding/pages/AuthOnboardingPage";
 export * from "./auth-onboarding/services/AuthOnboardingService";
+export * from "./table-zone-management/pages/TableZoneManagementPage";
+export * from "./table-zone-management/services/TableZoneService";
+export * from "./tax-management/pages/SalesTaxSettingsPage";
+export * from "./tax-management/services/SalesTaxService";

@@ -68,6 +68,16 @@ const requiredPaths = [
   "src/new/systems/pos/auth-onboarding/model/AuthSession.ts",
   "src/new/systems/pos/auth-onboarding/services/AuthOnboardingService.ts",
   "src/new/systems/pos/auth-onboarding/pages/AuthOnboardingPage.ts",
+  "src/new/systems/pos/table-zone-management/api/PosTableZoneApi.ts",
+  "src/new/systems/pos/table-zone-management/interface/ITableZoneRepository.ts",
+  "src/new/systems/pos/table-zone-management/model/TableZone.ts",
+  "src/new/systems/pos/table-zone-management/services/TableZoneService.ts",
+  "src/new/systems/pos/table-zone-management/pages/TableZoneManagementPage.ts",
+  "src/new/systems/pos/tax-management/api/PosSalesTaxApi.ts",
+  "src/new/systems/pos/tax-management/interface/ISalesTaxRepository.ts",
+  "src/new/systems/pos/tax-management/model/SalesTax.ts",
+  "src/new/systems/pos/tax-management/services/SalesTaxService.ts",
+  "src/new/systems/pos/tax-management/pages/SalesTaxSettingsPage.ts",
   "src/new/systems/catalog/product-publishing/api/CatalogApi.ts",
   "src/new/systems/catalog/product-publishing/interface/ICatalogRepository.ts",
   "src/new/systems/catalog/product-publishing/model/CatalogProduct.ts",
@@ -97,5 +107,6 @@ console.log("Modern feature-based architecture is ready.");
 console.log("Systems: pos, catalog, loyalty.");
 console.log("Layers per feature: interface, model, services, api, pages.");
 console.log(
-  "POS features: sales-management, order-processing, reporting-insights, business-settings, online-order-tracking, export-reporting, cash-closing-management, dashboard-analytics, finance-tracking, customer-management, employee-management, inventory-management, auth-onboarding.",
+  "POS features: sales-management, order-processing, reporting-insights, business-settings, table-zone-management, online-order-tracking, export-reporting, cash-closing-management, dashboard-analytics, finance-tracking, customer-management, employee-management, inventory-management, auth-onboarding.",
+  "POS features: sales-management, order-processing, reporting-insights, business-settings, table-zone-management, tax-management, online-order-tracking, export-reporting, cash-closing-management, dashboard-analytics, finance-tracking, customer-management, employee-management, inventory-management, auth-onboarding.",
 );

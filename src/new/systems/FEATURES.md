@@ -30,6 +30,8 @@ Legacy code remains active while feature modules are rebuilt incrementally in Ty
 - `inventory-management`
 - `auth-onboarding`
 - `business-settings`
+- `table-zone-management`
+- `tax-management`
 - `online-order-tracking`
 - `export-reporting`
 - `cash-closing-management`
