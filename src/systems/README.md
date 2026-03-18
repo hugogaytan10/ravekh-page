@@ -13,7 +13,7 @@ This folder introduces a new modular architecture that can coexist with the lega
 Each feature follows the same structure:
 
 - `api`: Infrastructure adapters that talk to external services.
-- `interfaces`: Contracts used by services and pages.
+- `interface`/`interfaces`: Contracts used by services and pages.
 - `model`: Domain entities and DTO mappers.
 - `services`: Application use cases with business rules.
 - `pages`: UI entry points that consume services.
@@ -21,6 +21,6 @@ Each feature follows the same structure:
 ## Migration notes
 
 1. Keep legacy modules in place to prevent runtime regressions.
-2. Move one feature at a time, starting with POS sales.
+2. Move one feature at a time, starting with POS sales and employees.
 3. Reuse DTO mappers to normalize legacy payloads.
 4. Keep services independent from fetch/axios for testability.
