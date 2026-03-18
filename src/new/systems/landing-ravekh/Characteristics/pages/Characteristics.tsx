@@ -1,5 +1,5 @@
-import "./Caracteristicas.css";
-export const Caracteristicas = () => {
+import "../styles/Characteristics.css";
+export const Characteristics = () => {
 
   return (
     <div className="container-caracteristicas  min-h-screen">

@@ -1,11 +1,15 @@
 import React from 'react';
 import { useFormik } from 'formik';
 import './contacto.css';
-import GoogleInput from '../Utilidades/GoogleInput';
-import validationSchema from './validationSchema';
-import { URL } from '../CatalogoWeb/Const/Const';
+import { FormInput } from "../../utilities/FormInput"
+import validationSchema from '../validation/validationSchema';
+import { ContactApi } from '../api/Contact';
 
-export const Contacto = ({ catalogo }) => {
+export const Contacto = () => {
+
+    const contactApi = new ContactApi();
+
+
     const formik = useFormik({
         initialValues: {
             email: '',
@@ -18,30 +22,13 @@ export const Contacto = ({ catalogo }) => {
         validationSchema: validationSchema,
         onSubmit: async (values) => {
             try {
-
-                const res = await fetch(`${URL}contacto/sendinfo`, {
-                    method: 'POST',
-                    mode: 'cors',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        nombre: values.nombre,
-                        apellido: values.apellido,
-                        email: values.email,
-                        mensaje: values.mensaje,
-                        lada: values.lada,
-                        telefono: values.telefono,
-                    }),
-                });
-
-                if (res.ok) {
-                    const data = await res.json();
-                    console.log('Formulario enviado exitosamente', data);
-                    document.getElementById('my_modal_5').showModal();
+                const res = await contactApi.senInfo(values);
+                if (res.apellido) {
+                    const modal = document.getElementById('my_modal_5');
+                    if (modal) {
+                        (modal as HTMLDialogElement).showModal();
+                    }
                     formik.resetForm();  // <-- Utiliza formik para resetear el formulario
-                } else {
-                    console.error('Error al enviar el formulario', res.statusText);
                 }
             } catch (error) {
                 console.error('Error al enviar el formulario', error);
@@ -49,7 +36,6 @@ export const Contacto = ({ catalogo }) => {
         },
     });
 
-    // aqui agregamos el llamado a la api para enviar el formulario
 
     return (
         <div className='flex justify-around flex-wrap min-h-screen w-full items-center'>
@@ -58,7 +44,7 @@ export const Contacto = ({ catalogo }) => {
                 className='mt-10 mb-10 md:w-2/4 flex flex-wrap justify-center items-center '>
                 <h3 className={`text-3xl ${catalogo ? 'text-black' : 'text-gray-100'} text-center block w-full mb-5`}>Contáctanos</h3>
                 <div className='mb-4 w-full md:w-1/2 md:pl-2'>
-                    <GoogleInput
+                    <FormInput
                         type='text'
                         placeholder='Nombre'
                         name='nombre'
@@ -71,7 +57,7 @@ export const Contacto = ({ catalogo }) => {
                     )}
                 </div>
                 <div className='mb-4 w-full md:w-1/2 md:pl-2'>
-                    <GoogleInput
+                    <FormInput
                         type='text'
                         placeholder='Apellido'
                         name='apellido'
@@ -84,7 +70,7 @@ export const Contacto = ({ catalogo }) => {
                     )}
                 </div>
                 <div className='mb-4 w-full md:w-1/2 md:pl-2'>
-                    <GoogleInput
+                    <FormInput
                         type='tel'
                         placeholder='Lada'
                         name='lada'
@@ -97,7 +83,7 @@ export const Contacto = ({ catalogo }) => {
                     )}
                 </div>
                 <div className='mb-4 w-full md:w-1/2 md:pl-2'>
-                    <GoogleInput
+                    <FormInput
                         type='tel'
                         placeholder='Teléfono'
                         name='telefono'
@@ -110,7 +96,7 @@ export const Contacto = ({ catalogo }) => {
                     )}
                 </div>
                 <div className='mb-4 w-full'>
-                    <GoogleInput
+                    <FormInput
                         type='textarea'
                         placeholder='Mensaje'
                         name='mensaje'
@@ -123,7 +109,7 @@ export const Contacto = ({ catalogo }) => {
                     )}
                 </div>
                 <div className='mb-4 w-full'>
-                    <GoogleInput
+                    <FormInput
                         type='email'
                         placeholder='Correo electrónico'
                         name='email'
@@ -154,7 +140,6 @@ export const Contacto = ({ catalogo }) => {
                     </div>
                 </div>
             </dialog>
-            {/* <img alt='foto' src={ravekh} className='md:w-1/4 object-contain md:h-72' />*/}
         </div>
     );
 };
