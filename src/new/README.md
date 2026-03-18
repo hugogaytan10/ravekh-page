@@ -48,6 +48,8 @@ Each feature in every system now includes all architecture layers: `api`, `inter
   - Focused on employee CRUD, role normalization, and access policy checks.
 - `inventory-management`
   - Focused on inventory listing, low-stock detection, and stock updates.
+- `auth-onboarding`
+  - Focused on login and sign-up onboarding flows with validation and decoupled API mapping.
 
 ## Legacy analysis used for the design
 
@@ -97,12 +99,17 @@ Each feature in every system now includes all architecture layers: `api`, `inter
   - Domain model (`FinanceOverview`, `FinanceEntry`)
   - Business service (`FinanceTrackingService`)
   - Presentation page model (`FinanceTrackingPage`)
+- POS authentication requests from `src/Components/CatalogoWeb/PuntoVenta/Login/Peticiones.ts` were split into:
+  - API adapter (`PosAuthOnboardingApi`)
+  - Domain model (`AuthSession`)
+  - Business service (`AuthOnboardingService`)
+  - Presentation page model (`AuthOnboardingPage`)
 
 ## Composition root
 
 Use `src/new/index.ts` as the entry point for new modules through `ModernSystemsFactory`.
 
-Factory coverage now includes POS sales, order processing, reporting, business settings, online orders, export reports, cash closing, dashboard analytics, finance tracking, customer management, employee management, and inventory management.
+Factory coverage now includes POS sales, order processing, reporting, business settings, online orders, export reports, cash closing, dashboard analytics, finance tracking, customer management, employee management, inventory management, and auth onboarding.
 
 ## Validation command
 

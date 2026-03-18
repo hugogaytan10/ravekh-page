@@ -13,7 +13,10 @@ import { PosOnlineOrderApi } from "./systems/pos/online-order-tracking/api/PosOn
 import { PosOrderApi } from "./systems/pos/order-processing/api/PosOrderApi";
 import { PosReportingApi } from "./systems/pos/reporting-insights/api/PosReportingApi";
 import { PosProductApi } from "./systems/pos/sales-management/api/PosProductApi";
+import { PosAuthOnboardingApi } from "./systems/pos/auth-onboarding/api/PosAuthOnboardingApi";
 import {
+  AuthOnboardingPage,
+  AuthOnboardingService,
   BusinessSettingsPage,
   BusinessSettingsService,
   CashClosingPage,
@@ -143,6 +146,14 @@ export class ModernSystemsFactory {
 
   createPosInventoryPage(): InventoryManagementPage {
     return new InventoryManagementPage(this.createPosInventoryService());
+  }
+
+  createPosAuthOnboardingService(): AuthOnboardingService {
+    return new AuthOnboardingService(new PosAuthOnboardingApi(this.httpClient));
+  }
+
+  createPosAuthOnboardingPage(): AuthOnboardingPage {
+    return new AuthOnboardingPage(this.createPosAuthOnboardingService());
   }
 
   createCatalogService(): CatalogService {

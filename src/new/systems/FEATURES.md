@@ -28,12 +28,14 @@ Legacy code remains active while feature modules are rebuilt incrementally in Ty
 - `customer-management`
 - `employee-management`
 - `inventory-management`
+- `auth-onboarding`
 - `business-settings`
 - `online-order-tracking`
 - `export-reporting`
 - `cash-closing-management`
 - `dashboard-analytics`
 - `finance-tracking`
+- `auth-onboarding` is focused on login and business registration flows decoupled from UI state management.
 - existing POS features will continue migrating with the same contract.
 
 ### Catalog

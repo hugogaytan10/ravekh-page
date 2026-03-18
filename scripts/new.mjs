@@ -63,6 +63,11 @@ const requiredPaths = [
   "src/new/systems/pos/inventory-management/model/InventoryItem.ts",
   "src/new/systems/pos/inventory-management/services/InventoryService.ts",
   "src/new/systems/pos/inventory-management/pages/InventoryManagementPage.ts",
+  "src/new/systems/pos/auth-onboarding/api/PosAuthOnboardingApi.ts",
+  "src/new/systems/pos/auth-onboarding/interface/IAuthOnboardingRepository.ts",
+  "src/new/systems/pos/auth-onboarding/model/AuthSession.ts",
+  "src/new/systems/pos/auth-onboarding/services/AuthOnboardingService.ts",
+  "src/new/systems/pos/auth-onboarding/pages/AuthOnboardingPage.ts",
   "src/new/systems/catalog/product-publishing/api/CatalogApi.ts",
   "src/new/systems/catalog/product-publishing/interface/ICatalogRepository.ts",
   "src/new/systems/catalog/product-publishing/model/CatalogProduct.ts",
@@ -92,5 +97,5 @@ console.log("Modern feature-based architecture is ready.");
 console.log("Systems: pos, catalog, loyalty.");
 console.log("Layers per feature: interface, model, services, api, pages.");
 console.log(
-  "POS features: sales-management, order-processing, reporting-insights, business-settings, online-order-tracking, export-reporting, cash-closing-management, dashboard-analytics, finance-tracking, customer-management, employee-management, inventory-management.",
+  "POS features: sales-management, order-processing, reporting-insights, business-settings, online-order-tracking, export-reporting, cash-closing-management, dashboard-analytics, finance-tracking, customer-management, employee-management, inventory-management, auth-onboarding.",
 );
