@@ -270,7 +270,7 @@ export const AuthPage: React.FC = () => {
                 {errorPassword}
               </span>
             )}
-            <a href="#" className="self-end text-xs mt-2 mb-2">
+            <a className="self-end text-xs mt-2 mb-2" onClick={() => {navigate("/reset-password-punto-venta")}}>
               Olvidaste tu contraseña?
             </a>
             <button type="submit" className="btn-login mt-2">Iniciar Sesión</button>

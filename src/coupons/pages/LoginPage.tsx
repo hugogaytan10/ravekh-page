@@ -142,6 +142,35 @@ const LoginPage: React.FC = () => {
 
         {errorMessage ? <p className="mt-4 text-sm font-semibold text-red-500">{errorMessage}</p> : null}
 
+        <div className="w-full flex justify-end mt-1">
+          <button
+            type="button"
+            className="text-sm font-semibold"
+            style={{ color: theme.textMuted }}
+            onClick={() => {
+              const params = new URLSearchParams();
+              if (effectiveToken) params.set("token", effectiveToken);
+              if (effectivePendingCouponId) params.set("couponId", String(effectivePendingCouponId));
+              const suffix = params.toString();
+              navigate(`/cupones/reset-password${suffix ? `?${suffix}` : ""}`);
+            }}
+          >
+            Recuperar contraseña
+          </button>
+        </div>
+
+        <button
+          type="button"
+          className="mt-7 w-full font-extrabold py-3.5 text-lg rounded-full shadow-[0_14px_30px_rgba(0,0,0,0.25)] hover:brightness-110 transition disabled:opacity-70"
+          style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
+          onClick={() => {
+            void handleLogin();
+          }}
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? "Ingresando..." : "Iniciar sesión"}
+        </button>
+
         <p className="mt-5 text-sm font-semibold" style={{ color: theme.textMuted }}>
           Si no tienes cuenta,
           <button
@@ -163,18 +192,6 @@ const LoginPage: React.FC = () => {
             puedes crearla
           </button>
         </p>
-
-        <button
-          type="button"
-          className="mt-7 w-full font-extrabold py-3.5 text-lg rounded-full shadow-[0_14px_30px_rgba(0,0,0,0.25)] hover:brightness-110 transition disabled:opacity-70"
-          style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-          onClick={() => {
-            void handleLogin();
-          }}
-          disabled={isSubmitting}
-        >
-          {isSubmitting ? "Ingresando..." : "Iniciar sesión"}
-        </button>
       </div>
 
       <div className="relative w-full mt-12 pb-8 flex justify-center overflow-hidden">

@@ -58,3 +58,29 @@ export const signUpToServer = async (businesInfo: Store, user: User, deviceToken
         return { error: 'Error al insertar el usuario ' + e };
     }
 }
+
+// funciones para el reset password del punto de venta
+export const compareQuestionsServer = async (body: { Question_Id: any; Answer: string; Password: string; }, user: string) => {
+    const url = `${URL}comparepasswordanswers/${user}`;
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body),
+    });
+    return response.json();
+}
+
+export const getQuestions = async () => {
+    const url = `${URL}questions`;
+    const response = await fetch(url, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        mode: 'cors',
+    });
+    const data = await response.json();
+    return data;
+}
