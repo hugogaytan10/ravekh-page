@@ -14,7 +14,7 @@ export class PosProductApi implements IProductRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
   async listByBusiness(businessId: number, token: string): Promise<Product[]> {
-    const [withoutStock, withStock] = await Promise.all([
+    let [withoutStock, withStock] = await Promise.all([
       this.httpClient.request<ProductResponse[]>({
         method: "GET",
         path: `products/stocknull/${businessId}`,
@@ -26,7 +26,9 @@ export class PosProductApi implements IProductRepository {
         token,
       }),
     ]);
-
+    //validar si es alguno nulo pasar un array vacio
+    if (!withoutStock) withoutStock = [];
+    if (!withStock) withStock = [];
     return [...withoutStock, ...withStock].map((item) => this.toDomain(item));
   }
 

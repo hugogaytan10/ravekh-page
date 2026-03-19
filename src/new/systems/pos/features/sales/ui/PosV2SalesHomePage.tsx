@@ -1,12 +1,18 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
+import MoreIcon from "../../../../../../assets/POS/MoreIcon";
+import { Basket } from "../../../../../../assets/POS/Basket";
+import MoneyIcon from "../../../../../../assets/POS/MoneyIcon";
+import { FiCreditCard, FiDollarSign, FiRepeat } from "react-icons/fi";
 import "./PosV2SalesHomePage.css";
+import { ModernSystemsFactory } from "../../../../../index";
 
 type SaleItemVm = {
   id: number;
   name: string;
   price: number;
   category: string;
+  image?: string;
 };
 
 type PaymentMethod = "Efectivo" | "Tarjeta" | "Transferencia";
@@ -18,24 +24,28 @@ type CompletedSale = {
   total: number;
 };
 
-const SAMPLE_PRODUCTS: SaleItemVm[] = [
-  { id: 1, name: "Latte", price: 56, category: "Bebidas" },
-  { id: 2, name: "Americano", price: 42, category: "Bebidas" },
-  { id: 3, name: "Croissant", price: 34, category: "Panadería" },
-  { id: 4, name: "Sandwich", price: 89, category: "Comida" },
-  { id: 5, name: "Cheesecake", price: 62, category: "Postres" },
-  { id: 6, name: "Té Chai", price: 48, category: "Bebidas" },
-  { id: 7, name: "Wrap de pollo", price: 96, category: "Comida" },
-  { id: 8, name: "Muffin", price: 39, category: "Panadería" },
+const PAYMENT_METHOD_OPTIONS: Array<{
+  value: PaymentMethod;
+  label: string;
+  Icon: typeof FiDollarSign;
+}> = [
+  { value: "Efectivo", label: "Efectivo", Icon: FiDollarSign },
+  { value: "Tarjeta", label: "Tarjeta", Icon: FiCreditCard },
+  { value: "Transferencia", label: "Transferencia", Icon: FiRepeat },
 ];
 
-const CATEGORIES = ["Todas", "Bebidas", "Comida", "Panadería", "Postres"];
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
+const TOKEN_KEY = "pos-v2-token";
+const BUSINESS_ID_KEY = "pos-v2-business-id";
 const TABLE_OPTIONS = ["Mesa 1", "Mesa 2", "Mesa 3", "Mesa 4", "Mesa 5", "Para llevar"];
 
 export const PosV2SalesHomePage = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Todas");
   const [isGrid, setIsGrid] = useState(true);
+  const [products, setProducts] = useState<SaleItemVm[]>([]);
+  const [loadingProducts, setLoadingProducts] = useState(true);
+  const [productsError, setProductsError] = useState<string | null>(null);
   const [cart, setCart] = useState<Record<number, { name: string; price: number; quantity: number }>>({});
   const [discountPercent, setDiscountPercent] = useState("0");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Efectivo");
@@ -44,14 +54,67 @@ export const PosV2SalesHomePage = () => {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [selectedTable, setSelectedTable] = useState("Mesa 1");
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
+  const [isMobileTablesOpen, setIsMobileTablesOpen] = useState(false);
+
+  useEffect(() => {
+    const token = window.localStorage.getItem(TOKEN_KEY);
+    const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY));
+
+    if (!token || !businessId) {
+      setProducts([]);
+      setLoadingProducts(false);
+      setProductsError("No encontramos sesión activa de negocio para cargar productos.");
+      return;
+    }
+
+    const factory = new ModernSystemsFactory(API_BASE_URL);
+    const productService = factory.createPosProductService();
+
+    setLoadingProducts(true);
+    setProductsError(null);
+    productService
+      .getSellableProducts(businessId, token)
+      .then((items) => {
+        const mapped: SaleItemVm[] = items.map((item: {
+          id: number;
+          name: string;
+          price: number;
+          categoryName?: string;
+          image?: string;
+          imageUrl?: string;
+        }) => ({
+          id: item.id,
+          name: item.name,
+          price: item.price,
+          category: item.categoryName || "General",
+          image: item.image || item.imageUrl,
+        }));
+        setProducts(mapped);
+      })
+      .catch((error) => {
+        setProductsError(error instanceof Error ? error.message : "No pudimos cargar tus productos.");
+      })
+      .finally(() => setLoadingProducts(false));
+  }, []);
+
+  const categories = useMemo(() => {
+    const dynamic = Array.from(new Set(products.map((item) => item.category).filter(Boolean)));
+    return ["Todas", ...dynamic];
+  }, [products]);
+
+  useEffect(() => {
+    if (!categories.includes(category)) {
+      setCategory("Todas");
+    }
+  }, [categories, category]);
 
   const filteredProducts = useMemo(() => {
-    return SAMPLE_PRODUCTS.filter((product) => {
+    return products.filter((product) => {
       const matchCategory = category === "Todas" || product.category === category;
       const matchSearch = product.name.toLowerCase().includes(search.toLowerCase());
       return matchCategory && matchSearch;
     });
-  }, [category, search]);
+  }, [category, products, search]);
 
   const cartItems = useMemo(() => Object.entries(cart).map(([id, value]) => ({ id: Number(id), ...value })), [cart]);
 
@@ -64,6 +127,34 @@ export const PosV2SalesHomePage = () => {
     return { subtotal, discount, total, items };
   }, [cartItems, discountPercent]);
 
+  const mobileSteps = useMemo(
+    () => [
+      {
+        key: "catalog" as const,
+        label: "Catálogo",
+        Icon: ({ active }: { active: boolean }) => (
+          <MoreIcon width={16} height={16} strokeColor={active ? "#ffffff" : "#6D01D1"} strokeWidth={2.2} />
+        ),
+      },
+      {
+        key: "cart" as const,
+        label: "Cantidad",
+        helper: totals.items ? `${totals.items} prod.` : undefined,
+        Icon: ({ active }: { active: boolean }) => (
+          <Basket width={18} height={18} fill={active ? "#ffffff" : "#6D01D1"} />
+        ),
+      },
+      {
+        key: "checkout" as const,
+        label: "Cobro",
+        Icon: ({ active }: { active: boolean }) => (
+          <MoneyIcon width={16} height={16} color={active ? "#ffffff" : "#6D01D1"} />
+        ),
+      },
+    ],
+    [totals.items],
+  );
+
   const addToCart = (product: SaleItemVm) => {
     setCart((current) => {
       const existing = current[product.id];
@@ -73,6 +164,27 @@ export const PosV2SalesHomePage = () => {
           name: product.name,
           price: product.price,
           quantity: (existing?.quantity ?? 0) + 1,
+        },
+      };
+    });
+  };
+
+  const setQuantity = (id: number, quantity: number) => {
+    const safeQuantity = Number.isNaN(quantity) ? 0 : Math.max(0, Math.floor(quantity));
+
+    setCart((current) => {
+      const target = current[id];
+      if (!target) return current;
+      if (safeQuantity <= 0) {
+        const { [id]: _, ...rest } = current;
+        return rest;
+      }
+
+      return {
+        ...current,
+        [id]: {
+          ...target,
+          quantity: safeQuantity,
         },
       };
     });
@@ -127,21 +239,37 @@ export const PosV2SalesHomePage = () => {
   };
 
   return (
-    <PosV2Shell title="Ventas" subtitle="Flujo funcional v2 (carrito, descuento, cobro y cierre)">
+    <PosV2Shell title="Entorno de prueba de Ravekh POS v2">
       <section className="pos-v2-sales-home pos-v2-sales-layout">
         <div className="pos-v2-sales-home__mobile-steps" role="tablist" aria-label="Flujo de venta">
-          <button type="button" className={mobileStep === "catalog" ? "is-active" : ""} onClick={() => setMobileStep("catalog")}>
-            🧾 Catálogo
-          </button>
-          <button type="button" className={mobileStep === "cart" ? "is-active" : ""} onClick={() => setMobileStep("cart")}>
-            🛒 Carrito ({totals.items})
-          </button>
-          <button type="button" className={mobileStep === "checkout" ? "is-active" : ""} onClick={() => setMobileStep("checkout")}>
-            💳 Cobro
-          </button>
+          {mobileSteps.map(({ key, label, helper, Icon }) => {
+            const active = mobileStep === key;
+
+            return (
+              <button
+                key={key}
+                type="button"
+                className={active ? "is-active" : ""}
+                onClick={() => setMobileStep(key)}
+                aria-current={active ? "step" : undefined}
+              >
+                <span className="pos-v2-sales-home__mobile-step-icon" aria-hidden="true">
+                  <Icon active={active} />
+                </span>
+                <span className="pos-v2-sales-home__mobile-step-label">{label}</span>
+                {helper ? <small>{helper}</small> : null}
+              </button>
+            );
+          })}
         </div>
 
         <section className={`pos-v2-sales-home__catalog ${mobileStep === "catalog" ? "is-mobile-active" : ""}`}>
+          <div className="pos-v2-sales-home__legacy-ad">
+            <button type="button" aria-label="Publicidad anterior">‹</button>
+            <strong>Publicidad</strong>
+            <button type="button" aria-label="Siguiente publicidad">›</button>
+          </div>
+
           <div className="pos-v2-sales-home__toolbar">
             <div className="pos-v2-sales-home__search">
               <input
@@ -162,7 +290,7 @@ export const PosV2SalesHomePage = () => {
           </div>
 
           <div className="pos-v2-sales-home__categories">
-            {CATEGORIES.map((item) => {
+            {categories.map((item) => {
               const active = item === category;
               return (
                 <button
@@ -177,9 +305,13 @@ export const PosV2SalesHomePage = () => {
             })}
           </div>
 
+          {loadingProducts ? <p className="pos-v2-sales-home__empty">Cargando productos…</p> : null}
+          {productsError ? <p className="pos-v2-sales-home__error">{productsError}</p> : null}
+
           <div className={`pos-v2-sales-home__products ${isGrid ? "is-grid" : "is-list"}`}>
             {filteredProducts.map((product) => (
               <article key={product.id} className="pos-v2-sales-home__product-card">
+                {product.image ? <img src={product.image} alt={product.name} className="pos-v2-sales-home__product-image" /> : null}
                 <p className="pos-v2-sales-home__product-category">{product.category}</p>
                 <h3>{product.name}</h3>
                 <strong>${product.price.toFixed(2)}</strong>
@@ -194,27 +326,51 @@ export const PosV2SalesHomePage = () => {
         <aside className={`pos-v2-sales-home__cart-panel ${mobileStep === "cart" || mobileStep === "checkout" ? "is-mobile-active" : ""}`}>
           <h2>Carrito · {selectedTable}</h2>
 
-          {cartItems.length === 0 ? <p className="pos-v2-sales-home__empty">No hay productos agregados.</p> : null}
+          <div className={`pos-v2-sales-home__cart-content ${mobileStep === "cart" ? "is-mobile-active" : ""}`}>
+            {cartItems.length === 0 ? <p className="pos-v2-sales-home__empty">No hay productos agregados.</p> : null}
 
-          {cartItems.length > 0 ? (
-            <ul className="pos-v2-sales-home__cart-list">
-              {cartItems.map((item) => (
-                <li key={item.id}>
-                  <div>
-                    <p>{item.name}</p>
-                    <small>${item.price.toFixed(2)}</small>
-                  </div>
-                  <div className="pos-v2-sales-home__qty-controls">
-                    <button type="button" onClick={() => updateQuantity(item.id, -1)}>-</button>
-                    <span>{item.quantity}</span>
-                    <button type="button" onClick={() => updateQuantity(item.id, 1)}>+</button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          ) : null}
+            {cartItems.length > 0 ? (
+              <ul className="pos-v2-sales-home__cart-list">
+                {cartItems.map((item) => (
+                  <li key={item.id}>
+                    <div>
+                      <p>{item.name}</p>
+                      <small>${item.price.toFixed(2)}</small>
+                    </div>
+                    <div className="pos-v2-sales-home__qty-controls">
+                      <button type="button" onClick={() => updateQuantity(item.id, -1)}>-1</button>
+                      <input
+                        type="number"
+                        min="0"
+                        value={item.quantity}
+                        onChange={(event) => setQuantity(item.id, Number(event.target.value))}
+                        aria-label={`Cantidad de ${item.name}`}
+                      />
+                      <button type="button" onClick={() => updateQuantity(item.id, 1)}>+1</button>
+                      <button type="button" onClick={() => updateQuantity(item.id, 10)}>+10</button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
 
-          <div className="pos-v2-sales-home__checkout">
+            <div className="pos-v2-sales-home__totals">
+              <p><span>Subtotal</span><strong>${totals.subtotal.toFixed(2)}</strong></p>
+              <p><span>Descuento</span><strong>-${totals.discount.toFixed(2)}</strong></p>
+              <p className="is-total"><span>Total</span><strong>${totals.total.toFixed(2)}</strong></p>
+            </div>
+
+            <button
+              type="button"
+              className="pos-v2-sales-home__continue"
+              onClick={() => setMobileStep("checkout")}
+              disabled={!totals.items}
+            >
+              Continuar a cobro
+            </button>
+          </div>
+
+          <div className={`pos-v2-sales-home__checkout pos-v2-sales-home__checkout-content ${mobileStep === "checkout" ? "is-mobile-active" : ""}`}>
             <h3>Cobro</h3>
             <label>
               Descuento (%)
@@ -229,6 +385,25 @@ export const PosV2SalesHomePage = () => {
                 }}
               />
             </label>
+
+            <div className="pos-v2-sales-home__payment-methods" role="radiogroup" aria-label="Selecciona método de pago">
+              {PAYMENT_METHOD_OPTIONS.map(({ value, label, Icon }) => {
+                const isActive = paymentMethod === value;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    role="radio"
+                    aria-checked={isActive}
+                    className={isActive ? "is-active" : ""}
+                    onClick={() => setPaymentMethod(value)}
+                  >
+                    <Icon size={16} />
+                    {label}
+                  </button>
+                );
+              })}
+            </div>
 
             <label>
               Método de pago
@@ -256,6 +431,10 @@ export const PosV2SalesHomePage = () => {
 
             <button type="button" className="pos-v2-sales-home__complete" onClick={handleCompleteSale} disabled={!totals.items}>
               Finalizar venta
+            </button>
+
+            <button type="button" className="pos-v2-sales-home__back" onClick={() => setMobileStep("cart")}>
+              Regresar al carrito
             </button>
 
             {validationError ? <p className="pos-v2-sales-home__error">{validationError}</p> : null}
@@ -289,6 +468,45 @@ export const PosV2SalesHomePage = () => {
           );
         })}
       </div>
+
+      <div className="pos-v2-sales-home__mobile-legacy-dock">
+        <button type="button" onClick={() => setMobileStep("cart")}>Pedidos</button>
+        <button type="button" onClick={() => setIsMobileTablesOpen(true)}>Mesas</button>
+        <button type="button" className="is-summary" onClick={() => setMobileStep("cart")}>
+          {totals.items.toFixed(2)}x Items = ${totals.total.toFixed(2)}
+        </button>
+      </div>
+
+      {isMobileTablesOpen ? (
+        <div className="pos-v2-sales-home__tables-modal" role="dialog" aria-modal="true" aria-label="Seleccionar mesa">
+          <div className="pos-v2-sales-home__tables-modal-card">
+            <div className="pos-v2-sales-home__tables-modal-header">
+              <h3>Selecciona mesa</h3>
+              <button type="button" onClick={() => setIsMobileTablesOpen(false)}>Cerrar</button>
+            </div>
+
+            <div className="pos-v2-sales-home__tables-modal-grid">
+              {TABLE_OPTIONS.map((table) => {
+                const isActive = table === selectedTable;
+                return (
+                  <button
+                    key={table}
+                    type="button"
+                    className={isActive ? "is-active" : ""}
+                    onClick={() => {
+                      setSelectedTable(table);
+                      setIsMobileTablesOpen(false);
+                      setMobileStep("catalog");
+                    }}
+                  >
+                    {table}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+      ) : null}
 
       {completedSale ? (
         <div className="pos-v2-sales-home__sale-modal" role="dialog" aria-modal="true" aria-label="Venta finalizada">

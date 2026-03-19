@@ -8,7 +8,7 @@
 .pos-v2-shell__header {
   background: #6d01d1;
   color: #fff;
-  padding: 1rem;
+  padding: 0.65rem 0.85rem;
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
@@ -23,9 +23,10 @@
 }
 
 .pos-v2-shell__title {
-  margin: 0.25rem 0 0;
-  font-size: 1.2rem;
+  margin: 0.15rem 0 0;
+  font-size: 0.98rem;
   font-weight: 700;
+  line-height: 1.25;
 }
 
 .pos-v2-shell__subtitle {
