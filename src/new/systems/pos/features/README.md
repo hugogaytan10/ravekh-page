@@ -1,18 +1,48 @@
 # POS Features
 
-This folder contains POS features that already follow the feature-first structure under `features/<feature-name>`.
+All POS modules now live under:
 
-## Active feature modules in this folder
+`src/new/systems/pos/features/<feature-name>/{api,interface,model,services,pages}`
 
-- `payment-method-management`
-- `branding-customization`
+## Naming convention
 
-Each feature module must include these layers:
+- Always use `features/<feature-name>`.
+- Feature names should be short and functional.
+- Avoid mixing redundant suffixes such as `*-management` or `*-tracking` unless strictly needed by domain language.
+- Settings-related capabilities are grouped under `features/settings/*` as subfeatures.
 
+## Current feature map
+
+### Core
+
+- `sales`
+- `products`
+- `orders`
+- `customers`
+- `employees`
+- `inventory`
+- `finance`
+- `dashboard`
+- `reporting`
+- `exports`
+- `online-orders`
+- `cash-closing`
+- `auth`
+
+### Settings subfeatures
+
+- `settings/business`
+- `settings/tax`
+- `settings/table-zones`
+- `settings/payment-methods`
+- `settings/branding`
+
+## Contract per feature
+
+Each feature (or settings subfeature) must include:
+
+- `api`
 - `interface`
 - `model`
 - `services`
-- `api`
 - `pages`
-
-Legacy and transitional POS features can remain in `src/new/systems/pos/<feature-name>` while migration is in progress.

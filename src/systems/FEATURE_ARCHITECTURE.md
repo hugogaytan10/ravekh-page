@@ -1,30 +1,26 @@
-# Systems Feature Architecture (Modern)
+# Systems Feature Architecture (Legacy Note)
 
-This directory now follows a **feature-first** structure per system.
+This file is legacy-facing documentation.
 
-## Systems
+For the current source of truth of the modern structure, use:
 
-- `pos`
-- `catalog`
-- `loyalty`
+- `src/new/systems/FEATURES.md`
+- `src/new/systems/pos/features/README.md`
 
-Each system contains `features/<feature-name>` folders with the same internal layout:
+## Modern structure summary
 
-Current POS migration now includes `sales`, `employees`, `products`, `finance`, `settings`, `customers`, and `orders`.
+Modern systems follow a feature-first structure per system:
 
-- `api/` for external integration adapters
-- `interface/` for dependency contracts
-- `model/` for feature entities and DTOs
-- `services/` for use-cases and orchestration logic
-- `pages/` for UI composition
+- `src/new/systems/pos/features/<feature-name>`
+- `src/new/systems/catalog/<feature-name>`
+- `src/new/systems/loyalty/<feature-name>`
 
-## Migration strategy
+Each feature contains:
 
-Legacy code remains untouched and operational while modern features are introduced incrementally.
+- `api/`
+- `interface/`
+- `model/`
+- `services/`
+- `pages/`
 
-1. Create modern feature modules in parallel.
-2. Reuse and normalize legacy API payloads with mappers.
-3. Move page entrypoints to modern services once behavior is validated.
-4. Remove legacy modules only when parity is confirmed.
-
-This keeps migration low-risk and allows gradual, testable adoption.
+Legacy modules can still exist outside `src/new` during migration windows, but all net-new POS development should target `src/new/systems/pos/features/*`.

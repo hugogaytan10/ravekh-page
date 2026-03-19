@@ -20,28 +20,28 @@ Every feature uses the same modules:
 
 ## Current migration map
 
-Legacy code remains active while feature modules are rebuilt incrementally in TypeScript.
-
 ### POS
 
-- `sales-management`
-- `customer-management`
-- `employee-management`
-- `inventory-management`
-- `auth-onboarding`
-- `business-settings`
-- `table-zone-management`
-- `tax-management`
-- `online-order-tracking`
-- `export-reporting`
-- `cash-closing-management`
-- `dashboard-analytics`
-- `finance-tracking`
-- `auth-onboarding` is focused on login and business registration flows decoupled from UI state management.
-- `payment-method-management`
-- `branding-customization`
-- existing POS features will continue migrating with the same contract.
-  - `branding-customization` is focused on business name/address/phone/logo/color/references updates with strict validation.
+All POS modules are standardized under `src/new/systems/pos/features`.
+
+- `sales`
+- `products`
+- `orders`
+- `customers`
+- `employees`
+- `inventory`
+- `finance`
+- `dashboard`
+- `reporting`
+- `exports`
+- `online-orders`
+- `cash-closing`
+- `auth`
+- `settings/business`
+- `settings/tax`
+- `settings/table-zones`
+- `settings/payment-methods`
+- `settings/branding`
 
 ### Catalog
 

@@ -1012,6 +1012,7 @@ export const Rutas = () => {
           <Route path="/open" element={<DeepLinkRedirect />} />
           <Route path="/open/servicebybusiness/:business" element={<DeepLinkRedirect />} />
 
+
         </Routes>
 
         {isFilterOpen && (

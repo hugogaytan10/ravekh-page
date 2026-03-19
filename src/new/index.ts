@@ -1,23 +1,24 @@
 import { FetchHttpClient } from "./core/api/FetchHttpClient";
 import { CatalogApi } from "./systems/catalog/product-publishing/api/CatalogApi";
 import { LoyaltyApi } from "./systems/loyalty/rewards-management/api/LoyaltyApi";
-import { PosBusinessSettingsApi } from "./systems/pos/business-settings/api/PosBusinessSettingsApi";
-import { PosCashClosingApi } from "./systems/pos/cash-closing-management/api/PosCashClosingApi";
-import { PosCustomerApi } from "./systems/pos/customer-management/api/PosCustomerApi";
-import { PosDashboardApi } from "./systems/pos/dashboard-analytics/api/PosDashboardApi";
-import { PosEmployeeApi } from "./systems/pos/employee-management/api/PosEmployeeApi";
-import { PosExportReportApi } from "./systems/pos/export-reporting/api/PosExportReportApi";
-import { PosFinanceApi } from "./systems/pos/finance-tracking/api/PosFinanceApi";
-import { PosInventoryApi } from "./systems/pos/inventory-management/api/PosInventoryApi";
-import { PosOnlineOrderApi } from "./systems/pos/online-order-tracking/api/PosOnlineOrderApi";
-import { PosOrderApi } from "./systems/pos/order-processing/api/PosOrderApi";
-import { PosReportingApi } from "./systems/pos/reporting-insights/api/PosReportingApi";
-import { PosProductApi } from "./systems/pos/sales-management/api/PosProductApi";
-import { PosAuthOnboardingApi } from "./systems/pos/auth-onboarding/api/PosAuthOnboardingApi";
-import { PosTableZoneApi } from "./systems/pos/table-zone-management/api/PosTableZoneApi";
-import { PosSalesTaxApi } from "./systems/pos/tax-management/api/PosSalesTaxApi";
-import { PosPaymentMethodApi } from "./systems/pos/features/payment-method-management/api/PosPaymentMethodApi";
-import { PosBrandingApi } from "./systems/pos/features/branding-customization/api/PosBrandingApi";
+import { PosBusinessSettingsApi } from "./systems/pos/features/settings/business/api/PosBusinessSettingsApi";
+import { PosCashClosingApi } from "./systems/pos/features/cash-closing/api/PosCashClosingApi";
+import { PosCustomerApi } from "./systems/pos/features/customers/api/PosCustomerApi";
+import { PosDashboardApi } from "./systems/pos/features/dashboard/api/PosDashboardApi";
+import { PosEmployeeApi } from "./systems/pos/features/employees/api/PosEmployeeApi";
+import { PosExportReportApi } from "./systems/pos/features/exports/api/PosExportReportApi";
+import { PosFinanceApi } from "./systems/pos/features/finance/api/PosFinanceApi";
+import { PosInventoryApi } from "./systems/pos/features/inventory/api/PosInventoryApi";
+import { PosOnlineOrderApi } from "./systems/pos/features/online-orders/api/PosOnlineOrderApi";
+import { PosOrderApi } from "./systems/pos/features/orders/api/PosOrderApi";
+import { PosReportingApi } from "./systems/pos/features/reporting/api/PosReportingApi";
+import { PosProductApi } from "./systems/pos/features/sales/api/PosProductApi";
+import { PosProductsApi } from "./systems/pos/features/products/api/PosProductsApi";
+import { PosAuthOnboardingApi } from "./systems/pos/features/auth/api/PosAuthOnboardingApi";
+import { PosTableZoneApi } from "./systems/pos/features/settings/table-zones/api/PosTableZoneApi";
+import { PosSalesTaxApi } from "./systems/pos/features/settings/tax/api/PosSalesTaxApi";
+import { PosPaymentMethodApi } from "./systems/pos/features/settings/payment-methods/api/PosPaymentMethodApi";
+import { PosBrandingApi } from "./systems/pos/features/settings/branding/api/PosBrandingApi";
 import {
   AuthOnboardingPage,
   AuthOnboardingService,
@@ -45,6 +46,8 @@ import {
   ReportingService,
   SalesManagementPage,
   ProductService,
+  ProductsManagementPage,
+  ProductsService,
   TableZoneManagementPage,
   TableZoneService,
   SalesTaxService,
@@ -70,6 +73,14 @@ export class ModernSystemsFactory {
 
   createPosProductPage(): SalesManagementPage {
     return new SalesManagementPage(this.createPosProductService());
+  }
+
+  createPosProductsService(): ProductsService {
+    return new ProductsService(new PosProductsApi(this.httpClient));
+  }
+
+  createPosProductsPage(): ProductsManagementPage {
+    return new ProductsManagementPage(this.createPosProductsService());
   }
 
   createPosOrderService(): OrderService {

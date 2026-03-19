@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import "./App.css";
-import { Rutas } from "./Components/Rutas/Rutas";
+import { RutasNew } from "./Components/Rutas/RutasNew";
 import { Carga } from "./Components/PantallaCarga/Carga";
 import AppProvider from "./Components/CatalogoWeb/Context/AppContext";
 import { BrowserRouter } from "react-router-dom";
@@ -34,7 +34,7 @@ const AppContent = () => {
   }, []);
   return (
     <div className="app-shell">
-      <Rutas />
+      <RutasNew />
       {loading ? (
         <div className="loading-overlay" aria-hidden="true">
           <Carga />
