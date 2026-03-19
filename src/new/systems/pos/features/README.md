@@ -28,6 +28,7 @@ All POS modules now live under:
 - `online-orders`
 - `cash-closing`
 - `auth`
+- `health`
 
 ### Settings subfeatures
 

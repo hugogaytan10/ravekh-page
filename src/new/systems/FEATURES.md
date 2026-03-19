@@ -37,6 +37,7 @@ All POS modules are standardized under `src/new/systems/pos/features`.
 - `online-orders`
 - `cash-closing`
 - `auth`
+- `health`
 - `settings/business`
 - `settings/tax`
 - `settings/table-zones`

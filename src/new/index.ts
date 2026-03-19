@@ -19,6 +19,7 @@ import { PosTableZoneApi } from "./systems/pos/features/settings/table-zones/api
 import { PosSalesTaxApi } from "./systems/pos/features/settings/tax/api/PosSalesTaxApi";
 import { PosPaymentMethodApi } from "./systems/pos/features/settings/payment-methods/api/PosPaymentMethodApi";
 import { PosBrandingApi } from "./systems/pos/features/settings/branding/api/PosBrandingApi";
+import { PosHealthApi } from "./systems/pos/features/health/api/PosHealthApi";
 import {
   AuthOnboardingPage,
   AuthOnboardingService,
@@ -56,6 +57,8 @@ import {
   PaymentMethodService,
   BrandingCustomizationPage,
   BrandingService,
+  HealthPage,
+  HealthService,
 } from "./systems/pos";
 import { CatalogPublishingPage, CatalogService } from "./systems/catalog";
 import { RewardsManagementPage, RewardService } from "./systems/loyalty";
@@ -209,6 +212,14 @@ export class ModernSystemsFactory {
 
   createPosBrandingPage(): BrandingCustomizationPage {
     return new BrandingCustomizationPage(this.createPosBrandingService());
+  }
+
+  createPosHealthService(): HealthService {
+    return new HealthService(new PosHealthApi(this.httpClient));
+  }
+
+  createPosHealthPage(): HealthPage {
+    return new HealthPage(this.createPosHealthService());
   }
 
   createCatalogService(): CatalogService {

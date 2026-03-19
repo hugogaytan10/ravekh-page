@@ -49,6 +49,7 @@ Each feature in every system now includes all architecture layers: `api`, `inter
 - `inventory-management`
   - Focused on inventory listing, low-stock detection, and stock updates.
 - `auth-onboarding`
+- `health-monitoring`
   - Focused on login and sign-up onboarding flows with validation and decoupled API mapping.
 - `table-zone-management`
   - Focused on table-zone listing, table-zone upsert operations, and business-level table-order activation.
