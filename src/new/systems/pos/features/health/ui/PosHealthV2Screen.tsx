@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../index";
 import { HealthVm } from "../pages/HealthPage";
+import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
 
@@ -44,8 +45,7 @@ export const PosHealthV2Screen = () => {
   }, [page]);
 
   return (
-    <section style={{ padding: "1.5rem" }}>
-      <h1>POS v2 • Health</h1>
+    <PosV2Shell title="Health" subtitle="Monitoreo técnico del POS v2">
       {loading ? <p>Cargando health…</p> : null}
       {error ? <p role="alert">{error}</p> : null}
       {health ? (
@@ -55,6 +55,6 @@ export const PosHealthV2Screen = () => {
           <li>checkedAt: {health.checkedAt}</li>
         </ul>
       ) : null}
-    </section>
+    </PosV2Shell>
   );
 };

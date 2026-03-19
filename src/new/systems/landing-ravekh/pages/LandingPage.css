@@ -34,6 +34,17 @@
   align-items: center;
   justify-content: center;
   padding: 1.25rem;
+  animation-duration: 260ms;
+  animation-timing-function: ease;
+  animation-fill-mode: forwards;
+}
+
+.floating-systems-menu--open {
+  animation-name: floating-menu-enter;
+}
+
+.floating-systems-menu--close {
+  animation-name: floating-menu-exit;
 }
 
 .floating-systems-menu__list {
@@ -55,4 +66,28 @@
 
 .floating-systems-menu__list a:hover {
   opacity: 0.9;
+}
+
+@keyframes floating-menu-enter {
+  from {
+    opacity: 0;
+    transform: translateY(-16px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes floating-menu-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-12px);
+  }
 }

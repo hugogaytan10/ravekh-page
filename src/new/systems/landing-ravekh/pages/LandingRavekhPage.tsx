@@ -17,6 +17,7 @@ export const LandingPageRavekhPage = (): JSX.Element => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [statusBarColor, setStatusBarColor] = useState<string>("#6D01D1");
   const [isSystemsMenuOpen, setIsSystemsMenuOpen] = useState(false);
+  const [isSystemsMenuClosing, setIsSystemsMenuClosing] = useState(false);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -51,6 +52,39 @@ export const LandingPageRavekhPage = (): JSX.Element => {
     };
   }, []);
 
+  const isSystemsMenuVisible = isSystemsMenuOpen || isSystemsMenuClosing;
+
+  const openSystemsMenu = () => {
+    setIsSystemsMenuClosing(false);
+    setIsSystemsMenuOpen(true);
+  };
+
+  const closeSystemsMenu = () => {
+    if (!isSystemsMenuVisible) {
+      return;
+    }
+
+    setIsSystemsMenuOpen(false);
+    setIsSystemsMenuClosing(true);
+  };
+
+  useEffect(() => {
+    if (!isSystemsMenuVisible) {
+      return;
+    }
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closeSystemsMenu();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+    };
+  }, [isSystemsMenuVisible]);
+
   return (
     <HelmetProvider>
       <Helmet>
@@ -64,28 +98,36 @@ export const LandingPageRavekhPage = (): JSX.Element => {
         <button
           type="button"
           className="floating-systems-menu__trigger"
-          aria-label={isSystemsMenuOpen ? "Cerrar menú de sistemas" : "Abrir menú de sistemas"}
-          aria-expanded={isSystemsMenuOpen}
-          onClick={() => setIsSystemsMenuOpen((prev) => !prev)}
+          aria-label={isSystemsMenuVisible ? "Cerrar menú de sistemas" : "Abrir menú de sistemas"}
+          aria-expanded={isSystemsMenuVisible}
+          onClick={() => (isSystemsMenuVisible ? closeSystemsMenu() : openSystemsMenu())}
         >
           ☰
         </button>
 
-        {isSystemsMenuOpen && (
-          <nav className="floating-systems-menu" aria-label="Menú de sistemas">
+        {isSystemsMenuVisible && (
+          <nav
+            className={`floating-systems-menu ${isSystemsMenuOpen ? "floating-systems-menu--open" : "floating-systems-menu--close"}`}
+            aria-label="Menú de sistemas"
+            onAnimationEnd={() => {
+              if (!isSystemsMenuOpen) {
+                setIsSystemsMenuClosing(false);
+              }
+            }}
+          >
             <ul className="floating-systems-menu__list">
               <li>
-                <NavLink to="/v2/pos/products" onClick={() => setIsSystemsMenuOpen(false)}>
+                <NavLink to="/v2/login-punto-venta" onClick={closeSystemsMenu}>
                   POS V2
                 </NavLink>
               </li>
               <li>
-                <NavLink to="/v2/pos/health" onClick={() => setIsSystemsMenuOpen(false)}>
+                <NavLink to="/v2/pos/health" onClick={closeSystemsMenu}>
                   POS Health
                 </NavLink>
               </li>
               <li>
-                <NavLink to="/pos" onClick={() => setIsSystemsMenuOpen(false)}>
+                <NavLink to="/pos" onClick={closeSystemsMenu}>
                   Acceso POS
                 </NavLink>
               </li>

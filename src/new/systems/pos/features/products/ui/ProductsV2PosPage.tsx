@@ -1,10 +1,12 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../index";
 import { SaveManagedProductDto } from "../model/ManagedProduct";
+import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
 const DEFAULT_BUSINESS_ID = Number(import.meta.env.VITE_POS_BUSINESS_ID ?? 0);
 const TOKEN_KEY = "pos-v2-token";
+const BUSINESS_ID_KEY = "pos-v2-business-id";
 
 type ProductItemVm = {
   id: number;
@@ -13,7 +15,10 @@ type ProductItemVm = {
 };
 
 export const ProductsV2PosPage = () => {
-  const [businessId, setBusinessId] = useState(DEFAULT_BUSINESS_ID);
+  const [businessId, setBusinessId] = useState(() => {
+    const storedBusinessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY) ?? 0);
+    return storedBusinessId || DEFAULT_BUSINESS_ID;
+  });
   const [token, setToken] = useState(() => window.localStorage.getItem(TOKEN_KEY) ?? "");
   const [products, setProducts] = useState<ProductItemVm[]>([]);
   const [loading, setLoading] = useState(false);
@@ -50,6 +55,12 @@ export const ProductsV2PosPage = () => {
   useEffect(() => {
     window.localStorage.setItem(TOKEN_KEY, token);
   }, [token]);
+
+  useEffect(() => {
+    if (businessId) {
+      window.localStorage.setItem(BUSINESS_ID_KEY, String(businessId));
+    }
+  }, [businessId]);
 
   useEffect(() => {
     loadProducts();
@@ -116,11 +127,11 @@ export const ProductsV2PosPage = () => {
   };
 
   return (
-    <section style={{ padding: "1.5rem", maxWidth: "960px", margin: "0 auto" }}>
-      <header>
-        <h1>POS v2 · Products</h1>
-        <p>Implementación real API → Service → Page, aislada del legacy.</p>
-      </header>
+    <PosV2Shell
+      title="Productos"
+      subtitle="Experiencia UI del POS clásico, implementada en código nuevo."
+    >
+      <section style={{ display: "grid", gap: "1rem" }}>
 
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem", marginBottom: "1rem" }}>
         <label>
@@ -145,7 +156,7 @@ export const ProductsV2PosPage = () => {
       {loading ? <p>Cargando productos...</p> : null}
       {error ? <p role="alert">{error}</p> : null}
 
-      <h2>Listado</h2>
+      <h2 style={{ marginBottom: 0 }}>Listado</h2>
       <ul>
         {products.map((product) => (
           <li key={product.id} style={{ display: "flex", justifyContent: "space-between", gap: "1rem", marginBottom: "0.5rem" }}>
@@ -160,6 +171,7 @@ export const ProductsV2PosPage = () => {
           </li>
         ))}
       </ul>
-    </section>
+      </section>
+    </PosV2Shell>
   );
 };

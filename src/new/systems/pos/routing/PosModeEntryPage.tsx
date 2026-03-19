@@ -3,7 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { getStoredPosRoutingMode, PosRoutingMode, savePosRoutingMode } from "./PosRoutingMode";
 
 const LEGACY_ENTRY = "/MainSales";
-const MODERN_ENTRY = "/v2/pos/products";
+const MODERN_ENTRY = "/v2/login-punto-venta";
 
 const parseMode = (raw: string | null): PosRoutingMode | null => {
   if (raw === "legacy" || raw === "modern") {
