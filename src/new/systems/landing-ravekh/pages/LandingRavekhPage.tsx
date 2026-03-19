@@ -1,5 +1,6 @@
 import React, { useRef, useEffect, useState } from "react";
 import { Helmet, HelmetProvider } from "react-helmet-async";
+import { NavLink } from "react-router-dom";
 import "./LandingPage.css";
 import { Heero } from "../Hero/pages/Hero";
 import { ProcessOne } from "../Process-One/pages/ProcessOne";
@@ -15,6 +16,7 @@ import logoWhasa from "../assets/logo-whatsapp.svg";
 export const LandingPageRavekhPage = (): JSX.Element => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const [statusBarColor, setStatusBarColor] = useState<string>("#6D01D1");
+  const [isSystemsMenuOpen, setIsSystemsMenuOpen] = useState(false);
 
   useEffect(() => {
     const container = containerRef.current;
@@ -59,6 +61,38 @@ export const LandingPageRavekhPage = (): JSX.Element => {
         ref={containerRef}
         className="h-screen flex flex-col overflow-y-scroll snap-y snap-mandatory scrollbar-hidden"
       >
+        <button
+          type="button"
+          className="floating-systems-menu__trigger"
+          aria-label={isSystemsMenuOpen ? "Cerrar menú de sistemas" : "Abrir menú de sistemas"}
+          aria-expanded={isSystemsMenuOpen}
+          onClick={() => setIsSystemsMenuOpen((prev) => !prev)}
+        >
+          ☰
+        </button>
+
+        {isSystemsMenuOpen && (
+          <nav className="floating-systems-menu" aria-label="Menú de sistemas">
+            <ul className="floating-systems-menu__list">
+              <li>
+                <NavLink to="/v2/pos/products" onClick={() => setIsSystemsMenuOpen(false)}>
+                  POS V2
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/v2/pos/health" onClick={() => setIsSystemsMenuOpen(false)}>
+                  POS Health
+                </NavLink>
+              </li>
+              <li>
+                <NavLink to="/pos" onClick={() => setIsSystemsMenuOpen(false)}>
+                  Acceso POS
+                </NavLink>
+              </li>
+            </ul>
+          </nav>
+        )}
+
         <section
           className="h-screen snap-start w-full"
           data-endcolor="109,1,209"
