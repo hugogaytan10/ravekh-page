@@ -16,8 +16,20 @@ import { EditClient } from "../CatalogoWeb/PuntoVenta/Customers/EditClient";
 import { Employees } from "../CatalogoWeb/PuntoVenta/Employees/Employees";
 import { NewEmployee } from "../CatalogoWeb/PuntoVenta/Employees/NewEmployee";
 import { EditEmployee } from "../CatalogoWeb/PuntoVenta/Employees/EditEmployee";
+import { PosModeEntryPage } from "../../new/systems/pos/routing/PosModeEntryPage";
+import { ProductsV2PosPage } from "../../new/systems/pos/features/products/ui/ProductsV2PosPage";
+import { PosHealthV2Screen } from "../../new/systems/pos/features/health/ui/PosHealthV2Screen";
 
 export const NEW_PRIMARY_ROUTES = [
+  { path: "/pos", element: <PosModeEntryPage /> },
+  {
+    path: "/v2/pos",
+    children: [
+      { path: "", element: <ProductsV2PosPage /> },
+      { path: "products", element: <ProductsV2PosPage /> },
+      { path: "health", element: <PosHealthV2Screen /> },
+    ],
+  },
   { path: "/", element: <LandingRavekhPage /> },
   { path: "/RavekhPos", element: <RavekhPos /> },
   { path: "/login-punto-venta", element: <AuthPage /> },
