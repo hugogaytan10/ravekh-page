@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import contenido from "../../assets/contenido.webp";
 import "../../shared/styles/circleAnimated.css";
 import { AnimatedText } from "../../utilities/AnimatedText";
-export const Contenido = () => {
+export const ProcessTwo = () => {
   const secundario = useRef(null); // Referencia al div
   const [shouldAnimate, setShouldAnimate] = useState(true);
   useEffect(() => {

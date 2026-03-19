@@ -1,31 +1,33 @@
-import {HttpClient} from "../../../../core/api/HttpClient";
+/// <reference types="vite/client" />
+
+import { FetchHttpClient } from "../../../../core/api/FetchHttpClient";
 import { Contact, FormData } from "../model/Contact";
 import { IContactRepository } from "../interface/IContactRepository";
 
-
 export class ContactApi implements IContactRepository {
-  httpClient: HttpClient;
-  constructor() {
-    this.httpClient = new HttpClient();
+  private readonly httpClient: FetchHttpClient;
+
+  constructor(baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) || "") {
+    this.httpClient = new FetchHttpClient(baseUrl);
   }
 
   async senInfo(bodyForm: FormData): Promise<Contact> {
-    const response = await this.httpClient.request<Contact>({
+    const response = await this.httpClient.request<FormData>({
       method: "POST",
-      path: "contacto/sendinfo",
-      body: JSON.stringify({
+      path: "contacto/ravekhPage",
+      body: {
         nombre: bodyForm.nombre,
-        apellido: bodyForm.apellido,
         email: bodyForm.email,
         mensaje: bodyForm.mensaje,
-        lada: bodyForm.lada,
         telefono: bodyForm.telefono,
-      }),
+      },
     });
-    
-    return response;
+
+    return new Contact(
+      response.email,
+      response.nombre,
+      response.mensaje,
+      response.telefono,
+    );
   }
-
-
-
 }

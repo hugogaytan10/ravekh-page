@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState } from "react";
 import wireframe from "../../assets/wireframe.webp";
-import "../BannerSecundario/BannerSecundario.css";
+import "../../shared/styles/Process.css";
 import {AnimatedText} from "../../utilities/AnimatedText"
-export const Wireframe = () => {
+export const ProcessThree = () => {
   const secundario = useRef(null); // Referencia al div
   const followerRef = useRef(null); // Referencia al seguidor del cursor
   const [shouldAnimate, setShouldAnimate] = useState(true);

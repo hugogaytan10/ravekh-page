@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react";
-import "./Banner.css";
+import "../styles/Hero.css";
 import { AnimatedText } from "../../utilities/AnimatedText";
-export const Banner = () => {
+export const Heero = () => {
   const sectionRef = useRef(null);
   const [isInView, setIsInView] = useState(false);
   const [shouldAnimate, setShouldAnimate] = useState(true);

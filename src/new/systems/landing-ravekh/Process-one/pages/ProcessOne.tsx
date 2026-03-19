@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import "../../shared/styles/circleAnimated.css";
 import lupa from "../../assets/lupa.png";
 import { AnimatedText } from "../../utilities/AnimatedText"
-export const BannerSecundario = () => {
+export const ProcessOne = () => {
   const secundario = useRef(null); // Referencia al div
   const [shouldAnimate, setShouldAnimate] = useState(true);
 

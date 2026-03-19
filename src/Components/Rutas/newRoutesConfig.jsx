@@ -1,5 +1,5 @@
 import React from "react";
-import { LandingRavekhPage } from "../../new/systems/landing-ravekh/pages/LandingRavekhPage";
+import { LandingPageRavekhPage } from "../../new/systems/landing-ravekh/pages/LandingRavekhPage";
 import { RavekhPos } from "../RavekhPos/RavekhPos";
 import { AuthPage } from "../CatalogoWeb/PuntoVenta/Login/AuthPage";
 import { MainSales } from "../CatalogoWeb/PuntoVenta/Sales/MainSales";
@@ -30,7 +30,7 @@ export const NEW_PRIMARY_ROUTES = [
       { path: "health", element: <PosHealthV2Screen /> },
     ],
   },
-  { path: "/", element: <LandingRavekhPage /> },
+  { path: "/", element: <LandingPageRavekhPage /> },
   { path: "/RavekhPos", element: <RavekhPos /> },
   { path: "/login-punto-venta", element: <AuthPage /> },
   { path: "/MainSales", element: <MainSales /> },

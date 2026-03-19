@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import "../../shared/styles/Process.css";
 import { AnimatedText } from "../../utilities/AnimatedText";
 import rocket from '../../assets/rocket-outline.svg';
-export const Desarrollo = () => {
+export const ProcessFive = () => {
   const secundario = useRef(null); // Referencia al div
   const followerRef = useRef(null); // Referencia al seguidor del cursor
   const [shouldAnimate, setShouldAnimate] = useState(true);

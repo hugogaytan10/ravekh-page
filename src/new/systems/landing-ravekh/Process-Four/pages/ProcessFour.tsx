@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import design from "../../assets/design.webp";
 import "../../shared/styles/Process.css";
 import {AnimatedText } from "../../utilities/AnimatedText";
-export const Design = () => {
+export const ProcessFour = () => {
   const secundario = useRef(null); // Referencia al div
   const [shouldAnimate, setShouldAnimate] = useState(true);
   useEffect(() => {

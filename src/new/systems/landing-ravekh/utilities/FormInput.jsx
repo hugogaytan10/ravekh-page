@@ -9,6 +9,10 @@ export const FormInput = ({ type, placeholder, name, value, onChange, onBlur }) 
         setIsFocused(true);
     };
 
+    const handleBlur = (e) => {
+        setIsFocused(false);
+        onBlur(e);
+    }
  
     return (
         <div className={`google-input-container ${isFocused ? 'focused' : ''}`}>
@@ -21,12 +25,13 @@ export const FormInput = ({ type, placeholder, name, value, onChange, onBlur }) 
                 onChange={onChange}
                 onFocus={handleFocus}
                 className="google-input"
+                onBlur={handleBlur}
             />
         </div>
     );
 };
 
-GoogleInput.propTypes = {
+FormInput.propTypes = {
     type: PropTypes.string.isRequired,
     placeholder: PropTypes.string.isRequired,
     name: PropTypes.string.isRequired,
