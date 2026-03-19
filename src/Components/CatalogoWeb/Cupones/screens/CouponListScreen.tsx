@@ -9,6 +9,7 @@ import { getCouponId, parseValidDate } from "../shared/couponsUtils";
 import { getCouponsByBusiness } from "../Petitions";
 import { Coupon } from "../types";
 import { CouponIcon } from "../../../../assets/Cupones/icons/CouponIcon";
+import { ChevronBack } from "../../../../assets/POS/ChevronBack";
 
 export const CouponListScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -99,11 +100,6 @@ export const CouponListScreen: React.FC = () => {
   }, [coupons]);
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate("/cuponespv");
-      return;
-    }
-
     navigate("/cuponespv/cupones");
   };
 
@@ -203,7 +199,17 @@ export const CouponListScreen: React.FC = () => {
     <div className="min-h-full" style={{ backgroundColor: ThemeLight.backgrounColor }}>
       <div className="mx-auto max-w-xl px-5 py-5">
         <header className="mb-5 flex items-center justify-between gap-3">
-          <h1 className="text-[18px] font-semibold text-[#565656]">Lista de cupones</h1>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={handleBack}
+              className="rounded-full p-1 hover:bg-gray-200 transition"
+              aria-label="Regresar"
+            >
+              <ChevronBack width={24} height={24} />
+            </button>
+            <h1 className="text-[18px] font-semibold text-[#565656]">Lista de cupones</h1>
+          </div>
           <button
             type="button"
             onClick={() => loadCoupons(true)}

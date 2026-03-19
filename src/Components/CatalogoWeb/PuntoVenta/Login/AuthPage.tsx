@@ -1,10 +1,11 @@
-import React, { useContext, useEffect, useState, useRef } from "react";
+import React, { useCallback, useContext, useEffect, useRef, useState } from "react";
 import "./Login.css";
 //import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { loginToServer, signUpToServer } from "./Peticiones";
 import { jwtDecode } from "jwt-decode";
 import { AppContext } from "../../Context/AppContext";
+import { persistCuponesAuthSession } from "../../../../coupons/services/authSession";
 interface DecodedToken {
   name: string;
   email: string;
@@ -13,6 +14,29 @@ interface DecodedToken {
 export const AuthPage: React.FC = () => {
   const context = useContext(AppContext);
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = (location.state as { redirectTo?: string } | null)?.redirectTo;
+
+  const navigateAfterAuth = useCallback(() => {
+    if (typeof redirectTo === "string" && redirectTo.startsWith("/")) {
+      navigate(redirectTo, { replace: true });
+      return;
+    }
+
+    navigate("/MainSales");
+  }, [navigate, redirectTo]);
+
+  const syncCouponsSession = (payload: unknown) => {
+    if (!payload || typeof payload !== "object") {
+      return;
+    }
+
+    try {
+      persistCuponesAuthSession(payload as Record<string, unknown>);
+    } catch (_error) {
+      // El login POS puede no incluir todos los campos esperados por cupones.
+    }
+  };
   // variables para el control del login y errores
   const [errorUsuario, setErrorUsuario] = useState("");
   const [errorPassword, setErrorPassword] = useState("");
@@ -110,7 +134,8 @@ export const AuthPage: React.FC = () => {
       localStorage.setItem("user", JSON.stringify({ email, password }));
       context.setUser(dataLogin);
       context.setShowNavBarBottom(true);
-      navigate("/MainSales");
+      syncCouponsSession(dataLogin);
+      navigateAfterAuth();
     
     }
   };
@@ -152,11 +177,12 @@ export const AuthPage: React.FC = () => {
         } else {
           context.setUser(data);
           context.setShowNavBarBottom(true);
-          navigate("/MainSales");
+          syncCouponsSession(data);
+          navigateAfterAuth();
         }
       });
     }
-  }, []);
+  }, [context, navigateAfterAuth]);
   return (
     <div className="w-full h-screen flex justify-center items-center">
       <div className="container" id="container" ref={containerRef}>
@@ -244,7 +270,7 @@ export const AuthPage: React.FC = () => {
                 {errorPassword}
               </span>
             )}
-            <a href="#" className="self-end text-xs mt-2 mb-2">
+            <a className="self-end text-xs mt-2 mb-2" onClick={() => {navigate("/reset-password-punto-venta")}}>
               Olvidaste tu contraseña?
             </a>
             <button type="submit" className="btn-login mt-2">Iniciar Sesión</button>

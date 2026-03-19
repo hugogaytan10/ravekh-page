@@ -151,6 +151,8 @@ import { loginToServer } from "../CatalogoWeb/PuntoVenta/Login/Peticiones";
 import { MainCoupons, VisitsNavigator, CouponsNavigator } from "../CatalogoWeb/Cupones";
 import CuponesEdit from "../CatalogoWeb/Cupones/screens/CuponesEdit";
 import { VisitHistoryPage } from "../../coupons/pages/VisitHistoryPage";
+import RecoverPasswordPage from "../../coupons/pages/ResetPasswordPage";
+import { PasswordRecovery } from "../CatalogoWeb/PuntoVenta/Login/ResetPasswordPuntoDeVenta";
 export const Rutas = () => {
   const navigate = useNavigate(); // Hook de react-router-dom para navegar entre rutas
   //contexto
@@ -433,6 +435,7 @@ export const Rutas = () => {
 
     const hiddenRoutes = [
       "/login-punto-venta",
+      "/reset-password-punto-venta",
       "/MainSales",
       "/MainCart",
       "/DiscountScreen",
@@ -495,6 +498,7 @@ export const Rutas = () => {
       "/cupones/home",
       "/cupones/login",
       "/cupones/registro",
+      "/cupones/reset-password",
       "/cupones/ajustes",
       "/cupones/eliminar-cuenta",
       "/cuponespv/visitas",
@@ -1004,6 +1008,7 @@ export const Rutas = () => {
           </Route>
           <Route path="/cupones/visitas" element={<VisitHistoryPage />} />
           <Route path="/cupones/registro" element={<RegisterPage />} />
+          <Route path="/cupones/reset-password" element={<RecoverPasswordPage />} />
           <Route path="/cuponespv/editar/:CouponId" element={<CuponesEdit />} />
           <Route path="cupones/editar/:CouponId" element={<CuponesEdit />} />
           <Route path="/cupones/home" element={<HomePage />} />
@@ -1043,6 +1048,7 @@ export const Rutas = () => {
           <Route path="/catalogo/pedido-info" element={<Pedido view="info" />} />
           {/* RUTAS PARA EL PUNTO DE VENTA */}
           <Route path="/login-punto-venta" element={<AuthPage />} />
+          <Route path="/reset-password-punto-venta" element={<PasswordRecovery />} />
           <Route path="/create-store" element={<InitialCustomizeApp />} />
           <Route path="/MainSales" element={<MainSales />} />
           <Route path="/MainCart" element={<MainCart />} />

@@ -255,6 +255,32 @@ const registerCupones = async (payload: RegisterPayload): Promise<RegisterRespon
   return (await parseJsonOrNull<RegisterResponse>(response)) ?? {};
 };
 
+const resetPassword = async (body: { Email: string; Password: string }) => {
+  const url = `${URL}resetpassword`;
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  console.log("Reset Password Request Body:", body);
+  console.log("Reset Password Response:", response);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      data?.Message ||
+        data?.message ||
+        data?.error ||
+        "No se pudo actualizar la contraseña."
+    );
+  }
+
+  return data;
+};
+
 export {
   claimCoupon,
   createCoupon,
@@ -270,6 +296,7 @@ export {
   redeemCouponByUser,
   registerCupones,
   updateCoupon,
+  resetPassword,
 };
 
 export type { ClaimCouponPayload, Coupon, CouponHasUser, CreateCouponPayload, LoginPayload, LoginResponse, RegisterPayload, RegisterResponse };
