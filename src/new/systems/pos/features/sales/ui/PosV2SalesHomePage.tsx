@@ -39,6 +39,25 @@ const TOKEN_KEY = "pos-v2-token";
 const BUSINESS_ID_KEY = "pos-v2-business-id";
 const TABLE_OPTIONS = ["Mesa 1", "Mesa 2", "Mesa 3", "Mesa 4", "Mesa 5", "Para llevar"];
 
+const toAbsoluteImageUrl = (image?: string | null): string | undefined => {
+  if (!image) return undefined;
+
+  const candidate = image.trim();
+  if (!candidate) return undefined;
+
+  if (/^https?:\/\//i.test(candidate) || candidate.startsWith("data:")) {
+    return candidate;
+  }
+
+  const normalizedPath = candidate.startsWith("/") ? candidate.slice(1) : candidate;
+
+  try {
+    return new URL(normalizedPath, API_BASE_URL).toString();
+  } catch {
+    return undefined;
+  }
+};
+
 export const PosV2SalesHomePage = () => {
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Todas");
@@ -79,15 +98,15 @@ export const PosV2SalesHomePage = () => {
           id: number;
           name: string;
           price: number;
-          categoryName?: string;
-          image?: string;
-          imageUrl?: string;
+          categoryName?: string | null;
+          image?: string | null;
+          images?: string[];
         }) => ({
           id: item.id,
           name: item.name,
           price: item.price,
-          category: item.categoryName || "General",
-          image: item.image || item.imageUrl,
+          category: item.categoryName?.trim() || "General",
+          image: toAbsoluteImageUrl(item.image || item.images?.find(Boolean)),
         }));
         setProducts(mapped);
       })
@@ -264,11 +283,7 @@ export const PosV2SalesHomePage = () => {
         </div>
 
         <section className={`pos-v2-sales-home__catalog ${mobileStep === "catalog" ? "is-mobile-active" : ""}`}>
-          <div className="pos-v2-sales-home__legacy-ad">
-            <button type="button" aria-label="Publicidad anterior">‹</button>
-            <strong>Publicidad</strong>
-            <button type="button" aria-label="Siguiente publicidad">›</button>
-          </div>
+       
 
           <div className="pos-v2-sales-home__toolbar">
             <div className="pos-v2-sales-home__search">
@@ -311,7 +326,13 @@ export const PosV2SalesHomePage = () => {
           <div className={`pos-v2-sales-home__products ${isGrid ? "is-grid" : "is-list"}`}>
             {filteredProducts.map((product) => (
               <article key={product.id} className="pos-v2-sales-home__product-card">
-                {product.image ? <img src={product.image} alt={product.name} className="pos-v2-sales-home__product-image" /> : null}
+                {product.image ? (
+                  <img src={product.image} alt={product.name} className="pos-v2-sales-home__product-image" />
+                ) : (
+                  <div className="pos-v2-sales-home__product-image-placeholder" aria-hidden="true">
+                    {product.name.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
                 <p className="pos-v2-sales-home__product-category">{product.category}</p>
                 <h3>{product.name}</h3>
                 <strong>${product.price.toFixed(2)}</strong>
@@ -320,11 +341,15 @@ export const PosV2SalesHomePage = () => {
                 </button>
               </article>
             ))}
+
+            {!loadingProducts && !productsError && filteredProducts.length === 0 ? (
+              <p className="pos-v2-sales-home__empty">No encontramos productos para esta categoría.</p>
+            ) : null}
           </div>
         </section>
 
         <aside className={`pos-v2-sales-home__cart-panel ${mobileStep === "cart" || mobileStep === "checkout" ? "is-mobile-active" : ""}`}>
-          <h2>Carrito · {selectedTable}</h2>
+          <h2>Mesa · {selectedTable}</h2>
 
           <div className={`pos-v2-sales-home__cart-content ${mobileStep === "cart" ? "is-mobile-active" : ""}`}>
             {cartItems.length === 0 ? <p className="pos-v2-sales-home__empty">No hay productos agregados.</p> : null}
@@ -447,7 +472,7 @@ export const PosV2SalesHomePage = () => {
         <button type="button" className="pos-v2-sales-home__mobile-order-resume" onClick={() => setMobileStep("cart")}>
           <span>{totals.items} prod.</span>
           <strong>${totals.total.toFixed(2)}</strong>
-          <em>Ver pedido</em>
+          <em>Ver mesa</em>
         </button>
       ) : null}
 
@@ -470,8 +495,7 @@ export const PosV2SalesHomePage = () => {
       </div>
 
       <div className="pos-v2-sales-home__mobile-legacy-dock">
-        <button type="button" onClick={() => setMobileStep("cart")}>Pedidos</button>
-        <button type="button" onClick={() => setIsMobileTablesOpen(true)}>Mesas</button>
+                <button type="button" onClick={() => setIsMobileTablesOpen(true)}>Mesas</button>
         <button type="button" className="is-summary" onClick={() => setMobileStep("cart")}>
           {totals.items.toFixed(2)}x Items = ${totals.total.toFixed(2)}
         </button>
