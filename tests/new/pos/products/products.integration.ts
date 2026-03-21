@@ -5,9 +5,10 @@ import { ProductsManagementPage } from "../../../../src/new/systems/pos/features
 
 export async function run(): Promise<void> {
   const calls: string[] = [];
+  let updateBody: unknown;
 
   const httpClient = {
-    request: async ({ method, path }: { method: string; path: string }) => {
+    request: async ({ method, path, body }: { method: string; path: string; body?: unknown }) => {
       calls.push(`${method} ${path}`);
 
       if (method === "GET" && path === "products/business/7") {
@@ -19,6 +20,11 @@ export async function run(): Promise<void> {
 
       if (method === "POST" && path === "products") {
         return undefined;
+      }
+
+      if (method === "PUT" && path === "products/9") {
+        updateBody = body;
+        return null;
       }
 
       if (method === "PUT" && path === "products/available/8") {
@@ -52,8 +58,43 @@ export async function run(): Promise<void> {
     "token",
   );
 
+  const updated = await service.saveProduct(
+    {
+      id: 9,
+      businessId: 7,
+      name: "Té chai",
+      description: "Bebida caliente",
+      forSale: true,
+      showInStore: true,
+      available: true,
+      variants: [{ description: "Grande", price: 42 }],
+      images: [],
+    },
+    "token",
+  );
+
   await page.archiveProduct(8, "token");
 
   assert.deepEqual(saved, { id: 0, name: "Té", available: true });
-  assert.deepEqual(calls, ["GET products/business/7", "POST products", "PUT products/available/8"]);
+  assert.equal(updated.id, 9, "fallback de update debe conservar id al no recibir payload");
+  assert.deepEqual(updateBody, {
+    Product: {
+      Id: 9,
+      Business_Id: 7,
+      Category_Id: undefined,
+      Name: "Té chai",
+      Description: "Bebida caliente",
+      ForSale: true,
+      ShowInStore: true,
+      Available: true,
+      Image: undefined,
+      Images: [],
+      Barcode: undefined,
+      Price: undefined,
+      CostPerItem: undefined,
+      Stock: undefined,
+    },
+    Variants: [{ description: "Grande", price: 42 }],
+  });
+  assert.deepEqual(calls, ["GET products/business/7", "POST products", "PUT products/9", "PUT products/available/8"]);
 }

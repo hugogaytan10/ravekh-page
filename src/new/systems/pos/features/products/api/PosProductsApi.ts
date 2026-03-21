@@ -82,12 +82,19 @@ export class PosProductsApi implements IProductsRepository {
       throw new Error("Product id is required for updates.");
     }
 
-    const updated = await this.httpClient.request<ProductResponse>({
+    const updated = await this.httpClient.request<ProductResponse | null>({
       method: "PUT",
       path: `products/${payload.id}`,
       token,
-      body: this.toLegacy(payload),
+      body: {
+        Product: this.toLegacy(payload),
+        Variants: payload.variants ?? null,
+      },
     });
+
+    if (!updated) {
+      return this.toDomain(this.toLegacy(payload));
+    }
 
     return this.toDomain(updated);
   }

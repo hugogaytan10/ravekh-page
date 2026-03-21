@@ -9,6 +9,7 @@ const outDir = resolve(projectRoot, ".tmp-modern-tests");
 const suites = [
   { name: "unit-products-service", entry: "tests/new/pos/products/products.service.unit.ts" },
   { name: "integration-products-api-service-page", entry: "tests/new/pos/products/products.integration.ts" },
+  { name: "integration-finance-api", entry: "tests/new/pos/finance/finance.api.integration.ts" },
   { name: "decoupling-no-legacy-imports", entry: "tests/new/architecture/decoupling.no-legacy-imports.ts" },
 ];
 

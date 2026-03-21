@@ -1,0 +1,8 @@
+.pos-v2-more { display:grid; gap:1rem; }
+.pos-v2-more header h2 { margin:0; }
+.pos-v2-more header p { margin:.35rem 0 0; color:#6b7280; }
+.pos-v2-more__grid { display:grid; gap:.75rem; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); }
+.pos-v2-more__grid article, .pos-v2-more__actions article { background:#fff; border:1px solid #e5e7eb; border-radius:.85rem; padding:.85rem; }
+.pos-v2-more__grid h3, .pos-v2-more__actions h3 { margin:0 0 .4rem; }
+.pos-v2-more__grid p, .pos-v2-more__actions p { margin:0 0 .75rem; color:#4b5563; }
+.pos-v2-more__grid a, .pos-v2-more__actions button { display:inline-flex; align-items:center; justify-content:center; border:0; background:#6d01d1; color:#fff; border-radius:.6rem; padding:.5rem .75rem; text-decoration:none; font-weight:600; cursor:pointer; }

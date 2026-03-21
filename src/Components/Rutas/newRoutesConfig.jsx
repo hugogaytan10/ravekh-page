@@ -21,8 +21,10 @@ import { PosModeEntryPage } from "../../new/systems/pos/routing/PosModeEntryPage
 import { ProductsV2PosPage } from "../../new/systems/pos/features/products/ui/ProductsV2PosPage";
 import { PosHealthV2Screen } from "../../new/systems/pos/features/health/ui/PosHealthV2Screen";
 import { PosV2LoginPage } from "../../new/systems/pos/features/auth/ui/PosV2LoginPage";
-import { PosV2PlaceholderPage } from "../../new/systems/pos/features/shell/ui/PosV2PlaceholderPage";
 import { PosV2SalesHomePage } from "../../new/systems/pos/features/sales/ui/PosV2SalesHomePage";
+import { PosV2FinancePage } from "../../new/systems/pos/features/finance/ui/PosV2FinancePage";
+import { PosV2ReportingPage } from "../../new/systems/pos/features/reporting/ui/PosV2ReportingPage";
+import { PosV2MorePage } from "../../new/systems/pos/features/more/ui/PosV2MorePage";
 import { PosV2RequireAuth } from "../../new/systems/pos/routing/PosV2RequireAuth";
 
 export const NEW_PRIMARY_ROUTES = [
@@ -30,9 +32,9 @@ export const NEW_PRIMARY_ROUTES = [
   { path: "/v2/login-punto-venta", element: <PosV2LoginPage /> },
   { path: "/v2/MainSales", element: <PosV2RequireAuth><PosV2SalesHomePage /></PosV2RequireAuth> },
   { path: "/v2/main-products/items", element: <PosV2RequireAuth><ProductsV2PosPage /></PosV2RequireAuth> },
-  { path: "/v2/MainFinances", element: <PosV2RequireAuth><PosV2PlaceholderPage title="Finanzas" description="Pantalla de finanzas en migración al stack nuevo." /></PosV2RequireAuth> },
-  { path: "/v2/dashboard", element: <PosV2RequireAuth><PosV2PlaceholderPage title="Reportes" description="Pantalla de reportes en migración al stack nuevo." /></PosV2RequireAuth> },
-  { path: "/v2/more", element: <PosV2RequireAuth><PosV2PlaceholderPage title="Más" description="Configuraciones y accesos adicionales del POS v2." /></PosV2RequireAuth> },
+  { path: "/v2/MainFinances", element: <PosV2RequireAuth><PosV2FinancePage /></PosV2RequireAuth> },
+  { path: "/v2/dashboard", element: <PosV2RequireAuth><PosV2ReportingPage /></PosV2RequireAuth> },
+  { path: "/v2/more", element: <PosV2RequireAuth><PosV2MorePage /></PosV2RequireAuth> },
   { path: "/v2/health", element: <PosV2RequireAuth><PosHealthV2Screen /></PosV2RequireAuth> },
   // Compatibilidad temporal de rutas /v2/pos/*
   { path: "/v2/pos", element: <Navigate to="/v2/login-punto-venta" replace /> },
