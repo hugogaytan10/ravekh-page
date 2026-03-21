@@ -1,4 +1,5 @@
 import { FinanceTrackingService } from "../services/FinanceTrackingService";
+import { CreateFinanceEntryInput, FinanceEntry } from "../model/FinanceEntry";
 
 export type FinanceOverviewViewModel = {
   monthIncome: number;
@@ -6,6 +7,11 @@ export type FinanceOverviewViewModel = {
   monthBalance: number;
   todayIncome: number;
   todayExpenses: number;
+};
+
+export type FinanceMonthMovementViewModel = {
+  income: FinanceEntry[];
+  expenses: FinanceEntry[];
 };
 
 export class FinanceTrackingPage {
@@ -21,5 +27,17 @@ export class FinanceTrackingPage {
       todayIncome: overview.todayIncome,
       todayExpenses: overview.todayExpenses,
     };
+  }
+
+  async loadMonthMovement(businessId: number, month: number, token: string): Promise<FinanceMonthMovementViewModel> {
+    return this.service.getMonthMovement(businessId, month, token);
+  }
+
+  async createIncome(input: CreateFinanceEntryInput, token: string): Promise<FinanceEntry> {
+    return this.service.registerIncome(input, token);
+  }
+
+  async createExpense(input: CreateFinanceEntryInput, token: string): Promise<FinanceEntry> {
+    return this.service.registerExpense(input, token);
   }
 }
