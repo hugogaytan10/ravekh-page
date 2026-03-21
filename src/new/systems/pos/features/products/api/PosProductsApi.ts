@@ -10,7 +10,7 @@ type ProductResponse = {
   Description?: string;
   ForSale?: boolean;
   ShowInStore?: boolean;
-  Available?: boolean;
+  Available?: boolean | number | string | null;
   Image?: string;
   Images?: string[];
   Barcode?: string | null;
@@ -92,6 +92,13 @@ export class PosProductsApi implements IProductsRepository {
     return this.toDomain(updated);
   }
 
+
+  private toAvailabilityFlag(value: ProductResponse["Available"]): boolean {
+    if (value === null || value === false || value === 0 || value === "0") return false;
+    if (value === true || value === 1 || value === "1") return true;
+    return value === undefined ? true : Boolean(value);
+  }
+
   async archive(productId: number, token: string): Promise<void> {
     await this.httpClient.request<void>({
       method: "PUT",
@@ -109,7 +116,7 @@ export class PosProductsApi implements IProductsRepository {
       product.Description ?? "",
       product.ForSale ?? true,
       product.ShowInStore ?? true,
-      product.Available ?? true,
+      this.toAvailabilityFlag(product.Available),
       product.Category_Id ?? null,
       product.Price ?? null,
       product.CostPerItem ?? null,

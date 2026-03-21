@@ -45,6 +45,14 @@ const toImageUrl = (image?: string | null): string | null => {
   }
 };
 
+const toDataUrl = (file: File): Promise<string> =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result ?? ""));
+    reader.onerror = () => reject(new Error("No se pudo leer la imagen seleccionada."));
+    reader.readAsDataURL(file);
+  });
+
 const createVariantDraft = (): VariantFormVm => ({
   key: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
   description: "",
@@ -55,11 +63,11 @@ const createVariantDraft = (): VariantFormVm => ({
 });
 
 export const ProductsV2PosPage = () => {
-  const [businessId, setBusinessId] = useState(() => {
+  const [businessId] = useState(() => {
     const storedBusinessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY) ?? 0);
     return storedBusinessId || DEFAULT_BUSINESS_ID;
   });
-  const [token, setToken] = useState(() => window.localStorage.getItem(TOKEN_KEY) ?? "");
+  const [token] = useState(() => window.localStorage.getItem(TOKEN_KEY) ?? "");
   const [products, setProducts] = useState<ProductItemVm[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -69,17 +77,18 @@ export const ProductsV2PosPage = () => {
   const [showArchived, setShowArchived] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("0");
   const [stock, setStock] = useState("0");
-  const [image, setImage] = useState("");
-  const [extraImages, setExtraImages] = useState("");
   const [forSale, setForSale] = useState(true);
   const [showInStore, setShowInStore] = useState(true);
   const [available, setAvailable] = useState(true);
   const [variants, setVariants] = useState<VariantFormVm[]>([]);
+  const [storedImages, setStoredImages] = useState<string[]>([]);
+  const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
 
   const service = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
@@ -92,12 +101,24 @@ export const ProductsV2PosPage = () => {
     setDescription("");
     setPrice("0");
     setStock("0");
-    setImage("");
-    setExtraImages("");
     setForSale(true);
     setShowInStore(true);
     setAvailable(true);
     setVariants([]);
+    setStoredImages([]);
+    setSelectedImageFiles([]);
+  };
+
+  const closeFormModal = () => {
+    if (saving) return;
+    setIsFormOpen(false);
+    resetForm();
+  };
+
+  const openCreateModal = () => {
+    resetForm();
+    setError(null);
+    setIsFormOpen(true);
   };
 
   const loadProducts = async () => {
@@ -108,36 +129,27 @@ export const ProductsV2PosPage = () => {
 
     try {
       const list = await service.listProducts(businessId, token);
-      const mapped: ProductItemVm[] = list.map((product) => ({
-        id: product.id,
-        name: product.name,
-        description: product.description,
-        available: product.available,
-        forSale: product.forSale,
-        showInStore: product.showInStore,
-        price: product.price,
-        stock: product.stock,
-        image: product.image,
-        images: product.images,
-        variants: product.variants,
-      }));
-      setProducts(mapped);
+      setProducts(
+        list.map((product) => ({
+          id: product.id,
+          name: product.name,
+          description: product.description,
+          available: product.available,
+          forSale: product.forSale,
+          showInStore: product.showInStore,
+          price: product.price,
+          stock: product.stock,
+          image: product.image,
+          images: product.images,
+          variants: product.variants,
+        })),
+      );
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo cargar productos v2.");
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    window.localStorage.setItem(TOKEN_KEY, token);
-  }, [token]);
-
-  useEffect(() => {
-    if (businessId) {
-      window.localStorage.setItem(BUSINESS_ID_KEY, String(businessId));
-    }
-  }, [businessId]);
 
   useEffect(() => {
     loadProducts();
@@ -151,11 +163,7 @@ export const ProductsV2PosPage = () => {
       .filter((product) => {
         if (!normalizedSearch) return true;
 
-        return (
-          product.name.toLowerCase().includes(normalizedSearch) ||
-          product.description.toLowerCase().includes(normalizedSearch) ||
-          String(product.id).includes(normalizedSearch)
-        );
+        return product.name.toLowerCase().includes(normalizedSearch) || product.description.toLowerCase().includes(normalizedSearch);
       });
   }, [products, search, showArchived]);
 
@@ -180,6 +188,22 @@ export const ProductsV2PosPage = () => {
       }));
   };
 
+  const formImagePreviews = useMemo(() => {
+    const remote = storedImages.map((img) => toImageUrl(img)).filter(Boolean) as string[];
+    const local = selectedImageFiles.map((file) => URL.createObjectURL(file));
+    return [...remote, ...local];
+  }, [storedImages, selectedImageFiles]);
+
+  useEffect(() => {
+    return () => {
+      formImagePreviews.forEach((src) => {
+        if (src.startsWith("blob:")) {
+          URL.revokeObjectURL(src);
+        }
+      });
+    };
+  }, [formImagePreviews]);
+
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
@@ -190,6 +214,11 @@ export const ProductsV2PosPage = () => {
 
     if (!token) {
       setError("Token es obligatorio para operar POS v2.");
+      return;
+    }
+
+    if (!name.trim()) {
+      setError("El nombre del producto es obligatorio.");
       return;
     }
 
@@ -206,35 +235,33 @@ export const ProductsV2PosPage = () => {
       return;
     }
 
-    const parsedExtraImages = extraImages
-      .split(",")
-      .map((candidate) => candidate.trim())
-      .filter(Boolean);
-
-    const payload: SaveManagedProductDto = {
-      id: editingId ?? undefined,
-      businessId,
-      name,
-      description,
-      forSale,
-      showInStore,
-      available,
-      price: parsedPrice,
-      stock: parsedStock,
-      image: image.trim() || undefined,
-      images: parsedExtraImages,
-      costPerItem: null,
-      barcode: null,
-      categoryId: null,
-      variants: mappedVariants(),
-    };
-
     setSaving(true);
     setError(null);
 
     try {
+      const selectedImages = await Promise.all(selectedImageFiles.map((file) => toDataUrl(file)));
+      const allImages = Array.from(new Set([...storedImages, ...selectedImages].filter(Boolean)));
+
+      const payload: SaveManagedProductDto = {
+        id: editingId ?? undefined,
+        businessId,
+        name: name.trim(),
+        description,
+        forSale,
+        showInStore,
+        available,
+        price: parsedPrice,
+        stock: parsedStock,
+        image: allImages[0] || undefined,
+        images: allImages,
+        costPerItem: null,
+        barcode: null,
+        categoryId: null,
+        variants: mappedVariants(),
+      };
+
       await service.saveProduct(payload, token);
-      resetForm();
+      closeFormModal();
       await loadProducts();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo guardar producto.");
@@ -263,8 +290,8 @@ export const ProductsV2PosPage = () => {
       setForSale(detail.forSale);
       setShowInStore(detail.showInStore);
       setAvailable(detail.available);
-      setImage(detail.image ?? "");
-      setExtraImages(detail.images.join(", "));
+      setStoredImages(Array.from(new Set([detail.image, ...detail.images].filter(Boolean) as string[])));
+      setSelectedImageFiles([]);
       setVariants(
         detail.variants.map((variant, index) => ({
           key: `${detail.id}-${index}`,
@@ -276,6 +303,7 @@ export const ProductsV2PosPage = () => {
         })),
       );
       setError(null);
+      setIsFormOpen(true);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo cargar el producto para edición.");
     }
@@ -287,13 +315,16 @@ export const ProductsV2PosPage = () => {
       return;
     }
 
+    const accepted = window.confirm("¿Seguro que deseas eliminar este producto? Esta acción lo marcará como no disponible.");
+    if (!accepted) return;
+
     setArchivingId(productId);
     setError(null);
 
     try {
       await service.archiveProduct(productId, token);
       if (editingId === productId) {
-        resetForm();
+        closeFormModal();
       }
       await loadProducts();
     } catch (cause) {
@@ -303,12 +334,17 @@ export const ProductsV2PosPage = () => {
     }
   };
 
-  const updateVariant = (key: string, field: keyof VariantFormVm, value: string) => {
-    setVariants((current) => current.map((variant) => (variant.key === key ? { ...variant, [field]: value } : variant)));
+  const handleImageInput = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
+    if (files.length === 0) return;
+    setSelectedImageFiles((current) => [...current, ...files]);
+    event.target.value = "";
   };
 
-  const removeVariant = (key: string) => {
-    setVariants((current) => current.filter((variant) => variant.key !== key));
+  const removeVariant = (key: string) => setVariants((current) => current.filter((variant) => variant.key !== key));
+
+  const updateVariant = (key: string, field: keyof VariantFormVm, value: string) => {
+    setVariants((current) => current.map((variant) => (variant.key === key ? { ...variant, [field]: value } : variant)));
   };
 
   return (
@@ -317,259 +353,190 @@ export const ProductsV2PosPage = () => {
         <header className="pos-v2-products__header">
           <div>
             <h2>Gestión de productos</h2>
-            <p>Crea, edita, archiva y administra variantes con una interfaz moderna y responsiva.</p>
+            <p>Alta y edición en modal, manteniendo la vista del catálogo limpia y rápida para POS.</p>
           </div>
 
-          <button type="button" className="pos-v2-products__refresh" onClick={loadProducts} disabled={loading || !token || !businessId}>
-            {loading ? "Actualizando..." : "Actualizar"}
-          </button>
+          <div className="pos-v2-products__header-actions">
+            <button type="button" className="pos-v2-products__secondary" onClick={openCreateModal}>+ Nuevo</button>
+            <button type="button" className="pos-v2-products__refresh" onClick={loadProducts} disabled={loading || !token || !businessId}>
+              {loading ? "Actualizando..." : "Actualizar"}
+            </button>
+          </div>
         </header>
 
+        {error ? <p className="pos-v2-products__error" role="alert">{error}</p> : null}
+
         <section className="pos-v2-products__stats" aria-label="Resumen de productos">
-          <article>
-            <span>Total</span>
-            <strong>{stats.total}</strong>
-          </article>
-          <article>
-            <span>Activos</span>
-            <strong>{stats.active}</strong>
-          </article>
-          <article>
-            <span>Archivados</span>
-            <strong>{stats.archived}</strong>
-          </article>
-          <article>
-            <span>Con variantes</span>
-            <strong>{stats.withVariants}</strong>
-          </article>
+          <article><span>Total</span><strong>{stats.total}</strong></article>
+          <article><span>Activos</span><strong>{stats.active}</strong></article>
+          <article><span>Archivados</span><strong>{stats.archived}</strong></article>
+          <article><span>Con variantes</span><strong>{stats.withVariants}</strong></article>
         </section>
 
-        <section className="pos-v2-products__layout">
-          <form className="pos-v2-products__form" onSubmit={handleSubmit}>
-            <h3>{editingId ? `Editar #${editingId}` : "Nuevo producto"}</h3>
+        <section className="pos-v2-products__catalog" aria-label="Listado de productos">
+          <div className="pos-v2-products__catalog-header">
+            <h3>Listado</h3>
 
-            <div className="pos-v2-products__field-grid">
-              <label>
-                Business ID
-                <input type="number" value={businessId || ""} onChange={(event) => setBusinessId(Number(event.target.value))} />
+            <div className="pos-v2-products__controls">
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nombre o descripción" aria-label="Buscar productos" />
+
+              <label className="pos-v2-products__switch" aria-label="Mostrar archivados">
+                <input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} />
+                <span className="pos-v2-products__switch-ui" aria-hidden="true" />
+                <span>Mostrar archivados</span>
               </label>
 
-              <label>
-                Token
-                <input value={token} onChange={(event) => setToken(event.target.value)} placeholder="JWT token" />
-              </label>
-            </div>
-
-            <label>
-              Nombre
-              <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej. Hamburguesa clásica" required />
-            </label>
-
-            <label>
-              Descripción
-              <textarea
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Describe el producto"
-                rows={3}
-                required
-              />
-            </label>
-
-            <div className="pos-v2-products__field-grid">
-              <label>
-                Precio
-                <input type="number" min="0" step="0.01" value={price} onChange={(event) => setPrice(event.target.value)} required />
-              </label>
-
-              <label>
-                Stock
-                <input type="number" min="0" step="1" value={stock} onChange={(event) => setStock(event.target.value)} required />
-              </label>
-            </div>
-
-            <div className="pos-v2-products__field-grid">
-              <label>
-                Imagen principal (URL)
-                <input value={image} onChange={(event) => setImage(event.target.value)} placeholder="https://..." />
-              </label>
-
-              <label>
-                Imágenes extra (URL, separadas por coma)
-                <input
-                  value={extraImages}
-                  onChange={(event) => setExtraImages(event.target.value)}
-                  placeholder="https://img1, https://img2"
-                />
-              </label>
-            </div>
-
-            <div className="pos-v2-products__toggles">
-              <label className="pos-v2-products__toggle-card">
-                <input type="checkbox" checked={forSale} onChange={(event) => setForSale(event.target.checked)} />
-                <span>A la venta</span>
-              </label>
-              <label className="pos-v2-products__toggle-card">
-                <input type="checkbox" checked={showInStore} onChange={(event) => setShowInStore(event.target.checked)} />
-                <span>Mostrar en tienda</span>
-              </label>
-              <label className="pos-v2-products__toggle-card">
-                <input type="checkbox" checked={available} onChange={(event) => setAvailable(event.target.checked)} />
-                <span>Disponible</span>
-              </label>
-            </div>
-
-            <div className="pos-v2-products__variants">
-              <div className="pos-v2-products__variants-head">
-                <h4>Variantes</h4>
-                <button type="button" onClick={() => setVariants((current) => [...current, createVariantDraft()])}>
-                  + Agregar variante
-                </button>
+              <div className="pos-v2-products__view-toggle" role="group" aria-label="Cambiar vista">
+                <button type="button" className={viewMode === "grid" ? "is-active" : ""} onClick={() => setViewMode("grid")}>Cuadrícula</button>
+                <button type="button" className={viewMode === "list" ? "is-active" : ""} onClick={() => setViewMode("list")}>Lista</button>
               </div>
+            </div>
+          </div>
 
-              {variants.length === 0 ? <p className="pos-v2-products__variants-empty">Sin variantes por ahora.</p> : null}
-
-              {variants.map((variant) => (
-                <article key={variant.key} className="pos-v2-products__variant-item">
-                  <input
-                    value={variant.description}
-                    onChange={(event) => updateVariant(variant.key, "description", event.target.value)}
-                    placeholder="Nombre variante"
-                  />
-                  <input
-                    value={variant.price}
-                    onChange={(event) => updateVariant(variant.key, "price", event.target.value)}
-                    placeholder="Precio"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                  />
-                  <input
-                    value={variant.stock}
-                    onChange={(event) => updateVariant(variant.key, "stock", event.target.value)}
-                    placeholder="Stock"
-                    type="number"
-                    min="0"
-                    step="1"
-                  />
-                  <input
-                    value={variant.color}
-                    onChange={(event) => updateVariant(variant.key, "color", event.target.value)}
-                    placeholder="Color"
-                  />
-                  <input
-                    value={variant.barcode}
-                    onChange={(event) => updateVariant(variant.key, "barcode", event.target.value)}
-                    placeholder="Código de barras"
-                  />
-                  <button type="button" className="is-delete" onClick={() => removeVariant(variant.key)}>Quitar</button>
+          {loading ? (
+            <div className={`pos-v2-products__skeletons ${viewMode === "grid" ? "is-grid" : "is-list"}`}>
+              {Array.from({ length: 6 }).map((_, index) => (
+                <article key={`skeleton-${index}`} className="pos-v2-products__skeleton-card" aria-hidden="true">
+                  <div className="pos-v2-products__skeleton-media" />
+                  <div className="pos-v2-products__skeleton-line" />
+                  <div className="pos-v2-products__skeleton-line short" />
                 </article>
               ))}
             </div>
+          ) : null}
 
-            <div className="pos-v2-products__form-actions">
-              <button type="submit" className="pos-v2-products__primary" disabled={saving}>
-                {saving ? "Guardando..." : editingId ? "Guardar cambios" : "Guardar producto"}
-              </button>
-              {editingId ? (
-                <button type="button" className="pos-v2-products__secondary" onClick={resetForm}>
-                  Cancelar edición
-                </button>
-              ) : null}
-            </div>
+          {!loading && visibleProducts.length === 0 ? <p className="pos-v2-products__empty">No hay productos para mostrar con los filtros actuales.</p> : null}
 
-            {error ? <p className="pos-v2-products__error" role="alert">{error}</p> : null}
-          </form>
+          {!loading ? (
+            <div className={`pos-v2-products__products ${viewMode === "grid" ? "is-grid" : "is-list"}`}>
+              {visibleProducts.map((product) => {
+                const imageCandidates = [product.image, ...product.images].map((candidate) => toImageUrl(candidate)).filter(Boolean) as string[];
+                const uniqueImages = Array.from(new Set(imageCandidates));
+                const preview = uniqueImages[0] ?? null;
 
-          <section className="pos-v2-products__catalog" aria-label="Listado de productos">
-            <div className="pos-v2-products__catalog-header">
-              <h3>Listado</h3>
+                return (
+                  <article key={product.id} className={`pos-v2-products__card ${!product.available ? "is-archived" : ""}`}>
+                    {preview ? <img src={preview} alt={product.name} className="pos-v2-products__card-image" loading="lazy" /> : <div className="pos-v2-products__card-image-placeholder" aria-hidden="true">{product.name.slice(0, 1).toUpperCase()}</div>}
 
-              <div className="pos-v2-products__controls">
-                <input
-                  value={search}
-                  onChange={(event) => setSearch(event.target.value)}
-                  placeholder="Buscar por nombre, ID o descripción"
-                  aria-label="Buscar productos"
-                />
-                <label className="pos-v2-products__switch">
-                  <input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} />
-                  Mostrar archivados
-                </label>
-                <div className="pos-v2-products__view-toggle" role="group" aria-label="Cambiar vista">
-                  <button type="button" className={viewMode === "grid" ? "is-active" : ""} onClick={() => setViewMode("grid")}>Grid</button>
-                  <button type="button" className={viewMode === "list" ? "is-active" : ""} onClick={() => setViewMode("list")}>Lista</button>
-                </div>
-              </div>
-            </div>
+                    <div className="pos-v2-products__card-content">
+                      <div className="pos-v2-products__card-headline">
+                        <h4>{product.name}</h4>
+                        <span className={product.available ? "is-ok" : "is-muted"}>{product.available ? "Disponible" : "Archivado"}</span>
+                      </div>
 
-            {loading ? (
-              <div className={`pos-v2-products__skeletons ${viewMode === "grid" ? "is-grid" : "is-list"}`}>
-                {Array.from({ length: 6 }).map((_, index) => (
-                  <article key={`skeleton-${index}`} className="pos-v2-products__skeleton-card" aria-hidden="true">
-                    <div className="pos-v2-products__skeleton-media" />
-                    <div className="pos-v2-products__skeleton-line" />
-                    <div className="pos-v2-products__skeleton-line short" />
+                      <div className="pos-v2-products__card-meta">
+                        <strong>{product.price == null ? "--" : `$${product.price.toFixed(2)}`}</strong>
+                        <small>Stock: {product.stock ?? "--"}</small>
+                      </div>
+
+                      <small className="pos-v2-products__simple-meta">Variantes: {product.variants.length} · Fotos: {uniqueImages.length}</small>
+                    </div>
+
+                    <div className="pos-v2-products__card-actions">
+                      <button type="button" className="is-edit" onClick={() => handleEdit(product.id)}>Editar</button>
+                      {product.available ? (
+                        <button type="button" onClick={() => handleArchive(product.id)} disabled={archivingId === product.id}>
+                          {archivingId === product.id ? "Eliminando..." : "Eliminar"}
+                        </button>
+                      ) : null}
+                    </div>
                   </article>
-                ))}
-              </div>
-            ) : null}
-
-            {!loading && visibleProducts.length === 0 ? (
-              <p className="pos-v2-products__empty">No hay productos para mostrar con los filtros actuales.</p>
-            ) : null}
-
-            {!loading ? (
-              <div className={`pos-v2-products__products ${viewMode === "grid" ? "is-grid" : "is-list"}`}>
-                {visibleProducts.map((product) => {
-                  const preview = toImageUrl(product.image ?? product.images[0] ?? null);
-
-                  return (
-                    <article key={product.id} className={`pos-v2-products__card ${!product.available ? "is-archived" : ""}`}>
-                      {preview ? (
-                        <img src={preview} alt={product.name} className="pos-v2-products__card-image" />
-                      ) : (
-                        <div className="pos-v2-products__card-image-placeholder" aria-hidden="true">
-                          {product.name.slice(0, 1).toUpperCase()}
-                        </div>
-                      )}
-
-                      <div className="pos-v2-products__card-content">
-                        <div className="pos-v2-products__card-headline">
-                          <h4>{product.name}</h4>
-                          <span className={product.available ? "is-ok" : "is-muted"}>
-                            {product.available ? "Disponible" : "Archivado"}
-                          </span>
-                        </div>
-                        <p>{product.description || `ID: #${product.id}`}</p>
-                        <div className="pos-v2-products__card-meta">
-                          <strong>{product.price == null ? "--" : `$${product.price.toFixed(2)}`}</strong>
-                          <small>Stock: {product.stock ?? "--"}</small>
-                        </div>
-                        <small className="pos-v2-products__chip-line">
-                          {product.forSale ? "Venta: Sí" : "Venta: No"} · {product.showInStore ? "Web: Sí" : "Web: No"} · Variantes: {product.variants.length}
-                        </small>
-                      </div>
-
-                      <div className="pos-v2-products__card-actions">
-                        <button type="button" className="is-edit" onClick={() => handleEdit(product.id)}>Editar</button>
-                        {product.available ? (
-                          <button
-                            type="button"
-                            onClick={() => handleArchive(product.id)}
-                            disabled={archivingId === product.id}
-                          >
-                            {archivingId === product.id ? "Eliminando..." : "Eliminar"}
-                          </button>
-                        ) : null}
-                      </div>
-                    </article>
-                  );
-                })}
-              </div>
-            ) : null}
-          </section>
+                );
+              })}
+            </div>
+          ) : null}
         </section>
+
+        {isFormOpen ? (
+          <div className="pos-v2-products__modal-backdrop" role="presentation" onClick={closeFormModal}>
+            <section className="pos-v2-products__modal" role="dialog" aria-modal="true" aria-label="Formulario de producto" onClick={(event) => event.stopPropagation()}>
+              <header className="pos-v2-products__modal-head">
+                <h3>{editingId ? `Editar producto #${editingId}` : "Nuevo producto"}</h3>
+                <button type="button" className="pos-v2-products__secondary" onClick={closeFormModal}>Cerrar</button>
+              </header>
+
+              <form className="pos-v2-products__form" onSubmit={handleSubmit}>
+                <label>
+                  Nombre
+                  <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej. Hamburguesa clásica" required />
+                </label>
+
+                <label>
+                  Descripción
+                  <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe el producto" rows={3} required />
+                </label>
+
+                <div className="pos-v2-products__field-grid">
+                  <label>
+                    Precio
+                    <input type="number" min="0" step="0.01" inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} required />
+                  </label>
+
+                  <label>
+                    Stock
+                    <input type="number" min="0" step="1" inputMode="numeric" value={stock} onChange={(event) => setStock(event.target.value)} required />
+                  </label>
+                </div>
+
+                <label>
+                  Fotos del producto
+                  <input type="file" accept="image/*" multiple onChange={handleImageInput} />
+                </label>
+
+                {formImagePreviews.length > 0 ? (
+                  <div className="pos-v2-products__image-preview" aria-label="Vista previa de fotos">
+                    {formImagePreviews.slice(0, 8).map((photo, index) => (
+                      <img key={`preview-${index}`} src={photo} alt={`Vista previa ${index + 1}`} loading="lazy" />
+                    ))}
+                  </div>
+                ) : null}
+
+                <div className="pos-v2-products__toggles">
+                  <label className="pos-v2-products__toggle-card">
+                    <input type="checkbox" checked={forSale} onChange={(event) => setForSale(event.target.checked)} />
+                    <span className="pos-v2-products__switch-ui" aria-hidden="true" />
+                    <span>A la venta</span>
+                  </label>
+                  <label className="pos-v2-products__toggle-card">
+                    <input type="checkbox" checked={showInStore} onChange={(event) => setShowInStore(event.target.checked)} />
+                    <span className="pos-v2-products__switch-ui" aria-hidden="true" />
+                    <span>Mostrar en tienda</span>
+                  </label>
+                  <label className="pos-v2-products__toggle-card">
+                    <input type="checkbox" checked={available} onChange={(event) => setAvailable(event.target.checked)} />
+                    <span className="pos-v2-products__switch-ui" aria-hidden="true" />
+                    <span>Disponible</span>
+                  </label>
+                </div>
+
+                <fieldset className="pos-v2-products__variants" aria-label="Variantes del producto">
+                  <div className="pos-v2-products__variants-head">
+                    <h4>Variantes</h4>
+                    <button type="button" onClick={() => setVariants((current) => [...current, createVariantDraft()])}>+ Agregar variante</button>
+                  </div>
+
+                  {variants.length === 0 ? <p className="pos-v2-products__variants-empty">Sin variantes por ahora.</p> : null}
+
+                  {variants.map((variant, index) => (
+                    <article key={variant.key} className="pos-v2-products__variant-item">
+                      <input value={variant.description} onChange={(event) => updateVariant(variant.key, "description", event.target.value)} placeholder={`Nombre variante ${index + 1}`} aria-label={`Nombre de variante ${index + 1}`} />
+                      <input value={variant.price} onChange={(event) => updateVariant(variant.key, "price", event.target.value)} placeholder="Precio" type="number" min="0" step="0.01" inputMode="decimal" aria-label={`Precio de variante ${index + 1}`} />
+                      <input value={variant.stock} onChange={(event) => updateVariant(variant.key, "stock", event.target.value)} placeholder="Stock" type="number" min="0" step="1" inputMode="numeric" aria-label={`Stock de variante ${index + 1}`} />
+                      <input value={variant.color} onChange={(event) => updateVariant(variant.key, "color", event.target.value)} placeholder="Color" aria-label={`Color de variante ${index + 1}`} />
+                      <input value={variant.barcode} onChange={(event) => updateVariant(variant.key, "barcode", event.target.value)} placeholder="Código de barras" aria-label={`Código de barras de variante ${index + 1}`} />
+                      <button type="button" className="is-delete" onClick={() => removeVariant(variant.key)}>Quitar</button>
+                    </article>
+                  ))}
+                </fieldset>
+
+                <div className="pos-v2-products__form-actions is-modal">
+                  <button type="button" className="pos-v2-products__secondary" onClick={closeFormModal}>Cancelar</button>
+                  <button type="submit" className="pos-v2-products__primary" disabled={saving}>{saving ? "Guardando..." : editingId ? "Guardar cambios" : "Guardar producto"}</button>
+                </div>
+              </form>
+            </section>
+          </div>
+        ) : null}
       </section>
     </PosV2Shell>
   );

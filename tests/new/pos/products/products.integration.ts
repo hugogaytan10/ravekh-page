@@ -11,7 +11,10 @@ export async function run(): Promise<void> {
       calls.push(`${method} ${path}`);
 
       if (method === "GET" && path === "products/business/7") {
-        return [{ Id: 1, Business_Id: 7, Name: "Café", Available: true }];
+        return [
+          { Id: 1, Business_Id: 7, Name: "Café", Available: true },
+          { Id: 2, Business_Id: 7, Name: "Descatalogado", Available: 0 },
+        ];
       }
 
       if (method === "POST" && path === "products") {
@@ -31,7 +34,10 @@ export async function run(): Promise<void> {
   const page = new ProductsManagementPage(service);
 
   const vm = await page.loadProducts(7, "token");
-  assert.deepEqual(vm, [{ id: 1, name: "Café", available: true }]);
+  assert.deepEqual(vm, [
+    { id: 1, name: "Café", available: true },
+    { id: 2, name: "Descatalogado", available: false },
+  ]);
 
   const saved = await page.saveProduct(
     {
