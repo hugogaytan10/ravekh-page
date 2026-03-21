@@ -6,6 +6,7 @@ import "./PosV2LoginPage.css";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
 const TOKEN_KEY = "pos-v2-token";
 const BUSINESS_ID_KEY = "pos-v2-business-id";
+const EMPLOYEE_ID_KEY = "pos-v2-employee-id";
 
 type PanelMode = "signin" | "signup";
 
@@ -41,6 +42,7 @@ export const PosV2LoginPage = () => {
       const session = await authPage.signIn({ email: signInEmail, password: signInPassword });
       window.localStorage.setItem(TOKEN_KEY, session.token);
       window.localStorage.setItem(BUSINESS_ID_KEY, String(session.businessId));
+      window.localStorage.setItem(EMPLOYEE_ID_KEY, String(session.employeeId));
       navigate("/v2/MainSales", { replace: true });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo iniciar sesión en POS v2.");
@@ -75,6 +77,7 @@ export const PosV2LoginPage = () => {
 
       window.localStorage.setItem(TOKEN_KEY, session.token);
       window.localStorage.setItem(BUSINESS_ID_KEY, String(session.businessId));
+      window.localStorage.setItem(EMPLOYEE_ID_KEY, String(session.employeeId));
       navigate("/v2/MainSales", { replace: true });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo crear la cuenta en POS v2.");

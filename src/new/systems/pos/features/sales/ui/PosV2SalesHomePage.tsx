@@ -4,6 +4,7 @@ import MoreIcon from "../../../../../../assets/POS/MoreIcon";
 import { Basket } from "../../../../../../assets/POS/Basket";
 import MoneyIcon from "../../../../../../assets/POS/MoneyIcon";
 import { FiCreditCard, FiDollarSign, FiRepeat } from "react-icons/fi";
+import { jwtDecode } from "jwt-decode";
 import "./PosV2SalesHomePage.css";
 import { ModernSystemsFactory } from "../../../../../index";
 
@@ -37,7 +38,23 @@ const PAYMENT_METHOD_OPTIONS: Array<{
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
 const TOKEN_KEY = "pos-v2-token";
 const BUSINESS_ID_KEY = "pos-v2-business-id";
-const TABLE_OPTIONS = ["Mesa 1", "Mesa 2", "Mesa 3", "Mesa 4", "Mesa 5", "Para llevar"];
+const EMPLOYEE_ID_KEY = "pos-v2-employee-id";
+const DEFAULT_TABLE_OPTIONS = ["Para llevar"];
+const DEBUG_KEY = "pos-v2-debug";
+
+type TableZoneResponse = {
+  Id?: number;
+  Name?: string;
+  Active?: boolean | number | null;
+};
+
+type TokenPayload = {
+  Id?: number | string;
+  id?: number | string;
+  employeeId?: number | string;
+  Employee_Id?: number | string;
+  sub?: number | string;
+};
 
 const toAbsoluteImageUrl = (image?: string | null): string | undefined => {
   if (!image) return undefined;
@@ -71,9 +88,18 @@ export const PosV2SalesHomePage = () => {
   const [ticket, setTicket] = useState<string | null>(null);
   const [mobileStep, setMobileStep] = useState<MobileStep>("catalog");
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [selectedTable, setSelectedTable] = useState("Mesa 1");
+  const [isCompletingSale, setIsCompletingSale] = useState(false);
+  const [tables, setTables] = useState<string[]>(DEFAULT_TABLE_OPTIONS);
+  const [selectedTable, setSelectedTable] = useState("Para llevar");
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
   const [isMobileTablesOpen, setIsMobileTablesOpen] = useState(false);
+  const [tablesError, setTablesError] = useState<string | null>(null);
+
+  const debugLog = (...args: unknown[]) => {
+    if (window.localStorage.getItem(DEBUG_KEY) === "true") {
+      console.log("[POS-V2-SALES]", ...args);
+    }
+  };
 
   useEffect(() => {
     const token = window.localStorage.getItem(TOKEN_KEY);
@@ -115,6 +141,56 @@ export const PosV2SalesHomePage = () => {
       })
       .finally(() => setLoadingProducts(false));
   }, []);
+
+  useEffect(() => {
+    const token = window.localStorage.getItem(TOKEN_KEY);
+    const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY));
+
+    if (!token || !businessId) {
+      setTables(DEFAULT_TABLE_OPTIONS);
+      setTablesError("No encontramos sesión para cargar mesas.");
+      return;
+    }
+
+    fetch(new URL(`table_zones/business/${businessId}`, API_BASE_URL).toString(), {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        token,
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (response) => {
+        const responseData = (await response.json().catch(() => [])) as TableZoneResponse[] | { message?: string };
+        if (!response.ok) {
+          const message = !Array.isArray(responseData) ? responseData?.message : undefined;
+          throw new Error(message ?? "No se pudieron cargar las mesas.");
+        }
+        return Array.isArray(responseData) ? responseData : [];
+      })
+      .then((zones) => {
+        const activeZones = zones
+          .filter((zone) => zone?.Active === true || zone?.Active === 1 || zone?.Active == null)
+          .map((zone) => zone?.Name?.trim())
+          .filter((name): name is string => Boolean(name));
+        const normalizedTables = Array.from(new Set([...activeZones, "Para llevar"]));
+
+        debugLog("Mesas cargadas desde API:", normalizedTables);
+        setTables(normalizedTables.length ? normalizedTables : DEFAULT_TABLE_OPTIONS);
+        setTablesError(null);
+      })
+      .catch((error) => {
+        console.error("[POS-V2-SALES] Error al cargar mesas", error);
+        setTables(DEFAULT_TABLE_OPTIONS);
+        setTablesError(error instanceof Error ? error.message : "No se pudieron cargar las mesas.");
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!tables.includes(selectedTable)) {
+      setSelectedTable("Para llevar");
+    }
+  }, [tables, selectedTable]);
 
   const categories = useMemo(() => {
     const dynamic = Array.from(new Set(products.map((item) => item.category).filter(Boolean)));
@@ -232,7 +308,29 @@ export const PosV2SalesHomePage = () => {
 
   const discountValue = Number(discountPercent);
 
-  const handleCompleteSale = () => {
+  const resolveEmployeeId = (token: string): number => {
+    const fromStorage = Number(window.localStorage.getItem(EMPLOYEE_ID_KEY));
+    if (Number.isFinite(fromStorage) && fromStorage > 0) {
+      return fromStorage;
+    }
+
+    try {
+      const decoded = jwtDecode<TokenPayload>(token);
+      const decodedCandidate = decoded.employeeId ?? decoded.Employee_Id ?? decoded.Id ?? decoded.id ?? decoded.sub;
+      const parsedDecoded = Number(decodedCandidate);
+      if (Number.isFinite(parsedDecoded) && parsedDecoded > 0) {
+        window.localStorage.setItem(EMPLOYEE_ID_KEY, String(parsedDecoded));
+        debugLog("Employee_Id recuperado desde JWT.", parsedDecoded);
+        return parsedDecoded;
+      }
+    } catch (error) {
+      debugLog("No se pudo decodificar JWT para Employee_Id.", error);
+    }
+
+    return 0;
+  };
+
+  const handleCompleteSale = async () => {
     if (!totals.items) {
       setValidationError("Agrega productos antes de finalizar la venta.");
       return;
@@ -243,18 +341,92 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
+    const token = window.localStorage.getItem(TOKEN_KEY);
+    const employeeId = token ? resolveEmployeeId(token) : 0;
+
+    if (!token || !employeeId) {
+      debugLog("Fallo de sesión al finalizar venta.", {
+        hasToken: Boolean(token),
+        storedEmployeeId: window.localStorage.getItem(EMPLOYEE_ID_KEY),
+      });
+      setValidationError("No encontramos la sesión del empleado. Inicia sesión nuevamente para finalizar.");
+      return;
+    }
+
+    const lineItems = cartItems.map((item) => ({
+      Product_Id: item.id,
+      Quantity: item.quantity,
+      Price: item.price,
+      Cost: 0,
+    }));
+
+    const payloadByTable = {
+      Employee_Id: employeeId,
+      PaymentMethod: paymentMethod,
+      Total: totals.total,
+      Discount: discountValue,
+      Tax: false,
+    };
+
+    setIsCompletingSale(true);
     setValidationError(null);
-    const folio = `RVK-${Date.now().toString().slice(-6)}`;
-    setTicket(`Venta ${folio} · ${paymentMethod} · ${selectedTable} · Total $${totals.total.toFixed(2)}`);
-    setCompletedSale({
-      folio,
-      paymentMethod,
-      table: selectedTable,
+    debugLog("Intentando finalizar venta.", {
+      endpoint: selectedTable === "Para llevar" ? "orders" : "commands",
+      selectedTable,
+      employeeId,
+      items: lineItems,
       total: totals.total,
+      paymentMethod,
     });
-    setCart({});
-    setDiscountPercent("0");
-    setMobileStep("catalog");
+
+    try {
+      const endpoint = selectedTable === "Para llevar" ? "orders" : "commands";
+      const payload = selectedTable === "Para llevar"
+        ? {
+            Order: payloadByTable,
+            OrderDetails: lineItems,
+          }
+        : {
+            Command: {
+              ...payloadByTable,
+              Table_Id: selectedTable,
+            },
+            Commands_has_Products: lineItems,
+          };
+
+      const response = await fetch(new URL(endpoint, API_BASE_URL).toString(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          token,
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      });
+
+      const responseData = (await response.json().catch(() => null)) as { message?: string; Id?: number } | null;
+
+      if (!response.ok) {
+        throw new Error(responseData?.message ?? "No pudimos registrar la venta en la base de datos.");
+      }
+      debugLog("Venta registrada correctamente.", responseData);
+
+      const folio = `RVK-${Date.now().toString().slice(-6)}`;
+      setTicket(`Venta ${folio} · ${paymentMethod} · ${selectedTable} · Total $${totals.total.toFixed(2)}`);
+      setCompletedSale({
+        folio,
+        paymentMethod,
+        table: selectedTable,
+        total: totals.total,
+      });
+      setCart({});
+      setDiscountPercent("0");
+      setMobileStep("catalog");
+    } catch (error) {
+      setValidationError(error instanceof Error ? error.message : "No pudimos registrar la venta en la base de datos.");
+    } finally {
+      setIsCompletingSale(false);
+    }
   };
 
   return (
@@ -325,7 +497,10 @@ export const PosV2SalesHomePage = () => {
 
           <div className={`pos-v2-sales-home__products ${isGrid ? "is-grid" : "is-list"}`}>
             {filteredProducts.map((product) => (
-              <article key={product.id} className="pos-v2-sales-home__product-card">
+              <article
+                key={product.id}
+                className={`pos-v2-sales-home__product-card ${!isGrid ? "is-list-item" : ""}`}
+              >
                 {product.image ? (
                   <img src={product.image} alt={product.name} className="pos-v2-sales-home__product-image" />
                 ) : (
@@ -333,12 +508,16 @@ export const PosV2SalesHomePage = () => {
                     {product.name.slice(0, 1).toUpperCase()}
                   </div>
                 )}
-                <p className="pos-v2-sales-home__product-category">{product.category}</p>
-                <h3>{product.name}</h3>
-                <strong>${product.price.toFixed(2)}</strong>
-                <button type="button" onClick={() => addToCart(product)}>
-                  Agregar
-                </button>
+                <div className="pos-v2-sales-home__product-content">
+                  <p className="pos-v2-sales-home__product-category">{product.category}</p>
+                  <h3>{product.name}</h3>
+                </div>
+                <div className="pos-v2-sales-home__product-side">
+                  <strong>${product.price.toFixed(2)}</strong>
+                  <button type="button" onClick={() => addToCart(product)}>
+                    Agregar
+                  </button>
+                </div>
               </article>
             ))}
 
@@ -442,7 +621,7 @@ export const PosV2SalesHomePage = () => {
             <label>
               Mesa
               <select value={selectedTable} onChange={(event) => setSelectedTable(event.target.value)}>
-                {TABLE_OPTIONS.map((table) => (
+                {tables.map((table) => (
                   <option key={table} value={table}>{table}</option>
                 ))}
               </select>
@@ -454,13 +633,20 @@ export const PosV2SalesHomePage = () => {
               <p className="is-total"><span>Total</span><strong>${totals.total.toFixed(2)}</strong></p>
             </div>
 
-            <button type="button" className="pos-v2-sales-home__complete" onClick={handleCompleteSale} disabled={!totals.items}>
-              Finalizar venta
-            </button>
+            <div className="pos-v2-sales-home__checkout-actions">
+              <button
+                type="button"
+                className="pos-v2-sales-home__complete"
+                onClick={handleCompleteSale}
+                disabled={!totals.items || isCompletingSale}
+              >
+                {isCompletingSale ? "Finalizando..." : "Finalizar venta"}
+              </button>
 
-            <button type="button" className="pos-v2-sales-home__back" onClick={() => setMobileStep("cart")}>
-              Regresar al carrito
-            </button>
+              <button type="button" className="pos-v2-sales-home__back" onClick={() => setMobileStep("cart")}>
+                Regresar al carrito
+              </button>
+            </div>
 
             {validationError ? <p className="pos-v2-sales-home__error">{validationError}</p> : null}
             {ticket ? <p className="pos-v2-sales-home__ticket">{ticket}</p> : null}
@@ -477,7 +663,7 @@ export const PosV2SalesHomePage = () => {
       ) : null}
 
       <div className="pos-v2-sales-home__tables-bar" aria-label="Barra de mesas">
-        {TABLE_OPTIONS.map((table) => {
+        {tables.map((table) => {
           const isActive = table === selectedTable;
           const isOccupied = isActive && totals.items > 0;
 
@@ -510,7 +696,7 @@ export const PosV2SalesHomePage = () => {
             </div>
 
             <div className="pos-v2-sales-home__tables-modal-grid">
-              {TABLE_OPTIONS.map((table) => {
+              {tables.map((table) => {
                 const isActive = table === selectedTable;
                 return (
                   <button
@@ -531,6 +717,8 @@ export const PosV2SalesHomePage = () => {
           </div>
         </div>
       ) : null}
+
+      {tablesError ? <p className="pos-v2-sales-home__error">{tablesError}</p> : null}
 
       {completedSale ? (
         <div className="pos-v2-sales-home__sale-modal" role="dialog" aria-modal="true" aria-label="Venta finalizada">
