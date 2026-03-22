@@ -3,7 +3,7 @@ import { ProductsService } from "../../../../src/new/systems/pos/features/produc
 import { ManagedProduct } from "../../../../src/new/systems/pos/features/products/model/ManagedProduct";
 
 const buildProduct = (id: number, available = true) =>
-  new ManagedProduct(id, 10, `Product ${id}`, "desc", true, true, available, null, 30, 10, 2, null, [], null, []);
+  new ManagedProduct(id, 10, `Product ${id}`, "desc", null, true, true, available, false, null, 30, null, 10, 2, null, null, null, null, null, [], null, []);
 
 export async function run(): Promise<void> {
   const createRepo = {

@@ -15,6 +15,8 @@ type ProductResponse = {
   name?: string;
   Description?: string;
   description?: string;
+  Color?: string | null;
+  color?: string | null;
   ForSale?: boolean;
   forSale?: boolean;
   ShowInStore?: boolean;
@@ -31,10 +33,20 @@ type ProductResponse = {
   barcode?: string | null;
   Price?: number | null;
   price?: number | null;
+  PromotionPrice?: number | null;
+  promotionPrice?: number | null;
   CostPerItem?: number | null;
   costPerItem?: number | null;
   Stock?: number | null;
   stock?: number | null;
+  ExpDate?: string | null;
+  expDate?: string | null;
+  MinStock?: number | null;
+  minStock?: number | null;
+  OptStock?: number | null;
+  optStock?: number | null;
+  Quantity?: number | null;
+  quantity?: number | null;
   Variants?: LegacyVariantResponse[];
   variants?: LegacyVariantResponse[];
 };
@@ -114,13 +126,20 @@ export class PosProductsApi implements IProductsRepository {
       payload.businessId,
       payload.name,
       payload.description,
+      payload.color ?? null,
       payload.forSale,
       payload.showInStore,
       payload.available,
+      payload.volume ?? false,
       payload.categoryId ?? null,
       payload.price ?? null,
+      payload.promotionPrice ?? null,
       payload.costPerItem ?? null,
       payload.stock ?? null,
+      payload.expDate ?? null,
+      payload.minStock ?? null,
+      payload.optStock ?? null,
+      payload.quantity ?? null,
       payload.image ?? null,
       payload.images ?? [],
       payload.barcode ?? null,
@@ -173,13 +192,20 @@ export class PosProductsApi implements IProductsRepository {
       product.Business_Id ?? product.business_Id ?? product.businessId ?? 0,
       product.Name ?? product.name ?? "",
       product.Description ?? product.description ?? "",
+      product.Color ?? product.color ?? null,
       product.ForSale ?? product.forSale ?? true,
       product.ShowInStore ?? product.showInStore ?? true,
       this.toAvailabilityFlag(product.Available ?? product.available),
+      product.Volume ?? product.volume ?? false,
       product.Category_Id ?? product.category_Id ?? product.categoryId ?? null,
       product.Price ?? product.price ?? null,
+      product.PromotionPrice ?? product.promotionPrice ?? null,
       product.CostPerItem ?? product.costPerItem ?? null,
       product.Stock ?? product.stock ?? null,
+      product.ExpDate ?? product.expDate ?? null,
+      product.MinStock ?? product.minStock ?? null,
+      product.OptStock ?? product.optStock ?? null,
+      product.Quantity ?? product.quantity ?? null,
       product.Image ?? product.image ?? null,
       product.Images ?? product.images ?? [],
       product.Barcode ?? product.barcode ?? null,
@@ -194,6 +220,7 @@ export class PosProductsApi implements IProductsRepository {
       Category_Id: payload.categoryId,
       Name: payload.name,
       Description: payload.description,
+      Color: payload.color ?? null,
       ForSale: payload.forSale,
       ShowInStore: payload.showInStore,
       Available: payload.available,
@@ -201,9 +228,14 @@ export class PosProductsApi implements IProductsRepository {
       Images: payload.images,
       Barcode: payload.barcode,
       Price: payload.price,
+      PromotionPrice: payload.promotionPrice ?? null,
       CostPerItem: payload.costPerItem,
       Stock: payload.stock,
-      Volume: false,
+      ExpDate: payload.expDate ?? null,
+      MinStock: payload.minStock ?? null,
+      OptStock: payload.optStock ?? null,
+      Quantity: payload.quantity ?? null,
+      Volume: payload.volume ?? false,
     };
   }
 

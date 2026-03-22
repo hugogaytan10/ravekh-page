@@ -13,11 +13,18 @@ type ProductItemVm = {
   id: number;
   name: string;
   description: string;
+  color: string | null;
   available: boolean;
   forSale: boolean;
   showInStore: boolean;
+  volume: boolean;
   price: number | null;
+  promotionPrice: number | null;
   stock: number | null;
+  expDate: string | null;
+  minStock: number | null;
+  optStock: number | null;
+  quantity: number | null;
   image: string | null;
   images: string[];
   variants: ProductVariant[];
@@ -25,9 +32,16 @@ type ProductItemVm = {
 
 type VariantFormVm = {
   key: string;
+  id?: number;
+  productId?: number;
   description: string;
   price: string;
+  promotionPrice: string;
+  costPerItem: string;
   stock: string;
+  minStock: string;
+  optStock: string;
+  expDate: string;
   barcode: string;
   color: string;
 };
@@ -59,10 +73,22 @@ const createVariantDraft = (): VariantFormVm => ({
   key: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
   description: "",
   price: "",
+  promotionPrice: "",
+  costPerItem: "",
   stock: "",
+  minStock: "",
+  optStock: "",
+  expDate: "",
   barcode: "",
   color: "",
 });
+
+const toNullableNumber = (value: string): number | null => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : null;
+};
 
 export const ProductsV2PosPage = () => {
   const [businessId] = useState(() => {
@@ -141,11 +167,18 @@ export const ProductsV2PosPage = () => {
           id: product.id,
           name: product.name,
           description: product.description,
+          color: product.color,
           available: product.available,
           forSale: product.forSale,
           showInStore: product.showInStore,
+          volume: product.volume,
           price: product.price,
+          promotionPrice: product.promotionPrice,
           stock: product.stock,
+          expDate: product.expDate,
+          minStock: product.minStock,
+          optStock: product.optStock,
+          quantity: product.quantity,
           image: product.image,
           images: product.images,
           variants: product.variants,
@@ -194,10 +227,15 @@ export const ProductsV2PosPage = () => {
         description: variant.description.trim(),
         barcode: variant.barcode.trim() || null,
         color: variant.color.trim() || null,
-        price: variant.price.trim() ? Number(variant.price) : null,
-        stock: variant.stock.trim() ? Number(variant.stock) : null,
-        costPerItem: null,
-        promotionPrice: null,
+        id: variant.id,
+        productId: variant.productId,
+        price: toNullableNumber(variant.price),
+        stock: toNullableNumber(variant.stock),
+        costPerItem: toNullableNumber(variant.costPerItem),
+        promotionPrice: toNullableNumber(variant.promotionPrice),
+        minStock: toNullableNumber(variant.minStock),
+        optStock: toNullableNumber(variant.optStock),
+        expDate: variant.expDate.trim() || null,
       }));
   };
 
@@ -263,8 +301,15 @@ export const ProductsV2PosPage = () => {
         forSale,
         showInStore,
         available,
+        color: null,
+        volume: false,
         price: parsedPrice,
+        promotionPrice: null,
         stock: parsedStock,
+        expDate: null,
+        minStock: null,
+        optStock: null,
+        quantity: null,
         image: allImages[0] || undefined,
         images: allImages,
         costPerItem: null,
@@ -310,9 +355,16 @@ export const ProductsV2PosPage = () => {
       setVariants(
         detail.variants.map((variant, index) => ({
           key: `${detail.id}-${index}`,
+          id: variant.id,
+          productId: variant.productId,
           description: variant.description ?? "",
           price: variant.price == null ? "" : String(variant.price),
+          promotionPrice: variant.promotionPrice == null ? "" : String(variant.promotionPrice),
+          costPerItem: variant.costPerItem == null ? "" : String(variant.costPerItem),
           stock: variant.stock == null ? "" : String(variant.stock),
+          minStock: variant.minStock == null ? "" : String(variant.minStock),
+          optStock: variant.optStock == null ? "" : String(variant.optStock),
+          expDate: variant.expDate ?? "",
           barcode: variant.barcode ?? "",
           color: variant.color ?? "",
         })),
