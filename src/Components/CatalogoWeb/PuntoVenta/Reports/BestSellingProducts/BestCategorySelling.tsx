@@ -17,6 +17,7 @@ import {
     bestCategorySellingYear,
 } from "./Petitions";
 import { AppContext } from "../../../Context/AppContext";
+import { normalizePeriodLabel, resolveBusinessId } from "../utils";
 
 // Registrar las escalas y elementos para Chart.js
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
@@ -28,33 +29,39 @@ interface Category {
 }
 
 const BestCategorySelling: React.FC = () => {
-    const { period, businessId } = useParams<{ period: string; businessId: string }>();
+    const { period } = useParams<{ period: string }>();
     const context = useContext(AppContext);
     const navigate = useNavigate();
 
     const [categories, setCategories] = useState<Category[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const normalizedPeriod = normalizePeriodLabel(period);
+    const businessId = resolveBusinessId(context.user?.Business_Id);
 
     useEffect(() => {
         fetchCategories();
-    }, [period, businessId]);
+    }, [businessId, normalizedPeriod, context.user.Token]);
 
     const fetchCategories = async () => {
         try {
             setLoading(true);
+            if (!businessId || !context.user.Token) {
+                setCategories([]);
+                return;
+            }
             let data: Category[] = [];
-            switch (period?.toUpperCase()) {
-                case "DÍA":
+            switch (normalizedPeriod) {
+                case "Día":
                     data = await bestCategorySellingToday(businessId!, context.user.Token);
                     break;
-                case "MES":
+                case "Mes":
                     data = await bestCategorySellingMonth(businessId!, context.user.Token);
                     break;
-                case "AÑO":
+                case "Año":
                     data = await bestCategorySellingYear(businessId!, context.user.Token);
                     break;
                 default:
-                    console.error("Periodo inválido:", period);
+                    console.error("Periodo inválido:", normalizedPeriod);
             }
             setCategories(data || []);
         } catch (error) {

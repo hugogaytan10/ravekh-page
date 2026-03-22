@@ -2,6 +2,7 @@ import { URL } from "./Const/Const";
 import { Order } from "../CatalogoWeb/Modelo/Order";
 import { OrderDetails } from "../CatalogoWeb/Modelo/OrderDetails";
 import { Variant } from "./PuntoVenta/Model/Variant";
+import { ProductExtrasResponse } from "./Modelo/ProductExtra";
 
 const syncAvailableCategoryIds = (response: any, businessId?: string) => {
     if (typeof window === "undefined") return;
@@ -293,5 +294,25 @@ export const getVariantsByProductIdPublic = async (productId: number | string) =
         return Array.isArray(data) ? (data as Variant[]) : [];
     } catch (error) {
         return [];
+    }
+}
+
+export const getExtrasByProductIdPublic = async (productId: number | string) => {
+    try {
+        const response = await fetch(`${URL}extras/product/${productId}`);
+        const data = await response.json();
+        if (!data || typeof data !== "object") return null;
+
+        const parsed = data as ProductExtrasResponse;
+        const hasColor = Array.isArray(parsed?.COLOR) && parsed.COLOR.length > 0;
+        const hasSize = Array.isArray(parsed?.TALLA) && parsed.TALLA.length > 0;
+
+        if (!hasColor && !hasSize) {
+            return null;
+        }
+
+        return parsed;
+    } catch (error) {
+        return null;
     }
 }

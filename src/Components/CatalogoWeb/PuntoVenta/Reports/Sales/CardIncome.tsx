@@ -3,8 +3,9 @@ import { useParams, useNavigate } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
 import { getSales } from "../Petitions";
 import MoneyIcon from "../../../../../assets/POS/MoneyIcon";
+import { normalizePeriodLabel, resolveBusinessId } from "../utils";
 const CardIncome: React.FC = () => {
-    const { period, businessId } = useParams<{ period: string; businessId: string }>();
+    const { period } = useParams<{ period: string }>();
     const context = useContext(AppContext);
     const navigate = useNavigate();
 
@@ -14,6 +15,8 @@ const CardIncome: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedSegment, setSelectedSegment] = useState<"Orders" | "Commands" | "Both">("Both");
     const [selectedCoin, setSelectedCoin] = useState<string | null>(null);
+    const normalizedPeriod = normalizePeriodLabel(period);
+    const businessId = resolveBusinessId(context.user?.Business_Id);
 
     // List of available coins
     const availableCoins = Array.from(new Set([...orders, ...commands].map((item) => item.CoinName)));
@@ -23,7 +26,11 @@ const CardIncome: React.FC = () => {
         setError(null);
 
         try {
-            const response = await getSales(businessId!, period!, "TARJETA", context.user.Token);
+            if (!businessId || !context.user.Token) {
+                setError("No se pudo identificar el negocio.");
+                return;
+            }
+            const response = await getSales(businessId, normalizedPeriod, "TARJETA", context.user.Token);
             setOrders(response?.Orders ?? []);
             setCommands(response?.Commands ?? []);
         } catch {
@@ -35,7 +42,7 @@ const CardIncome: React.FC = () => {
 
     useEffect(() => {
         loadSales();
-    }, [period, businessId]);
+    }, [businessId, normalizedPeriod, context.user.Token]);
 
     const filteredData = () => {
         let data: any[] = [];
@@ -87,7 +94,7 @@ const CardIncome: React.FC = () => {
         <div className="p-6 bg-gray-50 min-h-screen">
             <header className="mb-6">
                 <h1 className="text-2xl font-semibold text-gray-700">
-                    Recibido de tarjetas por {period}
+                    Recibido de tarjetas por {normalizedPeriod}
                 </h1>
             </header>
 

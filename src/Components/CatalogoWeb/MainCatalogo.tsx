@@ -10,6 +10,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import {
   confirmCheckoutPayment,
   getBusinessById,
+  getExtrasByProductIdPublic,
   getProductsByBusinessWithStock,
   getVariantsByProductIdPublic,
   insertOrder,
@@ -22,8 +23,10 @@ import defaultImage from "../../assets/ravekh.png";
 import { ProductGrid, ProductGridSkeleton } from "./ProductGrid";
 import { Variant } from "./PuntoVenta/Model/Variant";
 import { VariantSelectionModal, getBaseVariantKey } from "./VariantSelectionModal";
+import { ProductExtrasModal } from "./ProductExtrasModal";
 import { Order } from "./Modelo/Order";
 import { OrderDetails } from "./Modelo/OrderDetails";
+import { ProductExtrasResponse } from "./Modelo/ProductExtra";
 interface MainCatalogoProps {
   idBusiness?: string;
 }
@@ -47,6 +50,10 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
   const [variantModalOpen, setVariantModalOpen] = useState(false);
   const [variantLoading, setVariantLoading] = useState(false);
   const [loadingProducts, setLoadingProducts] = useState<boolean>(true);
+  const [extrasModalOpen, setExtrasModalOpen] = useState(false);
+  const [extrasLoading, setExtrasLoading] = useState(false);
+  const [extrasProduct, setExtrasProduct] = useState<Producto | null>(null);
+  const [extrasData, setExtrasData] = useState<ProductExtrasResponse>(null);
   const [showToast, setShowToast] = useState(false);
   const [toastMessage, setToastMessage] = useState("Agregado al carrito");
   const [themeColor, setThemeColor] = useState("#F9FAFB");
@@ -360,7 +367,18 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
         return;
       }
 
-      addProductToCart({ ...product, Variant_Id: null });
+      setExtrasLoading(true);
+      const fetchedExtras = await getExtrasByProductIdPublic(product.Id);
+      setExtrasLoading(false);
+
+      if (fetchedExtras) {
+        setExtrasProduct(product);
+        setExtrasData(fetchedExtras);
+        setExtrasModalOpen(true);
+        return;
+      }
+
+      addProductToCart({ ...product, Variant_Id: null, Color_Id: null, Size_Id: null });
       triggerToast();
     },
     [addProductToCart, fetchVariantsForProduct, openVariantModal, triggerToast]
@@ -399,6 +417,29 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
     setVariantProduct(null);
     setVariantOptions([]);
   }, []);
+
+  const handleCloseExtrasModal = useCallback(() => {
+    setExtrasModalOpen(false);
+    setExtrasProduct(null);
+    setExtrasData(null);
+  }, []);
+
+  const handleConfirmExtras = useCallback(
+    (selection: { color: { Id: number; Description: string } | null; size: { Id: number; Description: string } | null }) => {
+      if (!extrasProduct) return;
+      addProductToCart({
+        ...extrasProduct,
+        Variant_Id: null,
+        Color_Id: selection.color?.Id ?? null,
+        Size_Id: selection.size?.Id ?? null,
+        ColorDescription: selection.color?.Description ?? undefined,
+        SizeDescription: selection.size?.Description ?? undefined,
+      });
+      triggerToast();
+      handleCloseExtrasModal();
+    },
+    [addProductToCart, extrasProduct, handleCloseExtrasModal, triggerToast]
+  );
 
   const handleQuickView = useCallback(
     async (product: Producto) => {
@@ -827,6 +868,14 @@ export const MainCatalogo: React.FC<MainCatalogoProps> = () => {
             onConfirm={handleConfirmVariant}
             existingVariantQuantities={cartVariantQuantities}
             storeColor={color}
+          />
+          <ProductExtrasModal
+            isOpen={extrasModalOpen}
+            productName={extrasProduct?.Name ?? ""}
+            extras={extrasData}
+            loading={extrasLoading}
+            onClose={handleCloseExtrasModal}
+            onConfirm={handleConfirmExtras}
           />
         </div>
       </>

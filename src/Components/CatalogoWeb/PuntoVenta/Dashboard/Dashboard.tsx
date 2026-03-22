@@ -136,7 +136,7 @@ export const Dashboard: React.FC = () => {
           percentage={state.incomeComparison?.total.percentageChange?.toString() + "%" || "0%"}
           icon={<TrendingUpIcon color={"#049004"} height={48} width={47} />}
           bgColor="#CAE7CA"
-          navigation={`/report-income/Día/${context.user.Business_Id}`}
+          navigation={`/report-income/Día`}
         />
       ),
     },

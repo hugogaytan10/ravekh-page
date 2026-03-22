@@ -17,6 +17,7 @@ import {
     bestSellingProductsToday,
 } from "./Petitions";
 import { AppContext } from "../../../Context/AppContext";
+import { normalizePeriodLabel, resolveBusinessId } from "../utils";
 
 // Registrar escalas y elementos
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
@@ -27,28 +28,34 @@ interface Product {
 }
 
 const BestSelling: React.FC = () => {
-    const { period, businessId } = useParams<{ period: string; businessId: string }>();
+    const { period } = useParams<{ period: string }>();
     const context = useContext(AppContext);
     const navigate = useNavigate();
     const [products, setProducts] = useState<Product[]>([]);
     const [loading, setLoading] = useState(true);
+    const normalizedPeriod = normalizePeriodLabel(period);
+    const businessId = resolveBusinessId(context.user?.Business_Id);
 
     useEffect(() => {
         fetchProducts();
-    }, [period, businessId]);
+    }, [businessId, normalizedPeriod, context.user.Token]);
 
     const fetchProducts = async () => {
         setLoading(true);
         try {
+            if (!businessId || !context.user.Token) {
+                setProducts([]);
+                return;
+            }
             let data: Product[] = [];
-            switch (period?.toUpperCase()) {
-                case "DÍA":
+            switch (normalizedPeriod) {
+                case "Día":
                     data = await bestSellingProductsToday(businessId!, context.user.Token);
                     break;
-                case "MES":
+                case "Mes":
                     data = await bestSellingProductMonth(businessId!, context.user.Token);
                     break;
-                case "AÑO":
+                case "Año":
                     data = await bestSellingProductsYear(businessId!, context.user.Token);
                     break;
             }

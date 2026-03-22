@@ -7,6 +7,7 @@ import { SalesIcon } from "../../../../assets/POS/SalesIcon";
 import CardIcon from "../../../../assets/POS/CardIcon";
 import { ThemeLight } from "../Theme/Theme";
 import { useNavigate } from "react-router-dom";
+import { resolveBusinessId } from "./utils";
 
 interface CurrencyDetail {
     currency: string;
@@ -48,11 +49,27 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
         bestSeller: "",
         bestCategory: "",
     });
+    const businessId = resolveBusinessId(user?.Business_Id);
 
     const fetchData = async () => {
+        if (!businessId) {
+            setReportDetails({
+                balance: [],
+                income: [],
+                profit: [],
+                averagePurchase: [],
+                sales: [],
+                cardPercentage: [],
+                cashPercentage: [],
+                bestSeller: "",
+                bestCategory: "",
+            });
+            return;
+        }
+
         setIsLoading(true);
         try {
-            const reportData = await fetchReportData(user.Business_Id, selectedPeriod);
+            const reportData = await fetchReportData(Number(businessId), selectedPeriod);
             if (reportData) {
                 setReportDetails({
                     balance: reportData.balance || [],
@@ -75,7 +92,7 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
 
     useEffect(() => {
         fetchData();
-    }, [selectedPeriod, user.Business_Id]);
+    }, [businessId, selectedPeriod]);
 
     const renderCard = (
         title: string,
@@ -86,23 +103,22 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
     ) => {
         return (
             <div
-                className="bg-white rounded-lg shadow-md p-12 mb-6 transition-transform transform hover:scale-95 w-full sm:w-1/2"
+                className="bg-white rounded-lg shadow-md p-5 mb-4 transition-transform transform hover:scale-[0.99] w-full lg:w-[calc(50%-0.75rem)] cursor-pointer"
                 onClick={onClick}
             >
                 <div className="flex items-center">
-                    <div className="flex-shrink-0 w-16 h-16 flex items-center justify-center">
+                    <div className="flex-shrink-0 w-12 h-12 flex items-center justify-center">
                         {icon}
                     </div>
-                    <div className="ml-6 flex-grow">
-                        {/* Título responsivo */}
-                        <p className="text-gray-700 font-semibold truncate text-lg sm:text-xl md:text-2xl lg:text-3xl">
+                    <div className="ml-4 flex-grow min-w-0">
+                        <p className="text-gray-700 font-semibold truncate text-base sm:text-lg">
                             {title}
                         </p>
                         {Array.isArray(values) && values.length > 0 ? (
                             values.map((item, index) => (
                                 <p
                                     key={index}
-                                    className="text-gray-500 text-sm sm:text-base md:text-lg lg:text-xl truncate"
+                                    className="text-gray-500 text-sm sm:text-base truncate"
                                     style={{ color: valueColor }}
                                 >
                                     {`${item.currency}: $${item.total.toFixed(2)}`}
@@ -110,7 +126,7 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                             ))
                         ) : (
                             <p
-                                className="text-gray-500 text-sm sm:text-base md:text-lg lg:text-xl"
+                                className="text-gray-500 text-sm sm:text-base"
                                 style={{ color: valueColor }}
                             >
                                 {values && typeof values === "string" ? values : "Sin datos"}
@@ -118,7 +134,7 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                         )}
                     </div>
                     {!["Balance", "Ganancia", "Compra Promedio"].includes(title) && (
-                        <ChevronGo height={50} width={50} stroke={ThemeLight.textColor} />
+                        <ChevronGo height={28} width={28} stroke={ThemeLight.textColor} />
                     )}
                 </div>
             </div>
@@ -134,10 +150,10 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
     }
 
     return (
-        <div className="p-6 bg-gray-50 min-h-screen">
-            <div className="mb-8">
-                <h2 className="text-gray-700 font-semibold mb-6 text-2xl">Balance General</h2>
-                <div className="flex flex-wrap -mx-4">
+        <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
+            <div className="mb-6">
+                <h2 className="text-gray-700 font-semibold mb-4 text-xl sm:text-2xl">Balance General</h2>
+                <div className="flex flex-wrap gap-3">
                     {renderCard(
                         "Balance",
                         reportDetails.balance,
@@ -146,9 +162,9 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                 </div>
             </div>
 
-            <div className="mb-8">
-                <h2 className="text-gray-700 font-semibold mb-6 text-2xl">Resumen</h2>
-                <div className="flex flex-wrap -mx-4">
+            <div className="mb-6">
+                <h2 className="text-gray-700 font-semibold mb-4 text-xl sm:text-2xl">Resumen</h2>
+                <div className="flex flex-wrap gap-3">
                     {renderCard(
                         "Ingresos",
                         reportDetails.income,
@@ -159,7 +175,7 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                         />,
                         () => {
                             context.setShowNavBarBottom(false);
-                            navigation("/report-income/" + selectedPeriod + "/" + user.Business_Id)
+                            navigation("/report-income/" + selectedPeriod)
                         }
                     )}
                     {renderCard(
@@ -186,15 +202,15 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                         />,
                         () => {
                             context.setShowNavBarBottom(false);
-                            navigation("/report-sales/" + selectedPeriod + "/" + user.Business_Id)
+                            navigation("/report-sales/" + selectedPeriod)
                         }
                     )}
                 </div>
             </div>
 
-            <div className="mb-8">
-                <h2 className="text-gray-700 font-semibold mb-6 text-2xl">Métodos de Pago</h2>
-                <div className="flex flex-wrap -mx-4">
+            <div className="mb-6">
+                <h2 className="text-gray-700 font-semibold mb-4 text-xl sm:text-2xl">Métodos de Pago</h2>
+                <div className="flex flex-wrap gap-3">
                     {renderCard(
                         "Tarjeta",
                         reportDetails.cardPercentage,
@@ -205,7 +221,7 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                         />,
                         () => {
                             context.setShowNavBarBottom(false);
-                            navigation("/card-income/" + selectedPeriod + "/" + user.Business_Id)
+                            navigation("/card-income/" + selectedPeriod)
                         }
                     )}
                     {renderCard(
@@ -214,15 +230,15 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                         <MoneyIcon width={50} height={50} color={context.store.Color} />,
                         () => {
                             context.setShowNavBarBottom(false);
-                            navigation("/cash-income/" + selectedPeriod + "/" + user.Business_Id)
+                            navigation("/cash-income/" + selectedPeriod)
                         }
                     )}
                 </div>
             </div>
 
-            <div className="mb-8">
-                <h2 className="text-gray-700 font-semibold mb-6 text-2xl">Destacados</h2>
-                <div className="flex flex-wrap -mx-4">
+            <div className="mb-6">
+                <h2 className="text-gray-700 font-semibold mb-4 text-xl sm:text-2xl">Destacados</h2>
+                <div className="flex flex-wrap gap-3">
                     {renderCard(
                         "Producto más vendido",
                         reportDetails.bestSeller,
@@ -233,7 +249,7 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                         />,
                         () => {
                             context.setShowNavBarBottom(false);
-                            navigation("/best-selling/" + selectedPeriod + "/" + user.Business_Id)
+                            navigation("/best-selling/" + selectedPeriod)
                         }
                     )}
                     {renderCard(
@@ -246,7 +262,7 @@ export const ReportDetails: React.FC<ReportDetailsProps> = ({
                         />,
                         () => {
                             context.setShowNavBarBottom(false);
-                            navigation("/best-category-selling/" + selectedPeriod + "/" + user.Business_Id)
+                            navigation("/best-category-selling/" + selectedPeriod)
                         }
                     )}
                 </div>

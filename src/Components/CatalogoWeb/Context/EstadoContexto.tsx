@@ -17,7 +17,12 @@ export type AppContextState = {
     phoneNumber: string | null;
     setPhoneNumber: Dispatch<string | null>;
     addProductToCart: (product: Producto) => void;
-    removeProductFromCart: (id: string, variantId?: number | null) => void;
+    removeProductFromCart: (
+      id: string,
+      variantId?: number | null,
+      colorId?: number | null,
+      sizeId?: number | null
+    ) => void;
     clearCart: () => void;
     idBussiness: string;
     setIdBussiness: Dispatch<string>;

@@ -457,14 +457,14 @@ export const Rutas = () => {
       "/products-filter",
       "/keyboardProduct/:productId/:currentStock",
       "/main-reports",
-      "/report-income/:period/:businessId",
-      "/report-sales/:period/:businessId",
+      "/report-income/:period",
+      "/report-sales/:period",
       "/report-order-details/:orderId",
       "/report-command-details/:commandId",
-      "/card-income/:period/:businessId",
-      "/cash-income/:period/:businessId",
-      "/best-selling/:period/:businessId",
-      "/best-category-selling/:period/:businessId",
+      "/card-income/:period",
+      "/cash-income/:period",
+      "/best-selling/:period",
+      "/best-category-selling/:period",
       "/more",
       "/box-cutting",
       "/cutting-by-employee/:employeeId",
@@ -587,14 +587,14 @@ export const Rutas = () => {
       "/products-filter",
       "/keyboardProduct/:productId/:currentStock",
       "/main-reports",
-      "/report-income/:period/:businessId",
-      "/report-sales/:period/:businessId",
+      "/report-income/:period",
+      "/report-sales/:period",
       "/report-order-details/:orderId",
       "/report-command-details/:commandId",
-      "/card-income/:period/:businessId",
-      "/cash-income/:period/:businessId",
-      "/best-selling/:period/:businessId",
-      "/best-category-selling/:period/:businessId",
+      "/card-income/:period",
+      "/cash-income/:period",
+      "/best-selling/:period",
+      "/best-category-selling/:period",
       "/more",
       "/box-cutting",
       "/cutting-by-employee/:employeeId",
@@ -631,14 +631,14 @@ export const Rutas = () => {
       "/keyboardProduct/:productId/:currentStock",
       "/main-reports",
       "/sales-tax-settings",
-      "/report-income/:period/:businessId",
-      "/report-sales/:period/:businessId",
+      "/report-income/:period",
+      "/report-sales/:period",
       "/report-order-details/:orderId",
       "/report-command-details/:commandId",
-      "/card-income/:period/:businessId",
-      "/cash-income/:period/:businessId",
-      "/best-selling/:period/:businessId",
-      "/best-category-selling/:period/:businessId",
+      "/card-income/:period",
+      "/cash-income/:period",
+      "/best-selling/:period",
+      "/best-category-selling/:period",
       "/more",
       "/box-cutting",
       "/cutting-by-employee/:employeeId",
@@ -1076,14 +1076,14 @@ export const Rutas = () => {
           <Route path="/products-filter" element={<Filter />} />
           <Route path="/keyboardProduct/:productId/:currentStock" element={<KeyboardStock />} />
           <Route path="/main-reports" element={<MainReports />} />
-          <Route path="/report-income/:period/:businessId" element={<ReportIncome />} />
-          <Route path="/report-sales/:period/:businessId" element={<ReportSales />} />
+          <Route path="/report-income/:period" element={<ReportIncome />} />
+          <Route path="/report-sales/:period" element={<ReportSales />} />
           <Route path="/report-order-details/:orderId" element={<ReportOrderDetails />} />
           <Route path="/report-command-details/:commandId" element={<ReportCommandDetails />} />
-          <Route path="/card-income/:period/:businessId" element={<CardIncome />} />
-          <Route path="/cash-income/:period/:businessId" element={<CashIncome />} />
-          <Route path="/best-selling/:period/:businessId" element={<BestSelling />} />
-          <Route path="/best-category-selling/:period/:businessId" element={<BestCategorySelling />} />
+          <Route path="/card-income/:period" element={<CardIncome />} />
+          <Route path="/cash-income/:period" element={<CashIncome />} />
+          <Route path="/best-selling/:period" element={<BestSelling />} />
+          <Route path="/best-category-selling/:period" element={<BestCategorySelling />} />
           <Route path="/more" element={<MainSettings />} />
           <Route path="/catalog-config" element={<CatalogSettings />} />
           <Route path="/box-cutting" element={<BoxCutting />} />
