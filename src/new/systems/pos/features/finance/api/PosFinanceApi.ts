@@ -121,14 +121,22 @@ export class PosFinanceApi implements IFinanceRepository {
   private extractAmount(value: unknown): number {
     if (typeof value === "number") return this.toSafeAmount(value);
     if (typeof value === "string") return this.toSafeAmount(value);
+    if (Array.isArray(value)) {
+      return value.reduce((accumulator, row) => accumulator + this.extractAmount(row), 0);
+    }
 
     if (value && typeof value === "object") {
       const candidates = ["Amount", "amount", "Income", "income", "Expenses", "expenses", "total", "Total"] as const;
       for (const key of candidates) {
         const raw = (value as Record<string, unknown>)[key];
         if (raw !== undefined) {
-          return this.toSafeAmount(raw);
+          return this.extractAmount(raw);
         }
+      }
+
+      const totalsByCurrency = (value as Record<string, unknown>).TotalsByCurrency ?? (value as Record<string, unknown>).totalsByCurrency;
+      if (totalsByCurrency !== undefined) {
+        return this.extractAmount(totalsByCurrency);
       }
     }
 

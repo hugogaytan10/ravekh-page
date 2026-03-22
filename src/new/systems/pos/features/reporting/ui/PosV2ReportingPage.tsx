@@ -119,8 +119,8 @@ export const PosV2ReportingPage = () => {
 
     try {
       const [summaryData, incomeSeries] = await Promise.all([
-        page.loadSummary(businessId, range),
-        page.loadIncomeSeries(businessId, range),
+        page.loadSummary(businessId, range, hasToken ? cleanToken : undefined),
+        page.loadIncomeSeries(businessId, range, hasToken ? cleanToken : undefined),
       ]);
 
       setSummary(summaryData);

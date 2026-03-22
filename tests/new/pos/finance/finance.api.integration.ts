@@ -8,9 +8,9 @@ export async function run(): Promise<void> {
     request: async ({ method, path, body }: { method: string; path: string; body?: unknown }) => {
       calls.push({ method, path, body });
 
-      if (method === "GET" && path === "income/month/22") return { Income: "1300.50" };
+      if (method === "GET" && path === "income/month/22") return { Income: { TotalsByCurrency: [{ total: "1300.50" }] } };
       if (method === "GET" && path === "expenses/month/22") return 400;
-      if (method === "GET" && path === "income/today/22") return { total: 200 };
+      if (method === "GET" && path === "income/today/22") return [{ Amount: 100 }, { amount: 100 }];
       if (method === "GET" && path === "expenses/today/22") return "50";
 
       if (method === "POST" && path === "income/bymonth/22") {

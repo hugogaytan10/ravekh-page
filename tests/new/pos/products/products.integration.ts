@@ -13,7 +13,13 @@ export async function run(): Promise<void> {
 
       if (method === "GET" && path === "products/business/7") {
         return [
-          { Id: 1, Business_Id: 7, Name: "Café", Available: true },
+          {
+            Id: 1,
+            Business_Id: 7,
+            Name: "Café",
+            Available: true,
+            Variants: [{ Id: 99, Description: "Grande", Price: 42, Stock: 3, PromotionPrice: 39 }],
+          },
           { Id: 2, Business_Id: 7, Name: "Descatalogado", Available: 0 },
         ];
       }
@@ -93,8 +99,24 @@ export async function run(): Promise<void> {
       Price: undefined,
       CostPerItem: undefined,
       Stock: undefined,
+      Volume: false,
     },
-    Variants: [{ description: "Grande", price: 42 }],
+    Variants: [
+      {
+        Id: undefined,
+        Product_Id: undefined,
+        Description: "Grande",
+        Barcode: null,
+        Color: null,
+        Price: 42,
+        PromotionPrice: null,
+        CostPerItem: null,
+        Stock: null,
+        ExpDate: null,
+        MinStock: null,
+        OptStock: null,
+      },
+    ],
   });
   assert.deepEqual(calls, ["GET products/business/7", "POST products", "PUT products/9", "PUT products/available/8"]);
 }

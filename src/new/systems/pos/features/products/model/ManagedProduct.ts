@@ -1,5 +1,6 @@
 export interface ProductVariant {
   id?: number;
+  productId?: number;
   description: string;
   barcode?: string | null;
   color?: string | null;
@@ -7,6 +8,9 @@ export interface ProductVariant {
   promotionPrice?: number | null;
   costPerItem?: number | null;
   stock?: number | null;
+  expDate?: string | null;
+  minStock?: number | null;
+  optStock?: number | null;
 }
 
 export interface SaveManagedProductDto {

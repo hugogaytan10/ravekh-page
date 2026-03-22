@@ -33,6 +33,8 @@ type VariantFormVm = {
 };
 
 type ViewMode = "grid" | "list";
+type ToastState = { type: "success" | "error"; message: string } | null;
+type ArchiveDialogState = { id: number; name: string } | null;
 
 const toImageUrl = (image?: string | null): string | null => {
   if (!image) return null;
@@ -78,11 +80,13 @@ export const ProductsV2PosPage = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [archiveDialog, setArchiveDialog] = useState<ArchiveDialogState>(null);
+  const [toast, setToast] = useState<ToastState>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
-  const [price, setPrice] = useState("0");
-  const [stock, setStock] = useState("0");
+  const [price, setPrice] = useState("");
+  const [stock, setStock] = useState("");
   const [forSale, setForSale] = useState(true);
   const [showInStore, setShowInStore] = useState(true);
   const [available, setAvailable] = useState(true);
@@ -99,8 +103,8 @@ export const ProductsV2PosPage = () => {
     setEditingId(null);
     setName("");
     setDescription("");
-    setPrice("0");
-    setStock("0");
+    setPrice("");
+    setStock("");
     setForSale(true);
     setShowInStore(true);
     setAvailable(true);
@@ -122,7 +126,10 @@ export const ProductsV2PosPage = () => {
   };
 
   const loadProducts = async () => {
-    if (!businessId || !token) return;
+    if (!businessId || !token) {
+      setError("Inicia sesión para administrar productos.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
@@ -150,6 +157,12 @@ export const ProductsV2PosPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!toast) return;
+    const timeout = window.setTimeout(() => setToast(null), 2800);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
 
   useEffect(() => {
     loadProducts();
@@ -222,15 +235,15 @@ export const ProductsV2PosPage = () => {
       return;
     }
 
-    const parsedPrice = Number(price);
-    const parsedStock = Number(stock);
+    const parsedPrice = price.trim() === "" ? null : Number(price);
+    const parsedStock = stock.trim() === "" ? null : Number(stock);
 
-    if (Number.isNaN(parsedPrice) || parsedPrice < 0) {
+    if (parsedPrice !== null && (Number.isNaN(parsedPrice) || parsedPrice < 0)) {
       setError("El precio debe ser un número válido mayor o igual a 0.");
       return;
     }
 
-    if (Number.isNaN(parsedStock) || parsedStock < 0) {
+    if (parsedStock !== null && (Number.isNaN(parsedStock) || parsedStock < 0)) {
       setError("El stock debe ser un número válido mayor o igual a 0.");
       return;
     }
@@ -246,7 +259,7 @@ export const ProductsV2PosPage = () => {
         id: editingId ?? undefined,
         businessId,
         name: name.trim(),
-        description,
+        description: description.trim(),
         forSale,
         showInStore,
         available,
@@ -261,10 +274,12 @@ export const ProductsV2PosPage = () => {
       };
 
       await service.saveProduct(payload, token);
+      setToast({ type: "success", message: editingId ? "Producto actualizado correctamente." : "Producto creado correctamente." });
       closeFormModal();
       await loadProducts();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo guardar producto.");
+      setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo guardar producto." });
     } finally {
       setSaving(false);
     }
@@ -285,8 +300,8 @@ export const ProductsV2PosPage = () => {
       setEditingId(detail.id);
       setName(detail.name);
       setDescription(detail.description);
-      setPrice(String(detail.price ?? 0));
-      setStock(String(detail.stock ?? 0));
+      setPrice(detail.price == null ? "" : String(detail.price));
+      setStock(detail.stock == null ? "" : String(detail.stock));
       setForSale(detail.forSale);
       setShowInStore(detail.showInStore);
       setAvailable(detail.available);
@@ -304,31 +319,40 @@ export const ProductsV2PosPage = () => {
       );
       setError(null);
       setIsFormOpen(true);
+      setToast(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo cargar el producto para edición.");
+      setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo cargar el producto para edición." });
     }
   };
 
-  const handleArchive = async (productId: number) => {
+  const requestArchive = (productId: number, productName: string) => {
+    setArchiveDialog({ id: productId, name: productName });
+  };
+
+  const handleArchive = async () => {
+    if (!archiveDialog) return;
+
     if (!token) {
       setError("Token es obligatorio para eliminar/archivar.");
+      setToast({ type: "error", message: "Token es obligatorio para eliminar/archivar." });
       return;
     }
 
-    const accepted = window.confirm("¿Seguro que deseas eliminar este producto? Esta acción lo marcará como no disponible.");
-    if (!accepted) return;
-
-    setArchivingId(productId);
+    setArchivingId(archiveDialog.id);
     setError(null);
 
     try {
-      await service.archiveProduct(productId, token);
-      if (editingId === productId) {
+      await service.archiveProduct(archiveDialog.id, token);
+      if (editingId === archiveDialog.id) {
         closeFormModal();
       }
+      setToast({ type: "success", message: `Producto "${archiveDialog.name}" archivado.` });
+      setArchiveDialog(null);
       await loadProducts();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo eliminar/archivar producto.");
+      setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo eliminar/archivar producto." });
     } finally {
       setArchivingId(null);
     }
@@ -365,6 +389,7 @@ export const ProductsV2PosPage = () => {
         </header>
 
         {error ? <p className="pos-v2-products__error" role="alert">{error}</p> : null}
+        {toast ? <p className={`pos-v2-products__toast is-${toast.type}`} role="status">{toast.message}</p> : null}
 
         <section className="pos-v2-products__stats" aria-label="Resumen de productos">
           <article><span>Total</span><strong>{stats.total}</strong></article>
@@ -435,7 +460,7 @@ export const ProductsV2PosPage = () => {
                     <div className="pos-v2-products__card-actions">
                       <button type="button" className="is-edit" onClick={() => handleEdit(product.id)}>Editar</button>
                       {product.available ? (
-                        <button type="button" onClick={() => handleArchive(product.id)} disabled={archivingId === product.id}>
+                        <button type="button" onClick={() => requestArchive(product.id, product.name)} disabled={archivingId === product.id}>
                           {archivingId === product.id ? "Eliminando..." : "Eliminar"}
                         </button>
                       ) : null}
@@ -463,18 +488,18 @@ export const ProductsV2PosPage = () => {
 
                 <label>
                   Descripción
-                  <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe el producto" rows={3} required />
+                  <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe el producto (opcional)" rows={3} />
                 </label>
 
                 <div className="pos-v2-products__field-grid">
                   <label>
-                    Precio
-                    <input type="number" min="0" step="0.01" inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} required />
+                    Precio (opcional)
+                    <input type="number" min="0" step="0.01" inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} />
                   </label>
 
                   <label>
-                    Stock
-                    <input type="number" min="0" step="1" inputMode="numeric" value={stock} onChange={(event) => setStock(event.target.value)} required />
+                    Stock (opcional)
+                    <input type="number" min="0" step="1" inputMode="numeric" value={stock} onChange={(event) => setStock(event.target.value)} />
                   </label>
                 </div>
 
@@ -534,6 +559,24 @@ export const ProductsV2PosPage = () => {
                   <button type="submit" className="pos-v2-products__primary" disabled={saving}>{saving ? "Guardando..." : editingId ? "Guardar cambios" : "Guardar producto"}</button>
                 </div>
               </form>
+            </section>
+          </div>
+        ) : null}
+
+        {archiveDialog ? (
+          <div className="pos-v2-products__modal-backdrop is-sheet" role="presentation" onClick={() => setArchiveDialog(null)}>
+            <section className="pos-v2-products__modal pos-v2-products__modal-sheet" role="dialog" aria-modal="true" aria-label="Confirmar eliminación" onClick={(event) => event.stopPropagation()}>
+              <header className="pos-v2-products__modal-head">
+                <h3>¿Eliminar producto?</h3>
+              </header>
+              <p>Este producto se marcará como archivado y dejará de mostrarse en venta activa.</p>
+              <strong>{archiveDialog.name}</strong>
+              <div className="pos-v2-products__form-actions is-modal">
+                <button type="button" className="pos-v2-products__secondary" onClick={() => setArchiveDialog(null)}>Cancelar</button>
+                <button type="button" className="pos-v2-products__primary is-danger" onClick={handleArchive} disabled={archivingId === archiveDialog.id}>
+                  {archivingId === archiveDialog.id ? "Archivando..." : "Sí, archivar"}
+                </button>
+              </div>
             </section>
           </div>
         ) : null}

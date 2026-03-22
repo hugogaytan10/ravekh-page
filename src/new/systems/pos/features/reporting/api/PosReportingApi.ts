@@ -29,10 +29,18 @@ type LegacyReportPeriodResponse = {
 type LegacyReportResponse = {
   Day?: LegacyReportPeriodResponse | null;
   day?: LegacyReportPeriodResponse | null;
+  Dia?: LegacyReportPeriodResponse | null;
+  dia?: LegacyReportPeriodResponse | null;
   Month?: LegacyReportPeriodResponse | null;
   month?: LegacyReportPeriodResponse | null;
+  Mes?: LegacyReportPeriodResponse | null;
+  mes?: LegacyReportPeriodResponse | null;
   Year?: LegacyReportPeriodResponse | null;
   year?: LegacyReportPeriodResponse | null;
+  Anio?: LegacyReportPeriodResponse | null;
+  anio?: LegacyReportPeriodResponse | null;
+  Año?: LegacyReportPeriodResponse | null;
+  año?: LegacyReportPeriodResponse | null;
   Data?: LegacyReportResponse;
   data?: LegacyReportResponse;
 };
@@ -42,6 +50,15 @@ type LegacyIncomePointResponse = {
   date?: NullableText;
   Amount?: NullableNumber;
   amount?: NullableNumber;
+};
+
+type LegacyDataWrapper<T> = {
+  Data?: T;
+  data?: T;
+  Result?: T;
+  result?: T;
+  Payload?: T;
+  payload?: T;
 };
 
 type LegacySalesItem = {
@@ -69,6 +86,31 @@ const toNumber = (value: NullableNumber): number => {
   return Number.isFinite(parsed) ? parsed : 0;
 };
 
+const toNumericValue = (value: unknown): number => {
+  if (typeof value === "number" || typeof value === "string") {
+    return toNumber(value);
+  }
+
+  if (Array.isArray(value)) {
+    return value.reduce((accumulator, row) => accumulator + toNumericValue(row), 0);
+  }
+
+  if (value && typeof value === "object") {
+    const record = value as Record<string, unknown>;
+    const directValue = record.total ?? record.Total ?? record.amount ?? record.Amount ?? record.value ?? record.Value;
+    if (directValue !== undefined) {
+      return toNumericValue(directValue);
+    }
+
+    const nestedCurrencyList = record.TotalsByCurrency ?? record.totalsByCurrency;
+    if (nestedCurrencyList !== undefined) {
+      return toNumericValue(nestedCurrencyList);
+    }
+  }
+
+  return 0;
+};
+
 const toText = (value: NullableText, fallback = "Sin datos"): string => {
   const normalized = `${value ?? ""}`.trim();
   return normalized.length > 0 ? normalized : fallback;
@@ -80,6 +122,21 @@ const toIncomePoint = (item: LegacyIncomePointResponse): IncomePoint =>
     amount: item.Amount ?? item.amount,
   });
 
+const mapRangeToLegacyDate = (range: ReportRange): "DÍA" | "MES" | "AÑO" => {
+  if (range === "DAY") return "DÍA";
+  if (range === "MONTH") return "MES";
+  return "AÑO";
+};
+
+const unwrapPayload = <T>(payload: T | LegacyDataWrapper<T>): T => {
+  if (payload && typeof payload === "object") {
+    const wrappedPayload = payload as LegacyDataWrapper<T>;
+    return wrappedPayload.data ?? wrappedPayload.Data ?? wrappedPayload.result ?? wrappedPayload.Result ?? wrappedPayload.payload ?? wrappedPayload.Payload ?? (payload as T);
+  }
+
+  return payload as T;
+};
+
 export class PosReportingApi implements IReportingRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
@@ -90,26 +147,27 @@ export class PosReportingApi implements IReportingRepository {
       token,
     });
 
-    const report = this.unwrapReport(payload);
+    const report = this.unwrapReport(unwrapPayload(payload));
 
     return new SalesReport(
       businessId,
-      this.toSummary(report.Day ?? report.day),
-      this.toSummary(report.Month ?? report.month),
-      this.toSummary(report.Year ?? report.year),
+      this.toSummary(report.Day ?? report.day ?? report.Dia ?? report.dia),
+      this.toSummary(report.Month ?? report.month ?? report.Mes ?? report.mes),
+      this.toSummary(report.Year ?? report.year ?? report.Anio ?? report.anio ?? report.Año ?? report.año),
     );
   }
 
   async getIncomeSeries(businessId: number, range: ReportRange, token?: string): Promise<IncomePoint[]> {
     const suffix = range === "DAY" ? "today" : range === "MONTH" ? "month" : "year";
 
-    const response = await this.httpClient.request<LegacyIncomePointResponse[] | { data?: LegacyIncomePointResponse[] }>({
+    const response = await this.httpClient.request<LegacyIncomePointResponse[] | LegacyDataWrapper<LegacyIncomePointResponse[]>>({
       method: "GET",
       path: `income/${suffix}/${businessId}`,
       token,
     });
 
-    const rows = Array.isArray(response) ? response : Array.isArray(response.data) ? response.data : [];
+    const rowsCandidate = unwrapPayload(response);
+    const rows = Array.isArray(rowsCandidate) ? rowsCandidate : [];
 
     if (rows.length === 0) {
       return [];
@@ -124,24 +182,27 @@ export class PosReportingApi implements IReportingRepository {
     payment: "TODOS" | "EFECTIVO" | "TARJETA",
     token: string,
   ): Promise<ReportSale[]> {
-    const payload = await this.httpClient.request<LegacySalesResponse>({
+    const payload = await this.httpClient.request<LegacySalesResponse | LegacyDataWrapper<LegacySalesResponse>>({
       method: "POST",
       path: "sales/payment",
       token,
       body: {
         business_Id: businessId,
-        date: range,
+        date: mapRangeToLegacyDate(range),
         payment,
       },
     });
 
-    const orders = payload.Orders ?? payload.orders ?? [];
-    const commands = payload.Commands ?? payload.commands ?? [];
+    const unwrappedPayload = unwrapPayload(payload);
+    const orders = unwrappedPayload.Orders ?? unwrappedPayload.orders ?? [];
+    const commands = unwrappedPayload.Commands ?? unwrappedPayload.commands ?? [];
 
     return [
       ...orders.map((item) => this.toSale(item, "ORDER")),
       ...commands.map((item) => this.toSale(item, "COMMAND")),
-    ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    ]
+      .filter((sale) => sale.id !== "0")
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
 
   private unwrapReport(payload: LegacyReportResponse): LegacyReportResponse {
@@ -156,23 +217,25 @@ export class PosReportingApi implements IReportingRepository {
     }
 
     return SalesSummary.normalize({
-      balance: toNumber(period.Balance ?? period.balance),
-      income: toNumber(period.Income ?? period.income),
-      earnings: toNumber(period.Earnings ?? period.earnings),
-      averageSale: toNumber(period.AverageSale ?? period.averageSale),
-      totalSales: toNumber(period.SalesTotal ?? period.salesTotal),
-      cashSalesPercentage: toNumber(period.CashSales ?? period.cashSales),
-      cardSalesPercentage: toNumber(period.CardSales ?? period.cardSales),
+      balance: toNumericValue(period.Balance ?? period.balance),
+      income: toNumericValue(period.Income ?? period.income),
+      earnings: toNumericValue(period.Earnings ?? period.earnings),
+      averageSale: toNumericValue(period.AverageSale ?? period.averageSale),
+      totalSales: toNumericValue(period.SalesTotal ?? period.salesTotal),
+      cashSalesPercentage: toNumericValue(period.CashSales ?? period.cashSales),
+      cardSalesPercentage: toNumericValue(period.CardSales ?? period.cardSales),
       bestSeller: toText(period.MostSoldProduct ?? period.mostSoldProduct),
       bestCategory: toText(period.MostSoldCategory ?? period.mostSoldCategory),
     });
   }
 
   private toSale(row: LegacySalesItem, type: "ORDER" | "COMMAND"): ReportSale {
+    const fallbackDate = new Date().toISOString();
+
     return new ReportSale(
       String(row.Id ?? row.id ?? "0"),
       type,
-      row.Date ?? row.date ?? "",
+      row.Date ?? row.date ?? fallbackDate,
       toText(row.PaymentMethod ?? row.paymentMethod, "N/A"),
       toText(row.CoinName ?? row.coinName, "MXN"),
       toNumber(row.Total ?? row.total),

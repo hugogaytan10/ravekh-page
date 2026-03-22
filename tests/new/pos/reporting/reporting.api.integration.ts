@@ -11,9 +11,9 @@ export async function run(): Promise<void> {
       if (method === "GET" && path === "report/22") {
         return {
           data: {
-            day: { balance: "100", income: "200", earnings: "80", averageSale: "40", salesTotal: "5", cashSales: "60", cardSales: "40", mostSoldProduct: "Latte", mostSoldCategory: "Bebidas" },
-            month: { Balance: 1000, Income: 3000, Earnings: 900, AverageSale: 75, SalesTotal: 40, CashSales: 50, CardSales: 50, MostSoldProduct: "Sandwich", MostSoldCategory: "Comida" },
-            year: { Balance: 0, Income: 0, Earnings: 0, AverageSale: 0, SalesTotal: 0, CashSales: 0, CardSales: 0, MostSoldProduct: "", MostSoldCategory: "" },
+            day: { balance: [{ total: "100" }], income: "200", earnings: "80", averageSale: "40", salesTotal: "5", cashSales: "60", cardSales: "40", mostSoldProduct: "Latte", mostSoldCategory: "Bebidas" },
+            mes: { Balance: [{ currency: "MXN", total: 1000 }], Income: { TotalsByCurrency: [{ total: 3000 }] }, Earnings: 900, AverageSale: 75, SalesTotal: 40, CashSales: 50, CardSales: 50, MostSoldProduct: "Sandwich", MostSoldCategory: "Comida" },
+            año: { Balance: 0, Income: 0, Earnings: 0, AverageSale: 0, SalesTotal: 0, CashSales: 0, CardSales: 0, MostSoldProduct: "", MostSoldCategory: "" },
           },
         };
       }
@@ -36,6 +36,9 @@ export async function run(): Promise<void> {
   const api = new PosReportingApi(httpClient as never);
 
   const report = await api.getSalesReport(22, "token");
+  assert.equal(report.day.balance, 100);
+  assert.equal(report.month.balance, 1000);
+  assert.equal(report.month.income, 3000);
   assert.equal(report.month.totalSales, 40);
   assert.equal(report.day.bestSeller, "Latte");
 
@@ -47,6 +50,7 @@ export async function run(): Promise<void> {
   assert.equal(sales.length, 2);
   assert.equal(sales[0].id, "command-1");
   assert.equal(sales[1].type, "ORDER");
+  assert.deepEqual(calls[2]?.body, { business_Id: 22, date: "MES", payment: "TODOS" });
 
   assert.deepEqual(
     calls.map((call) => `${call.method} ${call.path}`),

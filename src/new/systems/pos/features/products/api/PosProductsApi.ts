@@ -4,37 +4,87 @@ import { ManagedProduct, ProductVariant, SaveManagedProductDto } from "../model/
 
 type ProductResponse = {
   Id?: number;
-  Business_Id: number;
+  id?: number;
+  Business_Id?: number;
+  business_Id?: number;
+  businessId?: number;
   Category_Id?: number | null;
-  Name: string;
+  category_Id?: number | null;
+  categoryId?: number | null;
+  Name?: string;
+  name?: string;
   Description?: string;
+  description?: string;
   ForSale?: boolean;
+  forSale?: boolean;
   ShowInStore?: boolean;
+  showInStore?: boolean;
   Available?: boolean | number | string | null;
+  available?: boolean | number | string | null;
+  Volume?: boolean;
+  volume?: boolean;
   Image?: string;
+  image?: string;
   Images?: string[];
+  images?: string[];
   Barcode?: string | null;
+  barcode?: string | null;
   Price?: number | null;
+  price?: number | null;
   CostPerItem?: number | null;
+  costPerItem?: number | null;
   Stock?: number | null;
-  Variants?: ProductVariant[];
+  stock?: number | null;
+  Variants?: LegacyVariantResponse[];
+  variants?: LegacyVariantResponse[];
+};
+
+type LegacyVariantResponse = {
+  Id?: number;
+  id?: number;
+  Product_Id?: number;
+  product_Id?: number;
+  Description?: string;
+  description?: string;
+  Barcode?: string | null;
+  barcode?: string | null;
+  Color?: string | null;
+  color?: string | null;
+  Price?: number | null;
+  price?: number | null;
+  PromotionPrice?: number | null;
+  promotionPrice?: number | null;
+  CostPerItem?: number | null;
+  costPerItem?: number | null;
+  Stock?: number | null;
+  stock?: number | null;
+  ExpDate?: string | null;
+  expDate?: string | null;
+  MinStock?: number | null;
+  minStock?: number | null;
+  OptStock?: number | null;
+  optStock?: number | null;
 };
 
 export class PosProductsApi implements IProductsRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
   async listByBusiness(businessId: number, token: string): Promise<ManagedProduct[]> {
-    const products = await this.httpClient.request<ProductResponse[]>({
+    const products = await this.httpClient.request<ProductResponse[] | { data?: ProductResponse[]; Data?: ProductResponse[]; Products?: ProductResponse[] }>({
       method: "GET",
       path: `products/business/${businessId}`,
       token,
     });
 
-    return (Array.isArray(products) ? products : []).map((product) => this.toDomain(product));
+    const rows = Array.isArray(products)
+      ? products
+      : products.data ?? products.Data ?? products.Products ?? [];
+
+    return rows.map((product) => this.toDomain(product));
   }
 
   async getById(productId: number, token: string): Promise<ManagedProduct | null> {
-    const product = await this.httpClient.request<ProductResponse | null>({
+    const product = await this.httpClient.request<ProductResponse | { data?: ProductResponse; Data?: ProductResponse } | null>({
       method: "GET",
       path: `products/${productId}`,
       token,
@@ -44,7 +94,8 @@ export class PosProductsApi implements IProductsRepository {
       return null;
     }
 
-    return this.toDomain(product);
+    const normalized = "data" in product || "Data" in product ? product.data ?? product.Data ?? null : product;
+    return normalized ? this.toDomain(normalized) : null;
   }
 
   async create(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct> {
@@ -54,7 +105,7 @@ export class PosProductsApi implements IProductsRepository {
       token,
       body: {
         Product: this.toLegacy(payload),
-        Variants: payload.variants ?? null,
+        Variants: payload.variants?.length ? payload.variants.map((variant) => this.toLegacyVariant(variant)) : null,
       },
     });
 
@@ -88,7 +139,7 @@ export class PosProductsApi implements IProductsRepository {
       token,
       body: {
         Product: this.toLegacy(payload),
-        Variants: payload.variants ?? null,
+        Variants: payload.variants?.length ? payload.variants.map((variant) => this.toLegacyVariant(variant)) : null,
       },
     });
 
@@ -116,22 +167,23 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   private toDomain(product: ProductResponse): ManagedProduct {
+    const variants = product.Variants ?? product.variants ?? [];
     return new ManagedProduct(
-      product.Id ?? 0,
-      product.Business_Id,
-      product.Name,
-      product.Description ?? "",
-      product.ForSale ?? true,
-      product.ShowInStore ?? true,
-      this.toAvailabilityFlag(product.Available),
-      product.Category_Id ?? null,
-      product.Price ?? null,
-      product.CostPerItem ?? null,
-      product.Stock ?? null,
-      product.Image ?? null,
-      product.Images ?? [],
-      product.Barcode ?? null,
-      product.Variants ?? [],
+      product.Id ?? product.id ?? 0,
+      product.Business_Id ?? product.business_Id ?? product.businessId ?? 0,
+      product.Name ?? product.name ?? "",
+      product.Description ?? product.description ?? "",
+      product.ForSale ?? product.forSale ?? true,
+      product.ShowInStore ?? product.showInStore ?? true,
+      this.toAvailabilityFlag(product.Available ?? product.available),
+      product.Category_Id ?? product.category_Id ?? product.categoryId ?? null,
+      product.Price ?? product.price ?? null,
+      product.CostPerItem ?? product.costPerItem ?? null,
+      product.Stock ?? product.stock ?? null,
+      product.Image ?? product.image ?? null,
+      product.Images ?? product.images ?? [],
+      product.Barcode ?? product.barcode ?? null,
+      variants.map((variant) => this.toDomainVariant(variant)),
     );
   }
 
@@ -151,6 +203,41 @@ export class PosProductsApi implements IProductsRepository {
       Price: payload.price,
       CostPerItem: payload.costPerItem,
       Stock: payload.stock,
+      Volume: false,
+    };
+  }
+
+  private toDomainVariant(variant: LegacyVariantResponse): ProductVariant {
+    return {
+      id: variant.Id ?? variant.id,
+      productId: variant.Product_Id ?? variant.product_Id,
+      description: variant.Description ?? variant.description ?? "",
+      barcode: variant.Barcode ?? variant.barcode ?? null,
+      color: variant.Color ?? variant.color ?? null,
+      price: variant.Price ?? variant.price ?? null,
+      promotionPrice: variant.PromotionPrice ?? variant.promotionPrice ?? null,
+      costPerItem: variant.CostPerItem ?? variant.costPerItem ?? null,
+      stock: variant.Stock ?? variant.stock ?? null,
+      expDate: variant.ExpDate ?? variant.expDate ?? null,
+      minStock: variant.MinStock ?? variant.minStock ?? null,
+      optStock: variant.OptStock ?? variant.optStock ?? null,
+    };
+  }
+
+  private toLegacyVariant(variant: ProductVariant): LegacyVariantResponse {
+    return {
+      Id: variant.id,
+      Product_Id: variant.productId,
+      Description: variant.description,
+      Barcode: variant.barcode ?? null,
+      Color: variant.color ?? null,
+      Price: variant.price ?? null,
+      PromotionPrice: variant.promotionPrice ?? null,
+      CostPerItem: variant.costPerItem ?? null,
+      Stock: variant.stock ?? null,
+      ExpDate: variant.expDate ?? null,
+      MinStock: variant.minStock ?? null,
+      OptStock: variant.optStock ?? null,
     };
   }
 }
