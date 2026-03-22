@@ -2,30 +2,49 @@ import { HttpClient } from "../../../../core/api/HttpClient";
 import { IReportingRepository } from "../interface/IReportingRepository";
 import { IncomePoint, ReportRange, SalesReport, SalesSummary } from "../model/SalesReport";
 
+type NullableNumber = number | string | null | undefined;
+type NullableText = string | null | undefined;
+
 type LegacyReportPeriodResponse = {
-  Balance: number;
-  Income: number;
-  Earnings: number;
-  AverageSale: number;
-  SalesTotal: number;
-  CashSales: number;
-  CardSales: number;
-  MostSoldProduct: string;
-  MostSoldCategory: string;
+  Balance?: NullableNumber;
+  Income?: NullableNumber;
+  Earnings?: NullableNumber;
+  AverageSale?: NullableNumber;
+  SalesTotal?: NullableNumber;
+  CashSales?: NullableNumber;
+  CardSales?: NullableNumber;
+  MostSoldProduct?: NullableText;
+  MostSoldCategory?: NullableText;
 };
 
 type LegacyReportResponse = {
-  Day: LegacyReportPeriodResponse;
-  Month: LegacyReportPeriodResponse;
-  Year: LegacyReportPeriodResponse;
+  Day?: LegacyReportPeriodResponse | null;
+  Month?: LegacyReportPeriodResponse | null;
+  Year?: LegacyReportPeriodResponse | null;
 };
 
 type LegacyIncomePointResponse = {
-  Date?: string;
-  date?: string;
-  Amount?: number;
-  amount?: number;
+  Date?: NullableText;
+  date?: NullableText;
+  Amount?: NullableNumber;
+  amount?: NullableNumber;
 };
+
+const toNumber = (value: NullableNumber): number => {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : 0;
+};
+
+const toText = (value: NullableText, fallback = "Sin datos"): string => {
+  const normalized = `${value ?? ""}`.trim();
+  return normalized.length > 0 ? normalized : fallback;
+};
+
+const toIncomePoint = (item: LegacyIncomePointResponse): IncomePoint =>
+  IncomePoint.normalize({
+    dateLabel: item.Date ?? item.date,
+    amount: item.Amount ?? item.amount,
+  });
 
 export class PosReportingApi implements IReportingRepository {
   constructor(private readonly httpClient: HttpClient) {}
@@ -54,22 +73,30 @@ export class PosReportingApi implements IReportingRepository {
       token,
     });
 
-    return response.map(
-      (item) => new IncomePoint(item.Date ?? item.date ?? "", item.Amount ?? item.amount ?? 0),
-    );
+    if (!Array.isArray(response) || response.length === 0) {
+      return [];
+    }
+
+    return response
+      .map(toIncomePoint)
+      .filter((point) => Number.isFinite(point.amount));
   }
 
-  private toSummary(period: LegacyReportPeriodResponse): SalesSummary {
-    return new SalesSummary(
-      period.Balance,
-      period.Income,
-      period.Earnings ?? 0,
-      period.AverageSale,
-      period.SalesTotal,
-      period.CashSales,
-      period.CardSales,
-      period.MostSoldProduct,
-      period.MostSoldCategory,
-    );
+  private toSummary(period?: LegacyReportPeriodResponse | null): SalesSummary {
+    if (!period) {
+      return SalesSummary.empty();
+    }
+
+    return SalesSummary.normalize({
+      balance: toNumber(period.Balance),
+      income: toNumber(period.Income),
+      earnings: toNumber(period.Earnings),
+      averageSale: toNumber(period.AverageSale),
+      totalSales: toNumber(period.SalesTotal),
+      cashSalesPercentage: toNumber(period.CashSales),
+      cardSalesPercentage: toNumber(period.CardSales),
+      bestSeller: toText(period.MostSoldProduct),
+      bestCategory: toText(period.MostSoldCategory),
+    });
   }
 }

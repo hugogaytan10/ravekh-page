@@ -10,6 +10,7 @@ const QUICK_LINKS = [
   { title: "Productos", description: "Administrar catálogo desacoplado.", path: "/v2/main-products/items" },
   { title: "Finanzas", description: "Control diario de ingresos y egresos.", path: "/v2/MainFinances" },
   { title: "Reportes", description: "Analítica de desempeño por periodos.", path: "/v2/dashboard" },
+  { title: "Mesas", description: "Configurar zonas/mesas para pedidos en salón.", path: "/v2/settings/table-zones" },
 ];
 
 export const PosV2MorePage = () => {

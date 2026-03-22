@@ -1,4 +1,5 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import type { FinanceEntry } from "../model/FinanceEntry";
@@ -18,6 +19,7 @@ type FinanceTransactionViewModel = {
   amount: number;
   type: FinanceFormMode;
   createdAt?: string;
+  occurredAt?: Date | null;
 };
 
 const dateFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
@@ -27,37 +29,53 @@ const INCOME_CATEGORIES = ["Venta", "Servicio", "Delivery", "Transferencia", "Ot
 const EXPENSE_CATEGORIES = ["Nómina", "Renta", "Comida", "Marketing", "Papelería", "Transporte", "General"];
 
 const sanitizeConceptInput = (value: string): string => value.replace(/\s+/g, " ").replace(/[<>]/g, "").trimStart();
-
-const sanitizeConceptForSave = (value: string): string =>
-  value
-    .replace(/\s+/g, " ")
-    .replace(/[^\p{L}\p{N}\s\-.,]/gu, "")
-    .trim();
-
+const sanitizeConceptForSave = (value: string): string => value.replace(/\s+/g, " ").replace(/[^\p{L}\p{N}\s\-.,]/gu, "").trim();
 const sanitizeMoneyInput = (value: string): string => {
   const sanitized = value.replace(/[^\d.]/g, "");
   const [integer, decimal = ""] = sanitized.split(".");
   return decimal.length > 0 ? `${integer}.${decimal.slice(0, 2)}` : integer;
 };
 
+const parseFinanceDate = (value?: string): Date | null => {
+  if (!value) return null;
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const [year, month, day] = value.split("-").map(Number);
+    return new Date(year, (month || 1) - 1, day || 1, 12, 0, 0);
+  }
+
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+};
+
 const toPresentationDate = (value?: string): string => {
-  if (!value) return "Sin fecha";
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : dateFormatter.format(date);
+  const parsed = parseFinanceDate(value);
+  return parsed ? dateFormatter.format(parsed) : "Sin fecha";
 };
 
 const isTodayEntry = (value?: string): boolean => {
-  if (!value) return false;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return false;
+  const date = parseFinanceDate(value);
+  if (!date) return false;
 
   const today = new Date();
   return date.getFullYear() === today.getFullYear() && date.getMonth() === today.getMonth() && date.getDate() === today.getDate();
 };
 
+const sumAmounts = (entries: FinanceEntry[]): number => entries.reduce((acc, item) => acc + Math.abs(Number(item.amount ?? 0)), 0);
+
+const getSafeSession = () => {
+  const token = (window.localStorage.getItem(TOKEN_KEY) ?? "").trim();
+  const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY) ?? "");
+  return {
+    token,
+    businessId,
+    hasSession: Boolean(token) && Number.isFinite(businessId) && businessId > 0,
+  };
+};
+
 export const PosV2FinancePage = () => {
-  const [token, setToken] = useState(() => window.localStorage.getItem(TOKEN_KEY) ?? "");
-  const [businessIdInput, setBusinessIdInput] = useState(() => window.localStorage.getItem(BUSINESS_ID_KEY) ?? "");
+  const navigate = useNavigate();
+  const [session] = useState(() => getSafeSession());
   const [month, setMonth] = useState(() => new Date().getMonth());
   const [periodView, setPeriodView] = useState<PeriodView>("month");
   const [name, setName] = useState("");
@@ -65,6 +83,7 @@ export const PosV2FinancePage = () => {
   const [formMode, setFormMode] = useState<FinanceFormMode>("income");
   const [typeFilter, setTypeFilter] = useState<FinanceFilter>("all");
   const [search, setSearch] = useState("");
+  const [openFormModal, setOpenFormModal] = useState(false);
 
   const [overview, setOverview] = useState({ monthIncome: 0, monthExpenses: 0, monthBalance: 0, todayIncome: 0, todayExpenses: 0 });
   const [movement, setMovement] = useState<{ income: FinanceEntry[]; expenses: FinanceEntry[] }>({ income: [], expenses: [] });
@@ -72,7 +91,7 @@ export const PosV2FinancePage = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
 
   const page = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
@@ -84,9 +103,7 @@ export const PosV2FinancePage = () => {
     [],
   );
 
-  const businessId = Number(businessIdInput);
-  const cleanToken = token.trim();
-  const hasSession = Boolean(cleanToken) && Number.isFinite(businessId) && businessId > 0;
+  const hasSession = session.hasSession;
 
   const financeTimeline = useMemo<FinanceTransactionViewModel[]>(() => {
     const base = [
@@ -96,6 +113,7 @@ export const PosV2FinancePage = () => {
         amount: Math.abs(Number(entry.amount ?? 0)),
         type: "income" as const,
         createdAt: entry.createdAt,
+        occurredAt: parseFinanceDate(entry.createdAt),
       })),
       ...movement.expenses.map((entry, index) => ({
         id: `expense-${index}-${entry.name}`,
@@ -103,6 +121,7 @@ export const PosV2FinancePage = () => {
         amount: Math.abs(Number(entry.amount ?? 0)),
         type: "expense" as const,
         createdAt: entry.createdAt,
+        occurredAt: parseFinanceDate(entry.createdAt),
       })),
     ];
 
@@ -112,14 +131,39 @@ export const PosV2FinancePage = () => {
       .filter((item) => (periodView === "today" ? isTodayEntry(item.createdAt) : true))
       .filter((item) => (typeFilter === "all" ? true : item.type === typeFilter))
       .filter((item) => (normalizedSearch ? item.concept.toLowerCase().includes(normalizedSearch) : true))
-      .sort((a, b) => new Date(b.createdAt ?? 0).getTime() - new Date(a.createdAt ?? 0).getTime());
+      .sort((a, b) => (b.occurredAt?.getTime() ?? 0) - (a.occurredAt?.getTime() ?? 0));
   }, [movement, periodView, typeFilter, search]);
 
   const activeCategories = formMode === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
+  const derivedOverview = useMemo(() => {
+    const fallbackMonthIncome = sumAmounts(movement.income);
+    const fallbackMonthExpenses = sumAmounts(movement.expenses);
+
+    const monthIncome = overview.monthIncome > 0 ? overview.monthIncome : fallbackMonthIncome;
+    const monthExpenses = overview.monthExpenses > 0 ? overview.monthExpenses : fallbackMonthExpenses;
+
+    const todayIncome = overview.todayIncome > 0 ? overview.todayIncome : sumAmounts(movement.income.filter((entry) => isTodayEntry(entry.createdAt)));
+    const todayExpenses = overview.todayExpenses > 0 ? overview.todayExpenses : sumAmounts(movement.expenses.filter((entry) => isTodayEntry(entry.createdAt)));
+
+    const monthBalance = monthIncome - monthExpenses;
+    const monthBurnRate = monthIncome > 0 ? Math.min((monthExpenses / monthIncome) * 100, 100) : 0;
+    const todayNet = todayIncome - todayExpenses;
+
+    return {
+      monthIncome,
+      monthExpenses,
+      monthBalance,
+      todayIncome,
+      todayExpenses,
+      monthBurnRate: Number(monthBurnRate.toFixed(1)),
+      todayNet,
+    };
+  }, [movement.expenses, movement.income, overview]);
+
   const refreshData = useCallback(async () => {
     if (!hasSession) {
-      setError("Ingresa token y business id válidos para cargar finanzas.");
+      setError("No hay sesión activa para cargar finanzas.");
       return;
     }
 
@@ -127,8 +171,8 @@ export const PosV2FinancePage = () => {
     setError(null);
 
     const [overviewResult, movementResult] = await Promise.allSettled([
-      page.loadOverview(businessId, cleanToken),
-      page.loadMonthMovement(businessId, month, cleanToken),
+      page.loadOverview(session.businessId, session.token),
+      page.loadMonthMovement(session.businessId, month, session.token),
     ]);
 
     if (overviewResult.status === "fulfilled") {
@@ -142,7 +186,7 @@ export const PosV2FinancePage = () => {
     }
 
     if (overviewResult.status === "rejected" && movementResult.status === "rejected") {
-      setError("No se pudieron cargar ingresos y egresos. Verifica token, business ID o disponibilidad del API.");
+      setError("No se pudieron cargar ingresos y egresos. Verifica sesión o disponibilidad del API.");
     } else if (overviewResult.status === "rejected") {
       setError("No se pudo cargar el resumen, pero sí los movimientos.");
     } else if (movementResult.status === "rejected") {
@@ -150,7 +194,7 @@ export const PosV2FinancePage = () => {
     }
 
     setLoading(false);
-  }, [businessId, cleanToken, hasSession, month, page]);
+  }, [hasSession, month, page, session.businessId, session.token]);
 
   useEffect(() => {
     if (hasSession) {
@@ -158,25 +202,19 @@ export const PosV2FinancePage = () => {
     }
   }, [hasSession, refreshData]);
 
-  const handleSaveSession = () => {
-    if (!hasSession) {
-      setError("Completa token y business id válidos para conectar.");
-      return;
-    }
+  useEffect(() => {
+    if (!toast) return;
 
-    window.localStorage.setItem(TOKEN_KEY, cleanToken);
-    window.localStorage.setItem(BUSINESS_ID_KEY, String(businessId));
-    setSuccessMessage("Sesión de finanzas conectada.");
-    setError(null);
-    refreshData();
-  };
+    const timer = window.setTimeout(() => setToast(null), 3200);
+    return () => window.clearTimeout(timer);
+  }, [toast]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
-    setSuccessMessage(null);
+    setToast(null);
 
     if (!hasSession) {
-      setError("Necesitas conectar sesión para registrar movimientos.");
+      setError("Necesitas iniciar sesión para registrar movimientos.");
       return;
     }
 
@@ -196,31 +234,73 @@ export const PosV2FinancePage = () => {
     setError(null);
 
     try {
-      const payload = { businessId, name: safeName, amount: Number(parsedAmount.toFixed(2)) };
+      const payload = { businessId: session.businessId, name: safeName, amount: Number(parsedAmount.toFixed(2)) };
       if (formMode === "income") {
-        await page.createIncome(payload, cleanToken);
+        await page.createIncome(payload, session.token);
       } else {
-        await page.createExpense(payload, cleanToken);
+        await page.createExpense(payload, session.token);
       }
 
       setName("");
       setAmount("0");
-      setSuccessMessage(formMode === "income" ? "Ingreso registrado correctamente." : "Egreso registrado correctamente.");
+      setOpenFormModal(false);
+      setToast({ type: "success", message: formMode === "income" ? "Ingreso registrado correctamente." : "Egreso registrado correctamente." });
       await refreshData();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo guardar el movimiento.");
+      setToast({ type: "error", message: "No se pudo guardar el movimiento." });
     } finally {
       setSaving(false);
     }
   };
 
+  const renderMovementForm = () => (
+    <form className="pos-v2-finance__form" onSubmit={handleSubmit}>
+      <h3>Registrar movimiento</h3>
+      <div className="pos-v2-finance__mode-toggle" role="tablist" aria-label="Tipo de movimiento">
+        <button type="button" className={formMode === "income" ? "is-active" : ""} onClick={() => setFormMode("income")}>Ingreso</button>
+        <button type="button" className={formMode === "expense" ? "is-active" : ""} onClick={() => setFormMode("expense")}>Egreso</button>
+      </div>
+
+      <label>
+        Concepto
+        <input value={name} onChange={(event) => setName(sanitizeConceptInput(event.target.value))} placeholder="Ej. Venta en mostrador" maxLength={80} />
+      </label>
+
+      <div className="pos-v2-finance__chips" aria-label="Categorías sugeridas">
+        {activeCategories.map((category) => (
+          <button key={category} type="button" className={name === category ? "is-active" : ""} onClick={() => setName(category)}>{category}</button>
+        ))}
+      </div>
+
+      <label>
+        Monto
+        <input type="text" inputMode="decimal" value={amount} onChange={(event) => setAmount(sanitizeMoneyInput(event.target.value))} placeholder="0.00" />
+      </label>
+
+      <button type="submit" disabled={saving || loading || !hasSession}>{saving ? "Guardando..." : `Guardar ${formMode === "income" ? "ingreso" : "egreso"}`}</button>
+    </form>
+  );
+
+  if (!hasSession) {
+    return (
+      <PosV2Shell title="Finanzas" subtitle="Control de ingresos y egresos moderno y desacoplado del legacy">
+        <section className="pos-v2-finance pos-v2-finance--empty">
+          <h2>Sesión requerida</h2>
+          <p>Para ver tus finanzas, primero inicia sesión en POS v2.</p>
+          <button type="button" onClick={() => navigate("/v2/login-punto-venta")}>Ir a iniciar sesión</button>
+        </section>
+      </PosV2Shell>
+    );
+  }
+
   return (
-    <PosV2Shell title="Finanzas" subtitle="Control de ingresos y egresos optimizado para móvil, tablet y desktop">
+    <PosV2Shell title="Finanzas" subtitle="Control financiero v2 optimizado para cualquier dispositivo">
       <section className="pos-v2-finance">
         <header className="pos-v2-finance__header">
           <div>
             <h2>Panel financiero</h2>
-            <p>Registro rápido + visualización de movimientos en tiempo real.</p>
+            <p>Datos del mes y del día con filtros operativos en tiempo real.</p>
           </div>
 
           <div className="pos-v2-finance__filters">
@@ -230,70 +310,42 @@ export const PosV2FinancePage = () => {
                 {monthOptions.map((monthLabel, index) => <option key={monthLabel} value={index}>{monthLabel}</option>)}
               </select>
             </label>
-            <button type="button" onClick={refreshData} disabled={loading || !hasSession}>{loading ? "Actualizando..." : "Actualizar"}</button>
+            <button type="button" className="pos-v2-finance__refresh" onClick={refreshData} disabled={loading}>{loading ? "Cargando..." : "Recargar"}</button>
+            <button type="button" className="pos-v2-finance__new-mobile" onClick={() => setOpenFormModal(true)}>+ Nuevo</button>
           </div>
         </header>
 
-        <section className="pos-v2-finance__session">
-          <label>
-            Token
-            <input value={token} onChange={(event) => setToken(event.target.value)} placeholder="Token POS v2" />
-          </label>
-          <label>
-            Business ID
-            <input value={businessIdInput} onChange={(event) => setBusinessIdInput(event.target.value.replace(/[^\d]/g, ""))} placeholder="Ej. 12" inputMode="numeric" />
-          </label>
-          <button type="button" onClick={handleSaveSession}>Conectar</button>
-        </section>
-
         {error ? <p className="pos-v2-finance__error">{error}</p> : null}
-        {successMessage ? <p className="pos-v2-finance__success">{successMessage}</p> : null}
+        {toast ? <p className={`pos-v2-finance__toast is-${toast.type}`}>{toast.message}</p> : null}
 
         <section className="pos-v2-finance__stats">
-          <article><span>Ingresos del mes</span><strong>{moneyFormatter.format(overview.monthIncome)}</strong></article>
-          <article><span>Egresos del mes</span><strong>{moneyFormatter.format(overview.monthExpenses)}</strong></article>
-          <article><span>Balance del mes</span><strong>{moneyFormatter.format(overview.monthBalance)}</strong></article>
-          <article><span>Ingresos de hoy</span><strong>{moneyFormatter.format(overview.todayIncome)}</strong></article>
-          <article><span>Egresos de hoy</span><strong>{moneyFormatter.format(overview.todayExpenses)}</strong></article>
+          <article><span>Ingresos del mes</span><strong>{moneyFormatter.format(derivedOverview.monthIncome)}</strong></article>
+          <article><span>Egresos del mes</span><strong>{moneyFormatter.format(derivedOverview.monthExpenses)}</strong></article>
+          <article><span>Balance general</span><strong>{moneyFormatter.format(derivedOverview.monthBalance)}</strong></article>
+          <article><span>Ingresos hoy</span><strong>{moneyFormatter.format(derivedOverview.todayIncome)}</strong></article>
+          <article><span>Egresos hoy</span><strong>{moneyFormatter.format(derivedOverview.todayExpenses)}</strong></article>
+        </section>
+
+        <section className="pos-v2-finance__insights">
+          <article>
+            <h3>Salud mensual</h3>
+            <p>Uso de egresos vs ingresos: <strong>{derivedOverview.monthBurnRate}%</strong></p>
+            <div className="pos-v2-finance__progress" role="presentation" aria-hidden="true"><span style={{ width: `${derivedOverview.monthBurnRate}%` }} /></div>
+          </article>
+          <article>
+            <h3>Resultado de hoy</h3>
+            <p className={derivedOverview.todayNet >= 0 ? "is-income" : "is-expense"}>{derivedOverview.todayNet >= 0 ? "+" : ""}{moneyFormatter.format(derivedOverview.todayNet)}</p>
+            <small>Ingreso diario - egreso diario</small>
+          </article>
+          <article>
+            <h3>Movimientos visibles</h3>
+            <p><strong>{financeTimeline.length}</strong> registros filtrados</p>
+            <small>Incluye filtro por tipo, periodo y búsqueda.</small>
+          </article>
         </section>
 
         <section className="pos-v2-finance__content">
-          <form className="pos-v2-finance__form" onSubmit={handleSubmit}>
-            <h3>Registrar movimiento</h3>
-            <div className="pos-v2-finance__mode-toggle" role="tablist" aria-label="Tipo de movimiento">
-              <button type="button" className={formMode === "income" ? "is-active" : ""} onClick={() => setFormMode("income")}>Ingreso</button>
-              <button type="button" className={formMode === "expense" ? "is-active" : ""} onClick={() => setFormMode("expense")}>Egreso</button>
-            </div>
-
-            <label>
-              Concepto
-              <input
-                value={name}
-                onChange={(event) => setName(sanitizeConceptInput(event.target.value))}
-                placeholder="Ej. Venta en mostrador"
-                maxLength={80}
-              />
-            </label>
-
-            <div className="pos-v2-finance__chips" aria-label="Categorías sugeridas">
-              {activeCategories.map((category) => (
-                <button key={category} type="button" className={name === category ? "is-active" : ""} onClick={() => setName(category)}>{category}</button>
-              ))}
-            </div>
-
-            <label>
-              Monto
-              <input
-                type="text"
-                inputMode="decimal"
-                value={amount}
-                onChange={(event) => setAmount(sanitizeMoneyInput(event.target.value))}
-                placeholder="0.00"
-              />
-            </label>
-
-            <button type="submit" disabled={saving || loading || !hasSession}>{saving ? "Guardando..." : `Guardar ${formMode === "income" ? "ingreso" : "egreso"}`}</button>
-          </form>
+          <div className="pos-v2-finance__desktop-form">{renderMovementForm()}</div>
 
           <article className="pos-v2-finance__timeline">
             <header>
@@ -320,14 +372,24 @@ export const PosV2FinancePage = () => {
                     <strong>{entry.concept || "Sin concepto"}</strong>
                     <span>{toPresentationDate(entry.createdAt)}</span>
                   </div>
-                  <strong className={entry.type === "income" ? "is-income" : "is-expense"}>
-                    {entry.type === "income" ? "+" : "-"}{moneyFormatter.format(entry.amount)}
-                  </strong>
+                  <strong className={entry.type === "income" ? "is-income" : "is-expense"}>{entry.type === "income" ? "+" : "-"}{moneyFormatter.format(entry.amount)}</strong>
                 </li>
               ))}
             </ul>
           </article>
         </section>
+
+        {openFormModal ? (
+          <section className="pos-v2-finance__modal" role="dialog" aria-modal="true" aria-label="Registrar movimiento">
+            <article>
+              <header>
+                <h3>Nuevo movimiento</h3>
+                <button type="button" onClick={() => setOpenFormModal(false)} aria-label="Cerrar">✕</button>
+              </header>
+              {renderMovementForm()}
+            </article>
+          </section>
+        ) : null}
       </section>
     </PosV2Shell>
   );

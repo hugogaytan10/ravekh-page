@@ -4,11 +4,15 @@ import { CreateFinanceEntryInput, FinanceEntry, FinanceOverview } from "../model
 
 type FinanceEntryResponse = {
   Name?: string;
-  Amount?: number;
+  Amount?: number | string;
   CreatedAt?: string;
+  Created_At?: string;
+  Created?: string;
   name?: string;
-  amount?: number;
+  amount?: number | string;
   createdAt?: string;
+  created_at?: string;
+  date?: string;
   Description?: string;
 };
 
@@ -110,7 +114,7 @@ export class PosFinanceApi implements IFinanceRepository {
     return new FinanceEntry(
       String(payload.name ?? payload.Name ?? payload.Description ?? fallbackName ?? "").trim(),
       this.toSafeAmount(payload.amount ?? payload.Amount ?? fallbackAmount),
-      payload.createdAt ?? payload.CreatedAt,
+      payload.createdAt ?? payload.CreatedAt ?? payload.created_at ?? payload.Created_At ?? payload.date ?? payload.Created,
     );
   }
 
