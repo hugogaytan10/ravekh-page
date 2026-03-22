@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../index";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
-import type { IncomePoint, ReportRange } from "../model/SalesReport";
+import type { IncomePoint, ReportRange, ReportSale } from "../model/SalesReport";
 import type { ReportSummaryViewModel } from "../pages/ReportingInsightsPage";
 import "./PosV2ReportingPage.css";
 
@@ -10,11 +10,18 @@ const TOKEN_KEY = "pos-v2-token";
 const BUSINESS_ID_KEY = "pos-v2-business-id";
 
 const moneyFormatter = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 });
+const dateFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
 
 const RANGE_OPTIONS: Array<{ value: ReportRange; label: string }> = [
   { value: "DAY", label: "Hoy" },
   { value: "MONTH", label: "Mes" },
   { value: "YEAR", label: "Año" },
+];
+
+const PAYMENT_OPTIONS: Array<{ value: "TODOS" | "EFECTIVO" | "TARJETA"; label: string }> = [
+  { value: "TODOS", label: "Todos" },
+  { value: "EFECTIVO", label: "Efectivo" },
+  { value: "TARJETA", label: "Tarjeta" },
 ];
 
 const DEFAULT_SUMMARY: ReportSummaryViewModel = {
@@ -59,14 +66,24 @@ const normalizeSeries = (series: IncomePoint[]): TrendPoint[] => {
   });
 };
 
+const formatDate = (value: string): string => {
+  if (!value) return "Sin fecha";
+  const parsed = new Date(value);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return dateFormatter.format(parsed);
+};
+
 export const PosV2ReportingPage = () => {
   const [token, setToken] = useState(() => window.localStorage.getItem(TOKEN_KEY) ?? "");
   const [businessIdInput, setBusinessIdInput] = useState(() => window.localStorage.getItem(BUSINESS_ID_KEY) ?? "");
   const [range, setRange] = useState<ReportRange>("MONTH");
+  const [paymentFilter, setPaymentFilter] = useState<"TODOS" | "EFECTIVO" | "TARJETA">("TODOS");
   const [summary, setSummary] = useState<ReportSummaryViewModel>(DEFAULT_SUMMARY);
   const [series, setSeries] = useState<IncomePoint[]>([]);
+  const [sales, setSales] = useState<ReportSale[]>([]);
   const [selectedPoint, setSelectedPoint] = useState<TrendPoint | null>(null);
   const [loading, setLoading] = useState(false);
+  const [salesLoading, setSalesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
 
@@ -77,7 +94,8 @@ export const PosV2ReportingPage = () => {
 
   const businessId = Number(businessIdInput);
   const cleanToken = token.trim();
-  const hasSession = Boolean(cleanToken) && Number.isFinite(businessId) && businessId > 0;
+  const hasBusinessId = Number.isFinite(businessId) && businessId > 0;
+  const hasToken = cleanToken.length > 0;
 
   const showToast = useCallback((type: "success" | "error", message: string) => {
     setToast({ type, message });
@@ -91,8 +109,8 @@ export const PosV2ReportingPage = () => {
   }, [toast]);
 
   const loadReporting = useCallback(async () => {
-    if (!hasSession) {
-      setError("Ingresa token y business id para consultar reportes.");
+    if (!hasBusinessId) {
+      setError("Ingresa business id para consultar reportes.");
       return;
     }
 
@@ -101,8 +119,8 @@ export const PosV2ReportingPage = () => {
 
     try {
       const [summaryData, incomeSeries] = await Promise.all([
-        page.loadSummary(businessId, range, cleanToken),
-        page.loadIncomeSeries(businessId, range, cleanToken),
+        page.loadSummary(businessId, range),
+        page.loadIncomeSeries(businessId, range),
       ]);
 
       setSummary(summaryData);
@@ -114,26 +132,51 @@ export const PosV2ReportingPage = () => {
     } finally {
       setLoading(false);
     }
-  }, [businessId, cleanToken, hasSession, page, range, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, page, range, showToast]);
 
-  useEffect(() => {
-    if (hasSession) {
-      loadReporting();
-    }
-  }, [hasSession, loadReporting]);
-
-  const handleSaveSession = useCallback(() => {
-    if (!hasSession) {
-      setError("Completa token y business id válidos para conectar.");
+  const loadSales = useCallback(async () => {
+    if (!hasBusinessId || !hasToken) {
+      setSales([]);
       return;
     }
 
-    window.localStorage.setItem(TOKEN_KEY, cleanToken);
+    setSalesLoading(true);
+    try {
+      const details = await page.loadSalesDetails(businessId, range, paymentFilter, cleanToken);
+      setSales(details);
+    } catch (cause) {
+      const message = cause instanceof Error ? cause.message : "No se pudieron cargar ventas detalladas.";
+      showToast("error", message);
+    } finally {
+      setSalesLoading(false);
+    }
+  }, [businessId, cleanToken, hasBusinessId, hasToken, page, paymentFilter, range, showToast]);
+
+  useEffect(() => {
+    if (hasBusinessId) {
+      loadReporting();
+    }
+  }, [hasBusinessId, loadReporting]);
+
+  useEffect(() => {
+    loadSales();
+  }, [loadSales]);
+
+  const handleSaveSession = useCallback(() => {
+    if (!hasBusinessId) {
+      setError("Completa business id válido para conectar.");
+      return;
+    }
+
     window.localStorage.setItem(BUSINESS_ID_KEY, String(businessId));
+    if (hasToken) {
+      window.localStorage.setItem(TOKEN_KEY, cleanToken);
+    }
     setError(null);
     showToast("success", "Sesión conectada para reportes.");
     loadReporting();
-  }, [businessId, cleanToken, hasSession, loadReporting, showToast]);
+    loadSales();
+  }, [businessId, cleanToken, hasBusinessId, hasToken, loadReporting, loadSales, showToast]);
 
   const trendData = useMemo(() => normalizeSeries(series), [series]);
 
@@ -175,13 +218,13 @@ export const PosV2ReportingPage = () => {
                 ))}
               </select>
             </label>
-            <button type="button" onClick={loadReporting} disabled={loading || !hasSession}>{loading ? "Actualizando..." : "Actualizar"}</button>
+            <button type="button" onClick={loadReporting} disabled={loading || !hasBusinessId}>{loading ? "Actualizando..." : "Actualizar"}</button>
           </div>
         </header>
 
         <section className="pos-v2-reporting__session">
           <label>
-            Token
+            Token (opcional para resumen)
             <input value={token} onChange={(event) => setToken(event.target.value)} placeholder="Token POS v2" />
           </label>
           <label>
@@ -252,6 +295,44 @@ export const PosV2ReportingPage = () => {
                 ))}
               </ul>
             )}
+          </article>
+
+          <article className="pos-v2-reporting__card is-full">
+            <header className="pos-v2-reporting__sales-header">
+              <h3>Ventas detalladas (legacy API desacoplada)</h3>
+              <div className="pos-v2-reporting__payment-tabs">
+                {PAYMENT_OPTIONS.map((option) => (
+                  <button
+                    key={option.value}
+                    type="button"
+                    className={paymentFilter === option.value ? "is-active" : ""}
+                    onClick={() => setPaymentFilter(option.value)}
+                    disabled={salesLoading || !hasToken}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </header>
+            {!hasToken ? <p className="is-empty">Para ventas detalladas ingresa token POS v2.</p> : null}
+            {hasToken && salesLoading ? <p className="is-empty">Cargando ventas...</p> : null}
+            {hasToken && !salesLoading && sales.length === 0 ? <p className="is-empty">Sin ventas para este rango/filtro.</p> : null}
+            {hasToken && sales.length > 0 ? (
+              <ul className="pos-v2-reporting__sales-list">
+                {sales.slice(0, 12).map((sale) => (
+                  <li key={`${sale.type}-${sale.id}`}>
+                    <span className={`badge ${sale.type === "ORDER" ? "order" : "command"}`}>
+                      {sale.type === "ORDER" ? "Orden" : "Comanda"}
+                    </span>
+                    <div>
+                      <strong>{moneyFormatter.format(sale.total)}</strong>
+                      <small>{sale.paymentMethod} · {sale.currency}</small>
+                    </div>
+                    <time>{formatDate(sale.date)}</time>
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </article>
         </section>
 

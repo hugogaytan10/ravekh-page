@@ -74,3 +74,16 @@ export class IncomePoint {
     return new IncomePoint(payload.dateLabel?.trim() || "Sin fecha", toFiniteNumber(payload.amount));
   }
 }
+
+export type ReportSaleType = "ORDER" | "COMMAND";
+
+export class ReportSale {
+  constructor(
+    public readonly id: string,
+    public readonly type: ReportSaleType,
+    public readonly date: string,
+    public readonly paymentMethod: string,
+    public readonly currency: string,
+    public readonly total: number,
+  ) {}
+}

@@ -173,6 +173,35 @@
   color: #64748b;
 }
 
+.pos-v2-reporting__sales-header {
+  display: flex;
+  gap: 0.7rem;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pos-v2-reporting__payment-tabs {
+  display: inline-flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.pos-v2-reporting__payment-tabs button {
+  min-height: 34px;
+  padding: 0.35rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+  background: #fff;
+}
+
+.pos-v2-reporting__payment-tabs button.is-active {
+  color: #fff;
+  border-color: transparent;
+  background: linear-gradient(135deg, #6d01d1 0%, #5b21b6 100%);
+}
+
 .pos-v2-reporting__progress {
   border-radius: 999px;
   background: #f3e8ff;
@@ -248,6 +277,53 @@
   color: #64748b;
 }
 
+.pos-v2-reporting__sales-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.pos-v2-reporting__sales-list li {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 0.65rem 0.75rem;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 0.55rem;
+  align-items: center;
+}
+
+.pos-v2-reporting__sales-list li .badge {
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.pos-v2-reporting__sales-list li .badge.order {
+  color: #5b21b6;
+  background: #ede9fe;
+}
+
+.pos-v2-reporting__sales-list li .badge.command {
+  color: #0f766e;
+  background: #ccfbf1;
+}
+
+.pos-v2-reporting__sales-list li div {
+  display: grid;
+  gap: 0.12rem;
+}
+
+.pos-v2-reporting__sales-list li small,
+.pos-v2-reporting__sales-list li time {
+  color: #64748b;
+  font-size: 0.78rem;
+}
+
 .pos-v2-reporting__modal {
   position: fixed;
   inset: 0;
@@ -299,6 +375,10 @@
   .pos-v2-reporting__point {
     grid-template-columns: 1fr;
   }
+
+  .pos-v2-reporting__sales-list li {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (min-width: 1100px) {
@@ -308,5 +388,38 @@
 
   .pos-v2-reporting__content {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  .pos-v2-reporting label,
+  .pos-v2-reporting__card p,
+  .pos-v2-reporting__point small,
+  .pos-v2-reporting .is-empty,
+  .pos-v2-reporting__sales-list li small,
+  .pos-v2-reporting__sales-list li time {
+    color: #cbd5e1;
+  }
+
+  .pos-v2-reporting input,
+  .pos-v2-reporting select,
+  .pos-v2-reporting__session,
+  .pos-v2-reporting__stats article,
+  .pos-v2-reporting__card,
+  .pos-v2-reporting__sales-list li {
+    background: #111827;
+    border-color: #374151;
+    color: #f9fafb;
+  }
+
+  .pos-v2-reporting__card li {
+    background: #0f172a;
+    border-color: #334155;
+  }
+
+  .pos-v2-reporting__payment-tabs button {
+    background: #1f2937;
+    border-color: #4b5563;
+    color: #f3f4f6;
   }
 }

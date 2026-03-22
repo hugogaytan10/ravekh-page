@@ -1,5 +1,5 @@
 import { IReportingRepository } from "../interface/IReportingRepository";
-import { IncomePoint, ReportRange, SalesSummary } from "../model/SalesReport";
+import { IncomePoint, ReportRange, ReportSale, SalesSummary } from "../model/SalesReport";
 
 export class ReportingService {
   constructor(private readonly repository: IReportingRepository) {}
@@ -11,5 +11,14 @@ export class ReportingService {
 
   async getIncomeSeries(businessId: number, range: ReportRange, token?: string): Promise<IncomePoint[]> {
     return this.repository.getIncomeSeries(businessId, range, token);
+  }
+
+  async getSalesDetails(
+    businessId: number,
+    range: ReportRange,
+    payment: "TODOS" | "EFECTIVO" | "TARJETA",
+    token: string,
+  ): Promise<ReportSale[]> {
+    return this.repository.getSalesDetails(businessId, range, payment, token);
   }
 }
