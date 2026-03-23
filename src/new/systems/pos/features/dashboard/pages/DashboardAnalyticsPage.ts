@@ -14,7 +14,6 @@ export class DashboardAnalyticsPage {
 
   async loadViewModel(businessId: number, month: number, token: string): Promise<DashboardViewModel> {
     const snapshot = await this.service.getMonthlySnapshot(businessId, month, token);
-
     return {
       averagePurchaseTrend: snapshot.averagePurchase.trend,
       incomeTrend: snapshot.income.trend,

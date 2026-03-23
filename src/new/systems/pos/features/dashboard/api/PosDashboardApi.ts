@@ -47,7 +47,6 @@ export class PosDashboardApi implements IDashboardRepository {
       this.getMostSoldCategoriesByMonth(businessId, month, token),
       this.getNewCustomersToday(businessId, token),
     ]);
-
     return new DashboardSnapshot(averagePurchase, income, balance, topProducts, topCategories, newCustomersToday);
   }
 
