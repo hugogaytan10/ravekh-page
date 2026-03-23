@@ -1,13 +1,21 @@
-import { UpsertEmployeeDto } from "../model/Employee";
+import { EmployeeRole, UpsertEmployeeDto } from "../model/Employee";
 import { EmployeeService } from "../services/EmployeeService";
 
 type EmployeeCardViewModel = {
   id: number;
   name: string;
   email: string;
-  role: string;
+  role: EmployeeRole;
   isActive: boolean;
   canAccessFinancialData: boolean;
+};
+
+export type EmployeeDetailViewModel = {
+  id: number;
+  name: string;
+  email: string;
+  role: EmployeeRole;
+  isActive: boolean;
 };
 
 export class EmployeeManagementPage {
@@ -24,6 +32,18 @@ export class EmployeeManagementPage {
       isActive: employee.isActive,
       canAccessFinancialData: employee.canAccessFinancialData(),
     }));
+  }
+
+  async getEmployeeDetail(employeeId: number, token: string): Promise<EmployeeDetailViewModel> {
+    const employee = await this.employeeService.getEmployeeDetail(employeeId, token);
+
+    return {
+      id: employee.id,
+      name: employee.name,
+      email: employee.email,
+      role: employee.role,
+      isActive: employee.isActive,
+    };
   }
 
   async upsertEmployee(token: string, payload: UpsertEmployeeDto, employeeId?: number): Promise<void> {

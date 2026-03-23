@@ -13,6 +13,10 @@ export class EmployeeService {
     return employees.filter((employee) => employee.matches(searchTerm));
   }
 
+  async getEmployeeDetail(employeeId: number, token: string): Promise<Employee> {
+    return this.repository.getById(employeeId, token);
+  }
+
   async saveEmployee(token: string, payload: UpsertEmployeeDto, employeeId?: number): Promise<Employee> {
     if (employeeId) {
       return this.repository.update(employeeId, payload, token);

@@ -1,85 +1,37 @@
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { MORE_MODULE_SECTIONS } from "../config/moreModules";
+import { MoreModuleLink, MoreModuleStatus } from "../model/MoreModule";
+import { MoreModuleService } from "../services/MoreModuleService";
+import { MoreModulePage } from "../pages/MoreModulePage";
 import "./PosV2MorePage.css";
 
 const TOKEN_KEY = "pos-v2-token";
 const BUSINESS_ID_KEY = "pos-v2-business-id";
-
-type MoreLinkStatus = "available" | "beta" | "preview";
-
-type MoreLink = {
-  id: string;
-  title: string;
-  description: string;
-  path: string;
-  status: MoreLinkStatus;
-};
-
-type MoreSection = {
-  title: string;
-  subtitle: string;
-  items: MoreLink[];
-};
-
-const previewPath = (id: string) => `/v2/more/preview/${id}`;
-
-const MORE_SECTIONS: MoreSection[] = [
-  {
-    title: "Operación diaria",
-    subtitle: "Flujos principales del POS que ya están funcionales en v2.",
-    items: [
-      { id: "sales", title: "Ventas", description: "Punto de venta y cobro rápido.", path: "/v2/MainSales", status: "available" },
-      { id: "products", title: "Productos", description: "Catálogo y edición de artículos.", path: "/v2/main-products/items", status: "available" },
-      { id: "finances", title: "Finanzas", description: "Registro de ingresos y egresos.", path: "/v2/MainFinances", status: "available" },
-      { id: "reports", title: "Reportes", description: "Balance, ingresos, ganancias y pedidos por periodo.", path: "/v2/dashboard", status: "available" },
-    ],
-  },
-  {
-    title: "Configuración",
-    subtitle: "Paridad estructural con Ajustes legacy, 100% en módulo moderno.",
-    items: [
-      { id: "tables", title: "Mesas y zonas", description: "Gestión de mesas para consumo en salón.", path: "/v2/settings/table-zones", status: "available" },
-      { id: "business", title: "Información del negocio", description: "Datos fiscales/comerciales del negocio.", path: previewPath("business"), status: "beta" },
-      { id: "catalog-settings", title: "Configuración catálogo", description: "Preferencias de publicación del catálogo.", path: previewPath("catalog-settings"), status: "preview" },
-      { id: "sales-tax", title: "Impuesto de venta", description: "Ajustes de impuestos aplicados en ventas.", path: previewPath("sales-tax"), status: "beta" },
-      { id: "branding", title: "Color de app", description: "Branding de colores para el POS.", path: previewPath("branding"), status: "beta" },
-      { id: "exports", title: "Exportar reportes", description: "Descarga reportes para contabilidad.", path: previewPath("exports"), status: "beta" },
-      { id: "inventory", title: "Inventario", description: "Módulo de stock desacoplado para v2.", path: previewPath("inventory"), status: "beta" },
-      { id: "customers", title: "Clientes", description: "Catálogo de clientes y seguimiento.", path: previewPath("customers"), status: "beta" },
-      { id: "employees", title: "Empleados", description: "Administración de personal y permisos.", path: previewPath("employees"), status: "beta" },
-      { id: "cash-closing", title: "Corte de caja", description: "Cierres de caja al final de turno.", path: previewPath("cash-closing"), status: "beta" },
-    ],
-  },
-  {
-    title: "Servicios",
-    subtitle: "Herramientas de soporte y operación extendida.",
-    items: [
-      { id: "health", title: "Salud de API", description: "Verifica conectividad y disponibilidad backend.", path: "/v2/health", status: "available" },
-      { id: "online-store", title: "Tienda en línea", description: "Gestión de catálogo digital y canal online.", path: previewPath("online-store"), status: "beta" },
-      { id: "loyalty", title: "Cupones y visitas", description: "Herramientas de fidelización y recompensas.", path: previewPath("loyalty"), status: "beta" },
-      { id: "support", title: "Ayuda", description: "Centro de ayuda y soporte para el negocio.", path: previewPath("support"), status: "preview" },
-      { id: "delete-account", title: "Borrar cuenta", description: "Proceso de baja y eliminación de cuenta.", path: previewPath("delete-account"), status: "preview" },
-    ],
-  },
-];
+const EMPLOYEE_ID_KEY = "pos-v2-employee-id";
+const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
 
 export const PosV2MorePage = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<"all" | MoreLinkStatus>("all");
-  const allItems = useMemo(() => MORE_SECTIONS.flatMap((section) => section.items), []);
+  const [statusFilter, setStatusFilter] = useState<"all" | MoreModuleStatus>("all");
+  const [betaLoadingId, setBetaLoadingId] = useState<string | null>(null);
+  const [betaResult, setBetaResult] = useState<{ id: string; title: string; payload: string } | null>(null);
+  const [betaError, setBetaError] = useState<string>("");
+
+  const modulePage = useMemo(() => new MoreModulePage(new MoreModuleService(API_BASE_URL)), []);
+  const allItems = useMemo(() => MORE_MODULE_SECTIONS.flatMap((section) => section.items), []);
   const availableCount = allItems.filter((item) => item.status === "available").length;
   const normalizedQuery = query.trim().toLowerCase();
 
   const filteredSections = useMemo(() => {
-    return MORE_SECTIONS.map((section) => {
+    return MORE_MODULE_SECTIONS.map((section) => {
       const items = section.items.filter((item) => {
         const matchesStatus = statusFilter === "all" ? true : item.status === statusFilter;
-        const matchesQuery =
-          normalizedQuery.length === 0
-            ? true
-            : `${item.title} ${item.description}`.toLowerCase().includes(normalizedQuery);
+        const matchesQuery = normalizedQuery.length === 0
+          ? true
+          : `${item.title} ${item.description}`.toLowerCase().includes(normalizedQuery);
 
         return matchesStatus && matchesQuery;
       });
@@ -91,7 +43,41 @@ export const PosV2MorePage = () => {
   const handleSignOut = () => {
     window.localStorage.removeItem(TOKEN_KEY);
     window.localStorage.removeItem(BUSINESS_ID_KEY);
+    window.localStorage.removeItem(EMPLOYEE_ID_KEY);
     navigate("/v2/login-punto-venta");
+  };
+
+  const runBetaAction = async (item: MoreModuleLink) => {
+    const token = (window.localStorage.getItem(TOKEN_KEY) ?? "").trim();
+    const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY) ?? "");
+    const employeeId = Number(window.localStorage.getItem(EMPLOYEE_ID_KEY) ?? "");
+
+    setBetaLoadingId(item.id);
+    setBetaError("");
+    setBetaResult(null);
+    try {
+      const result = await modulePage.execute(item.id, item.title, { token, businessId, employeeId });
+      setBetaResult({ id: item.id, title: item.title, payload: JSON.stringify(result.payload, null, 2) });
+    } catch (cause) {
+      setBetaError(cause instanceof Error ? cause.message : "No fue posible ejecutar la acción beta.");
+    } finally {
+      setBetaLoadingId(null);
+    }
+  };
+
+  const openModule = async (item: MoreModuleLink) => {
+    if (item.id === "delete-account") {
+      handleSignOut();
+      return;
+    }
+
+    const shouldRunInline = item.actionType === "beta-action" && modulePage.supportsInlineExecution(item.id);
+    if (shouldRunInline) {
+      await runBetaAction(item);
+      return;
+    }
+
+    navigate(item.path);
   };
 
   return (
@@ -101,44 +87,28 @@ export const PosV2MorePage = () => {
           <h2>Centro de operaciones</h2>
           <p>
             Todo abre dentro de la SPA sin refrescar la página. Lo productivo está marcado como <strong>Disponible</strong> y
-            lo pendiente como <strong>Vista previa</strong> para poder validar navegación completa desde ahora.
+            lo pendiente como <strong>Vista previa</strong>.
           </p>
           <button type="button" className="pos-v2-more__back" onClick={() => navigate("/v2/MainSales")}>
             ← Volver a Ventas
           </button>
           <div className="pos-v2-more__toolbar">
-            <input
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-              placeholder="Buscar módulo..."
-              aria-label="Buscar módulo"
-            />
+            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar módulo..." aria-label="Buscar módulo" />
             <div className="pos-v2-more__chips">
-              <button type="button" className={statusFilter === "all" ? "is-active" : ""} onClick={() => setStatusFilter("all")}>
-                Todos
-              </button>
-              <button type="button" className={statusFilter === "available" ? "is-active" : ""} onClick={() => setStatusFilter("available")}>
-                Disponibles
-              </button>
-              <button type="button" className={statusFilter === "beta" ? "is-active" : ""} onClick={() => setStatusFilter("beta")}>
-                Beta
-              </button>
-              <button type="button" className={statusFilter === "preview" ? "is-active" : ""} onClick={() => setStatusFilter("preview")}>
-                Vista previa
-              </button>
+              <button type="button" className={statusFilter === "all" ? "is-active" : ""} onClick={() => setStatusFilter("all")}>Todos</button>
+              <button type="button" className={statusFilter === "available" ? "is-active" : ""} onClick={() => setStatusFilter("available")}>Disponibles</button>
+              <button type="button" className={statusFilter === "beta" ? "is-active" : ""} onClick={() => setStatusFilter("beta")}>Beta</button>
+              <button type="button" className={statusFilter === "preview" ? "is-active" : ""} onClick={() => setStatusFilter("preview")}>Vista previa</button>
             </div>
           </div>
         </header>
 
         <section className="pos-v2-more__qa" aria-label="Estado de pruebas del sistema">
           <h3>Checklist de testing</h3>
-          <p>
-            {availableCount} módulos listos y {allItems.length - availableCount} en vista previa. Puedes recorrer todos los
-            flujos desde este panel para QA funcional de navegación.
-          </p>
+          <p>{availableCount} módulos listos y {allItems.length - availableCount} en vista previa.</p>
           <div className="pos-v2-more__qa-grid">
             {allItems.map((item) => (
-              <button key={`qa-${item.id}`} type="button" className="pos-v2-more__qa-item" onClick={() => navigate(item.path)}>
+              <button key={`qa-${item.id}`} type="button" className="pos-v2-more__qa-item" onClick={() => openModule(item)}>
                 <span>{item.title}</span>
                 <small className={item.status === "available" ? "is-available" : item.status === "beta" ? "is-beta" : "is-preview"}>
                   {item.status === "available" ? "Disponible" : item.status === "beta" ? "Beta" : "Vista previa"}
@@ -164,8 +134,8 @@ export const PosV2MorePage = () => {
                     </span>
                   </div>
                   <p>{item.description}</p>
-                  <button type="button" onClick={() => navigate(item.path)} className="pos-v2-more__open">
-                    Abrir módulo
+                  <button type="button" onClick={() => openModule(item)} className="pos-v2-more__open" disabled={betaLoadingId === item.id}>
+                    {betaLoadingId === item.id ? "Ejecutando..." : "Abrir módulo"}
                   </button>
                 </article>
               ))}
@@ -173,11 +143,7 @@ export const PosV2MorePage = () => {
           </section>
         ))}
 
-        {filteredSections.length === 0 ? (
-          <section className="pos-v2-more__empty">
-            <p>No encontramos módulos con ese filtro. Ajusta la búsqueda para continuar QA.</p>
-          </section>
-        ) : null}
+        {filteredSections.length === 0 ? <section className="pos-v2-more__empty"><p>No encontramos módulos con ese filtro.</p></section> : null}
 
         <section className="pos-v2-more__actions">
           <article>
@@ -186,6 +152,18 @@ export const PosV2MorePage = () => {
             <button type="button" onClick={handleSignOut}>Cambiar usuario / cerrar sesión</button>
           </article>
         </section>
+
+        {betaError ? <p className="pos-v2-more__error">{betaError}</p> : null}
+
+        {betaResult ? (
+          <section className="pos-v2-more__result" aria-label={`Resultado módulo ${betaResult.title}`}>
+            <header>
+              <h3>Resultado: {betaResult.title}</h3>
+              <button type="button" onClick={() => setBetaResult(null)}>Cerrar</button>
+            </header>
+            <pre>{betaResult.payload}</pre>
+          </section>
+        ) : null}
       </section>
     </PosV2Shell>
   );

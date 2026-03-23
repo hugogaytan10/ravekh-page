@@ -1,5 +1,5 @@
 import { ProductsService } from "../services/ProductsService";
-import { SaveManagedProductDto } from "../model/ManagedProduct";
+import { ProductCategory, SaveManagedProductDto } from "../model/ManagedProduct";
 
 export class ProductsManagementPage {
   constructor(private readonly service: ProductsService) {}
@@ -21,5 +21,36 @@ export class ProductsManagementPage {
 
   async archiveProduct(productId: number, token: string): Promise<void> {
     await this.service.archiveProduct(productId, token);
+  }
+
+  async loadCategories(businessId: number, token: string): Promise<Array<{ id: number; name: string; color: string }>> {
+    const categories = await this.service.listCategories(businessId, token);
+    return categories.map((category) => ({
+      id: category.id ?? 0,
+      name: category.name,
+      color: category.color,
+    }));
+  }
+
+  async createCategory(category: ProductCategory, token: string): Promise<{ id: number; name: string; color: string }> {
+    const saved = await this.service.createCategory(category, token);
+    return {
+      id: saved.id ?? 0,
+      name: saved.name,
+      color: saved.color,
+    };
+  }
+
+  async updateCategory(category: ProductCategory, token: string): Promise<{ id: number; name: string; color: string }> {
+    const saved = await this.service.updateCategory(category, token);
+    return {
+      id: saved.id ?? 0,
+      name: saved.name,
+      color: saved.color,
+    };
+  }
+
+  async deleteCategory(categoryId: number, token: string): Promise<void> {
+    await this.service.deleteCategory(categoryId, token);
   }
 }

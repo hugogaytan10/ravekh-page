@@ -1,6 +1,21 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { ICustomerRepository } from "../interface/ICustomerRepository";
-import { Customer, UpsertCustomerDto } from "../model/Customer";
+import { Customer, CustomerSale, CustomerSalesPeriod, CustomerSex, UpsertCustomerDto } from "../model/Customer";
+
+
+
+type CustomerSaleResponse = {
+  Id?: number;
+  Order_Id?: number;
+  OrderId?: number;
+  Date?: string;
+  Create_Date?: string;
+  Created_At?: string;
+  Status?: string | null;
+  Total?: number | string | null;
+  Price?: number | string | null;
+  Amount?: number | string | null;
+};
 
 type CustomerResponse = {
   Id: number;
@@ -11,6 +26,7 @@ type CustomerResponse = {
   Address: string | null;
   Notes: string | null;
   CanPayLater: number | boolean | null;
+  Sex: string | null;
 };
 
 export class PosCustomerApi implements ICustomerRepository {
@@ -66,6 +82,16 @@ export class PosCustomerApi implements ICustomerRepository {
     });
   }
 
+  async listSalesByPeriod(customerId: number, period: CustomerSalesPeriod, token: string): Promise<CustomerSale[]> {
+    const response = await this.httpClient.request<CustomerSaleResponse[]>({
+      method: "GET",
+      path: `customers/order/${customerId}/${period}`,
+      token,
+    });
+
+    return response.map((row) => this.toSale(row));
+  }
+
   private toApiPayload(payload: UpsertCustomerDto): Record<string, unknown> {
     return {
       Business_Id: payload.businessId,
@@ -75,6 +101,7 @@ export class PosCustomerApi implements ICustomerRepository {
       Address: payload.address ?? null,
       Notes: payload.notes ?? null,
       CanPayLater: payload.canPayLater ? 1 : 0,
+      Sex: payload.sex ?? "M",
     };
   }
 
@@ -88,6 +115,29 @@ export class PosCustomerApi implements ICustomerRepository {
       item.Address,
       item.Notes,
       item.CanPayLater === true || item.CanPayLater === 1,
+      this.toSex(item.Sex),
     );
+  }
+
+  private toSale(row: CustomerSaleResponse): CustomerSale {
+    const orderId = Number(row.Order_Id ?? row.OrderId ?? row.Id ?? 0);
+    const rawTotal = row.Total ?? row.Price ?? row.Amount ?? 0;
+    const total = Number(rawTotal) || 0;
+
+    return new CustomerSale(
+      orderId,
+      row.Date ?? row.Create_Date ?? row.Created_At ?? "",
+      total,
+      row.Status ?? "Sin estado",
+    );
+  }
+
+  private toSex(value: string | null): CustomerSex {
+    const normalized = (value ?? "M").toUpperCase();
+    if (normalized === "F" || normalized === "O") {
+      return normalized;
+    }
+
+    return "M";
   }
 }

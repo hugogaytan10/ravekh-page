@@ -1,5 +1,5 @@
 import { ICustomerRepository } from "../interface/ICustomerRepository";
-import { Customer, UpsertCustomerDto } from "../model/Customer";
+import { Customer, CustomerSale, CustomerSalesPeriod, UpsertCustomerDto } from "../model/Customer";
 
 export class CustomerService {
   constructor(private readonly repository: ICustomerRepository) {}
@@ -15,6 +15,14 @@ export class CustomerService {
 
   async getCustomer(customerId: number, token: string): Promise<Customer> {
     return this.repository.getById(customerId, token);
+  }
+
+  async getCustomerDetail(customerId: number, token: string): Promise<Customer> {
+    return this.repository.getById(customerId, token);
+  }
+
+  async listSalesByPeriod(customerId: number, period: CustomerSalesPeriod, token: string): Promise<CustomerSale[]> {
+    return this.repository.listSalesByPeriod(customerId, period, token);
   }
 
   async saveCustomer(token: string, payload: UpsertCustomerDto, customerId?: number): Promise<Customer> {

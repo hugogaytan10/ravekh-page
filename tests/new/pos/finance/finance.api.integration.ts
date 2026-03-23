@@ -10,8 +10,23 @@ export async function run(): Promise<void> {
 
       if (method === "GET" && path === "income/month/22") return { Income: { TotalsByCurrency: [{ total: "1300.50" }] } };
       if (method === "GET" && path === "expenses/month/22") return 400;
-      if (method === "GET" && path === "income/today/22") return [{ Amount: 100 }, { amount: 100 }];
-      if (method === "GET" && path === "expenses/today/22") return "50";
+      if (method === "GET" && path === "income/today/22") {
+        return {
+          data: {
+            Incomes: [
+              { Name: "Venta hoy", Amount: 100, Date: "2026-03-23T10:00:00.000Z" },
+              { name: "Servicio hoy", amount: 100, created_at: "2026-03-23T11:00:00.000Z" },
+            ],
+          },
+        };
+      }
+      if (method === "GET" && path === "expenses/today/22") {
+        return {
+          payload: {
+            Expense: { Name: "Renta hoy", Amount: "50", Date: "2026-03-23" },
+          },
+        };
+      }
 
       if (method === "POST" && path === "income/bymonth/22") {
         return { Incomes: [{ Name: "Venta", Amount: 500, CreatedAt: "2026-03-01T10:00:00Z" }] };
@@ -41,6 +56,15 @@ export async function run(): Promise<void> {
   assert.equal(overview.todayIncome, 200);
   assert.equal(overview.todayExpenses, 50);
 
+  const todayIncomeEntries = await api.getIncomeToday(22, "token");
+  const todayExpenseEntries = await api.getExpensesToday(22, "token");
+  assert.equal(todayIncomeEntries.length, 2);
+  assert.equal(todayIncomeEntries[0].name, "Venta hoy");
+  assert.equal(todayIncomeEntries[0].createdAt, "2026-03-23T10:00:00.000Z");
+  assert.equal(todayExpenseEntries.length, 1);
+  assert.equal(todayExpenseEntries[0].name, "Renta hoy");
+  assert.equal(todayExpenseEntries[0].createdAt, "2026-03-23");
+
   const incomes = await api.getIncomeByMonth(22, 2, "token");
   const expenses = await api.getExpensesByMonth(22, 2, "token");
 
@@ -57,6 +81,8 @@ export async function run(): Promise<void> {
     [
       "GET income/month/22",
       "GET expenses/month/22",
+      "GET income/today/22",
+      "GET expenses/today/22",
       "GET income/today/22",
       "GET expenses/today/22",
       "POST income/bymonth/22",

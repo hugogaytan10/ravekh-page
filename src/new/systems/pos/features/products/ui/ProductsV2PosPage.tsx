@@ -13,6 +13,8 @@ type ProductItemVm = {
   id: number;
   name: string;
   description: string;
+  categoryId: number | null;
+  categoryName: string | null;
   color: string | null;
   available: boolean;
   forSale: boolean;
@@ -28,6 +30,7 @@ type ProductItemVm = {
   image: string | null;
   images: string[];
   variants: ProductVariant[];
+  extras: Array<{ description: string; type: string }>;
 };
 
 type VariantFormVm = {
@@ -43,13 +46,12 @@ type VariantFormVm = {
   optStock: string;
   expDate: string;
   barcode: string;
-  color: string;
-  size: string;
 };
 
 type ViewMode = "grid" | "list";
 type ToastState = { type: "success" | "error"; message: string } | null;
 type ArchiveDialogState = { id: number; name: string } | null;
+type ProductCategoryVm = { id: number; name: string; color: string };
 
 const toImageUrl = (image?: string | null): string | null => {
   if (!image) return null;
@@ -81,8 +83,6 @@ const createVariantDraft = (): VariantFormVm => ({
   optStock: "",
   expDate: "",
   barcode: "",
-  color: "",
-  size: "",
 });
 
 const toNullableNumber = (value: string): number | null => {
@@ -99,6 +99,11 @@ export const ProductsV2PosPage = () => {
   });
   const [token] = useState(() => window.localStorage.getItem(TOKEN_KEY) ?? "");
   const [products, setProducts] = useState<ProductItemVm[]>([]);
+  const [categories, setCategories] = useState<ProductCategoryVm[]>([]);
+  const [categoryNameInput, setCategoryNameInput] = useState("");
+  const [categoryColorInput, setCategoryColorInput] = useState("#4F46E5");
+  const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
+  const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [archivingId, setArchivingId] = useState<number | null>(null);
@@ -119,6 +124,9 @@ export const ProductsV2PosPage = () => {
   const [showInStore, setShowInStore] = useState(true);
   const [available, setAvailable] = useState(true);
   const [variants, setVariants] = useState<VariantFormVm[]>([]);
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [sizesInput, setSizesInput] = useState("");
+  const [colorsInput, setColorsInput] = useState("");
   const [storedImages, setStoredImages] = useState<string[]>([]);
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
 
@@ -137,6 +145,9 @@ export const ProductsV2PosPage = () => {
     setShowInStore(true);
     setAvailable(true);
     setVariants([]);
+    setSelectedCategoryId(null);
+    setSizesInput("");
+    setColorsInput("");
     setStoredImages([]);
     setSelectedImageFiles([]);
   };
@@ -151,6 +162,12 @@ export const ProductsV2PosPage = () => {
     resetForm();
     setError(null);
     setIsFormOpen(true);
+  };
+
+  const resetCategoryForm = () => {
+    setEditingCategoryId(null);
+    setCategoryNameInput("");
+    setCategoryColorInput("#4F46E5");
   };
 
   const loadProducts = async () => {
@@ -169,6 +186,8 @@ export const ProductsV2PosPage = () => {
           id: product.id,
           name: product.name,
           description: product.description,
+          categoryId: product.categoryId,
+          categoryName: product.categoryName,
           color: product.color,
           available: product.available,
           forSale: product.forSale,
@@ -184,7 +203,14 @@ export const ProductsV2PosPage = () => {
           image: product.image,
           images: product.images,
           variants: product.variants,
+          extras: product.extras,
         })),
+      );
+      const categoryRows = await service.listCategories(businessId, token);
+      setCategories(
+        categoryRows
+          .filter((category) => typeof category.id === "number" && category.id > 0)
+          .map((category) => ({ id: category.id as number, name: category.name, color: category.color })),
       );
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo cargar productos v2.");
@@ -228,8 +254,8 @@ export const ProductsV2PosPage = () => {
       .map((variant) => ({
         description: variant.description.trim(),
         barcode: variant.barcode.trim() || null,
-        color: variant.color.trim() || null,
-        size: variant.size.trim() || null,
+        color: null,
+        size: null,
         id: variant.id,
         productId: variant.productId,
         price: toNullableNumber(variant.price),
@@ -241,6 +267,12 @@ export const ProductsV2PosPage = () => {
         expDate: variant.expDate.trim() || null,
       }));
   };
+
+  const parseExtrasFromInput = (value: string, type: "TALLA" | "COLOR") =>
+    Array.from(new Set(value.split(",").map((item) => item.trim()).filter(Boolean))).map((description) => ({
+      description,
+      type,
+    }));
 
   const formImagePreviews = useMemo(() => {
     const remote = storedImages.map((img) => toImageUrl(img)).filter(Boolean) as string[];
@@ -317,8 +349,9 @@ export const ProductsV2PosPage = () => {
         images: allImages,
         costPerItem: null,
         barcode: null,
-        categoryId: null,
+        categoryId: selectedCategoryId,
         variants: mappedVariants(),
+        extras: [...parseExtrasFromInput(sizesInput, "TALLA"), ...parseExtrasFromInput(colorsInput, "COLOR")],
       };
 
       await service.saveProduct(payload, token);
@@ -353,8 +386,11 @@ export const ProductsV2PosPage = () => {
       setForSale(detail.forSale);
       setShowInStore(detail.showInStore);
       setAvailable(detail.available);
+      setSelectedCategoryId(detail.categoryId ?? null);
       setStoredImages(Array.from(new Set([detail.image, ...detail.images].filter(Boolean) as string[])));
       setSelectedImageFiles([]);
+      setSizesInput(detail.extras.filter((extra) => extra.type.toUpperCase() === "TALLA").map((extra) => extra.description).join(", "));
+      setColorsInput(detail.extras.filter((extra) => extra.type.toUpperCase() === "COLOR").map((extra) => extra.description).join(", "));
       setVariants(
         detail.variants.map((variant, index) => ({
           key: `${detail.id}-${index}`,
@@ -369,8 +405,6 @@ export const ProductsV2PosPage = () => {
           optStock: variant.optStock == null ? "" : String(variant.optStock),
           expDate: variant.expDate ?? "",
           barcode: variant.barcode ?? "",
-          color: variant.color ?? "",
-          size: variant.size ?? "",
         })),
       );
       setError(null);
@@ -427,6 +461,46 @@ export const ProductsV2PosPage = () => {
     setVariants((current) => current.map((variant) => (variant.key === key ? { ...variant, [field]: value } : variant)));
   };
 
+  const saveCategory = async () => {
+    if (!token || !businessId) return;
+    if (!categoryNameInput.trim()) return;
+
+    try {
+      if (editingCategoryId) {
+        await service.updateCategory({ id: editingCategoryId, businessId, name: categoryNameInput.trim(), color: categoryColorInput }, token);
+        setToast({ type: "success", message: "Categoría actualizada." });
+      } else {
+        await service.createCategory({ businessId, name: categoryNameInput.trim(), color: categoryColorInput }, token);
+        setToast({ type: "success", message: "Categoría creada." });
+      }
+      resetCategoryForm();
+      await loadProducts();
+    } catch (cause) {
+      setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo guardar categoría." });
+    }
+  };
+
+  const editCategory = (category: ProductCategoryVm) => {
+    setEditingCategoryId(category.id);
+    setCategoryNameInput(category.name);
+    setCategoryColorInput(category.color || "#4F46E5");
+    setShowCategoryManager(true);
+  };
+
+  const deleteCategory = async (categoryId: number) => {
+    if (!token) return;
+    try {
+      await service.deleteCategory(categoryId, token);
+      if (selectedCategoryId === categoryId) {
+        setSelectedCategoryId(null);
+      }
+      setToast({ type: "success", message: "Categoría eliminada." });
+      await loadProducts();
+    } catch (cause) {
+      setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo eliminar categoría." });
+    }
+  };
+
   return (
     <PosV2Shell title="Productos" subtitle="Catálogo moderno para operar tu POS de forma rápida.">
       <section className="pos-v2-products">
@@ -438,6 +512,7 @@ export const ProductsV2PosPage = () => {
 
           <div className="pos-v2-products__header-actions">
             <button type="button" className="pos-v2-products__secondary" onClick={openCreateModal}>+ Nuevo</button>
+            <button type="button" className="pos-v2-products__secondary" onClick={() => setShowCategoryManager(true)}>Categorías</button>
             <button type="button" className="pos-v2-products__refresh" onClick={loadProducts} disabled={loading || !token || !businessId}>
               {loading ? "Actualizando..." : "Actualizar"}
             </button>
@@ -494,8 +569,14 @@ export const ProductsV2PosPage = () => {
                 const imageCandidates = [product.image, ...product.images].map((candidate) => toImageUrl(candidate)).filter(Boolean) as string[];
                 const uniqueImages = Array.from(new Set(imageCandidates));
                 const preview = uniqueImages[0] ?? null;
-                const colors = Array.from(new Set(product.variants.map((variant) => variant.color?.trim()).filter(Boolean) as string[]));
-                const sizes = Array.from(new Set(product.variants.map((variant) => variant.size?.trim()).filter(Boolean) as string[]));
+                const colors = Array.from(new Set([
+                  ...product.variants.map((variant) => variant.color?.trim()),
+                  ...product.extras.filter((extra) => extra.type.toUpperCase() === "COLOR").map((extra) => extra.description.trim()),
+                ].filter(Boolean) as string[]));
+                const sizes = Array.from(new Set([
+                  ...product.variants.map((variant) => variant.size?.trim()),
+                  ...product.extras.filter((extra) => extra.type.toUpperCase() === "TALLA").map((extra) => extra.description.trim()),
+                ].filter(Boolean) as string[]));
 
                 return (
                   <article key={product.id} className={`pos-v2-products__card ${!product.available ? "is-archived" : ""}`}>
@@ -511,6 +592,7 @@ export const ProductsV2PosPage = () => {
                         <strong>{product.price == null ? "--" : `$${product.price.toFixed(2)}`}</strong>
                         <small>Stock: {product.stock ?? "--"}</small>
                       </div>
+                      {product.categoryName ? <small className="pos-v2-products__simple-meta">Categoría: {product.categoryName}</small> : null}
 
                       <small className="pos-v2-products__simple-meta">Variantes: {product.variants.length} · Fotos: {uniqueImages.length}</small>
                       {(colors.length > 0 || sizes.length > 0) ? (
@@ -553,6 +635,25 @@ export const ProductsV2PosPage = () => {
                   Descripción
                   <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Describe el producto (opcional)" rows={3} />
                 </label>
+
+                <fieldset className="pos-v2-products__variants" aria-label="Categoría de producto">
+                  <div className="pos-v2-products__variants-head">
+                    <h4>Categoría</h4>
+                  </div>
+                  <div className="pos-v2-products__chips">
+                    <button type="button" className={selectedCategoryId == null ? "is-active" : ""} onClick={() => setSelectedCategoryId(null)}>Sin categoría</button>
+                    {categories.map((category) => (
+                      <button
+                        key={category.id}
+                        type="button"
+                        className={selectedCategoryId === category.id ? "is-active" : ""}
+                        onClick={() => setSelectedCategoryId(category.id)}
+                      >
+                        {category.name}
+                      </button>
+                    ))}
+                  </div>
+                </fieldset>
 
                 <div className="pos-v2-products__field-grid">
                   <label>
@@ -607,15 +708,31 @@ export const ProductsV2PosPage = () => {
 
                   {variants.map((variant, index) => (
                     <article key={variant.key} className="pos-v2-products__variant-item">
-                      <input value={variant.description} onChange={(event) => updateVariant(variant.key, "description", event.target.value)} placeholder={`Nombre variante ${index + 1}`} aria-label={`Nombre de variante ${index + 1}`} />
-                      <input value={variant.price} onChange={(event) => updateVariant(variant.key, "price", event.target.value)} placeholder="Precio" type="number" min="0" step="0.01" inputMode="decimal" aria-label={`Precio de variante ${index + 1}`} />
-                      <input value={variant.stock} onChange={(event) => updateVariant(variant.key, "stock", event.target.value)} placeholder="Stock" type="number" min="0" step="1" inputMode="numeric" aria-label={`Stock de variante ${index + 1}`} />
-                      <input value={variant.color} onChange={(event) => updateVariant(variant.key, "color", event.target.value)} placeholder="Color" aria-label={`Color de variante ${index + 1}`} />
-                      <input value={variant.size} onChange={(event) => updateVariant(variant.key, "size", event.target.value)} placeholder="Talla" aria-label={`Talla de variante ${index + 1}`} />
-                      <input value={variant.barcode} onChange={(event) => updateVariant(variant.key, "barcode", event.target.value)} placeholder="Código de barras" aria-label={`Código de barras de variante ${index + 1}`} />
-                      <button type="button" className="is-delete" onClick={() => removeVariant(variant.key)}>Quitar</button>
+                      <div className="pos-v2-products__variant-head">
+                        <strong>Variante {index + 1}</strong>
+                        <button type="button" className="is-delete" onClick={() => removeVariant(variant.key)}>Eliminar</button>
+                      </div>
+                      <div className="pos-v2-products__variant-grid">
+                        <input value={variant.description} onChange={(event) => updateVariant(variant.key, "description", event.target.value)} placeholder="Descripción" aria-label={`Nombre de variante ${index + 1}`} />
+                        <input value={variant.barcode} onChange={(event) => updateVariant(variant.key, "barcode", event.target.value)} placeholder="Código de barras" aria-label={`Código de barras de variante ${index + 1}`} />
+                        <input value={variant.price} onChange={(event) => updateVariant(variant.key, "price", event.target.value)} placeholder="Precio" type="number" min="0" step="0.01" inputMode="decimal" aria-label={`Precio de variante ${index + 1}`} />
+                        <input value={variant.promotionPrice} onChange={(event) => updateVariant(variant.key, "promotionPrice", event.target.value)} placeholder="Promoción" type="number" min="0" step="0.01" inputMode="decimal" aria-label={`Promoción de variante ${index + 1}`} />
+                        <input value={variant.costPerItem} onChange={(event) => updateVariant(variant.key, "costPerItem", event.target.value)} placeholder="Costo" type="number" min="0" step="0.01" inputMode="decimal" aria-label={`Costo de variante ${index + 1}`} />
+                        <input value={variant.stock} onChange={(event) => updateVariant(variant.key, "stock", event.target.value)} placeholder="Stock" type="number" min="0" step="1" inputMode="numeric" aria-label={`Stock de variante ${index + 1}`} />
+                        <input value={variant.minStock} onChange={(event) => updateVariant(variant.key, "minStock", event.target.value)} placeholder="Stock mínimo" type="number" min="0" step="1" inputMode="numeric" aria-label={`Stock mínimo de variante ${index + 1}`} />
+                        <input value={variant.optStock} onChange={(event) => updateVariant(variant.key, "optStock", event.target.value)} placeholder="Stock óptimo" type="number" min="0" step="1" inputMode="numeric" aria-label={`Stock óptimo de variante ${index + 1}`} />
+                        <input value={variant.expDate} onChange={(event) => updateVariant(variant.key, "expDate", event.target.value)} placeholder="Fecha de caducidad" type="date" aria-label={`Fecha de caducidad de variante ${index + 1}`} />
+                      </div>
                     </article>
                   ))}
+                </fieldset>
+
+                <fieldset className="pos-v2-products__variants" aria-label="Tallas y colores">
+                  <div className="pos-v2-products__variants-head">
+                    <h4>Tallas y colores (Extras)</h4>
+                  </div>
+                  <input value={sizesInput} onChange={(event) => setSizesInput(event.target.value)} placeholder="Tallas por coma. Ej: S, M, XL" aria-label="Tallas del producto" />
+                  <input value={colorsInput} onChange={(event) => setColorsInput(event.target.value)} placeholder="Colores por coma. Ej: AZUL, VERDE" aria-label="Colores del producto" />
                 </fieldset>
 
                 <div className="pos-v2-products__form-actions is-modal">
@@ -640,6 +757,47 @@ export const ProductsV2PosPage = () => {
                 <button type="button" className="pos-v2-products__primary is-danger" onClick={handleArchive} disabled={archivingId === archiveDialog.id}>
                   {archivingId === archiveDialog.id ? "Archivando..." : "Sí, archivar"}
                 </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+        {showCategoryManager ? (
+          <div className="pos-v2-products__modal-backdrop" role="presentation" onClick={() => setShowCategoryManager(false)}>
+            <section className="pos-v2-products__modal pos-v2-products__modal--compact" role="dialog" aria-modal="true" aria-label="Gestión de categorías" onClick={(event) => event.stopPropagation()}>
+              <header className="pos-v2-products__modal-head">
+                <h3>Gestionar categorías</h3>
+                <button type="button" className="pos-v2-products__secondary" onClick={() => setShowCategoryManager(false)}>Cerrar</button>
+              </header>
+
+              <div className="pos-v2-products__field-grid">
+                <label>
+                  Nombre categoría
+                  <input value={categoryNameInput} onChange={(event) => setCategoryNameInput(event.target.value)} placeholder="Ej. Bebidas" />
+                </label>
+                <label>
+                  Color
+                  <input type="color" value={categoryColorInput} onChange={(event) => setCategoryColorInput(event.target.value)} />
+                </label>
+              </div>
+              <div className="pos-v2-products__form-actions">
+                <button type="button" className="pos-v2-products__secondary" onClick={resetCategoryForm}>Limpiar</button>
+                <button type="button" className="pos-v2-products__primary" onClick={saveCategory}>{editingCategoryId ? "Guardar cambios" : "Crear categoría"}</button>
+              </div>
+
+              <div className="pos-v2-products__category-list">
+                {categories.length === 0 ? <p className="pos-v2-products__variants-empty">Aún no hay categorías.</p> : null}
+                {categories.map((category) => (
+                  <article key={category.id} className="pos-v2-products__category-item">
+                    <span className="pos-v2-products__category-dot" style={{ backgroundColor: category.color }} aria-hidden="true" />
+                    <strong>{category.name}</strong>
+                    <small>{category.color}</small>
+                    <div className="pos-v2-products__card-actions">
+                      <button type="button" className="is-edit" onClick={() => editCategory(category)}>Editar</button>
+                      <button type="button" onClick={() => deleteCategory(category.id)}>Eliminar</button>
+                    </div>
+                  </article>
+                ))}
               </div>
             </section>
           </div>

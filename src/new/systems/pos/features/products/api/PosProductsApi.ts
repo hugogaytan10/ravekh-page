@@ -1,6 +1,6 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { IProductsRepository } from "../interface/IProductsRepository";
-import { ManagedProduct, ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
+import { ManagedProduct, ProductCategory, ProductExtra, ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 
 type ProductResponse = {
   Id?: number;
@@ -11,6 +11,9 @@ type ProductResponse = {
   Category_Id?: number | null;
   category_Id?: number | null;
   categoryId?: number | null;
+  Category_Name?: string | null;
+  category_Name?: string | null;
+  categoryName?: string | null;
   Name?: string;
   name?: string;
   Description?: string;
@@ -82,6 +85,32 @@ type LegacyVariantResponse = {
   optStock?: number | null;
 };
 
+type ExtraResponse = {
+  Id?: number;
+  id?: number;
+  Product_Id?: number;
+  product_Id?: number;
+  ProductId?: number;
+  productId?: number;
+  Description?: string;
+  description?: string;
+  Type?: string;
+  type?: string;
+};
+
+type CategoryResponse = {
+  Id?: number;
+  id?: number;
+  Business_Id?: number;
+  business_Id?: number;
+  Parent_Id?: number | null;
+  parent_Id?: number | null;
+  Name?: string;
+  name?: string;
+  Color?: string;
+  color?: string;
+};
+
 export class PosProductsApi implements IProductsRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
@@ -100,30 +129,45 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   async getById(productId: number, token: string): Promise<ManagedProduct | null> {
-    const product = await this.httpClient.request<ProductResponse | { data?: ProductResponse; Data?: ProductResponse } | null>({
-      method: "GET",
-      path: `products/${productId}`,
-      token,
-    });
+    const [product, extrasResponse] = await Promise.all([
+      this.httpClient.request<ProductResponse | { data?: ProductResponse; Data?: ProductResponse } | null>({
+        method: "GET",
+        path: `products/${productId}`,
+        token,
+      }),
+      this.httpClient.request<unknown>({
+        method: "GET",
+        path: `extras/product/${productId}`,
+        token,
+      }).catch(() => null),
+    ]);
 
     if (!product) {
       return null;
     }
 
     const normalized = "data" in product || "Data" in product ? product.data ?? product.Data ?? null : product;
-    return normalized ? this.toDomain(normalized) : null;
+    if (!normalized) return null;
+
+    return this.toDomain(normalized, this.toDomainExtras(extrasResponse));
   }
 
   async create(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct> {
-    await this.httpClient.request<void>({
+    const response = await this.httpClient.request<ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null>({
       method: "POST",
       path: "products",
       token,
       body: {
         Product: this.toLegacy(payload),
         Variants: payload.variants?.length ? payload.variants.map((variant) => this.toLegacyVariant(variant)) : null,
+        Extras: payload.extras?.length ? payload.extras.map((extra) => this.toLegacyCreateExtra(extra)) : null,
       },
     });
+
+    const created = this.extractCreatedProduct(response);
+    if (created) {
+      return this.toDomain(created, this.extractCreatedExtras(response));
+    }
 
     return new ManagedProduct(
       payload.id ?? 0,
@@ -136,6 +180,7 @@ export class PosProductsApi implements IProductsRepository {
       payload.available,
       payload.volume ?? false,
       payload.categoryId ?? null,
+      null,
       payload.price ?? null,
       payload.promotionPrice ?? null,
       payload.costPerItem ?? null,
@@ -148,6 +193,7 @@ export class PosProductsApi implements IProductsRepository {
       payload.images ?? [],
       payload.barcode ?? null,
       payload.variants ?? [],
+      payload.extras ?? [],
     );
   }
 
@@ -166,13 +212,25 @@ export class PosProductsApi implements IProductsRepository {
       },
     });
 
-    if (!updated) {
-      return this.toDomain(this.toLegacy(payload));
+    if (payload.extras?.length) {
+      await Promise.all(
+        payload.extras
+          .filter((extra) => extra.description.trim().length > 0)
+          .map((extra) => this.httpClient.request<void>({
+            method: "POST",
+            path: "extras",
+            token,
+            body: this.toLegacyPersistedExtra(payload.id as number, extra),
+          })),
+      );
     }
 
-    return this.toDomain(updated);
-  }
+    if (!updated) {
+      return this.toDomain(this.toLegacy(payload), payload.extras ?? []);
+    }
 
+    return this.toDomain(updated, payload.extras ?? []);
+  }
 
   private toAvailabilityFlag(value: ProductResponse["Available"]): boolean {
     if (value === null || value === false || value === 0 || value === "0") return false;
@@ -189,7 +247,56 @@ export class PosProductsApi implements IProductsRepository {
     });
   }
 
-  private toDomain(product: ProductResponse): ManagedProduct {
+  async listCategoriesByBusiness(businessId: number, token: string): Promise<ProductCategory[]> {
+    const payload = await this.httpClient.request<CategoryResponse[] | { data?: CategoryResponse[]; Data?: CategoryResponse[] }>({
+      method: "GET",
+      path: `categories/business/${businessId}`,
+      token,
+    });
+
+    const rows = Array.isArray(payload)
+      ? payload
+      : payload.data ?? payload.Data ?? [];
+
+    return rows.map((category) => this.toDomainCategory(category));
+  }
+
+  async createCategory(category: ProductCategory, token: string): Promise<ProductCategory> {
+    const response = await this.httpClient.request<CategoryResponse | null>({
+      method: "POST",
+      path: "categories",
+      token,
+      body: this.toLegacyCategory(category),
+    });
+
+    return response ? this.toDomainCategory(response) : category;
+  }
+
+  async updateCategory(category: ProductCategory, token: string): Promise<ProductCategory> {
+    if (!category.id) {
+      throw new Error("Category id is required for updates.");
+    }
+
+    const response = await this.httpClient.request<CategoryResponse | null>({
+      method: "PUT",
+      path: `categories/${category.id}`,
+      token,
+      body: this.toLegacyCategory(category),
+    });
+
+    return response ? this.toDomainCategory(response) : category;
+  }
+
+  async deleteCategory(categoryId: number, token: string): Promise<void> {
+    await this.httpClient.request<void>({
+      method: "DELETE",
+      path: `categories/${categoryId}`,
+      token,
+      body: { Available: false },
+    });
+  }
+
+  private toDomain(product: ProductResponse, extras: ProductExtra[] = []): ManagedProduct {
     const variants = product.Variants ?? product.variants ?? [];
     return new ManagedProduct(
       product.Id ?? product.id ?? 0,
@@ -202,6 +309,7 @@ export class PosProductsApi implements IProductsRepository {
       this.toAvailabilityFlag(product.Available ?? product.available),
       product.Volume ?? product.volume ?? false,
       product.Category_Id ?? product.category_Id ?? product.categoryId ?? null,
+      product.Category_Name ?? product.category_Name ?? product.categoryName ?? null,
       product.Price ?? product.price ?? null,
       product.PromotionPrice ?? product.promotionPrice ?? null,
       product.CostPerItem ?? product.costPerItem ?? null,
@@ -214,6 +322,7 @@ export class PosProductsApi implements IProductsRepository {
       product.Images ?? product.images ?? [],
       product.Barcode ?? product.barcode ?? null,
       variants.map((variant) => this.toDomainVariant(variant)),
+      extras,
     );
   }
 
@@ -278,6 +387,78 @@ export class PosProductsApi implements IProductsRepository {
       ExpDate: variant.expDate ?? null,
       MinStock: variant.minStock ?? null,
       OptStock: variant.optStock ?? null,
+    };
+  }
+
+  private toDomainExtras(payload: unknown): ProductExtra[] {
+    if (!payload || typeof payload !== "object") return [];
+
+    const record = payload as Record<string, unknown>;
+    const colorRows = Array.isArray(record.COLOR) ? record.COLOR : [];
+    const sizeRows = Array.isArray(record.TALLA) ? record.TALLA : [];
+
+    return [...colorRows, ...sizeRows]
+      .filter((row) => row && typeof row === "object")
+      .map((row) => this.toDomainExtra(row as ExtraResponse));
+  }
+
+  private toDomainExtra(extra: ExtraResponse): ProductExtra {
+    return {
+      id: extra.Id ?? extra.id,
+      productId: extra.Product_Id ?? extra.product_Id ?? extra.ProductId ?? extra.productId,
+      description: String(extra.Description ?? extra.description ?? "").trim(),
+      type: String(extra.Type ?? extra.type ?? "").trim() || "COLOR",
+    };
+  }
+
+  private toLegacyCreateExtra(extra: ProductExtra): { Description: string; Type: string } {
+    return {
+      Description: extra.description.trim(),
+      Type: extra.type,
+    };
+  }
+
+  private toLegacyPersistedExtra(productId: number, extra: ProductExtra): { Product_Id: number; Description: string; Type: string } {
+    return {
+      Product_Id: productId,
+      Description: extra.description.trim(),
+      Type: extra.type,
+    };
+  }
+
+  private extractCreatedProduct(response: ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null): ProductResponse | null {
+    if (!response || typeof response !== "object") return null;
+    if ("Product" in response && response.Product) return response.Product;
+    if ("product" in response && response.product) return response.product;
+    return response as ProductResponse;
+  }
+
+  private extractCreatedExtras(response: unknown): ProductExtra[] {
+    if (!response || typeof response !== "object") return [];
+    const record = response as Record<string, unknown>;
+    if (!Array.isArray(record.Extras)) return [];
+    return record.Extras
+      .filter((row) => row && typeof row === "object")
+      .map((row) => this.toDomainExtra(row as ExtraResponse));
+  }
+
+  private toLegacyCategory(category: ProductCategory): CategoryResponse {
+    return {
+      Id: category.id,
+      Business_Id: category.businessId,
+      Parent_Id: category.parentId ?? null,
+      Name: category.name,
+      Color: category.color,
+    };
+  }
+
+  private toDomainCategory(category: CategoryResponse): ProductCategory {
+    return {
+      id: category.Id ?? category.id,
+      businessId: category.Business_Id ?? category.business_Id ?? 0,
+      parentId: category.Parent_Id ?? category.parent_Id ?? null,
+      name: category.Name ?? category.name ?? "",
+      color: category.Color ?? category.color ?? "",
     };
   }
 }

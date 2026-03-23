@@ -26,7 +26,10 @@ import { PosV2FinancePage } from "../../new/systems/pos/features/finance/ui/PosV
 import { PosV2ReportingPage } from "../../new/systems/pos/features/reporting/ui/PosV2ReportingPage";
 import { PosV2MorePage } from "../../new/systems/pos/features/more/ui/PosV2MorePage";
 import { PosV2ModulePreviewPage } from "../../new/systems/pos/features/more/ui/PosV2ModulePreviewPage";
+import { PosV2CustomersPage } from "../../new/systems/pos/features/customers/ui/PosV2CustomersPage";
+import { PosV2EmployeesPage } from "../../new/systems/pos/features/employees/ui/PosV2EmployeesPage";
 import { PosV2TableZonesPage } from "../../new/systems/pos/features/settings/table-zones/ui/PosV2TableZonesPage";
+import { PosV2OnlineOrdersPage } from "../../new/systems/pos/features/online-orders/ui/PosV2OnlineOrdersPage";
 import { PosV2RequireAuth } from "../../new/systems/pos/routing/PosV2RequireAuth";
 
 export const NEW_PRIMARY_ROUTES = [
@@ -38,7 +41,10 @@ export const NEW_PRIMARY_ROUTES = [
   { path: "/v2/dashboard", element: <PosV2RequireAuth><PosV2ReportingPage /></PosV2RequireAuth> },
   { path: "/v2/more", element: <PosV2RequireAuth><PosV2MorePage /></PosV2RequireAuth> },
   { path: "/v2/more/preview/:moduleId", element: <PosV2RequireAuth><PosV2ModulePreviewPage /></PosV2RequireAuth> },
+  { path: "/v2/customers", element: <PosV2RequireAuth><PosV2CustomersPage /></PosV2RequireAuth> },
+  { path: "/v2/employees", element: <PosV2RequireAuth><PosV2EmployeesPage /></PosV2RequireAuth> },
   { path: "/v2/settings/table-zones", element: <PosV2RequireAuth><PosV2TableZonesPage /></PosV2RequireAuth> },
+  { path: "/v2/online-store", element: <PosV2RequireAuth><PosV2OnlineOrdersPage /></PosV2RequireAuth> },
   { path: "/v2/health", element: <PosV2RequireAuth><PosHealthV2Screen /></PosV2RequireAuth> },
   // Compatibilidad temporal de rutas /v2/pos/*
   { path: "/v2/pos", element: <Navigate to="/v2/login-punto-venta" replace /> },
@@ -48,7 +54,10 @@ export const NEW_PRIMARY_ROUTES = [
   { path: "/v2/pos/finances", element: <Navigate to="/v2/MainFinances" replace /> },
   { path: "/v2/pos/reports", element: <Navigate to="/v2/dashboard" replace /> },
   { path: "/v2/pos/more", element: <Navigate to="/v2/more" replace /> },
+  { path: "/v2/pos/customers", element: <Navigate to="/v2/customers" replace /> },
+  { path: "/v2/pos/employees", element: <Navigate to="/v2/employees" replace /> },
   { path: "/v2/pos/health", element: <Navigate to="/v2/health" replace /> },
+  { path: "/v2/pos/online-store", element: <Navigate to="/v2/online-store" replace /> },
   { path: "/", element: <LandingPageRavekhPage /> },
   { path: "/RavekhPos", element: <RavekhPos /> },
   { path: "/login-punto-venta", element: <AuthPage /> },

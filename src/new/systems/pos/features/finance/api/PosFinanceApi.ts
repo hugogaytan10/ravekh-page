@@ -5,6 +5,7 @@ import { CreateFinanceEntryInput, FinanceEntry, FinanceOverview } from "../model
 type FinanceEntryResponse = {
   Name?: string;
   Amount?: number | string;
+  Date?: string;
   CreatedAt?: string;
   Created_At?: string;
   Created?: string;
@@ -17,11 +18,20 @@ type FinanceEntryResponse = {
 };
 
 type LegacyListResponse = {
-  Incomes?: FinanceEntryResponse[];
-  Expenses?: FinanceEntryResponse[];
-  Income?: FinanceEntryResponse[];
-  Expense?: FinanceEntryResponse[];
-  data?: FinanceEntryResponse[];
+  Incomes?: FinanceEntryResponse[] | FinanceEntryResponse;
+  Expenses?: FinanceEntryResponse[] | FinanceEntryResponse;
+  Income?: FinanceEntryResponse[] | FinanceEntryResponse;
+  Expense?: FinanceEntryResponse[] | FinanceEntryResponse;
+  incomes?: FinanceEntryResponse[] | FinanceEntryResponse;
+  expenses?: FinanceEntryResponse[] | FinanceEntryResponse;
+  income?: FinanceEntryResponse[] | FinanceEntryResponse;
+  expense?: FinanceEntryResponse[] | FinanceEntryResponse;
+  data?: unknown;
+  Data?: unknown;
+  result?: unknown;
+  Result?: unknown;
+  payload?: unknown;
+  Payload?: unknown;
 };
 
 export class PosFinanceApi implements IFinanceRepository {
@@ -107,54 +117,102 @@ export class PosFinanceApi implements IFinanceRepository {
       .filter((entry) => entry.name.trim().length > 0 || entry.amount !== 0);
   }
 
-  private extractRows(payload: FinanceEntryResponse[] | LegacyListResponse, type: "income" | "expense"): FinanceEntryResponse[] {
+  private extractRows(payload: unknown, type: "income" | "expense"): FinanceEntryResponse[] {
     if (Array.isArray(payload)) {
-      return payload;
+      return payload as FinanceEntryResponse[];
     }
 
-    const typedRows = type === "income"
-      ? payload.Incomes ?? payload.Income
-      : payload.Expenses ?? payload.Expense;
-
-    if (Array.isArray(typedRows)) {
-      return typedRows;
+    if (!payload || typeof payload !== "object") {
+      return [];
     }
 
-    if (Array.isArray(payload.data)) {
-      return payload.data;
+    const record = payload as Record<string, unknown>;
+
+    const typedCandidates = type === "income"
+      ? [record.Incomes, record.Income, record.incomes, record.income]
+      : [record.Expenses, record.Expense, record.expenses, record.expense];
+
+    for (const candidate of typedCandidates) {
+      if (Array.isArray(candidate)) return candidate as FinanceEntryResponse[];
+      if (this.isFinanceEntryLike(candidate)) return [candidate as FinanceEntryResponse];
     }
 
-    const genericFirstArray = Object.values(payload).find((value) => Array.isArray(value));
-    return Array.isArray(genericFirstArray) ? genericFirstArray as FinanceEntryResponse[] : [];
+    const wrappers = [record.data, record.Data, record.result, record.Result, record.payload, record.Payload];
+    for (const wrapped of wrappers) {
+      const extracted = this.extractRows(wrapped, type);
+      if (extracted.length > 0) {
+        return extracted;
+      }
+    }
+
+    const firstArray = Object.values(record).find((value) => Array.isArray(value));
+    if (Array.isArray(firstArray)) {
+      return firstArray as FinanceEntryResponse[];
+    }
+
+    if (this.isFinanceEntryLike(record)) {
+      return [record as FinanceEntryResponse];
+    }
+
+    return [];
+  }
+
+  private isFinanceEntryLike(value: unknown): boolean {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
+
+    const row = value as Record<string, unknown>;
+    return ["Name", "name", "Description", "Amount", "amount", "Date", "date", "CreatedAt", "createdAt", "Created_At", "created_at", "Created"]
+      .some((key) => row[key] !== undefined);
   }
 
   private mapEntry(payload: FinanceEntryResponse = {}, fallbackName = "", fallbackAmount = 0): FinanceEntry {
     return new FinanceEntry(
       String(payload.name ?? payload.Name ?? payload.Description ?? fallbackName ?? "").trim(),
       this.toSafeAmount(payload.amount ?? payload.Amount ?? fallbackAmount),
-      payload.createdAt ?? payload.CreatedAt ?? payload.created_at ?? payload.Created_At ?? payload.date ?? payload.Created,
+      payload.createdAt ?? payload.CreatedAt ?? payload.created_at ?? payload.Created_At ?? payload.date ?? payload.Date ?? payload.Created,
     );
   }
 
   private extractAmount(value: unknown): number {
     if (typeof value === "number") return this.toSafeAmount(value);
     if (typeof value === "string") return this.toSafeAmount(value);
+
     if (Array.isArray(value)) {
       return value.reduce((accumulator, row) => accumulator + this.extractAmount(row), 0);
     }
 
     if (value && typeof value === "object") {
-      const candidates = ["Amount", "amount", "Income", "income", "Expenses", "expenses", "total", "Total"] as const;
+      const objectValue = value as Record<string, unknown>;
+      const candidates = [
+        "Amount", "amount",
+        "Income", "income", "Incomes", "incomes",
+        "Expenses", "expenses", "Expense", "expense",
+        "total", "Total",
+      ] as const;
+
       for (const key of candidates) {
-        const raw = (value as Record<string, unknown>)[key];
+        const raw = objectValue[key];
         if (raw !== undefined) {
           return this.extractAmount(raw);
         }
       }
 
-      const totalsByCurrency = (value as Record<string, unknown>).TotalsByCurrency ?? (value as Record<string, unknown>).totalsByCurrency;
-      if (totalsByCurrency !== undefined) {
-        return this.extractAmount(totalsByCurrency);
+      const wrappers = [
+        objectValue.TotalsByCurrency,
+        objectValue.totalsByCurrency,
+        objectValue.data,
+        objectValue.Data,
+        objectValue.result,
+        objectValue.Result,
+        objectValue.payload,
+        objectValue.Payload,
+      ];
+
+      for (const wrapped of wrappers) {
+        if (wrapped !== undefined) {
+          const amount = this.extractAmount(wrapped);
+          if (amount !== 0) return amount;
+        }
       }
     }
 

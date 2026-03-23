@@ -1,3 +1,5 @@
+export type CustomerSex = "M" | "F" | "O";
+
 export class Customer {
   constructor(
     public readonly id: number,
@@ -8,6 +10,7 @@ export class Customer {
     public readonly address: string | null,
     public readonly notes: string | null,
     public readonly canPayLater: boolean,
+    public readonly sex: CustomerSex,
   ) {}
 
   matches(term: string): boolean {
@@ -31,4 +34,17 @@ export interface UpsertCustomerDto {
   address?: string;
   notes?: string;
   canPayLater?: boolean;
+  sex?: CustomerSex;
+}
+
+
+export type CustomerSalesPeriod = "DAY" | "MONTH" | "YEAR";
+
+export class CustomerSale {
+  constructor(
+    public readonly orderId: number,
+    public readonly date: string,
+    public readonly total: number,
+    public readonly status: string,
+  ) {}
 }

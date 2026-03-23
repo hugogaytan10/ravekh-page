@@ -69,8 +69,10 @@ export class PosEmployeeApi implements IEmployeeRepository {
       Business_Id: payload.businessId,
       Name: payload.name,
       Email: payload.email,
-      Role: payload.role,
+      Role: this.toApiRole(payload.role),
       IsActive: payload.isActive ?? true,
+      Password: payload.password?.trim() ? payload.password.trim() : undefined,
+      Pin: payload.pin?.trim() ? payload.pin.trim() : undefined,
     };
   }
 
@@ -87,10 +89,33 @@ export class PosEmployeeApi implements IEmployeeRepository {
 
   private toRole(role: string | null): EmployeeRole {
     const normalized = (role ?? "staff").toLowerCase();
-    if (normalized === "admin" || normalized === "manager" || normalized === "cashier") {
-      return normalized;
+
+    if (normalized === "gerente" || normalized === "manager") {
+      return "manager";
+    }
+
+    if (normalized === "admin" || normalized === "administrador") {
+      return "admin";
+    }
+
+    if (normalized === "cashier" || normalized === "cajero") {
+      return "cashier";
     }
 
     return "staff";
+  }
+
+  private toApiRole(role: EmployeeRole): string {
+    switch (role) {
+      case "manager":
+        return "GERENTE";
+      case "staff":
+        return "AYUDANTE";
+      case "cashier":
+        return "CAJERO";
+      case "admin":
+      default:
+        return "ADMIN";
+    }
   }
 }

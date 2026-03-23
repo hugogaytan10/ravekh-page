@@ -1,3 +1,5 @@
+export type ProductExtraType = "COLOR" | "TALLA" | string;
+
 export interface ProductVariant {
   id?: number;
   productId?: number;
@@ -12,6 +14,21 @@ export interface ProductVariant {
   expDate?: string | null;
   minStock?: number | null;
   optStock?: number | null;
+}
+
+export interface ProductExtra {
+  id?: number;
+  productId?: number;
+  description: string;
+  type: ProductExtraType;
+}
+
+export interface ProductCategory {
+  id?: number;
+  businessId: number;
+  parentId?: number | null;
+  name: string;
+  color: string;
 }
 
 export interface SaveManagedProductDto {
@@ -37,6 +54,7 @@ export interface SaveManagedProductDto {
   optStock?: number | null;
   quantity?: number | null;
   variants?: ProductVariant[];
+  extras?: ProductExtra[];
 }
 
 export class ManagedProduct {
@@ -51,6 +69,7 @@ export class ManagedProduct {
     public readonly available: boolean,
     public readonly volume: boolean,
     public readonly categoryId: number | null,
+    public readonly categoryName: string | null,
     public readonly price: number | null,
     public readonly promotionPrice: number | null,
     public readonly costPerItem: number | null,
@@ -63,6 +82,7 @@ export class ManagedProduct {
     public readonly images: string[],
     public readonly barcode: string | null,
     public readonly variants: ProductVariant[],
+    public readonly extras: ProductExtra[],
   ) {}
 
   toSaveDto(): SaveManagedProductDto {
@@ -89,6 +109,7 @@ export class ManagedProduct {
       optStock: this.optStock,
       quantity: this.quantity,
       variants: this.variants,
+      extras: this.extras,
     };
   }
 }

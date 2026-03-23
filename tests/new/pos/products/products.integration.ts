@@ -5,7 +5,11 @@ import { ProductsManagementPage } from "../../../../src/new/systems/pos/features
 
 export async function run(): Promise<void> {
   const calls: string[] = [];
+  let createBody: unknown;
   let updateBody: unknown;
+  const extraBodies: unknown[] = [];
+  let createCategoryBody: unknown;
+  let updateCategoryBody: unknown;
 
   const httpClient = {
     request: async ({ method, path, body }: { method: string; path: string; body?: unknown }) => {
@@ -25,7 +29,8 @@ export async function run(): Promise<void> {
       }
 
       if (method === "POST" && path === "products") {
-        return undefined;
+        createBody = body;
+        return { Product: { Id: 10, Business_Id: 7, Name: "Té", Available: true } };
       }
 
       if (method === "PUT" && path === "products/9") {
@@ -33,7 +38,30 @@ export async function run(): Promise<void> {
         return null;
       }
 
+      if (method === "POST" && path === "extras") {
+        extraBodies.push(body);
+        return { Id: 120 };
+      }
+
       if (method === "PUT" && path === "products/available/8") {
+        return undefined;
+      }
+
+      if (method === "GET" && path === "categories/business/7") {
+        return [{ Id: 1, Name: "Bebidas", Color: "#111", Business_Id: 7, Parent_Id: null }];
+      }
+
+      if (method === "POST" && path === "categories") {
+        createCategoryBody = body;
+        return { Id: 2, Name: "Pan", Color: "#222", Business_Id: 7, Parent_Id: null };
+      }
+
+      if (method === "PUT" && path === "categories/2") {
+        updateCategoryBody = body;
+        return { Id: 2, Name: "Pan dulce", Color: "#333", Business_Id: 7, Parent_Id: null };
+      }
+
+      if (method === "DELETE" && path === "categories/2") {
         return undefined;
       }
 
@@ -59,6 +87,11 @@ export async function run(): Promise<void> {
       forSale: true,
       showInStore: true,
       available: true,
+      categoryId: 3,
+      extras: [
+        { description: "M", type: "TALLA" },
+        { description: "VERDE", type: "COLOR" },
+      ],
       images: [],
     },
     "token",
@@ -74,6 +107,10 @@ export async function run(): Promise<void> {
       showInStore: true,
       available: true,
       variants: [{ description: "Grande", price: 42 }],
+      extras: [
+        { description: "XL", type: "TALLA" },
+        { description: "AZUL", type: "COLOR" },
+      ],
       images: [],
     },
     "token",
@@ -81,8 +118,45 @@ export async function run(): Promise<void> {
 
   await page.archiveProduct(8, "token");
 
-  assert.deepEqual(saved, { id: 0, name: "Té", available: true });
+  const categories = await page.loadCategories(7, "token");
+  const createdCategory = await page.createCategory({ businessId: 7, name: "Pan", color: "#222" }, "token");
+  const updatedCategory = await page.updateCategory({ id: 2, businessId: 7, name: "Pan dulce", color: "#333" }, "token");
+  await page.deleteCategory(2, "token");
+
+  assert.deepEqual(saved, { id: 10, name: "Té", available: true });
   assert.equal(updated.id, 9, "fallback de update debe conservar id al no recibir payload");
+
+  assert.deepEqual(createBody, {
+    Product: {
+      Id: undefined,
+      Business_Id: 7,
+      Category_Id: 3,
+      Name: "Té",
+      Description: "Bebida",
+      Color: null,
+      ForSale: true,
+      ShowInStore: true,
+      Available: true,
+      Image: undefined,
+      Images: [],
+      Barcode: undefined,
+      Price: undefined,
+      PromotionPrice: null,
+      CostPerItem: undefined,
+      Stock: undefined,
+      ExpDate: null,
+      MinStock: null,
+      OptStock: null,
+      Quantity: null,
+      Volume: false,
+    },
+    Variants: null,
+    Extras: [
+      { Description: "M", Type: "TALLA" },
+      { Description: "VERDE", Type: "COLOR" },
+    ],
+  });
+
   assert.deepEqual(updateBody, {
     Product: {
       Id: 9,
@@ -124,5 +198,42 @@ export async function run(): Promise<void> {
       },
     ],
   });
-  assert.deepEqual(calls, ["GET products/business/7", "POST products", "PUT products/9", "PUT products/available/8"]);
+
+  assert.deepEqual(extraBodies, [
+    { Product_Id: 9, Description: "XL", Type: "TALLA" },
+    { Product_Id: 9, Description: "AZUL", Type: "COLOR" },
+  ]);
+
+  assert.deepEqual(categories, [{ id: 1, name: "Bebidas", color: "#111" }]);
+  assert.deepEqual(createdCategory, { id: 2, name: "Pan", color: "#222" });
+  assert.deepEqual(updatedCategory, { id: 2, name: "Pan dulce", color: "#333" });
+
+  assert.deepEqual(createCategoryBody, {
+    Id: undefined,
+    Business_Id: 7,
+    Parent_Id: null,
+    Name: "Pan",
+    Color: "#222",
+  });
+
+  assert.deepEqual(updateCategoryBody, {
+    Id: 2,
+    Business_Id: 7,
+    Parent_Id: null,
+    Name: "Pan dulce",
+    Color: "#333",
+  });
+
+  assert.deepEqual(calls, [
+    "GET products/business/7",
+    "POST products",
+    "PUT products/9",
+    "POST extras",
+    "POST extras",
+    "PUT products/available/8",
+    "GET categories/business/7",
+    "POST categories",
+    "PUT categories/2",
+    "DELETE categories/2",
+  ]);
 }

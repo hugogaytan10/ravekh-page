@@ -3,7 +3,7 @@ import { ProductsService } from "../../../../src/new/systems/pos/features/produc
 import { ManagedProduct } from "../../../../src/new/systems/pos/features/products/model/ManagedProduct";
 
 const buildProduct = (id: number, available = true) =>
-  new ManagedProduct(id, 10, `Product ${id}`, "desc", null, true, true, available, false, null, 30, null, 10, 2, null, null, null, null, null, [], null, []);
+  new ManagedProduct(id, 10, `Product ${id}`, "desc", null, true, true, available, false, null, null, 30, null, 10, 2, null, null, null, null, null, [], null, [], []);
 
 export async function run(): Promise<void> {
   const createRepo = {
@@ -12,6 +12,10 @@ export async function run(): Promise<void> {
     create: async () => buildProduct(101),
     update: async () => buildProduct(999),
     archive: async () => undefined,
+    listCategoriesByBusiness: async () => [],
+    createCategory: async () => ({ id: 1, businessId: 10, parentId: null, name: "General", color: "#111" }),
+    updateCategory: async () => ({ id: 1, businessId: 10, parentId: null, name: "General", color: "#222" }),
+    deleteCategory: async () => undefined,
   };
 
   const createService = new ProductsService(createRepo);
@@ -66,4 +70,8 @@ export async function run(): Promise<void> {
   const archiveService = new ProductsService(archiveRepo);
   await archiveService.archiveProduct(55, "token");
   assert.equal(archivedId, 55, "archive should call repository with product id");
+
+  const categoryService = new ProductsService(createRepo);
+  const category = await categoryService.createCategory({ businessId: 10, name: "General", color: "#111" }, "token");
+  assert.equal(category.name, "General");
 }

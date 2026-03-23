@@ -30,4 +30,6 @@ export interface UpsertEmployeeDto {
   email: string;
   role: EmployeeRole;
   isActive?: boolean;
+  password?: string;
+  pin?: string;
 }
