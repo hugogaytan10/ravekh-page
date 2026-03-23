@@ -3,6 +3,7 @@
   background: #f3f4f6;
   color: #111827;
   padding-bottom: 72px;
+  overflow-x: hidden;
 }
 
 .pos-v2-shell__header {
@@ -47,6 +48,7 @@
   padding: 1rem;
   max-width: 980px;
   margin: 0 auto;
+  min-width: 0;
 }
 
 .pos-v2-shell__bottom-nav {
@@ -78,6 +80,11 @@
   color: #6d01d1;
 }
 
+.pos-v2-shell__nav-item span {
+  line-height: 1;
+  text-align: center;
+}
+
 @media (min-width: 768px) {
   .pos-v2-shell {
     padding-bottom: 0;
@@ -107,17 +114,32 @@
   }
 }
 
+/* Respect explicit light/dark theme toggles while keeping system fallback. */
+:root[data-theme="dark"] .pos-v2-shell {
+  background: #030712;
+  color: #f9fafb;
+}
+
+:root[data-theme="dark"] .pos-v2-shell__header {
+  background: #4c1d95;
+}
+
+:root[data-theme="dark"] .pos-v2-shell__bottom-nav {
+  background: #111827;
+  border-color: #374151;
+}
+
 @media (prefers-color-scheme: dark) {
-  .pos-v2-shell {
+  :root:not([data-theme="light"]) .pos-v2-shell {
     background: #030712;
     color: #f9fafb;
   }
 
-  .pos-v2-shell__header {
+  :root:not([data-theme="light"]) .pos-v2-shell__header {
     background: #4c1d95;
   }
 
-  .pos-v2-shell__bottom-nav {
+  :root:not([data-theme="light"]) .pos-v2-shell__bottom-nav {
     background: #111827;
     border-color: #374151;
   }
