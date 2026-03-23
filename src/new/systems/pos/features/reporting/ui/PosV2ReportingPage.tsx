@@ -1,5 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import {
+  ArcElement,
+  CategoryScale,
+  Chart as ChartJS,
+  Filler,
+  Legend,
+  LineElement,
+  LinearScale,
+  PointElement,
+  Tooltip,
+} from "chart.js";
+import { Doughnut, Line } from "react-chartjs-2";
 import { ModernSystemsFactory } from "../../../../../index";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import type { IncomePoint, ReportRange, ReportSale } from "../model/SalesReport";
@@ -37,28 +49,16 @@ const DEFAULT_SUMMARY: ReportSummaryViewModel = {
   bestCategory: "Sin datos",
 };
 
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler);
+
 type ToastState = { type: "success" | "error"; message: string } | null;
-
-type EndpointTiming = {
-  key: "summary" | "series" | "sales";
-  label: string;
-  endpoint: string;
-  durationMs: number;
-  available: boolean;
-};
-
-type PerformanceSnapshot = {
-  summaryMs: number;
-  seriesMs: number;
-  salesMs: number;
-  totalMs: number;
-  updatedAt: string;
-};
 
 type TrendPoint = IncomePoint & {
   widthPercentage: number;
   deltaLabel: string;
 };
+
+type TopChartItem = { name: string; quantity: number };
 
 const clampPercentage = (value: number): number => {
   if (!Number.isFinite(value)) return 0;
@@ -90,9 +90,19 @@ const formatDate = (value: string): string => {
   return dateFormatter.format(parsed);
 };
 
+const getSafeSession = () => {
+  const token = (window.localStorage.getItem(TOKEN_KEY) ?? "").trim();
+  const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY) ?? "");
+
+  return {
+    token,
+    businessId,
+    hasSession: token.length > 0 && Number.isFinite(businessId) && businessId > 0,
+  };
+};
+
 export const PosV2ReportingPage = () => {
-  const [token, setToken] = useState(() => window.localStorage.getItem(TOKEN_KEY) ?? "");
-  const [businessIdInput, setBusinessIdInput] = useState(() => window.localStorage.getItem(BUSINESS_ID_KEY) ?? "");
+  const [session] = useState(() => getSafeSession());
   const [range, setRange] = useState<ReportRange>("MONTH");
   const [paymentFilter, setPaymentFilter] = useState<"TODOS" | "EFECTIVO" | "TARJETA">("TODOS");
   const [summary, setSummary] = useState<ReportSummaryViewModel>(DEFAULT_SUMMARY);
@@ -101,21 +111,30 @@ export const PosV2ReportingPage = () => {
   const [selectedPoint, setSelectedPoint] = useState<TrendPoint | null>(null);
   const [loading, setLoading] = useState(false);
   const [salesLoading, setSalesLoading] = useState(false);
+  const [topChartsLoading, setTopChartsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
-  const [perfSnapshot, setPerfSnapshot] = useState<PerformanceSnapshot | null>(null);
+  const [topProducts, setTopProducts] = useState<TopChartItem[]>([]);
+  const [topCategories, setTopCategories] = useState<TopChartItem[]>([]);
+  const [newCustomersToday, setNewCustomersToday] = useState(0);
+  const [insightMonth, setInsightMonth] = useState(() => new Date().getMonth() + 1);
+  const [tableRange, setTableRange] = useState<ReportRange>("DAY");
   const reportRequestRef = useRef(0);
   const salesRequestRef = useRef(0);
+  const topChartsRequestRef = useRef(0);
 
-  const page = useMemo(() => {
+  const { reportingPage, dashboardPage } = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
-    return factory.createPosReportingPage();
+    return {
+      reportingPage: factory.createPosReportingPage(),
+      dashboardPage: factory.createPosDashboardAnalyticsPage(),
+    };
   }, []);
 
-  const businessId = Number(businessIdInput);
-  const cleanToken = token.trim();
-  const hasBusinessId = Number.isFinite(businessId) && businessId > 0;
-  const hasToken = cleanToken.length > 0;
+  const businessId = session.businessId;
+  const cleanToken = session.token;
+  const hasBusinessId = session.hasSession;
+  const hasToken = session.hasSession;
   const navigate = useNavigate();
 
   const showToast = useCallback((type: "success" | "error", message: string) => {
@@ -131,34 +150,24 @@ export const PosV2ReportingPage = () => {
 
   const loadReporting = useCallback(async () => {
     if (!hasBusinessId) {
-      setError("Ingresa business id para consultar reportes.");
+      setError("No hay sesión activa para consultar reportes.");
       return;
     }
 
     const reportRequestId = reportRequestRef.current + 1;
     reportRequestRef.current = reportRequestId;
-    const loadStartedAt = window.performance.now();
     setLoading(true);
     setError(null);
 
     try {
-      const summaryStartedAt = window.performance.now();
-      const summaryPromise = page
-        .loadSummary(businessId, range, hasToken ? cleanToken : undefined)
-        .then((summaryData) => ({
-          summaryData,
-          summaryMs: Math.round(window.performance.now() - summaryStartedAt),
-        }));
+      const summaryPromise = reportingPage
+        .loadSummary(businessId, range, cleanToken)
+        .then((summaryData) => summaryData);
+      const seriesPromise = reportingPage
+        .loadIncomeSeries(businessId, range, cleanToken)
+        .then((incomeSeries) => incomeSeries);
 
-      const seriesStartedAt = window.performance.now();
-      const seriesPromise = page
-        .loadIncomeSeries(businessId, range, hasToken ? cleanToken : undefined)
-        .then((incomeSeries) => ({
-          incomeSeries,
-          seriesMs: Math.round(window.performance.now() - seriesStartedAt),
-        }));
-
-      const [{ summaryData, summaryMs }, { incomeSeries, seriesMs }] = await Promise.all([summaryPromise, seriesPromise]);
+      const [summaryData, incomeSeries] = await Promise.all([summaryPromise, seriesPromise]);
 
       if (reportRequestRef.current !== reportRequestId) {
         return;
@@ -166,13 +175,6 @@ export const PosV2ReportingPage = () => {
 
       setSummary(summaryData);
       setSeries(incomeSeries);
-      setPerfSnapshot((previousPerformance) => ({
-        summaryMs,
-        seriesMs,
-        salesMs: previousPerformance?.salesMs ?? 0,
-        totalMs: Math.round(window.performance.now() - loadStartedAt),
-        updatedAt: new Date().toISOString(),
-      }));
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "No se pudieron cargar los reportes.";
       if (reportRequestRef.current === reportRequestId) {
@@ -184,7 +186,7 @@ export const PosV2ReportingPage = () => {
         setLoading(false);
       }
     }
-  }, [businessId, cleanToken, hasBusinessId, page, range, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, reportingPage, range, showToast]);
 
   const loadSales = useCallback(async () => {
     if (!hasBusinessId || !hasToken) {
@@ -194,21 +196,13 @@ export const PosV2ReportingPage = () => {
 
     const salesRequestId = salesRequestRef.current + 1;
     salesRequestRef.current = salesRequestId;
-    const salesStartedAt = window.performance.now();
     setSalesLoading(true);
     try {
-      const details = await page.loadSalesDetails(businessId, range, paymentFilter, cleanToken);
+      const details = await reportingPage.loadSalesDetails(businessId, tableRange, paymentFilter, cleanToken);
       if (salesRequestRef.current !== salesRequestId) {
         return;
       }
       setSales(details);
-      setPerfSnapshot((previousPerformance) => ({
-        summaryMs: previousPerformance?.summaryMs ?? 0,
-        seriesMs: previousPerformance?.seriesMs ?? 0,
-        salesMs: Math.round(window.performance.now() - salesStartedAt),
-        totalMs: previousPerformance?.totalMs ?? 0,
-        updatedAt: new Date().toISOString(),
-      }));
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "No se pudieron cargar ventas detalladas.";
       if (salesRequestRef.current === salesRequestId) {
@@ -219,7 +213,42 @@ export const PosV2ReportingPage = () => {
         setSalesLoading(false);
       }
     }
-  }, [businessId, cleanToken, hasBusinessId, hasToken, page, paymentFilter, range, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, hasToken, reportingPage, paymentFilter, tableRange, showToast]);
+
+  const loadTopCharts = useCallback(async () => {
+    if (!hasBusinessId || !hasToken) {
+      setTopProducts([]);
+      setTopCategories([]);
+      setNewCustomersToday(0);
+      return;
+    }
+
+    const requestId = topChartsRequestRef.current + 1;
+    topChartsRequestRef.current = requestId;
+    setTopChartsLoading(true);
+
+    try {
+      const snapshot = await dashboardPage.loadViewModel(businessId, insightMonth, cleanToken);
+      if (topChartsRequestRef.current !== requestId) {
+        return;
+      }
+
+      setTopProducts(snapshot.topProducts.slice(0, 5));
+      setTopCategories(snapshot.topCategories.slice(0, 5));
+      setNewCustomersToday(snapshot.newCustomersToday);
+    } catch (cause) {
+      if (topChartsRequestRef.current === requestId) {
+        setTopProducts([]);
+        setTopCategories([]);
+        setNewCustomersToday(0);
+        showToast("error", cause instanceof Error ? cause.message : "No se pudieron cargar gráficas avanzadas.");
+      }
+    } finally {
+      if (topChartsRequestRef.current === requestId) {
+        setTopChartsLoading(false);
+      }
+    }
+  }, [businessId, cleanToken, dashboardPage, hasBusinessId, hasToken, insightMonth, showToast]);
 
   useEffect(() => {
     if (hasBusinessId) {
@@ -231,28 +260,15 @@ export const PosV2ReportingPage = () => {
     loadSales();
   }, [loadSales]);
 
-  const handleSaveSession = useCallback(() => {
-    if (!hasBusinessId) {
-      setError("Completa business id válido para conectar.");
-      return;
-    }
-
-    window.localStorage.setItem(BUSINESS_ID_KEY, String(businessId));
-    if (hasToken) {
-      window.localStorage.setItem(TOKEN_KEY, cleanToken);
-    }
-    setError(null);
-    showToast("success", "Sesión conectada para reportes.");
-    loadReporting();
-    loadSales();
-  }, [businessId, cleanToken, hasBusinessId, hasToken, loadReporting, loadSales, showToast]);
+  useEffect(() => {
+    loadTopCharts();
+  }, [loadTopCharts]);
 
   const trendData = useMemo(() => normalizeSeries(series), [series]);
 
   const derivedKpis = useMemo(
     () => ({
       margin: summary.income > 0 ? clampPercentage((summary.earnings / summary.income) * 100) : 0,
-      avgPerChannel: summary.totalSales > 0 ? summary.income / summary.totalSales : 0,
       cashRatio: clampPercentage(summary.cashSalesPercentage),
       cardRatio: clampPercentage(summary.cardSalesPercentage),
     }),
@@ -270,48 +286,133 @@ export const PosV2ReportingPage = () => {
     [summary],
   );
 
-  const endpointTimings = useMemo<EndpointTiming[]>(() => {
-    const rangeSuffix = range === "DAY" ? "today" : range === "MONTH" ? "month" : "year";
+  const monthOptions = useMemo(
+    () => Array.from({ length: 12 }, (_, index) => ({
+      value: index + 1,
+      label: new Date(new Date().getFullYear(), index, 1).toLocaleString("es-MX", { month: "long" }),
+    })),
+    [],
+  );
 
-    return [
+  const trendChartData = useMemo(() => ({
+    labels: trendData.map((point) => point.dateLabel || "Sin fecha"),
+    datasets: [
       {
-        key: "summary",
-        label: "Resumen",
-        endpoint: `GET /report/${hasBusinessId ? businessId : "{businessId}"}`,
-        durationMs: perfSnapshot?.summaryMs ?? 0,
-        available: hasBusinessId && !!perfSnapshot,
+        label: "Ingresos",
+        data: trendData.map((point) => Number(point.amount) || 0),
+        borderColor: "#7c3aed",
+        backgroundColor: "rgba(124, 58, 237, 0.16)",
+        tension: 0.35,
+        pointRadius: 3,
+        pointHoverRadius: 5,
+        fill: true,
       },
-      {
-        key: "series",
-        label: "Serie ingresos",
-        endpoint: `GET /income/${rangeSuffix}/${hasBusinessId ? businessId : "{businessId}"}`,
-        durationMs: perfSnapshot?.seriesMs ?? 0,
-        available: hasBusinessId && !!perfSnapshot,
-      },
-      {
-        key: "sales",
-        label: "Ventas por pago",
-        endpoint: "POST /sales/payment",
-        durationMs: perfSnapshot?.salesMs ?? 0,
-        available: hasBusinessId && hasToken && !!perfSnapshot,
-      },
-    ];
-  }, [businessId, hasBusinessId, hasToken, perfSnapshot, range]);
+    ],
+  }), [trendData]);
 
-  const slowestEndpoint = useMemo(() => {
-    const availableTimings = endpointTimings.filter((item) => item.available);
-    if (availableTimings.length === 0) return null;
+  const paymentChartData = useMemo(() => ({
+    labels: ["Efectivo", "Tarjeta"],
+    datasets: [
+      {
+        data: [derivedKpis.cashRatio || 0, derivedKpis.cardRatio || 0],
+        backgroundColor: ["#8b5cf6", "#06b6d4"],
+        borderWidth: 0,
+      },
+    ],
+  }), [derivedKpis.cardRatio, derivedKpis.cashRatio]);
 
-    return [...availableTimings].sort((a, b) => b.durationMs - a.durationMs)[0];
-  }, [endpointTimings]);
+  const lineChartOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: {
+        ticks: {
+          callback: (value: string | number) => moneyFormatter.format(Number(value) || 0),
+        },
+      },
+    },
+  }), []);
+
+  const doughnutOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: "68%",
+    plugins: {
+      legend: { display: false },
+    },
+  }), []);
+
+  const quantityLineOptions = useMemo(() => ({
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+    },
+    scales: {
+      x: { grid: { display: false } },
+      y: {
+        ticks: {
+          callback: (value: string | number) => `${Number(value) || 0} u.`,
+        },
+      },
+    },
+  }), []);
+
+  const topProductsChartData = useMemo(() => ({
+    labels: topProducts.map((item) => item.name),
+    datasets: [
+      {
+        label: "Productos más vendidos",
+        data: topProducts.map((item) => item.quantity),
+        borderColor: "#3b82f6",
+        backgroundColor: "rgba(59, 130, 246, 0.14)",
+        fill: true,
+        tension: 0.35,
+        pointRadius: 3,
+      },
+    ],
+  }), [topProducts]);
+
+  const topCategoriesChartData = useMemo(() => ({
+    labels: topCategories.map((item) => item.name),
+    datasets: [
+      {
+        label: "Categorías más vendidas",
+        data: topCategories.map((item) => item.quantity),
+        borderColor: "#0ea5e9",
+        backgroundColor: "rgba(14, 165, 233, 0.14)",
+        fill: true,
+        tension: 0.35,
+        pointRadius: 3,
+      },
+    ],
+  }), [topCategories]);
+
+  if (!session.hasSession) {
+    return (
+      <PosV2Shell title="Reportes" subtitle="Analítica operacional v2 moderna y desacoplada">
+        <section className="pos-v2-reporting">
+          <section className="pos-v2-reporting__session-empty">
+            <h2>Sesión requerida</h2>
+            <p>Inicia sesión en POS v2 para ver reportes y gráficas.</p>
+            <button type="button" onClick={() => navigate("/v2/login-punto-venta")}>Ir a iniciar sesión</button>
+          </section>
+        </section>
+      </PosV2Shell>
+    );
+  }
 
   return (
-    <PosV2Shell title="Reportes" subtitle="Analítica operacional v2 enfocada en decisiones rápidas y desacoplada del legacy">
+    <PosV2Shell title="Reportes" subtitle="Analítica operacional v2 enfocada en decisiones rápidas">
       <section className="pos-v2-reporting">
         <header className="pos-v2-reporting__header">
           <div>
             <h2>Insights de ventas</h2>
-            <p>Métricas accionables, tendencia visual y lectura clara para móvil, tablet y desktop.</p>
+            <p>Métricas accionables, diseño limpio y visualización moderna para móvil, tablet y desktop.</p>
           </div>
           <div className="pos-v2-reporting__filters">
             <button type="button" className="pos-v2-reporting__back" onClick={() => navigate("/v2/MainSales")}>
@@ -325,21 +426,9 @@ export const PosV2ReportingPage = () => {
                 ))}
               </select>
             </label>
-            <button type="button" onClick={loadReporting} disabled={loading || !hasBusinessId}>{loading ? "Actualizando..." : "Actualizar"}</button>
+            <button type="button" onClick={loadReporting} disabled={loading}>{loading ? "Actualizando..." : "Actualizar"}</button>
           </div>
         </header>
-
-        <section className="pos-v2-reporting__session">
-          <label>
-            Token (opcional para resumen)
-            <input value={token} onChange={(event) => setToken(event.target.value)} placeholder="Token POS v2" />
-          </label>
-          <label>
-            Business ID
-            <input value={businessIdInput} onChange={(event) => setBusinessIdInput(event.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder="Ej. 12" />
-          </label>
-          <button type="button" onClick={handleSaveSession}>Conectar</button>
-        </section>
 
         {error ? <p className="pos-v2-reporting__error">{error}</p> : null}
         {toast ? <p className={`pos-v2-reporting__toast is-${toast.type}`}>{toast.message}</p> : null}
@@ -350,41 +439,25 @@ export const PosV2ReportingPage = () => {
           <span><i className="is-trend" />Tendencia de ingresos</span>
         </section>
 
-        {perfSnapshot ? (
-          <section className="pos-v2-reporting__perf" aria-label="Métricas de rendimiento en cliente">
-            <h3>Tiempos por endpoint</h3>
-            <div>
-              {endpointTimings.map((timing) => (
-                <p key={timing.key}>
-                  <span>{timing.endpoint}</span>
-                  <strong>{timing.available ? `${timing.durationMs} ms` : "N/D"}</strong>
-                </p>
-              ))}
-            </div>
-            {slowestEndpoint ? (
-              <p className="pos-v2-reporting__perf-winner">
-                Más lento: <strong>{slowestEndpoint.label}</strong> ({slowestEndpoint.endpoint}) ·{" "}
-                <strong>{slowestEndpoint.durationMs} ms</strong>
-              </p>
-            ) : (
-              <p className="pos-v2-reporting__perf-winner">Conecta businessId/token para medir todos los endpoints.</p>
-            )}
-            <div>
-              <p>Total resumen+serie: <strong>{perfSnapshot.totalMs} ms</strong></p>
-            </div>
-            <small>Última medición: {formatDate(perfSnapshot.updatedAt)}</small>
-          </section>
-        ) : null}
-
         <section className="pos-v2-reporting__stats">
-          {statCards.map((card) => (
-            <article key={card.label}><span>{card.label}</span><strong>{card.value}</strong></article>
-          ))}
+          {loading
+            ? statCards.map((card) => (
+              <article key={`skeleton-${card.label}`} className="is-skeleton">
+                <span />
+                <strong />
+              </article>
+            ))
+            : statCards.map((card) => (
+              <article key={card.label}><span>{card.label}</span><strong>{card.value}</strong></article>
+            ))}
         </section>
 
         <section className="pos-v2-reporting__content">
           <article className="pos-v2-reporting__card">
             <h3>Mix de cobro</h3>
+            <div className="pos-v2-reporting__doughnut">
+              <Doughnut data={paymentChartData} options={doughnutOptions} />
+            </div>
             <div className="pos-v2-reporting__progress">
               <span style={{ width: `${derivedKpis.cashRatio}%` }} />
               <span style={{ width: `${derivedKpis.cardRatio}%` }} />
@@ -396,13 +469,37 @@ export const PosV2ReportingPage = () => {
           <article className="pos-v2-reporting__card">
             <h3>Rentabilidad</h3>
             <p>Margen bruto: <strong>{derivedKpis.margin}%</strong></p>
-            <p>Ingreso por venta: <strong>{moneyFormatter.format(derivedKpis.avgPerChannel)}</strong></p>
           </article>
 
           <article className="pos-v2-reporting__card">
             <h3>Top desempeño</h3>
             <p>Producto más vendido: <strong>{summary.bestSeller}</strong></p>
             <p>Categoría líder: <strong>{summary.bestCategory}</strong></p>
+            <p>Nuevos clientes hoy: <strong>{newCustomersToday}</strong></p>
+          </article>
+
+          <article className="pos-v2-reporting__card">
+            <header>
+              <h3>Top productos</h3>
+              <select value={insightMonth} onChange={(event) => setInsightMonth(Number(event.target.value))}>
+                {monthOptions.map((month) => <option key={month.value} value={month.value}>{month.label}</option>)}
+              </select>
+            </header>
+            {topChartsLoading ? <div className="pos-v2-reporting__chart-skeleton" aria-hidden="true" /> : null}
+            {!topChartsLoading && topProducts.length === 0 ? <p className="is-empty">Sin datos de productos para el mes.</p> : null}
+            {!topChartsLoading && topProducts.length > 0 ? <div className="pos-v2-reporting__mini-line"><Line data={topProductsChartData} options={quantityLineOptions} /></div> : null}
+          </article>
+
+          <article className="pos-v2-reporting__card">
+            <header>
+              <h3>Top categorías</h3>
+              <select value={insightMonth} onChange={(event) => setInsightMonth(Number(event.target.value))}>
+                {monthOptions.map((month) => <option key={month.value} value={month.value}>{month.label}</option>)}
+              </select>
+            </header>
+            {topChartsLoading ? <div className="pos-v2-reporting__chart-skeleton" aria-hidden="true" /> : null}
+            {!topChartsLoading && topCategories.length === 0 ? <p className="is-empty">Sin datos de categorías para el mes.</p> : null}
+            {!topChartsLoading && topCategories.length > 0 ? <div className="pos-v2-reporting__mini-line"><Line data={topCategoriesChartData} options={quantityLineOptions} /></div> : null}
           </article>
 
           <article className="pos-v2-reporting__card is-full">
@@ -410,6 +507,11 @@ export const PosV2ReportingPage = () => {
               <h3>Serie de ingresos</h3>
               <span>{trendData.length} puntos</span>
             </header>
+            {trendData.length > 0 ? (
+              <div className="pos-v2-reporting__line-chart">
+                <Line data={trendChartData} options={lineChartOptions} />
+              </div>
+            ) : null}
             {trendData.length === 0 ? <p className="is-empty">Sin puntos de ingreso para este rango.</p> : (
               <ul>
                 {trendData.map((point, index) => (
@@ -432,39 +534,67 @@ export const PosV2ReportingPage = () => {
 
           <article className="pos-v2-reporting__card is-full">
             <header className="pos-v2-reporting__sales-header">
-              <h3>Ventas detalladas (legacy API desacoplada)</h3>
-              <div className="pos-v2-reporting__payment-tabs">
-                {PAYMENT_OPTIONS.map((option) => (
-                  <button
-                    key={option.value}
-                    type="button"
-                    className={paymentFilter === option.value ? "is-active" : ""}
-                    onClick={() => setPaymentFilter(option.value)}
-                    disabled={salesLoading || !hasToken}
-                  >
-                    {option.label}
-                  </button>
-                ))}
+              <h3>Reporte pedidos</h3>
+              <div className="pos-v2-reporting__sales-controls">
+                <label>
+                  Periodo
+                  <select value={tableRange} onChange={(event) => setTableRange(event.target.value as ReportRange)} disabled={salesLoading || !hasToken}>
+                    {RANGE_OPTIONS.map((option) => <option key={`table-${option.value}`} value={option.value}>{option.label}</option>)}
+                  </select>
+                </label>
+                <div className="pos-v2-reporting__payment-tabs">
+                  {PAYMENT_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      className={paymentFilter === option.value ? "is-active" : ""}
+                      onClick={() => setPaymentFilter(option.value)}
+                      disabled={salesLoading || !hasToken}
+                    >
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
               </div>
             </header>
             {!hasToken ? <p className="is-empty">Para ventas detalladas ingresa token POS v2.</p> : null}
-            {hasToken && salesLoading ? <p className="is-empty">Cargando ventas...</p> : null}
+            {hasToken && salesLoading ? (
+              <div className="pos-v2-reporting__table-skeleton" aria-hidden="true">
+                {Array.from({ length: 4 }).map((_, index) => <span key={`table-skeleton-${index}`} />)}
+              </div>
+            ) : null}
             {hasToken && !salesLoading && sales.length === 0 ? <p className="is-empty">Sin ventas para este rango/filtro.</p> : null}
             {hasToken && sales.length > 0 ? (
-              <ul className="pos-v2-reporting__sales-list">
-                {sales.slice(0, 12).map((sale) => (
-                  <li key={`${sale.type}-${sale.id}`}>
-                    <span className={`badge ${sale.type === "ORDER" ? "order" : "command"}`}>
-                      {sale.type === "ORDER" ? "Orden" : "Comanda"}
-                    </span>
-                    <div>
-                      <strong>{moneyFormatter.format(sale.total)}</strong>
-                      <small>{sale.paymentMethod} · {sale.currency}</small>
-                    </div>
-                    <time>{formatDate(sale.date)}</time>
-                  </li>
-                ))}
-              </ul>
+              <div className="pos-v2-reporting__table-wrap">
+                <table className="pos-v2-reporting__table">
+                  <thead>
+                    <tr>
+                      <th>Nombre del producto</th>
+                      <th>Dirección</th>
+                      <th>Fecha de encargo</th>
+                      <th>Cantidad</th>
+                      <th>Monto</th>
+                      <th>Estado</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sales.slice(0, 15).map((sale) => (
+                      <tr key={`${sale.type}-${sale.id}`}>
+                        <td>{sale.productName}</td>
+                        <td>{sale.address}</td>
+                        <td>{formatDate(sale.date)}</td>
+                        <td>{sale.quantity}</td>
+                        <td>{moneyFormatter.format(sale.total)}</td>
+                        <td>
+                          <span className={`status ${sale.status.toLowerCase().includes("pend") ? "is-pending" : "is-success"}`}>
+                            {sale.status}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             ) : null}
           </article>
         </section>

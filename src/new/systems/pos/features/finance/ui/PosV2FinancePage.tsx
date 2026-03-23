@@ -332,11 +332,10 @@ export const PosV2FinancePage = () => {
         {toast ? <p className={`pos-v2-finance__toast is-${toast.type}`}>{toast.message}</p> : null}
 
         <section className="pos-v2-finance__stats">
-          <article><span>Ingresos del mes</span><strong>{moneyFormatter.format(derivedOverview.monthIncome)}</strong></article>
-          <article><span>Egresos del mes</span><strong>{moneyFormatter.format(derivedOverview.monthExpenses)}</strong></article>
-          <article><span>Balance general</span><strong>{moneyFormatter.format(derivedOverview.monthBalance)}</strong></article>
-          <article><span>Ingresos hoy</span><strong>{moneyFormatter.format(derivedOverview.todayIncome)}</strong></article>
-          <article><span>Egresos hoy</span><strong>{moneyFormatter.format(derivedOverview.todayExpenses)}</strong></article>
+          <article><span>Entradas del mes</span><strong>{moneyFormatter.format(derivedOverview.monthIncome)}</strong></article>
+          <article><span>Salidas del mes</span><strong>{moneyFormatter.format(derivedOverview.monthExpenses)}</strong></article>
+          <article><span>Resultado operativo hoy</span><strong className={derivedOverview.todayNet >= 0 ? "is-income" : "is-expense"}>{derivedOverview.todayNet >= 0 ? "+" : ""}{moneyFormatter.format(derivedOverview.todayNet)}</strong></article>
+          <article><span>Movimientos registrados</span><strong>{financeTimeline.length}</strong></article>
         </section>
 
         <section className="pos-v2-finance__insights">

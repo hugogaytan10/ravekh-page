@@ -85,5 +85,9 @@ export class ReportSale {
     public readonly paymentMethod: string,
     public readonly currency: string,
     public readonly total: number,
+    public readonly productName = "Sin detalle",
+    public readonly address = "Sin dirección",
+    public readonly quantity = 1,
+    public readonly status = "Pendiente",
   ) {}
 }

@@ -23,6 +23,12 @@ type CompletedSale = {
   paymentMethod: PaymentMethod;
   table: string;
   total: number;
+  customerName?: string;
+};
+
+type CustomerVm = {
+  id: number;
+  name: string;
 };
 
 const PAYMENT_METHOD_OPTIONS: Array<{
@@ -94,6 +100,9 @@ export const PosV2SalesHomePage = () => {
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
   const [isMobileTablesOpen, setIsMobileTablesOpen] = useState(false);
   const [tablesError, setTablesError] = useState<string | null>(null);
+  const [customers, setCustomers] = useState<CustomerVm[]>([]);
+  const [customersError, setCustomersError] = useState<string | null>(null);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
 
   const debugLog = (...args: unknown[]) => {
     if (window.localStorage.getItem(DEBUG_KEY) === "true") {
@@ -140,6 +149,31 @@ export const PosV2SalesHomePage = () => {
         setProductsError(error instanceof Error ? error.message : "No pudimos cargar tus productos.");
       })
       .finally(() => setLoadingProducts(false));
+  }, []);
+
+  useEffect(() => {
+    const token = window.localStorage.getItem(TOKEN_KEY);
+    const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY));
+
+    if (!token || !businessId) {
+      setCustomers([]);
+      return;
+    }
+
+    const factory = new ModernSystemsFactory(API_BASE_URL);
+    const customerService = factory.createPosCustomerService();
+
+    customerService
+      .listCustomers(businessId, token)
+      .then((items) => {
+        const mapped = items.map((customer) => ({ id: customer.id, name: customer.name.trim() || `Cliente #${customer.id}` }));
+        setCustomers(mapped);
+        setCustomersError(null);
+      })
+      .catch((cause) => {
+        setCustomers([]);
+        setCustomersError(cause instanceof Error ? cause.message : "No fue posible cargar clientes.");
+      });
   }, []);
 
   useEffect(() => {
@@ -362,6 +396,7 @@ export const PosV2SalesHomePage = () => {
 
     const payloadByTable = {
       Employee_Id: employeeId,
+      Customer_Id: selectedCustomerId ? Number(selectedCustomerId) : undefined,
       PaymentMethod: paymentMethod,
       Total: totals.total,
       Discount: discountValue,
@@ -418,6 +453,7 @@ export const PosV2SalesHomePage = () => {
         paymentMethod,
         table: selectedTable,
         total: totals.total,
+        customerName: customers.find((customer) => String(customer.id) === selectedCustomerId)?.name,
       });
       setCart({});
       setDiscountPercent("0");
@@ -627,6 +663,18 @@ export const PosV2SalesHomePage = () => {
               </select>
             </label>
 
+            <label>
+              Cliente (opcional)
+              <select value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)}>
+                <option value="">Venta general</option>
+                {customers.map((customer) => (
+                  <option key={customer.id} value={customer.id}>{customer.name}</option>
+                ))}
+              </select>
+            </label>
+            {customersError ? <small className="pos-v2-sales-home__customer-hint is-error">{customersError}</small> : null}
+            {!customersError && customers.length > 0 ? <small className="pos-v2-sales-home__customer-hint">Puedes vincular la venta a cliente para historial y recompensas.</small> : null}
+
             <div className="pos-v2-sales-home__totals">
               <p><span>Subtotal</span><strong>${totals.subtotal.toFixed(2)}</strong></p>
               <p><span>Descuento</span><strong>-${totals.discount.toFixed(2)}</strong></p>
@@ -727,6 +775,7 @@ export const PosV2SalesHomePage = () => {
             <p>Folio: <strong>{completedSale.folio}</strong></p>
             <p>Mesa: <strong>{completedSale.table}</strong></p>
             <p>Método: <strong>{completedSale.paymentMethod}</strong></p>
+            <p>Cliente: <strong>{completedSale.customerName ?? "General"}</strong></p>
             <p>Total: <strong>${completedSale.total.toFixed(2)}</strong></p>
 
             <div className="pos-v2-sales-home__sale-modal-actions">

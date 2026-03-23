@@ -453,6 +453,16 @@
   font-size: 0.85rem;
 }
 
+.pos-v2-sales-home__customer-hint {
+  margin-top: -0.3rem;
+  color: #6b7280;
+  font-size: 0.76rem;
+}
+
+.pos-v2-sales-home__customer-hint.is-error {
+  color: #b91c1c;
+}
+
 .pos-v2-sales-home__error {
   margin: 0;
   border-radius: 10px;

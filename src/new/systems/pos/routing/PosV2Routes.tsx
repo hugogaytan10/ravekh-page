@@ -8,6 +8,9 @@ import { PosV2ReportingPage } from "../features/reporting/ui/PosV2ReportingPage"
 import { PosV2MorePage } from "../features/more/ui/PosV2MorePage";
 import { PosV2ModulePreviewPage } from "../features/more/ui/PosV2ModulePreviewPage";
 import { PosV2TableZonesPage } from "../features/settings/table-zones/ui/PosV2TableZonesPage";
+import { PosV2CustomersPage } from "../features/customers/ui/PosV2CustomersPage";
+import { PosV2EmployeesPage } from "../features/employees/ui/PosV2EmployeesPage";
+import { PosV2OnlineOrdersPage } from "../features/online-orders/ui/PosV2OnlineOrdersPage";
 import { PosV2RequireAuth } from "./PosV2RequireAuth";
 
 export const POS_V2_ROUTES = (
@@ -20,6 +23,9 @@ export const POS_V2_ROUTES = (
     <Route path="/v2/more" element={<PosV2RequireAuth><PosV2MorePage /></PosV2RequireAuth>} />
     <Route path="/v2/more/preview/:moduleId" element={<PosV2RequireAuth><PosV2ModulePreviewPage /></PosV2RequireAuth>} />
     <Route path="/v2/settings/table-zones" element={<PosV2RequireAuth><PosV2TableZonesPage /></PosV2RequireAuth>} />
+    <Route path="/v2/customers" element={<PosV2RequireAuth><PosV2CustomersPage /></PosV2RequireAuth>} />
+    <Route path="/v2/employees" element={<PosV2RequireAuth><PosV2EmployeesPage /></PosV2RequireAuth>} />
+    <Route path="/v2/online-store" element={<PosV2RequireAuth><PosV2OnlineOrdersPage /></PosV2RequireAuth>} />
     <Route path="/v2/health" element={<PosV2RequireAuth><PosHealthV2Screen /></PosV2RequireAuth>} />
     <Route path="/v2/pos" element={<Navigate to="/v2/login-punto-venta" replace />} />
     <Route path="/v2/pos/login" element={<Navigate to="/v2/login-punto-venta" replace />} />

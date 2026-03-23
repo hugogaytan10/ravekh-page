@@ -9,8 +9,8 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
     items: [
       { id: "sales", title: "Ventas", description: "Punto de venta y cobro rápido.", path: "/v2/MainSales", status: "available", actionType: "route" },
       { id: "products", title: "Productos", description: "Catálogo y edición de artículos.", path: "/v2/main-products/items", status: "available", actionType: "route" },
-      { id: "finances", title: "Finanzas", description: "Registro de ingresos y egresos.", path: "/v2/MainFinances", status: "available", actionType: "route" },
-      { id: "reports", title: "Reportes", description: "Balance, ingresos, ganancias y pedidos por periodo.", path: "/v2/dashboard", status: "available", actionType: "route" },
+      { id: "finances", title: "Finanzas", description: "Registro operativo de ingresos/egresos y flujo diario.", path: "/v2/MainFinances", status: "available", actionType: "route" },
+      { id: "reports", title: "Reportes", description: "Analítica ejecutiva, tendencias y gráficas de desempeño.", path: "/v2/dashboard", status: "available", actionType: "route" },
     ],
   },
   {
@@ -35,7 +35,7 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
     subtitle: "Herramientas de soporte y operación extendida.",
     items: [
       { id: "health", title: "Salud de API", description: "Verifica conectividad y disponibilidad backend.", path: "/v2/health", status: "available", actionType: "route" },
-      { id: "online-store", title: "Tienda en línea", description: "Gestión de canal online.", path: "/v2/online-store", status: "available", actionType: "route" },
+      { id: "online-store", title: "Tienda en línea", description: "Gestión de pedidos del canal online.", path: "/v2/online-store", status: "available", actionType: "route" },
       { id: "loyalty", title: "Cupones y visitas", description: "Herramientas de fidelización y recompensas.", path: previewPath("loyalty"), status: "beta", actionType: "beta-action" },
       { id: "support", title: "Ayuda", description: "Centro de ayuda y soporte para el negocio.", path: previewPath("support"), status: "preview", actionType: "route" },
       { id: "delete-account", title: "Borrar cuenta", description: "Proceso de cierre de sesión/seguridad.", path: previewPath("delete-account"), status: "preview", actionType: "route" },

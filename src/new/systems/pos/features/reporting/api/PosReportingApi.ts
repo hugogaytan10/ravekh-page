@@ -72,6 +72,16 @@ type LegacySalesItem = {
   coinName?: string;
   Total?: NullableNumber;
   total?: NullableNumber;
+  Status?: string;
+  status?: string;
+  Quantity?: NullableNumber;
+  quantity?: NullableNumber;
+  ProductName?: string;
+  productName?: string;
+  Name?: string;
+  name?: string;
+  Address?: string;
+  address?: string;
 };
 
 type LegacySalesResponse = {
@@ -239,6 +249,10 @@ export class PosReportingApi implements IReportingRepository {
       toText(row.PaymentMethod ?? row.paymentMethod, "N/A"),
       toText(row.CoinName ?? row.coinName, "MXN"),
       toNumber(row.Total ?? row.total),
+      toText(row.ProductName ?? row.productName ?? row.Name ?? row.name, "Sin detalle"),
+      toText(row.Address ?? row.address, "Sin dirección"),
+      Math.max(1, Math.round(toNumber(row.Quantity ?? row.quantity) || 1)),
+      toText(row.Status ?? row.status, "Pendiente"),
     );
   }
 }
