@@ -128,6 +128,13 @@ export const OrderDetailScreen: React.FC = () => {
             />
             <div>
               <p className="font-semibold text-gray-800">{detail.Name}</p>
+              {(detail.Size_Name || detail.Color_Name) && (
+                <p className="text-sm text-gray-600">
+                  {detail.Size_Name ? `Talla: ${detail.Size_Name}` : ""}
+                  {detail.Size_Name && detail.Color_Name ? " · " : ""}
+                  {detail.Color_Name ? `Color: ${detail.Color_Name}` : ""}
+                </p>
+              )}
               <p>Precio: ${detail.Price}</p>
               <p>Cantidad: {detail.Item_Quantity}</p>
               <p>Subtotal: ${detail.Price * detail.Item_Quantity}</p>

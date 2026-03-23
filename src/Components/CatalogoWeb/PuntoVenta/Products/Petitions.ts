@@ -56,6 +56,12 @@ export type ProductExtrasByType = {
     TALLA: ProductExtraOption[];
 } | null;
 
+export type ProductExtraPayload = {
+    Product_Id: number;
+    Description: string;
+    Type: "COLOR" | "TALLA";
+};
+
 export const getProducts = async (token: string, Business_Id: string) => {
     try {
         const response = await fetch(`${URL}products/business/${Business_Id}`, {
@@ -170,7 +176,12 @@ export const updateProduct = async (product: Item, token: string): Promise<Mutat
     }
 }
 
-export const insertProduct = async (product: Item, token: string, Variants?: Variant[]): Promise<MutationResult> => {
+export const insertProduct = async (
+    product: Item,
+    token: string,
+    Variants?: Variant[],
+    Extras?: Array<{ Description: string; Type: "COLOR" | "TALLA" }>
+): Promise<MutationResult> => {
     try {
         const response = await fetch(`${URL}products`, {
             method: 'POST',
@@ -180,7 +191,8 @@ export const insertProduct = async (product: Item, token: string, Variants?: Var
             },
             body: JSON.stringify({
                 Product: product,
-                Variants: Variants && Variants.length ? Variants : null
+                Variants: Variants && Variants.length ? Variants : null,
+                Extras: Extras && Extras.length ? Extras : null,
             })
         });
         const data = await parseJsonSafely(response);
@@ -243,6 +255,37 @@ export const getExtrasByProductId = async (productId: number, token: string): Pr
         };
     } catch (e) {
         return null;
+    }
+};
+
+export const updateExtra = async (extraId: number, extra: ProductExtraPayload, token: string) => {
+    try {
+        const response = await fetch(`${URL}extras/${extraId}`, {
+            method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                token,
+            },
+            body: JSON.stringify(extra),
+        });
+        return response.ok;
+    } catch (e) {
+        return false;
+    }
+};
+
+export const deleteExtra = async (extraId: number, token: string) => {
+    try {
+        const response = await fetch(`${URL}extras/${extraId}`, {
+            method: "DELETE",
+            headers: {
+                "Content-Type": "application/json",
+                token,
+            },
+        });
+        return response.ok;
+    } catch (e) {
+        return false;
     }
 };
 
