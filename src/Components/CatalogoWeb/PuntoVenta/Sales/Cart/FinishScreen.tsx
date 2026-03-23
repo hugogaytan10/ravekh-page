@@ -102,6 +102,9 @@ export const FinishScreen: React.FC = () => {
       const orderDetails = context.cartPos.map((item) => ({
         Product_Id: item.Id || 0,
         Quantity: item.Quantity || 0,
+        Variant_Id: item.Variant_Id ?? undefined,
+        Color_Id: item.Color_Id ?? undefined,
+        Size_Id: item.Size_Id ?? undefined,
         Price: item.Price || 0,
         Cost: item.Cost || 0,
       }));
@@ -136,7 +139,7 @@ export const FinishScreen: React.FC = () => {
         className="finish-screen-header"
         style={{ backgroundColor: context.store.Color || "#6200EE" }}
       >
-        <button className="flex items-center" onClick={()=>{navigate(-1)}}>
+        <button className="flex items-center" onClick={()=>{navigate("/payment")}}>
         <ChevronBack  />
         <h1 className="finish-screen-title">Finalizar</h1>
         </button>

@@ -3,6 +3,7 @@ import { AppContext } from "../../../Context/AppContext";
 import { useNavigate, useParams } from "react-router-dom";
 import { getSales } from "../Petitions";
 import MoneyIcon from "../../../../../assets/POS/MoneyIcon";
+import { normalizePeriodLabel, resolveBusinessId } from "../utils";
 
 interface SaleItem {
     Id: string;
@@ -14,7 +15,7 @@ interface SaleItem {
 }
 
 const ReportSales: React.FC = () => {
-    const { period, businessId } = useParams<{ period: string; businessId: string }>();
+    const { period } = useParams<{ period: string }>();
     const context = useContext(AppContext);
     const navigate = useNavigate();
 
@@ -24,6 +25,8 @@ const ReportSales: React.FC = () => {
     const [error, setError] = useState<string | null>(null);
     const [selectedSegment, setSelectedSegment] = useState<"Orders" | "Commands" | "Both">("Both");
     const [selectedCoin, setSelectedCoin] = useState<string | null>(null);
+    const normalizedPeriod = normalizePeriodLabel(period);
+    const businessId = resolveBusinessId(context.user?.Business_Id);
 
     // List of available coins
     const availableCoins = Array.from(new Set([...orders, ...commands].map((item) => item.CoinName)));
@@ -33,7 +36,11 @@ const ReportSales: React.FC = () => {
         setError(null);
 
         try {
-            const response = await getSales(businessId!, period!, "TODOS", context.user.Token);
+            if (!businessId || !context.user.Token) {
+                setError("No se pudo identificar el negocio.");
+                return;
+            }
+            const response = await getSales(businessId, normalizedPeriod, "TODOS", context.user.Token);
             setOrders(response?.Orders?.map((order: any) => ({ ...order, type: "Orden" })) || []);
             setCommands(response?.Commands?.map((command: any) => ({ ...command, type: "Comanda" })) || []);
         } catch {
@@ -45,7 +52,7 @@ const ReportSales: React.FC = () => {
 
     useEffect(() => {
         fetchSalesData();
-    }, [period, businessId]);
+    }, [businessId, normalizedPeriod, context.user.Token]);
 
     const filteredData = (): SaleItem[] => {
         let data: SaleItem[] = [];
@@ -97,8 +104,8 @@ const ReportSales: React.FC = () => {
     return (
         <div className="p-6 bg-gray-50 min-h-screen">
             <div className="mb-8">
-                <h2 className="text-2xl font-semibold text-gray-700">
-                    Ventas por {period}
+                    <h2 className="text-2xl font-semibold text-gray-700">
+                    Ventas por {normalizedPeriod}
                 </h2>
             </div>
 

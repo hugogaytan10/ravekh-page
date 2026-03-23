@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import { Producto } from "./Modelo/Producto";
 import { getBaseVariantKey } from "./VariantSelectionModal";
 import cartIcon from "../../assets/cart-outline.svg";
-import {Trash} from "../../assets/POS/Trash";
+import {Trash} from "../../assets/POS/Trash.tsx";
 import { EyeIcon } from "../../assets/Cupones/icons/EyeIcon";
 interface ProductGridProps {
   products: Producto[];

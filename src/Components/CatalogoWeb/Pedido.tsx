@@ -46,7 +46,12 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
   const [deliveryMethod, setDeliveryMethod] = useState<string>("domicilio");
   const [paymentMethod, setPaymentMethod] = useState<string>("transferencia");
   const [showModal, setShowModal] = useState<boolean>(false); // Estado para mostrar el modal de confirmación
-  const [deleteProduct, setDeleteProduct] = useState<{ id: number; variantId: number | null } | null>(null); // Estado para guardar el producto a eliminar
+  const [deleteProduct, setDeleteProduct] = useState<{
+    id: number;
+    variantId: number | null;
+    colorId: number | null;
+    sizeId: number | null;
+  } | null>(null); // Estado para guardar el producto a eliminar
   const [quantityWarnings, setQuantityWarnings] = useState<Record<string, string | null>>({});
   const [shippingOptions, setShippingOptions] = useState<ShippingOptions>(defaultShippingOptions);
   const [loadingShippingOptions, setLoadingShippingOptions] = useState<boolean>(true);
@@ -184,6 +189,9 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     const orderDetails: OrderDetails[] = cart.map((producto) => ({
       Product_Id: producto.Id!,
       Quantity: producto.Quantity || 1,
+      Variant_Id: producto.Variant_Id ?? undefined,
+      Color_Id: producto.Color_Id ?? undefined,
+      Size_Id: producto.Size_Id ?? undefined,
     }));
 
     return { order, orderDetails };
@@ -209,11 +217,16 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
       const qty = p.Quantity ?? 1;
       const name = clean(p.Name);
       const variant = clean(p.VariantDescription);
+      const size = clean(p.SizeDescription);
+      const color = clean(p.ColorDescription);
       const unit = Number(p.Price) || 0;
       const subtotal = qty * unit;
+      const extrasLabel = [variant, size && `Talla: ${size}`, color && `Color: ${color}`]
+        .filter(Boolean)
+        .join(", ");
 
       lines.push(
-        `${idx + 1}) ${name}${variant ? ` (${variant})` : ""} — ${qty} × ${money(unit)} = ${money(subtotal)}`
+        `${idx + 1}) ${name}${extrasLabel ? ` (${extrasLabel})` : ""} — ${qty} × ${money(unit)} = ${money(subtotal)}`
       );
     });
 
@@ -767,7 +780,12 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     const key = getProductKey(product);
 
     const updatedCart = cart.map(item => {
-      if (item.Id === product.Id && (item.Variant_Id ?? null) === (product.Variant_Id ?? null)) {
+      if (
+        item.Id === product.Id &&
+        (item.Variant_Id ?? null) === (product.Variant_Id ?? null) &&
+        (item.Color_Id ?? null) === (product.Color_Id ?? null) &&
+        (item.Size_Id ?? null) === (product.Size_Id ?? null)
+      ) {
         const currentQuantity = item.Quantity ?? 1;
         const nextQuantity = maxStock != null ? Math.min(currentQuantity + 1, maxStock) : currentQuantity + 1;
 
@@ -793,12 +811,22 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     const key = getProductKey(product);
     const updatedCart = cart
       .map(item => {
-        if (item.Id === product.Id && (item.Variant_Id ?? null) === (product.Variant_Id ?? null)) {
+        if (
+          item.Id === product.Id &&
+          (item.Variant_Id ?? null) === (product.Variant_Id ?? null) &&
+          (item.Color_Id ?? null) === (product.Color_Id ?? null) &&
+          (item.Size_Id ?? null) === (product.Size_Id ?? null)
+        ) {
           if (item.Quantity! > 1) {
             return { ...item, Quantity: item.Quantity! - 1 }; // Reduce la cantidad
           } else {
             setShowModalProduct(true); // Muestra el modal de confirmación
-            setDeleteProduct({ id: product.Id!, variantId: product.Variant_Id ?? null }); // Guarda el producto a eliminar
+            setDeleteProduct({
+              id: product.Id!,
+              variantId: product.Variant_Id ?? null,
+              colorId: product.Color_Id ?? null,
+              sizeId: product.Size_Id ?? null,
+            }); // Guarda el producto a eliminar
           }
         }
         return item;
@@ -813,7 +841,8 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     setQuantityWarnings((prev) => ({ ...prev, [key]: null }));
   };
 
-  const getProductKey = (product: CartPos) => `${product.Id}-${product.Variant_Id ?? "base"}`;
+  const getProductKey = (product: CartPos) =>
+    `${product.Id}-${product.Variant_Id ?? "base"}-${product.Color_Id ?? "no-color"}-${product.Size_Id ?? "no-size"}`;
 
   const handleManualQuantityChange = (product: CartPos, value: string) => {
     const key = getProductKey(product);
@@ -832,7 +861,12 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
     }
 
     const updatedCart = cart.map(item => {
-      if (item.Id === product.Id && (item.Variant_Id ?? null) === (product.Variant_Id ?? null)) {
+      if (
+        item.Id === product.Id &&
+        (item.Variant_Id ?? null) === (product.Variant_Id ?? null) &&
+        (item.Color_Id ?? null) === (product.Color_Id ?? null) &&
+        (item.Size_Id ?? null) === (product.Size_Id ?? null)
+      ) {
         return { ...item, Quantity: nextQuantity };
       }
       return item;
@@ -1001,7 +1035,7 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
 
                     return (
                       <div
-                        key={`${producto.Id}-${producto.Variant_Id ?? "base"}`}
+                        key={getProductKey(producto)}
                         className="py-6 flex items-center gap-5"
                       >
                         <img
@@ -1014,6 +1048,13 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                             {producto.Name}
                             {producto.VariantDescription ? `, ${producto.VariantDescription}` : ""}
                           </p>
+                          {(producto.SizeDescription || producto.ColorDescription) && (
+                            <p className="mt-1 text-sm text-[var(--text-secondary)]">
+                              {producto.SizeDescription ? `Talla: ${producto.SizeDescription}` : ""}
+                              {producto.SizeDescription && producto.ColorDescription ? " · " : ""}
+                              {producto.ColorDescription ? `Color: ${producto.ColorDescription}` : ""}
+                            </p>
+                          )}
                           <div className="mt-2 flex items-center gap-3">
                             {hasPromo && (
                               <span className="text-sm text-[var(--text-muted)] line-through">
@@ -1518,7 +1559,12 @@ export const Pedido: React.FC<{ view?: PedidoView }> = ({ view = "cart" }) => {
                     onClick={() => {
                       setShowModalProduct(false);
                       if (deleteProduct) {
-                        context.removeProductFromCart(deleteProduct.id.toString(), deleteProduct.variantId ?? null);
+                        context.removeProductFromCart(
+                          deleteProduct.id.toString(),
+                          deleteProduct.variantId ?? null,
+                          deleteProduct.colorId ?? null,
+                          deleteProduct.sizeId ?? null,
+                        );
                       }
                     }}
                     className="bg-[var(--state-error)] text-white py-2 px-6 rounded-full shadow-sm"

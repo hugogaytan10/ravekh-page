@@ -18,7 +18,7 @@ export const Header: React.FC<HeaderProps> = ({ screenName, navigation }) => {
     <div
       className="flex items-center px-4 py-2 rounded-b-2xl"
       style={{ backgroundColor: context.store.Color || ThemeLight.btnBackground }}
-      onClick={() => navigate(-1)}
+      onClick={() => navigate("/more")}
     >
       <button className="mr-2">
         <ChevronBack width={30} height={30}/>

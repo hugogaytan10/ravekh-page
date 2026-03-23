@@ -15,7 +15,7 @@ export const CategoriasScreenSales: React.FC = () => {
   const chooseCategory = (category: Category) => {
     // Actualizar el contexto con la categoría seleccionada
     context.setCategorySelected(category);
-    navigate(-1);
+    navigate("/add-product");
   };
 
   useEffect(() => {
@@ -36,7 +36,7 @@ export const CategoriasScreenSales: React.FC = () => {
           backgroundColor: context.store.Color || ThemeLight.btnBackground,
         }}
       >
-        <button onClick={() => navigate(-1)} className="mr-2">
+        <button onClick={() => navigate("/add-product")} className="mr-2">
           <ChevronBack />
         </button>
         <h1 className="text-lg font-bold">

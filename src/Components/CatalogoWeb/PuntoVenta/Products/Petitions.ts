@@ -44,6 +44,18 @@ const extractErrorMessage = (payload: any, fallback: string) => {
     return fallback;
 };
 
+export type ProductExtraOption = {
+    Id: number;
+    Product_Id: number;
+    Description: string;
+    Type: "COLOR" | "TALLA" | string;
+};
+
+export type ProductExtrasByType = {
+    COLOR: ProductExtraOption[];
+    TALLA: ProductExtraOption[];
+} | null;
+
 export const getProducts = async (token: string, Business_Id: string) => {
     try {
         const response = await fetch(`${URL}products/business/${Business_Id}`, {
@@ -207,6 +219,30 @@ export const getVariantsByProductId = async (productId: number, token: string) =
         return data;
     } catch (e) {
         return [];
+    }
+};
+
+export const getExtrasByProductId = async (productId: number, token: string): Promise<ProductExtrasByType> => {
+    try {
+        const response = await fetch(`${URL}extras/product/${productId}`, {
+            headers: {
+                "Content-Type": "application/json",
+                token,
+            },
+        });
+        const data = await response.json();
+        if (!data || typeof data !== "object") return null;
+
+        const color = Array.isArray(data.COLOR) ? data.COLOR : [];
+        const size = Array.isArray(data.TALLA) ? data.TALLA : [];
+        if (color.length === 0 && size.length === 0) return null;
+
+        return {
+            COLOR: color as ProductExtraOption[],
+            TALLA: size as ProductExtraOption[],
+        };
+    } catch (e) {
+        return null;
     }
 };
 

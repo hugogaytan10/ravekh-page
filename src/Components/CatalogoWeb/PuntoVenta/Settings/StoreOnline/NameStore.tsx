@@ -42,7 +42,7 @@ export const NameStore: React.FC = () => {
       <div className="flex items-center mb-6">
         <button
           className="mr-4"
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/main-store-online")}
         >
           {/* Replace with an actual back icon */}
           <svg

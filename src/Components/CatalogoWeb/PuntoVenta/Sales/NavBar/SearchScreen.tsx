@@ -168,7 +168,7 @@ export const SearchScreen: React.FC = () => {
         <button
           onClick={() => {
             context.setShowNavBarBottom(true);
-            navigate(-1);
+            navigate("/MainSales");
           }}
           className="text-white"
         >

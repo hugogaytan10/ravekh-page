@@ -19,6 +19,9 @@ export const MainCoupons: React.FC = () => {
     "/cuponespv/visitas/qr-dinamico",
     "/cuponespv/visitas/generar/",
     "/cuponespv/visitas/qrs-activos/online",
+    "/cuponespv/cupones/lista",
+     "/cuponespv/cupones",
+     "/cuponespv/visitas"
   ];
   const hideTabsForRoute = hiddenTabsRoutes.some((route) => location.pathname.includes(route));
 

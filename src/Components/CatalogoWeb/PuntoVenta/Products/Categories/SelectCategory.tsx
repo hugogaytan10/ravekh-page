@@ -21,6 +21,15 @@ export const SelectCategory: React.FC = () => {
 
   useEffect(() => {
     let isMounted = true;
+
+    if (!context.user?.Business_Id || !context.user?.Token) {
+      setCategories([]);
+      setIsLoading(false);
+      return () => {
+        isMounted = false;
+      };
+    }
+
     setIsLoading(true);
     getCategoriesByBusiness(
       context.user.Business_Id.toString(),
@@ -28,7 +37,7 @@ export const SelectCategory: React.FC = () => {
     )
       .then((data) => {
         if (isMounted) {
-          setCategories(data);
+          setCategories(Array.isArray(data) ? data : []);
         }
       })
       .finally(() => {
@@ -39,7 +48,7 @@ export const SelectCategory: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [context.stockFlag, context.user.Business_Id, context.user.Token]);
+  }, [context.stockFlag, context.user?.Business_Id, context.user?.Token]);
 
   return (
     <div className="flex flex-col min-h-screen bg-white">
@@ -50,7 +59,7 @@ export const SelectCategory: React.FC = () => {
         }}
       >
         <button
-          onClick={() => {navigate(-1); context.setShowNavBarBottom(true);} }
+          onClick={() => {navigate("/main-products/items"); context.setShowNavBarBottom(true);} }
           className="mr-2 text-white text-lg flex items-center"
         >
           <ChevronBack />
@@ -65,7 +74,7 @@ export const SelectCategory: React.FC = () => {
 
         {/* Crear Nueva Categoría */}
         <button
-          onClick={() => navigate("/add-category-product")}
+          onClick={() => navigate("/add-category-sales")}
           className="flex items-center justify-start space-x-3 p-4 bg-gray-100 rounded"
         >
           <PlusIcon width={20} height={20} color={context.store.Color} />

@@ -64,7 +64,7 @@ export const VisitsTopClientsScreen: React.FC = () => {
 
   const handleBack = () => {
     if (window.history.length > 1) {
-      navigate(-1);
+      navigate("/cuponespv");
       return;
     }
 

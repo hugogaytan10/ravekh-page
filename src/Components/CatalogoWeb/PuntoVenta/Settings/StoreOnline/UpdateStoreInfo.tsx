@@ -33,18 +33,18 @@ export const UpdateStoreInfo: React.FC = () => {
       updatedStore
     );
 
-    navigate(-1); // Volver a la pantalla anterior
+    navigate("/main-store-online"); // Volver a la pantalla anterior
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-white">
+    <div className="flex flex-col min-h-screen bg-white text-gray-900">
       {/* Header */}
       <header
         className="h-16 flex items-center justify-between px-4 text-white"
         style={{ backgroundColor: context.store.Color || "#3B82F6" }}
       >
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate("/main-store-online")}
           className="p-2 rounded-full text-black"
         >
           <ChevronBack />
@@ -54,41 +54,41 @@ export const UpdateStoreInfo: React.FC = () => {
       </header>
 
       {/* Formulario de actualización */}
-      <main className="flex-grow p-4">
+      <main className="flex-grow p-4 bg-white text-gray-900">
         {/* Sección de Información básica */}
         <section className="mb-6">
-          <h2 className="text-lg font-semibold mb-4">Información básica</h2>
+          <h2 className="text-lg font-semibold mb-4 text-gray-900">Información básica</h2>
 
-          <label className="block text-sm font-medium mb-2">Nombre de la tienda</label>
+          <label className="block text-sm font-medium mb-2 text-gray-900">Nombre de la tienda</label>
           <input
             type="text"
-            className=" bg-white w-full p-3 border rounded-md mb-4"
+            className="bg-white text-gray-900 w-full p-3 border rounded-md mb-4"
             value={storeName}
             onChange={(e) => setStoreName(e.target.value)}
             placeholder="Nombre de la tienda"
           />
 
-          <label className="block text-sm font-medium mb-2">Teléfono</label>
+          <label className="block text-sm font-medium mb-2 text-gray-900">Teléfono</label>
           <input
             type="tel"
-            className="bg-white w-full p-3 border rounded-md mb-4"
+            className="bg-white text-gray-900 w-full p-3 border rounded-md mb-4"
             value={phoneNumber}
             onChange={(e) => setPhoneNumber(e.target.value)}
             placeholder="Teléfono"
           />
 
-          <label className="block text-sm font-medium mb-2">Dirección</label>
+          <label className="block text-sm font-medium mb-2 text-gray-900">Dirección</label>
           <input
             type="text"
-            className="bg-white w-full p-3 border rounded-md mb-4"
+            className="bg-white text-gray-900 w-full p-3 border rounded-md mb-4"
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             placeholder="Dirección"
           />
 
-          <label className="block text-sm font-medium mb-2">Referencias</label>
+          <label className="block text-sm font-medium mb-2 text-gray-900">Referencias</label>
           <textarea
-            className="bg-white w-full p-3 border rounded-md mb-4"
+            className="bg-white text-gray-900 w-full p-3 border rounded-md mb-4"
             value={references}
             onChange={(e) => setReferences(e.target.value)}
             rows={4}

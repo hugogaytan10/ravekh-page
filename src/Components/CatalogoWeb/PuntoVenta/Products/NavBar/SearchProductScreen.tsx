@@ -54,7 +54,7 @@ export const SearchProductScreen: React.FC = () => {
           className="back-button"
           onClick={() => {
             context.setShowNavBarBottom(true);
-            navigate(-1);
+            navigate("/main-products/items");
           }}
         >
           <ChevronBack />

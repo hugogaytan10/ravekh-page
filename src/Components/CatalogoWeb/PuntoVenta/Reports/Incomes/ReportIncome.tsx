@@ -3,6 +3,7 @@ import { getIncomesToday, getIncomesMonth, getIncomesYear } from "../Petitions";
 import { useNavigate, useParams } from "react-router-dom";
 import MoneyIcon from "../../../../../assets/POS/MoneyIcon";
 import { AppContext } from "../../../Context/AppContext";
+import { normalizePeriodLabel, resolveBusinessId } from "../utils";
 
 interface IIncome {
     Id?: number;
@@ -15,13 +16,16 @@ interface IIncome {
 
 
 export const ReportIncome: React.FC = () => {
-    const { businessId, period } = useParams();
+    const { period } = useParams();
     const navigation = useNavigate();
     const context = useContext(AppContext);
     const [incomes, setIncomes] = useState<IIncome[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
     const [noData, setNoData] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
+
+    const normalizedPeriod = normalizePeriodLabel(period);
+    const businessId = resolveBusinessId(context.user?.Business_Id);
 
     const loadIncomes = async () => {
         setLoading(true);
@@ -33,14 +37,9 @@ export const ReportIncome: React.FC = () => {
                 setError('ID de negocio no válido.');
                 return;
             }
-            if (!period) {
-                setError('Período no válido.');
-                return;
-            }
-
             let response: { Incomes: IIncome[] | null; TotalsByCurrency: any[] } | null = null;
 
-            switch (period) {
+            switch (normalizedPeriod) {
                 case 'Día':
                     response = await getIncomesToday(businessId.toString());
                     break;
@@ -71,7 +70,7 @@ export const ReportIncome: React.FC = () => {
 
     useEffect(() => {
         loadIncomes();
-    }, [period, businessId]);
+    }, [businessId, normalizedPeriod]);
 
     const totalsByCurrency = incomes.reduce((totals, income) => {
         const moneyType = income.MoneyTipe || "Desconocido";
@@ -145,7 +144,7 @@ export const ReportIncome: React.FC = () => {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                         </svg>
                     </button>
-                    <h1 className="text-white text-lg font-bold">Ingresos por {period}</h1>
+                    <h1 className="text-white text-lg font-bold">Ingresos por {normalizedPeriod}</h1>
                 </div>
                 <p className="text-center text-gray-600 text-lg mt-16">
                     No hay ingresos para el período seleccionado.
@@ -165,7 +164,7 @@ export const ReportIncome: React.FC = () => {
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
                     </svg>
                 </button>
-                <h1 className="text-white text-lg font-bold">Ingresos por {period}</h1>
+                <h1 className="text-white text-lg font-bold">Ingresos por {normalizedPeriod}</h1>
             </div>
             <div className="-mt-4">{renderSummary()}</div>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">

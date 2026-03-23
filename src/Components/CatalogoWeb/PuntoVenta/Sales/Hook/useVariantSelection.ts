@@ -3,7 +3,7 @@ import { AppContext } from '../../../Context/AppContext';
 import { Item } from '../../Model/Item';
 import { Variant } from '../../Model/Variant';
 import { CartPos } from '../../Model/CarPos';
-import { getVariantsByProductId } from '../../Products/Petitions';
+import { getExtrasByProductId, getVariantsByProductId, ProductExtrasByType } from '../../Products/Petitions';
 import { VariantModalState, VariantOption } from '../variantTypes';
 
 const BASE_VARIANT_INTERNAL_ID = 0;
@@ -50,6 +50,9 @@ export const useVariantSelection = ({
   const [selectedVariantQuantities, setSelectedVariantQuantities] = useState<Map<number, number>>(
     () => new Map(),
   );
+  const [extras, setExtras] = useState<ProductExtrasByType>(null);
+  const [selectedColorId, setSelectedColorId] = useState<number | null>(null);
+  const [selectedSizeId, setSelectedSizeId] = useState<number | null>(null);
   const [isFetchingVariants, setIsFetchingVariants] = useState(false);
 
   const addItemToCart = useCallback(
@@ -69,12 +72,23 @@ export const useVariantSelection = ({
       const quantity = Number.isFinite(rawQuantity) && rawQuantity > 0 ? rawQuantity : 1;
       const productImage = product.Images?.[0] ?? '';
       const variantId = variant?.Id ?? null;
+      const isBaseProduct = variant == null || variant.Id === BASE_VARIANT_INTERNAL_ID;
+      const selectedColor = isBaseProduct
+        ? extras?.COLOR?.find((option) => option.Id === selectedColorId) ?? null
+        : null;
+      const selectedSize = isBaseProduct
+        ? extras?.TALLA?.find((option) => option.Id === selectedSizeId) ?? null
+        : null;
+      const colorId = selectedColor?.Id ?? null;
+      const sizeId = selectedSize?.Id ?? null;
 
       context.setCart((prevCart: CartPos[]) => {
         const cartIndex = prevCart.findIndex(
           (item: CartPos) =>
             item.Id === product.Id &&
-            (item.Variant_Id ?? null) === (variantId ?? null),
+            (item.Variant_Id ?? null) === (variantId ?? null) &&
+            (item.Color_Id ?? null) === colorId &&
+            (item.Size_Id ?? null) === sizeId,
         );
 
         if (cartIndex !== -1) {
@@ -105,55 +119,75 @@ export const useVariantSelection = ({
               (variant?.CostPerItem ?? product.CostPerItem ?? 0).toFixed(2),
             ),
             Variant_Id: variantId,
+            Color_Id: colorId,
+            Size_Id: sizeId,
+            ColorDescription: selectedColor?.Description,
+            SizeDescription: selectedSize?.Description,
           },
         ];
       });
 
       onCartUpdated?.();
     },
-    [context.quantityNextSell, onCartUpdated],
+    [context.quantityNextSell, extras, onCartUpdated, selectedColorId, selectedSizeId],
   );
 
   const closeModal = useCallback(() => {
     setModalVisible(false);
     setSelectedVariantIds(new Set());
     setSelectedVariantQuantities(new Map());
+    setExtras(null);
+    setSelectedColorId(null);
+    setSelectedSizeId(null);
   }, []);
+
+  const openSelectionModal = useCallback(
+    (product: Item, variants: Variant[], productExtras: ProductExtrasByType) => {
+      const hasOnlyBaseProduct = variants.length === 0;
+      const defaultQuantity = Math.max(1, Number(context.quantityNextSell) || 1);
+      setVariantOptions(buildVariantOptions(product, variants));
+      setCurrentProduct(product);
+      setSelectedVariantIds(
+        hasOnlyBaseProduct ? new Set([BASE_VARIANT_INTERNAL_ID]) : new Set(),
+      );
+      setSelectedVariantQuantities(
+        hasOnlyBaseProduct
+          ? new Map([[BASE_VARIANT_INTERNAL_ID, defaultQuantity]])
+          : new Map(),
+      );
+      setExtras(productExtras);
+      setSelectedColorId(null);
+      setSelectedSizeId(null);
+      setModalVisible(true);
+    },
+    [context.quantityNextSell],
+  );
 
   const handleProductSelection = useCallback(
     async (product: Item) => {
       onProductTap?.(product);
-
-      const inlineVariants = Array.isArray(product.Variants)
-        ? product.Variants
-        : [];
-
-      if (inlineVariants.length > 0) {
-        setVariantOptions(buildVariantOptions(product, inlineVariants));
-        setCurrentProduct(product);
-        setSelectedVariantIds(new Set());
-        setSelectedVariantQuantities(new Map());
-        setModalVisible(true);
-        return;
-      }
 
       if (!product.Id) {
         addItemToCart(product);
         return;
       }
 
+      const inlineVariants = Array.isArray(product.Variants) ? product.Variants : [];
+
       setIsFetchingVariants(true);
       try {
-        const fetchedVariants = await getVariantsByProductId(
-          product.Id,
-          context.user.Token,
-        );
-        if (Array.isArray(fetchedVariants) && fetchedVariants.length > 0) {
-          setVariantOptions(buildVariantOptions(product, fetchedVariants));
-          setCurrentProduct(product);
-          setSelectedVariantIds(new Set());
-          setSelectedVariantQuantities(new Map());
-          setModalVisible(true);
+        const [resolvedVariants, fetchedExtras] = await Promise.all([
+          inlineVariants.length > 0
+            ? Promise.resolve(inlineVariants)
+            : getVariantsByProductId(product.Id, context.user.Token),
+          getExtrasByProductId(product.Id, context.user.Token),
+        ]);
+
+        const hasVariants = Array.isArray(resolvedVariants) && resolvedVariants.length > 0;
+        const hasExtras = Boolean(fetchedExtras);
+
+        if (hasVariants || hasExtras) {
+          openSelectionModal(product, hasVariants ? resolvedVariants : [], fetchedExtras);
         } else {
           addItemToCart(product);
         }
@@ -163,7 +197,7 @@ export const useVariantSelection = ({
         setIsFetchingVariants(false);
       }
     },
-    [addItemToCart, context.user.Token, onProductTap],
+    [addItemToCart, context.user.Token, onProductTap, openSelectionModal],
   );
 
   const toggleVariantSelection = useCallback(
@@ -205,8 +239,21 @@ export const useVariantSelection = ({
     });
   }, []);
 
+  const canConfirm = useMemo(() => {
+    if (selectedVariantIds.size === 0) return false;
+
+    if (!selectedVariantIds.has(BASE_VARIANT_INTERNAL_ID)) {
+      return true;
+    }
+
+    const requiresColor = (extras?.COLOR?.length ?? 0) > 0;
+    const requiresSize = (extras?.TALLA?.length ?? 0) > 0;
+
+    return (!requiresColor || selectedColorId != null) && (!requiresSize || selectedSizeId != null);
+  }, [selectedVariantIds, extras, selectedColorId, selectedSizeId]);
+
   const confirmSelection = useCallback(() => {
-    if (!currentProduct) {
+    if (!currentProduct || !canConfirm) {
       return;
     }
 
@@ -238,6 +285,7 @@ export const useVariantSelection = ({
     closeModal();
   }, [
     addItemToCart,
+    canConfirm,
     closeModal,
     currentProduct,
     selectedVariantIds,
@@ -252,6 +300,12 @@ export const useVariantSelection = ({
       variants: variantOptions,
       selectedVariantIds,
       selectedVariantQuantities,
+      extras,
+      selectedColorId,
+      selectedSizeId,
+      selectColor: setSelectedColorId,
+      selectSize: setSelectedSizeId,
+      canConfirm,
       toggleVariantSelection,
       adjustVariantQuantity,
       confirmSelection,
@@ -263,6 +317,10 @@ export const useVariantSelection = ({
       variantOptions,
       selectedVariantIds,
       selectedVariantQuantities,
+      extras,
+      selectedColorId,
+      selectedSizeId,
+      canConfirm,
       toggleVariantSelection,
       adjustVariantQuantity,
       confirmSelection,

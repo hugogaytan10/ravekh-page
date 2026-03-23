@@ -157,6 +157,10 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
       Stock: product.Stock,
       Variant_Id: product.Variant_Id ?? null,
       VariantDescription: product.VariantDescription,
+      Color_Id: product.Color_Id ?? null,
+      Size_Id: product.Size_Id ?? null,
+      ColorDescription: product.ColorDescription,
+      SizeDescription: product.SizeDescription,
     };
 
     const storedCart = localStorage.getItem("cart");
@@ -164,7 +168,10 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
 
     const exist = currentCart.find(
       (item: CartPos) =>
-        item.Id === mappedProduct.Id && (item.Variant_Id ?? null) === (mappedProduct.Variant_Id ?? null),
+        item.Id === mappedProduct.Id &&
+        (item.Variant_Id ?? null) === (mappedProduct.Variant_Id ?? null) &&
+        (item.Color_Id ?? null) === (mappedProduct.Color_Id ?? null) &&
+        (item.Size_Id ?? null) === (mappedProduct.Size_Id ?? null),
     );
 
     const stockLimit = mappedProduct.Stock;
@@ -180,6 +187,8 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
     const newCart = exist
       ? currentCart.map((item: CartPos) =>
           item.Id === mappedProduct.Id && (item.Variant_Id ?? null) === (mappedProduct.Variant_Id ?? null)
+          && (item.Color_Id ?? null) === (mappedProduct.Color_Id ?? null)
+          && (item.Size_Id ?? null) === (mappedProduct.Size_Id ?? null)
             ? {
                 ...exist,
                 Quantity: (exist.Quantity || 0) + allowedQuantity,
@@ -206,7 +215,12 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
   };
 
   //funcion para eliminar un producto del carrito
-  const removeProductFromCart = (id: string, variantId: number | null = null) => {
+  const removeProductFromCart = (
+    id: string,
+    variantId: number | null = null,
+    colorId: number | null = null,
+    sizeId: number | null = null,
+  ) => {
     const storedCart = localStorage.getItem("cart");
     const currentCart: CartPos[] = storedCart ? JSON.parse(storedCart) : cart;
 
@@ -215,7 +229,12 @@ const AppProvider: React.FC<AppContextProps> = ({ children }) => {
 
     const newCart = currentCart.filter(
       (product: CartPos) =>
-        !(product.Id === targetId && (product.Variant_Id ?? null) === targetVariant),
+        !(
+          product.Id === targetId &&
+          (product.Variant_Id ?? null) === targetVariant &&
+          (product.Color_Id ?? null) === (colorId ?? null) &&
+          (product.Size_Id ?? null) === (sizeId ?? null)
+        ),
     );
 
     setCart(newCart);

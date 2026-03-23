@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useRef, useState } from "react";
+import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppContext } from "../../../Context/AppContext";
 import { getProducts } from "../Petitions";
 import { ThemeLight } from "../../Theme/Theme";
@@ -323,6 +323,44 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
     }
   };
 
+
+
+  const filteredProducts = useMemo(() => {
+    const activeFilters = context.filterProduct;
+
+    const filtered = products.filter((product) => {
+      if (activeFilters.noStock && (product.Stock ?? 0) > 0) return false;
+
+      if (activeFilters.MinStock) {
+        const stock = product.Stock ?? 0;
+        const minStock = product.MinStock ?? null;
+        if (minStock === null || stock > minStock) return false;
+      }
+
+      if (activeFilters.NoMaganeStock) {
+        if (product.Stock !== null && product.Stock !== undefined) return false;
+      }
+
+      if (activeFilters.ExpDate) {
+        if (!product.ExpDate) return false;
+        const expDate = new Date(product.ExpDate);
+        if (Number.isNaN(expDate.getTime()) || expDate > new Date()) return false;
+      }
+
+      return true;
+    });
+
+    if (activeFilters.orderAsc) {
+      return [...filtered].sort((a, b) => a.Name.localeCompare(b.Name));
+    }
+
+    if (activeFilters.orderDesc) {
+      return [...filtered].sort((a, b) => b.Name.localeCompare(a.Name));
+    }
+
+    return filtered;
+  }, [products, context.filterProduct]);
+
   const renderSkeleton = () => {
     return (
       <div className="p-2 rounded-md mb-20">
@@ -492,7 +530,7 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
     <div className="p-2 rounded-md mb-20">
       {renderHeader()}
       <div className="space-y-1 flex flex-wrap justify-around gap-1">
-        {products.map((product) => (
+        {filteredProducts.map((product) => (
           <div key={product.Id} className="w-full md:w-2/5 lg:w-3/12">
             {renderItem(product)}
           </div>

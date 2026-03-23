@@ -22,4 +22,8 @@ export type Producto = {
     VariantsCount?: number|string|null;
     Variant_Id?: number | null;
     VariantDescription?: string;
+    Color_Id?: number | null;
+    Size_Id?: number | null;
+    ColorDescription?: string;
+    SizeDescription?: string;
 }

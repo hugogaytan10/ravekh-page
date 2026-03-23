@@ -1,5 +1,6 @@
 import {
   setCuponesBusinessId,
+  setCuponesRole,
   setCuponesSession,
   setCuponesToken,
   setCuponesUserId,
@@ -50,7 +51,7 @@ const persistCuponesAuthSession = (payload: CuponesAuthPayload): { role: string;
   setCuponesUserName(userName);
   setCuponesBusinessId(businessId ?? undefined);
   setCuponesToken(token);
-  localStorage.setItem("cupones-role", role);
+  setCuponesRole(role);
 
   return { role, userId };
 };

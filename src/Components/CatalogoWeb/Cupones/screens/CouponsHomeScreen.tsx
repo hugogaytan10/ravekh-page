@@ -36,12 +36,7 @@ export const CouponsHomeScreen: React.FC = () => {
   const accentColor = context.store?.Color ?? ThemeLight.btnBackground;
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
-    navigate("/settings-p");
+    navigate("/more", { replace: true });
   };
 
   return (

@@ -3,10 +3,12 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import { AppContext } from "./Context/AppContext";
 import { Producto } from "./Modelo/Producto";
-import { getProductById, getVariantsByProductIdPublic } from "./Petitions";
+import { getExtrasByProductIdPublic, getProductById, getVariantsByProductIdPublic } from "./Petitions";
 import logoWhasa from "../../assets/logo-whatsapp.svg";
 import { ProductCarousel } from "./ProductsCarousel";
 import { Variant } from "./PuntoVenta/Model/Variant";
+import { ProductExtrasModal } from "./ProductExtrasModal";
+import { ProductExtrasResponse } from "./Modelo/ProductExtra";
 
 type Params = {
   idProducto?: string;
@@ -31,6 +33,10 @@ export const DetalleProducto: React.FC = () => {
   const [addedPulse, setAddedPulse] = useState(false);
   const [variantsOpen, setVariantsOpen] = useState(true);
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
+  const [extrasModalOpen, setExtrasModalOpen] = useState(false);
+  const [extrasData, setExtrasData] = useState<ProductExtrasResponse>(null);
+  const [extrasLoading, setExtrasLoading] = useState(false);
+  const [pendingNavigationToCart, setPendingNavigationToCart] = useState(false);
   const toastTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const pulseTimeoutRef = useRef<ReturnType<typeof setTimeout>>();
   const context = useContext(AppContext);
@@ -167,7 +173,10 @@ export const DetalleProducto: React.FC = () => {
     pulseTimeoutRef.current = setTimeout(() => setAddedPulse(false), 1200);
   };
 
-  const handleAddCart = () => {
+  const addCurrentProductToCart = (opts?: {
+    color?: { Id: number; Description: string } | null;
+    size?: { Id: number; Description: string } | null;
+  }) => {
     if (!producto) return;
     const variant = activeVariant;
     const itemPrice =
@@ -179,31 +188,72 @@ export const DetalleProducto: React.FC = () => {
       PromotionPrice: variant?.PromotionPrice ?? producto.PromotionPrice,
       Variant_Id: variant?.Id ?? null,
       VariantDescription: variant?.Description,
+      Color_Id: opts?.color?.Id ?? null,
+      Size_Id: opts?.size?.Id ?? null,
+      ColorDescription: opts?.color?.Description ?? undefined,
+      SizeDescription: opts?.size?.Description ?? undefined,
       Stock: variant?.Stock ?? producto.Stock,
       Quantity: count,
     });
+  };
+
+  const handleAddCart = async () => {
+    if (!producto) return;
+    setPendingNavigationToCart(false);
+    setExtrasLoading(true);
+    const fetchedExtras = await getExtrasByProductIdPublic(producto.Id);
+    setExtrasLoading(false);
+
+    if (fetchedExtras) {
+      setExtrasData(fetchedExtras);
+      setExtrasModalOpen(true);
+      return;
+    }
+
+    addCurrentProductToCart();
     triggerToast();
     triggerPulse();
   };
 
-  const handleBuyNow = () => {
+  const handleBuyNow = async () => {
     if (!producto) return;
-    const variant = activeVariant;
-    const itemPrice =
-      variant?.PromotionPrice ?? variant?.Price ?? producto.PromotionPrice ?? producto.Price ?? 0;
+    setPendingNavigationToCart(true);
+    setExtrasLoading(true);
+    const fetchedExtras = await getExtrasByProductIdPublic(producto.Id);
+    setExtrasLoading(false);
 
-    addProductToCart({
-      ...producto,
-      Price: itemPrice,
-      PromotionPrice: variant?.PromotionPrice ?? producto.PromotionPrice,
-      Variant_Id: variant?.Id ?? null,
-      VariantDescription: variant?.Description,
-      Stock: variant?.Stock ?? producto.Stock,
-      Quantity: count,
-    });
+    if (fetchedExtras) {
+      setExtrasData(fetchedExtras);
+      setExtrasModalOpen(true);
+      return;
+    }
+
+    addCurrentProductToCart();
     triggerToast();
     triggerPulse();
     navigate("/catalogo/pedido");
+  };
+
+  const handleCloseExtrasModal = () => {
+    setExtrasModalOpen(false);
+    setExtrasData(null);
+    setPendingNavigationToCart(false);
+  };
+
+  const handleConfirmExtras = (selection: {
+    color: { Id: number; Description: string } | null;
+    size: { Id: number; Description: string } | null;
+  }) => {
+    addCurrentProductToCart({ color: selection.color, size: selection.size });
+    triggerToast();
+    triggerPulse();
+    setExtrasModalOpen(false);
+    setExtrasData(null);
+
+    if (pendingNavigationToCart) {
+      setPendingNavigationToCart(false);
+      navigate("/catalogo/pedido");
+    }
   };
 
   const handleCountInput = (value: string) => {
@@ -455,6 +505,14 @@ export const DetalleProducto: React.FC = () => {
         </div>
         */
       }
+      <ProductExtrasModal
+        isOpen={extrasModalOpen}
+        productName={producto.Name}
+        extras={extrasData}
+        loading={extrasLoading}
+        onClose={handleCloseExtrasModal}
+        onConfirm={handleConfirmExtras}
+      />
       </div>
     </HelmetProvider>
   );

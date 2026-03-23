@@ -26,6 +26,60 @@ export const VariantModal: React.FC<VariantModalProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto px-5">
+          {modalState.extras && (
+            <div className="mb-4 rounded-lg border border-gray-200 bg-gray-50 p-4">
+              {modalState.extras.TALLA.length > 0 && (
+                <div className="mb-4">
+                  <p className="mb-2 text-sm font-semibold text-gray-700">Talla</p>
+                  <div className="flex flex-wrap gap-2">
+                    {modalState.extras.TALLA.map((size) => {
+                      const active = modalState.selectedSizeId === size.Id;
+                      return (
+                        <button
+                          key={`size-${size.Id}`}
+                          type="button"
+                          onClick={() => modalState.selectSize(size.Id)}
+                          className={`h-10 min-w-10 rounded-full border px-4 text-sm ${
+                            active
+                              ? "border-purple-600 bg-purple-600 text-white"
+                              : "border-gray-300 bg-white text-gray-700"
+                          }`}
+                        >
+                          {size.Description}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {modalState.extras.COLOR.length > 0 && (
+                <div>
+                  <p className="mb-2 text-sm font-semibold text-gray-700">Color</p>
+                  <div className="flex flex-wrap gap-2">
+                    {modalState.extras.COLOR.map((color) => {
+                      const active = modalState.selectedColorId === color.Id;
+                      return (
+                        <button
+                          key={`color-${color.Id}`}
+                          type="button"
+                          onClick={() => modalState.selectColor(color.Id)}
+                          className={`h-10 rounded-full border px-4 text-sm ${
+                            active
+                              ? "border-purple-600 bg-purple-600 text-white"
+                              : "border-gray-300 bg-white text-gray-700"
+                          }`}
+                        >
+                          {color.Description}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
           {modalState.variants.map((variant: VariantOption) => {
             const selected = modalState.selectedVariantIds.has(variant.__internalId);
             const qty = modalState.selectedVariantQuantities.get(variant.__internalId) ?? 1;
@@ -100,7 +154,7 @@ export const VariantModal: React.FC<VariantModalProps> = ({
         <footer className="border-t border-gray-200 p-5">
           <button
             onClick={modalState.confirmSelection}
-            disabled={modalState.selectedVariantIds.size === 0 || isLoading}
+            disabled={!modalState.canConfirm || isLoading}
             className="w-full bg-purple-600 text-white font-bold py-3 rounded-full disabled:opacity-40"
           >
             {isLoading ? "Cargando variantes..." : "Agregar al carrito"}

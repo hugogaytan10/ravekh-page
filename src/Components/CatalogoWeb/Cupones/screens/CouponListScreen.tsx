@@ -2,14 +2,14 @@ import React, { useContext, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AppContext } from "../../Context/AppContext";
 import { ThemeLight } from "../../PuntoVenta/Theme/Theme";
-import { ChevronBack } from "../../../../assets/POS/ChevronBack";
 import { FeedbackModal } from "../components/FeedbackModal";
 
-import { URL } from "../../Const/Const";
+import { WEB_COUPONS_DOMAIN } from "../shared/constants";
 import { getCouponId, parseValidDate } from "../shared/couponsUtils";
 import { getCouponsByBusiness } from "../Petitions";
 import { Coupon } from "../types";
 import { CouponIcon } from "../../../../assets/Cupones/icons/CouponIcon";
+import { ChevronBack } from "../../../../assets/POS/ChevronBack";
 
 export const CouponListScreen: React.FC = () => {
   const navigate = useNavigate();
@@ -72,7 +72,7 @@ export const CouponListScreen: React.FC = () => {
     loadCoupons(false);
   }, [businessId, token]);
 
-  const couponsDomain = URL || window.location.origin;
+  const couponsDomain = WEB_COUPONS_DOMAIN;
 
   const groupedCoupons = useMemo(() => {
     const now = new Date();
@@ -100,11 +100,6 @@ export const CouponListScreen: React.FC = () => {
   }, [coupons]);
 
   const handleBack = () => {
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
-
     navigate("/cuponespv/cupones");
   };
 
@@ -208,14 +203,13 @@ export const CouponListScreen: React.FC = () => {
             <button
               type="button"
               onClick={handleBack}
-              className="rounded-full p-1 transition hover:bg-gray-200"
+              className="rounded-full p-1 hover:bg-gray-200 transition"
               aria-label="Regresar"
             >
               <ChevronBack width={24} height={24} />
             </button>
             <h1 className="text-[18px] font-semibold text-[#565656]">Lista de cupones</h1>
           </div>
-
           <button
             type="button"
             onClick={() => loadCoupons(true)}

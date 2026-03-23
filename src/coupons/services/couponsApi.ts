@@ -147,6 +147,25 @@ const claimCoupon = async (payload: ClaimCouponPayload): Promise<unknown> => {
   return (await parseJsonOrNull<unknown>(response)) ?? null;
 };
 
+const redeemCouponByUser = async (couponId: number, userId: number): Promise<unknown> => {
+  if (!isValidId(couponId) || !isValidId(userId)) {
+    throw new Error("Datos inválidos para reclamar el cupón.");
+  }
+
+  const response = await fetch(`${URL}couponhasusers/coupon/${couponId}/user/${userId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!response.ok) {
+    throw await buildHttpError(response, "No se pudo procesar el reclamo del cupón.");
+  }
+
+  return (await parseJsonOrNull<unknown>(response)) ?? null;
+};
+
 const getCouponsDisponibilityByUser = async (userId: number): Promise<Coupon[]> => {
   const relations = await getCouponDisponibility(userId);
   if (!relations || relations.length === 0) {
@@ -236,6 +255,32 @@ const registerCupones = async (payload: RegisterPayload): Promise<RegisterRespon
   return (await parseJsonOrNull<RegisterResponse>(response)) ?? {};
 };
 
+const resetPassword = async (body: { Email: string; Password: string }) => {
+  const url = `${URL}resetpassword`;
+
+  const response = await fetch(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+  console.log("Reset Password Request Body:", body);
+  console.log("Reset Password Response:", response);
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error(
+      data?.Message ||
+        data?.message ||
+        data?.error ||
+        "No se pudo actualizar la contraseña."
+    );
+  }
+
+  return data;
+};
+
 export {
   claimCoupon,
   createCoupon,
@@ -248,8 +293,10 @@ export {
   getCouponsByUser,
   getCouponsDisponibilityByUser,
   loginCupones,
+  redeemCouponByUser,
   registerCupones,
   updateCoupon,
+  resetPassword,
 };
 
 export type { ClaimCouponPayload, Coupon, CouponHasUser, CreateCouponPayload, LoginPayload, LoginResponse, RegisterPayload, RegisterResponse };

@@ -1,12 +1,13 @@
 import React, { useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import cuponsito from "../../assets/Cupones/cuponsito.png";
+import cuponsito from "../../assets/Cupones/Coupon";
 import QRCode from "../lib/QRCode";
 import QRErrorCorrectLevel from "../lib/QRCode/QRErrorCorrectLevel";
 import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { getCuponesUserId, getCuponesUserName, hasCuponesSession } from "../services/session";
 import type { Coupon } from "../models/coupon";
+import {WEB_COUPONS_DOMAIN} from "../../Components/CatalogoWeb/Cupones/shared/constants";
 
 const CouponQrPage: React.FC = () => {
   const navigate = useNavigate();
@@ -35,9 +36,18 @@ const CouponQrPage: React.FC = () => {
     [coupon.QR, userId]
   );
 
-  const qrUrl = useMemo(() => {
+  const webRedeemUrl = useMemo(() => {
+    const params = new URLSearchParams({
+      couponId: String(coupon.Id || 0),
+      userId: String(userId || 0),
+    });
+
+    return `${WEB_COUPONS_DOMAIN}/cupones/reclamo-web?${params.toString()}`;
+  }, [coupon.Id, userId]);
+
+  const renderQrSvg = (payload: string) => {
     const qr = new QRCode(0, QRErrorCorrectLevel.M);
-    qr.addData(qrPayload);
+    qr.addData(payload);
     qr.make();
 
     const moduleCount = qr.getModuleCount();
@@ -59,7 +69,10 @@ const CouponQrPage: React.FC = () => {
 
     const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect width="100%" height="100%" fill="#ffffff"/>${rects.join("")}</svg>`;
     return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
-  }, [qrPayload]);
+  };
+
+  const qrAppUrl = useMemo(() => renderQrSvg(qrPayload), [qrPayload]);
+  const qrWebUrl = useMemo(() => renderQrSvg(webRedeemUrl), [webRedeemUrl]);
 
   useEffect(() => {
     if (!hasCuponesSession()) {
@@ -117,11 +130,30 @@ const CouponQrPage: React.FC = () => {
               Muéstralo al administrador para escanear tu cupón.
             </p>
 
-            <div
-              className="mt-6 mx-auto w-56 rounded-3xl p-4 shadow-[0_10px_22px_rgba(0,0,0,0.12)]"
-              style={{ backgroundColor: "#ffffff" }}
-            >
-              <img src={qrUrl} alt="Código QR del cupón" className="w-full h-auto rounded-xl" loading="lazy" />
+            <div className="mt-6 grid gap-6 md:grid-cols-2">
+              <div>
+                <p className="text-sm font-bold" style={{ color: theme.textMuted }}>
+                  QR para aplicación
+                </p>
+                <div
+                  className="mt-3 mx-auto w-56 rounded-3xl p-4 shadow-[0_10px_22px_rgba(0,0,0,0.12)]"
+                  style={{ backgroundColor: "#ffffff" }}
+                >
+                  <img src={qrAppUrl} alt="Código QR del cupón para aplicación" className="w-full h-auto rounded-xl" loading="lazy" />
+                </div>
+              </div>
+
+              <div>
+                <p className="text-sm font-bold" style={{ color: theme.textMuted }}>
+                  QR para Web
+                </p>
+                <div
+                  className="mt-3 mx-auto w-56 rounded-3xl p-4 shadow-[0_10px_22px_rgba(0,0,0,0.12)]"
+                  style={{ backgroundColor: "#ffffff" }}
+                >
+                  <img src={qrWebUrl} alt="Código QR del cupón para web" className="w-full h-auto rounded-xl" loading="lazy" />
+                </div>
+              </div>
             </div>
 
             <div className="mt-6 space-y-1 text-sm font-semibold" style={{ color: theme.textMuted }}>

@@ -30,7 +30,7 @@ export const SettingsP: React.FC<{ navigation: any }> = ({ navigation }) => {
         style={{ backgroundColor: context.store.Color || ThemeLight.btnBackground }}
         onClick={() => {
           context.setShowNavBarBottom(true);
-          navigate(-1)}}
+          navigate("/more")}}
       >
         <button className="mr-2">
           <ChevronBack width={30} height={30} />
