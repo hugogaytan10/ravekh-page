@@ -1,6 +1,9 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
+import { ModernSystemsFactory } from "../../../../../index";
+import { MODULE_BETA_ACTIONS } from "./moduleBetaActions";
+import "./PosV2ModulePreviewPage.css";
 
 type PreviewData = {
   title: string;
@@ -79,6 +82,12 @@ const PREVIEW_MODULES: Record<string, PreviewData> = {
 export const PosV2ModulePreviewPage = () => {
   const { moduleId = "" } = useParams();
   const navigate = useNavigate();
+  const [token, setToken] = useState(() => window.localStorage.getItem("pos-v2-token") ?? "");
+  const [businessIdInput, setBusinessIdInput] = useState(() => window.localStorage.getItem("pos-v2-business-id") ?? "");
+  const [employeeIdInput, setEmployeeIdInput] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [betaResponse, setBetaResponse] = useState<string>("");
+  const [betaError, setBetaError] = useState<string>("");
 
   const data = useMemo<PreviewData>(() => {
     return (
@@ -90,37 +99,88 @@ export const PosV2ModulePreviewPage = () => {
     );
   }, [moduleId]);
 
+  const moduleAction = MODULE_BETA_ACTIONS[moduleId];
+  const hasToken = token.trim().length > 0;
+  const businessId = Number(businessIdInput);
+  const employeeId = Number(employeeIdInput);
+  const hasBusinessId = Number.isFinite(businessId) && businessId > 0;
+
+  const runBetaAction = async () => {
+    if (!moduleAction) {
+      setBetaError("Este módulo aún no tiene acciones beta habilitadas.");
+      return;
+    }
+
+    if (!hasToken) {
+      setBetaError("Ingresa token para probar funciones beta.");
+      return;
+    }
+
+    if (moduleAction.requiresBusinessId && !hasBusinessId) {
+      setBetaError("Ingresa un business id válido.");
+      return;
+    }
+
+    if (moduleAction.requiresEmployeeId && (!Number.isFinite(employeeId) || employeeId <= 0)) {
+      setBetaError("Para este módulo ingresa employee id válido.");
+      return;
+    }
+
+    setLoading(true);
+    setBetaError("");
+    setBetaResponse("");
+
+    try {
+      const factory = new ModernSystemsFactory(
+        (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/",
+      );
+      const result = await moduleAction.run({ token: token.trim(), businessId, employeeId }, factory);
+      setBetaResponse(JSON.stringify(result, null, 2));
+    } catch (cause) {
+      setBetaError(cause instanceof Error ? cause.message : "No fue posible ejecutar la función beta.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <PosV2Shell title={data.title} subtitle="Vista previa de módulo POS v2">
-      <section
-        style={{
-          background: "#fff",
-          border: "1px solid #e5e7eb",
-          borderRadius: "12px",
-          padding: "1rem",
-          boxShadow: "0 10px 25px -20px rgba(0,0,0,0.35)",
-          display: "grid",
-          gap: "0.75rem",
-        }}
-      >
-        <h2 style={{ margin: 0 }}>{data.title}</h2>
-        <p style={{ margin: 0, color: "#475569" }}>{data.description}</p>
-        <p style={{ margin: 0, color: "#6d01d1", fontWeight: 600 }}>Entrega estimada: {data.eta}</p>
-        <div>
-          <button
-            type="button"
-            onClick={() => navigate("/v2/more")}
-            style={{
-              border: 0,
-              background: "#6d01d1",
-              color: "#fff",
-              borderRadius: "10px",
-              padding: "0.55rem 0.95rem",
-              fontWeight: 600,
-              cursor: "pointer",
-            }}
-          >
-            Volver a Más
+      <section className="pos-v2-module-preview">
+        <h2>{data.title}</h2>
+        <p>{data.description}</p>
+        <p className="pos-v2-module-preview__eta">Entrega estimada: {data.eta}</p>
+        {moduleAction ? (
+          <section className="pos-v2-module-preview__beta">
+            <h3>Funciones beta disponibles</h3>
+            <p>Ejecuta una lectura real del módulo para que puedas validar funcionalidad desde hoy.</p>
+            <div className="pos-v2-module-preview__inputs">
+              <input value={token} onChange={(event) => setToken(event.target.value)} placeholder="Token POS v2" />
+              <input
+                value={businessIdInput}
+                onChange={(event) => setBusinessIdInput(event.target.value.replace(/[^\d]/g, ""))}
+                placeholder="Business ID"
+              />
+              {moduleAction.requiresEmployeeId ? (
+                <input
+                  value={employeeIdInput}
+                  onChange={(event) => setEmployeeIdInput(event.target.value.replace(/[^\d]/g, ""))}
+                  placeholder="Employee ID"
+                />
+              ) : null}
+            </div>
+            <button type="button" onClick={runBetaAction} disabled={loading}>
+              {loading ? "Ejecutando..." : "Probar función beta"}
+            </button>
+            {betaError ? <p className="pos-v2-module-preview__error">{betaError}</p> : null}
+            {betaResponse ? <pre>{betaResponse}</pre> : null}
+          </section>
+        ) : null}
+        <div className="pos-v2-module-preview__actions">
+          <button type="button" onClick={() => navigate(-1)}>
+            ← Volver atrás
+          </button>
+          <button type="button" onClick={() => navigate("/v2/more")}>
+            Ir a Más
           </button>
         </div>
       </section>

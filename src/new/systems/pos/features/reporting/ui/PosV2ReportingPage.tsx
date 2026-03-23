@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import type { IncomePoint, ReportRange, ReportSale } from "../model/SalesReport";
@@ -37,6 +38,22 @@ const DEFAULT_SUMMARY: ReportSummaryViewModel = {
 };
 
 type ToastState = { type: "success" | "error"; message: string } | null;
+
+type EndpointTiming = {
+  key: "summary" | "series" | "sales";
+  label: string;
+  endpoint: string;
+  durationMs: number;
+  available: boolean;
+};
+
+type PerformanceSnapshot = {
+  summaryMs: number;
+  seriesMs: number;
+  salesMs: number;
+  totalMs: number;
+  updatedAt: string;
+};
 
 type TrendPoint = IncomePoint & {
   widthPercentage: number;
@@ -86,6 +103,9 @@ export const PosV2ReportingPage = () => {
   const [salesLoading, setSalesLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
+  const [perfSnapshot, setPerfSnapshot] = useState<PerformanceSnapshot | null>(null);
+  const reportRequestRef = useRef(0);
+  const salesRequestRef = useRef(0);
 
   const page = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
@@ -96,6 +116,7 @@ export const PosV2ReportingPage = () => {
   const cleanToken = token.trim();
   const hasBusinessId = Number.isFinite(businessId) && businessId > 0;
   const hasToken = cleanToken.length > 0;
+  const navigate = useNavigate();
 
   const showToast = useCallback((type: "success" | "error", message: string) => {
     setToast({ type, message });
@@ -114,23 +135,54 @@ export const PosV2ReportingPage = () => {
       return;
     }
 
+    const reportRequestId = reportRequestRef.current + 1;
+    reportRequestRef.current = reportRequestId;
+    const loadStartedAt = window.performance.now();
     setLoading(true);
     setError(null);
 
     try {
-      const [summaryData, incomeSeries] = await Promise.all([
-        page.loadSummary(businessId, range, hasToken ? cleanToken : undefined),
-        page.loadIncomeSeries(businessId, range, hasToken ? cleanToken : undefined),
-      ]);
+      const summaryStartedAt = window.performance.now();
+      const summaryPromise = page
+        .loadSummary(businessId, range, hasToken ? cleanToken : undefined)
+        .then((summaryData) => ({
+          summaryData,
+          summaryMs: Math.round(window.performance.now() - summaryStartedAt),
+        }));
+
+      const seriesStartedAt = window.performance.now();
+      const seriesPromise = page
+        .loadIncomeSeries(businessId, range, hasToken ? cleanToken : undefined)
+        .then((incomeSeries) => ({
+          incomeSeries,
+          seriesMs: Math.round(window.performance.now() - seriesStartedAt),
+        }));
+
+      const [{ summaryData, summaryMs }, { incomeSeries, seriesMs }] = await Promise.all([summaryPromise, seriesPromise]);
+
+      if (reportRequestRef.current !== reportRequestId) {
+        return;
+      }
 
       setSummary(summaryData);
       setSeries(incomeSeries);
+      setPerfSnapshot((previousPerformance) => ({
+        summaryMs,
+        seriesMs,
+        salesMs: previousPerformance?.salesMs ?? 0,
+        totalMs: Math.round(window.performance.now() - loadStartedAt),
+        updatedAt: new Date().toISOString(),
+      }));
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "No se pudieron cargar los reportes.";
-      setError(message);
-      showToast("error", message);
+      if (reportRequestRef.current === reportRequestId) {
+        setError(message);
+        showToast("error", message);
+      }
     } finally {
-      setLoading(false);
+      if (reportRequestRef.current === reportRequestId) {
+        setLoading(false);
+      }
     }
   }, [businessId, cleanToken, hasBusinessId, page, range, showToast]);
 
@@ -140,15 +192,32 @@ export const PosV2ReportingPage = () => {
       return;
     }
 
+    const salesRequestId = salesRequestRef.current + 1;
+    salesRequestRef.current = salesRequestId;
+    const salesStartedAt = window.performance.now();
     setSalesLoading(true);
     try {
       const details = await page.loadSalesDetails(businessId, range, paymentFilter, cleanToken);
+      if (salesRequestRef.current !== salesRequestId) {
+        return;
+      }
       setSales(details);
+      setPerfSnapshot((previousPerformance) => ({
+        summaryMs: previousPerformance?.summaryMs ?? 0,
+        seriesMs: previousPerformance?.seriesMs ?? 0,
+        salesMs: Math.round(window.performance.now() - salesStartedAt),
+        totalMs: previousPerformance?.totalMs ?? 0,
+        updatedAt: new Date().toISOString(),
+      }));
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "No se pudieron cargar ventas detalladas.";
-      showToast("error", message);
+      if (salesRequestRef.current === salesRequestId) {
+        showToast("error", message);
+      }
     } finally {
-      setSalesLoading(false);
+      if (salesRequestRef.current === salesRequestId) {
+        setSalesLoading(false);
+      }
     }
   }, [businessId, cleanToken, hasBusinessId, hasToken, page, paymentFilter, range, showToast]);
 
@@ -201,6 +270,41 @@ export const PosV2ReportingPage = () => {
     [summary],
   );
 
+  const endpointTimings = useMemo<EndpointTiming[]>(() => {
+    const rangeSuffix = range === "DAY" ? "today" : range === "MONTH" ? "month" : "year";
+
+    return [
+      {
+        key: "summary",
+        label: "Resumen",
+        endpoint: `GET /report/${hasBusinessId ? businessId : "{businessId}"}`,
+        durationMs: perfSnapshot?.summaryMs ?? 0,
+        available: hasBusinessId && !!perfSnapshot,
+      },
+      {
+        key: "series",
+        label: "Serie ingresos",
+        endpoint: `GET /income/${rangeSuffix}/${hasBusinessId ? businessId : "{businessId}"}`,
+        durationMs: perfSnapshot?.seriesMs ?? 0,
+        available: hasBusinessId && !!perfSnapshot,
+      },
+      {
+        key: "sales",
+        label: "Ventas por pago",
+        endpoint: "POST /sales/payment",
+        durationMs: perfSnapshot?.salesMs ?? 0,
+        available: hasBusinessId && hasToken && !!perfSnapshot,
+      },
+    ];
+  }, [businessId, hasBusinessId, hasToken, perfSnapshot, range]);
+
+  const slowestEndpoint = useMemo(() => {
+    const availableTimings = endpointTimings.filter((item) => item.available);
+    if (availableTimings.length === 0) return null;
+
+    return [...availableTimings].sort((a, b) => b.durationMs - a.durationMs)[0];
+  }, [endpointTimings]);
+
   return (
     <PosV2Shell title="Reportes" subtitle="Analítica operacional v2 enfocada en decisiones rápidas y desacoplada del legacy">
       <section className="pos-v2-reporting">
@@ -210,6 +314,9 @@ export const PosV2ReportingPage = () => {
             <p>Métricas accionables, tendencia visual y lectura clara para móvil, tablet y desktop.</p>
           </div>
           <div className="pos-v2-reporting__filters">
+            <button type="button" className="pos-v2-reporting__back" onClick={() => navigate("/v2/MainSales")}>
+              ← Volver a Ventas
+            </button>
             <label>
               Rango
               <select value={range} onChange={(event) => setRange(event.target.value as ReportRange)}>
@@ -242,6 +349,32 @@ export const PosV2ReportingPage = () => {
           <span><i className="is-card" />Tarjeta</span>
           <span><i className="is-trend" />Tendencia de ingresos</span>
         </section>
+
+        {perfSnapshot ? (
+          <section className="pos-v2-reporting__perf" aria-label="Métricas de rendimiento en cliente">
+            <h3>Tiempos por endpoint</h3>
+            <div>
+              {endpointTimings.map((timing) => (
+                <p key={timing.key}>
+                  <span>{timing.endpoint}</span>
+                  <strong>{timing.available ? `${timing.durationMs} ms` : "N/D"}</strong>
+                </p>
+              ))}
+            </div>
+            {slowestEndpoint ? (
+              <p className="pos-v2-reporting__perf-winner">
+                Más lento: <strong>{slowestEndpoint.label}</strong> ({slowestEndpoint.endpoint}) ·{" "}
+                <strong>{slowestEndpoint.durationMs} ms</strong>
+              </p>
+            ) : (
+              <p className="pos-v2-reporting__perf-winner">Conecta businessId/token para medir todos los endpoints.</p>
+            )}
+            <div>
+              <p>Total resumen+serie: <strong>{perfSnapshot.totalMs} ms</strong></p>
+            </div>
+            <small>Última medición: {formatDate(perfSnapshot.updatedAt)}</small>
+          </section>
+        ) : null}
 
         <section className="pos-v2-reporting__stats">
           {statCards.map((card) => (

@@ -12,6 +12,49 @@
   color: #475569;
 }
 
+.pos-v2-more__back {
+  width: fit-content;
+  background: #f8fafc;
+  color: #0f172a;
+  border: 1px solid #cbd5e1;
+}
+
+.pos-v2-more__toolbar {
+  margin-top: 0.75rem;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.pos-v2-more__toolbar input {
+  width: 100%;
+  min-height: 42px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 0.55rem 0.75rem;
+  background: #fff;
+}
+
+.pos-v2-more__chips {
+  display: inline-flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pos-v2-more__chips button {
+  min-height: 34px;
+  background: #f8fafc;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 0.3rem 0.7rem;
+}
+
+.pos-v2-more__chips button.is-active {
+  color: #fff;
+  border-color: transparent;
+  background: #0f172a;
+}
+
 .pos-v2-more__qa,
 .pos-v2-more__section,
 .pos-v2-more__actions article {
@@ -45,7 +88,7 @@
   border: 1px solid #e2e8f0;
   border-radius: 0.75rem;
   padding: 0.75rem;
-  background: linear-gradient(180deg, #fff 0%, #faf5ff 100%);
+  background: linear-gradient(180deg, #fff 0%, #fcfcff 100%);
 }
 
 .pos-v2-more__qa-item {
@@ -88,10 +131,20 @@
   background: #ffedd5;
 }
 
+.is-beta {
+  color: #0f766e;
+  background: #ccfbf1;
+}
+
 .pos-v2-more__grid p,
 .pos-v2-more__actions p {
   margin: 0.55rem 0 0.75rem;
   color: #4b5563;
+}
+
+.pos-v2-more__item {
+  display: grid;
+  gap: 0.5rem;
 }
 
 .pos-v2-more button {
@@ -99,13 +152,28 @@
   align-items: center;
   justify-content: center;
   border: 0;
-  background: #6d01d1;
+  background: #0f172a;
   color: #fff;
   border-radius: 0.6rem;
   padding: 0.5rem 0.75rem;
   text-decoration: none;
   font-weight: 600;
   cursor: pointer;
+}
+
+.pos-v2-more__open {
+  width: fit-content;
+  background: transparent !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.pos-v2-more__empty {
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 0.85rem;
+  color: #64748b;
+  background: #fff;
 }
 
 .pos-v2-more__qa-item:hover,
@@ -116,38 +184,151 @@
 .pos-v2-more__actions button:focus-visible {
   outline: none;
   transform: translateY(-1px);
-  box-shadow: 0 0 0 2px #e9d5ff;
+  box-shadow: 0 0 0 2px #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-more__header p,
+:root[data-theme="dark"] .pos-v2-more__qa p,
+:root[data-theme="dark"] .pos-v2-more__section-head p,
+:root[data-theme="dark"] .pos-v2-more__grid p,
+:root[data-theme="dark"] .pos-v2-more__actions p {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-more__qa,
+:root[data-theme="dark"] .pos-v2-more__section,
+:root[data-theme="dark"] .pos-v2-more__actions article {
+  background: #111827;
+  border-color: #374151;
+}
+
+:root[data-theme="dark"] .pos-v2-more__qa-item,
+:root[data-theme="dark"] .pos-v2-more__grid article {
+  background: linear-gradient(180deg, #111827 0%, #1f2937 100%);
+  border-color: #374151;
+}
+
+:root[data-theme="dark"] .pos-v2-more__toolbar input,
+:root[data-theme="dark"] .pos-v2-more__chips button {
+  background: #0f172a;
+  border-color: #334155;
+  color: #e2e8f0;
+}
+
+:root[data-theme="dark"] .pos-v2-more__chips button.is-active {
+  color: #0b1120;
+  border-color: transparent;
+  background: #38bdf8;
+}
+
+:root[data-theme="dark"] .pos-v2-more button {
+  background: #38bdf8;
+  color: #0b1120;
+}
+
+:root[data-theme="dark"] .pos-v2-more__open {
+  background: transparent !important;
+  color: #e2e8f0 !important;
+  border-color: #475569 !important;
+}
+
+:root[data-theme="dark"] .pos-v2-more__back {
+  background: #1e293b;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+:root[data-theme="dark"] .pos-v2-more__empty {
+  background: #111827;
+  border-color: #334155;
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .is-available {
+  color: #86efac;
+  background: rgba(34, 197, 94, 0.2);
+}
+
+:root[data-theme="dark"] .is-preview {
+  color: #fdba74;
+  background: rgba(249, 115, 22, 0.2);
+}
+
+:root[data-theme="dark"] .is-beta {
+  color: #67e8f9;
+  background: rgba(6, 182, 212, 0.2);
 }
 
 @media (prefers-color-scheme: dark) {
-  .pos-v2-more__header p,
-  .pos-v2-more__qa p,
-  .pos-v2-more__section-head p,
-  .pos-v2-more__grid p,
-  .pos-v2-more__actions p {
+  :root:not([data-theme="light"]) .pos-v2-more__header p,
+  :root:not([data-theme="light"]) .pos-v2-more__qa p,
+  :root:not([data-theme="light"]) .pos-v2-more__section-head p,
+  :root:not([data-theme="light"]) .pos-v2-more__grid p,
+  :root:not([data-theme="light"]) .pos-v2-more__actions p {
     color: #cbd5e1;
   }
 
-  .pos-v2-more__qa,
-  .pos-v2-more__section,
-  .pos-v2-more__actions article {
+  :root:not([data-theme="light"]) .pos-v2-more__qa,
+  :root:not([data-theme="light"]) .pos-v2-more__section,
+  :root:not([data-theme="light"]) .pos-v2-more__actions article {
     background: #111827;
     border-color: #374151;
   }
 
-  .pos-v2-more__qa-item,
-  .pos-v2-more__grid article {
+  :root:not([data-theme="light"]) .pos-v2-more__qa-item,
+  :root:not([data-theme="light"]) .pos-v2-more__grid article {
     background: linear-gradient(180deg, #111827 0%, #1f2937 100%);
     border-color: #374151;
   }
 
-  .is-available {
+  :root:not([data-theme="light"]) .pos-v2-more__toolbar input,
+  :root:not([data-theme="light"]) .pos-v2-more__chips button {
+    background: #0f172a;
+    border-color: #334155;
+    color: #e2e8f0;
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-more__chips button.is-active {
+    color: #0b1120;
+    border-color: transparent;
+    background: #38bdf8;
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-more button {
+    background: #38bdf8;
+    color: #0b1120;
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-more__open {
+    background: transparent !important;
+    color: #e2e8f0 !important;
+    border-color: #475569 !important;
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-more__back {
+    background: #1e293b;
+    border-color: #475569;
+    color: #e2e8f0;
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-more__empty {
+    background: #111827;
+    border-color: #334155;
+    color: #cbd5e1;
+  }
+
+  :root:not([data-theme="light"]) .is-available {
     color: #86efac;
     background: rgba(34, 197, 94, 0.2);
   }
 
-  .is-preview {
+  :root:not([data-theme="light"]) .is-preview {
     color: #fdba74;
     background: rgba(249, 115, 22, 0.2);
+  }
+
+  :root:not([data-theme="light"]) .is-beta {
+    color: #67e8f9;
+    background: rgba(6, 182, 212, 0.2);
   }
 }

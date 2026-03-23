@@ -1,0 +1,125 @@
+.pos-v2-module-preview {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 8px 24px -20px rgba(15, 23, 42, 0.45);
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pos-v2-module-preview h2,
+.pos-v2-module-preview p {
+  margin: 0;
+}
+
+.pos-v2-module-preview p {
+  color: #475569;
+}
+
+.pos-v2-module-preview__eta {
+  color: #0f172a;
+  font-weight: 700;
+}
+
+.pos-v2-module-preview__actions {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.pos-v2-module-preview__beta {
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  background: #f8fafc;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.55rem;
+}
+
+.pos-v2-module-preview__beta h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.pos-v2-module-preview__inputs {
+  display: grid;
+  gap: 0.45rem;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+}
+
+.pos-v2-module-preview__inputs input {
+  min-height: 38px;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.45rem 0.6rem;
+  background: #fff;
+}
+
+.pos-v2-module-preview__actions button {
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #0f172a;
+  border-radius: 10px;
+  padding: 0.5rem 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.pos-v2-module-preview__actions button:last-child {
+  background: #0f172a;
+  border-color: #0f172a;
+  color: #ffffff;
+}
+
+.pos-v2-module-preview__error {
+  color: #b91c1c !important;
+  font-weight: 600;
+}
+
+.pos-v2-module-preview pre {
+  margin: 0;
+  max-height: 260px;
+  overflow: auto;
+  background: #0f172a;
+  color: #e2e8f0;
+  border-radius: 8px;
+  padding: 0.65rem;
+  font-size: 0.78rem;
+}
+
+:root[data-theme="dark"] .pos-v2-module-preview {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+:root[data-theme="dark"] .pos-v2-module-preview p {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-module-preview__beta {
+  border-color: #334155;
+  background: #111827;
+}
+
+:root[data-theme="dark"] .pos-v2-module-preview__inputs input {
+  background: #0f172a;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-module-preview__eta {
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-module-preview__actions button {
+  background: #1e293b;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-module-preview__actions button:last-child {
+  background: #38bdf8;
+  border-color: #38bdf8;
+  color: #0b1120;
+}

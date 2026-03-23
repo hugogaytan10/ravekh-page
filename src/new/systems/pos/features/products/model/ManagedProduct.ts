@@ -4,6 +4,7 @@ export interface ProductVariant {
   description: string;
   barcode?: string | null;
   color?: string | null;
+  size?: string | null;
   price?: number | null;
   promotionPrice?: number | null;
   costPerItem?: number | null;

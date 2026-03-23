@@ -33,6 +33,10 @@ export class FinanceTrackingPage {
     return this.service.getMonthMovement(businessId, month, token);
   }
 
+  async loadTodayMovement(businessId: number, token: string): Promise<FinanceMonthMovementViewModel> {
+    return this.service.getTodayMovement(businessId, token);
+  }
+
   async createIncome(input: CreateFinanceEntryInput, token: string): Promise<FinanceEntry> {
     return this.service.registerIncome(input, token);
   }

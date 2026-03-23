@@ -17,6 +17,15 @@ export class FinanceTrackingService {
     return { income, expenses };
   }
 
+  async getTodayMovement(businessId: number, token: string): Promise<{ income: FinanceEntry[]; expenses: FinanceEntry[] }> {
+    const [income, expenses] = await Promise.all([
+      this.repository.getIncomeToday(businessId, token),
+      this.repository.getExpensesToday(businessId, token),
+    ]);
+
+    return { income, expenses };
+  }
+
   async registerIncome(input: CreateFinanceEntryInput, token: string): Promise<FinanceEntry> {
     return this.repository.createIncome(input, token);
   }

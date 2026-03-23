@@ -69,6 +69,12 @@
   cursor: pointer;
 }
 
+.pos-v2-reporting__back {
+  background: #f8fafc !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
 .pos-v2-reporting button:disabled {
   opacity: 0.65;
   cursor: not-allowed;
@@ -131,6 +137,50 @@
 .pos-v2-reporting__legend .is-cash { background: #8b5cf6; }
 .pos-v2-reporting__legend .is-card { background: #06b6d4; }
 .pos-v2-reporting__legend .is-trend { background: #7c3aed; }
+
+.pos-v2-reporting__perf {
+  border: 1px dashed #cbd5e1;
+  border-radius: 12px;
+  padding: 0.75rem;
+  background: #f8fafc;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.pos-v2-reporting__perf h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.pos-v2-reporting__perf div {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 0.45rem;
+}
+
+.pos-v2-reporting__perf p {
+  margin: 0;
+  color: #0f172a;
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.pos-v2-reporting__perf p span {
+  color: #475569;
+  font-size: 0.78rem;
+}
+
+.pos-v2-reporting__perf-winner {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 0.35rem;
+}
+
+.pos-v2-reporting__perf small {
+  color: var(--report-muted);
+}
 
 .pos-v2-reporting__stats {
   display: grid;
@@ -416,8 +466,59 @@
   }
 }
 
+:root[data-theme="dark"] .pos-v2-reporting {
+  --report-bg: #111827;
+  --report-soft-bg: #0f172a;
+  --report-border: #374151;
+  --report-muted: #cbd5e1;
+  --report-text: #f8fafc;
+  --report-overlay: rgba(2, 6, 23, 0.72);
+  --report-input-bg: #0f172a;
+  --report-progress-bg: #1f2937;
+  --report-point-bg: #0b1222;
+  --report-point-border: #334155;
+}
+
+:root[data-theme="dark"] .pos-v2-reporting label {
+  color: var(--report-muted);
+}
+
+:root[data-theme="dark"] .pos-v2-reporting__perf {
+  border-color: #475569;
+  background: rgba(15, 23, 42, 0.8);
+}
+
+:root[data-theme="dark"] .pos-v2-reporting__perf p {
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-reporting__perf p span {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-reporting__perf-winner {
+  border-top-color: #334155;
+}
+
+:root[data-theme="dark"] .pos-v2-reporting__back {
+  background: #1e293b !important;
+  color: #f8fafc !important;
+  border-color: #475569 !important;
+}
+
+:root[data-theme="dark"] .pos-v2-reporting__card li {
+  background: var(--report-point-bg);
+  border-color: var(--report-point-border);
+}
+
+:root[data-theme="dark"] .pos-v2-reporting__payment-tabs button {
+  background: #1f2937;
+  border-color: #4b5563;
+  color: #f3f4f6;
+}
+
 @media (prefers-color-scheme: dark) {
-  .pos-v2-reporting {
+  :root:not([data-theme="light"]) .pos-v2-reporting {
     --report-bg: #111827;
     --report-soft-bg: #0f172a;
     --report-border: #374151;
@@ -425,21 +526,44 @@
     --report-text: #f8fafc;
     --report-overlay: rgba(2, 6, 23, 0.72);
     --report-input-bg: #0f172a;
-    --report-progress-bg: #312e81;
+    --report-progress-bg: #1f2937;
     --report-point-bg: #0b1222;
     --report-point-border: #334155;
   }
 
-  .pos-v2-reporting label {
+  :root:not([data-theme="light"]) .pos-v2-reporting label {
     color: var(--report-muted);
   }
 
-  .pos-v2-reporting__card li {
+  :root:not([data-theme="light"]) .pos-v2-reporting__perf {
+    border-color: #475569;
+    background: rgba(15, 23, 42, 0.8);
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-reporting__perf p {
+    color: #f8fafc;
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-reporting__perf p span {
+    color: #cbd5e1;
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-reporting__perf-winner {
+    border-top-color: #334155;
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-reporting__back {
+    background: #1e293b !important;
+    color: #f8fafc !important;
+    border-color: #475569 !important;
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-reporting__card li {
     background: var(--report-point-bg);
     border-color: var(--report-point-border);
   }
 
-  .pos-v2-reporting__payment-tabs button {
+  :root:not([data-theme="light"]) .pos-v2-reporting__payment-tabs button {
     background: #1f2937;
     border-color: #4b5563;
     color: #f3f4f6;

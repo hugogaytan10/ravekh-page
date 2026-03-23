@@ -53,11 +53,29 @@ export class PosFinanceApi implements IFinanceRepository {
     return this.mapEntries(payload, "income");
   }
 
+  async getIncomeToday(businessId: number, token: string): Promise<FinanceEntry[]> {
+    const payload = await this.httpClient.request<FinanceEntryResponse[] | LegacyListResponse>({
+      method: "GET",
+      path: `income/today/${businessId}`,
+      token,
+    });
+    return this.mapEntries(payload, "income");
+  }
+
   async getExpensesByMonth(businessId: number, month: number, token: string): Promise<FinanceEntry[]> {
     const payload = await this.httpClient.request<FinanceEntryResponse[] | LegacyListResponse>({
       method: "POST",
       path: `expenses/bymonth/${businessId}`,
       body: { month: month + 1 },
+      token,
+    });
+    return this.mapEntries(payload, "expense");
+  }
+
+  async getExpensesToday(businessId: number, token: string): Promise<FinanceEntry[]> {
+    const payload = await this.httpClient.request<FinanceEntryResponse[] | LegacyListResponse>({
+      method: "GET",
+      path: `expenses/today/${businessId}`,
       token,
     });
     return this.mapEntries(payload, "expense");

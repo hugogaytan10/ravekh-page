@@ -25,6 +25,8 @@ import { PosV2SalesHomePage } from "../../new/systems/pos/features/sales/ui/PosV
 import { PosV2FinancePage } from "../../new/systems/pos/features/finance/ui/PosV2FinancePage";
 import { PosV2ReportingPage } from "../../new/systems/pos/features/reporting/ui/PosV2ReportingPage";
 import { PosV2MorePage } from "../../new/systems/pos/features/more/ui/PosV2MorePage";
+import { PosV2ModulePreviewPage } from "../../new/systems/pos/features/more/ui/PosV2ModulePreviewPage";
+import { PosV2TableZonesPage } from "../../new/systems/pos/features/settings/table-zones/ui/PosV2TableZonesPage";
 import { PosV2RequireAuth } from "../../new/systems/pos/routing/PosV2RequireAuth";
 
 export const NEW_PRIMARY_ROUTES = [
@@ -35,6 +37,8 @@ export const NEW_PRIMARY_ROUTES = [
   { path: "/v2/MainFinances", element: <PosV2RequireAuth><PosV2FinancePage /></PosV2RequireAuth> },
   { path: "/v2/dashboard", element: <PosV2RequireAuth><PosV2ReportingPage /></PosV2RequireAuth> },
   { path: "/v2/more", element: <PosV2RequireAuth><PosV2MorePage /></PosV2RequireAuth> },
+  { path: "/v2/more/preview/:moduleId", element: <PosV2RequireAuth><PosV2ModulePreviewPage /></PosV2RequireAuth> },
+  { path: "/v2/settings/table-zones", element: <PosV2RequireAuth><PosV2TableZonesPage /></PosV2RequireAuth> },
   { path: "/v2/health", element: <PosV2RequireAuth><PosHealthV2Screen /></PosV2RequireAuth> },
   // Compatibilidad temporal de rutas /v2/pos/*
   { path: "/v2/pos", element: <Navigate to="/v2/login-punto-venta" replace /> },

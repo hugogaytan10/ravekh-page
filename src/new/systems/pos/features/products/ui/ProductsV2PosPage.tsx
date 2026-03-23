@@ -44,6 +44,7 @@ type VariantFormVm = {
   expDate: string;
   barcode: string;
   color: string;
+  size: string;
 };
 
 type ViewMode = "grid" | "list";
@@ -81,6 +82,7 @@ const createVariantDraft = (): VariantFormVm => ({
   expDate: "",
   barcode: "",
   color: "",
+  size: "",
 });
 
 const toNullableNumber = (value: string): number | null => {
@@ -227,6 +229,7 @@ export const ProductsV2PosPage = () => {
         description: variant.description.trim(),
         barcode: variant.barcode.trim() || null,
         color: variant.color.trim() || null,
+        size: variant.size.trim() || null,
         id: variant.id,
         productId: variant.productId,
         price: toNullableNumber(variant.price),
@@ -367,6 +370,7 @@ export const ProductsV2PosPage = () => {
           expDate: variant.expDate ?? "",
           barcode: variant.barcode ?? "",
           color: variant.color ?? "",
+          size: variant.size ?? "",
         })),
       );
       setError(null);
@@ -490,6 +494,8 @@ export const ProductsV2PosPage = () => {
                 const imageCandidates = [product.image, ...product.images].map((candidate) => toImageUrl(candidate)).filter(Boolean) as string[];
                 const uniqueImages = Array.from(new Set(imageCandidates));
                 const preview = uniqueImages[0] ?? null;
+                const colors = Array.from(new Set(product.variants.map((variant) => variant.color?.trim()).filter(Boolean) as string[]));
+                const sizes = Array.from(new Set(product.variants.map((variant) => variant.size?.trim()).filter(Boolean) as string[]));
 
                 return (
                   <article key={product.id} className={`pos-v2-products__card ${!product.available ? "is-archived" : ""}`}>
@@ -507,6 +513,11 @@ export const ProductsV2PosPage = () => {
                       </div>
 
                       <small className="pos-v2-products__simple-meta">Variantes: {product.variants.length} · Fotos: {uniqueImages.length}</small>
+                      {(colors.length > 0 || sizes.length > 0) ? (
+                        <small className="pos-v2-products__simple-meta">
+                          {colors.length > 0 ? `Colores: ${colors.join(", ")}` : "Colores: --"} · {sizes.length > 0 ? `Tallas: ${sizes.join(", ")}` : "Tallas: --"}
+                        </small>
+                      ) : null}
                     </div>
 
                     <div className="pos-v2-products__card-actions">
@@ -600,6 +611,7 @@ export const ProductsV2PosPage = () => {
                       <input value={variant.price} onChange={(event) => updateVariant(variant.key, "price", event.target.value)} placeholder="Precio" type="number" min="0" step="0.01" inputMode="decimal" aria-label={`Precio de variante ${index + 1}`} />
                       <input value={variant.stock} onChange={(event) => updateVariant(variant.key, "stock", event.target.value)} placeholder="Stock" type="number" min="0" step="1" inputMode="numeric" aria-label={`Stock de variante ${index + 1}`} />
                       <input value={variant.color} onChange={(event) => updateVariant(variant.key, "color", event.target.value)} placeholder="Color" aria-label={`Color de variante ${index + 1}`} />
+                      <input value={variant.size} onChange={(event) => updateVariant(variant.key, "size", event.target.value)} placeholder="Talla" aria-label={`Talla de variante ${index + 1}`} />
                       <input value={variant.barcode} onChange={(event) => updateVariant(variant.key, "barcode", event.target.value)} placeholder="Código de barras" aria-label={`Código de barras de variante ${index + 1}`} />
                       <button type="button" className="is-delete" onClick={() => removeVariant(variant.key)}>Quitar</button>
                     </article>

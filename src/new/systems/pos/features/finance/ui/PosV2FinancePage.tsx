@@ -87,6 +87,7 @@ export const PosV2FinancePage = () => {
 
   const [overview, setOverview] = useState({ monthIncome: 0, monthExpenses: 0, monthBalance: 0, todayIncome: 0, todayExpenses: 0 });
   const [movement, setMovement] = useState<{ income: FinanceEntry[]; expenses: FinanceEntry[] }>({ income: [], expenses: [] });
+  const [todayMovement, setTodayMovement] = useState<{ income: FinanceEntry[]; expenses: FinanceEntry[] }>({ income: [], expenses: [] });
 
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -106,8 +107,14 @@ export const PosV2FinancePage = () => {
   const hasSession = session.hasSession;
 
   const financeTimeline = useMemo<FinanceTransactionViewModel[]>(() => {
+    const fallbackTodayMovement = {
+      income: movement.income.filter((entry) => isTodayEntry(entry.createdAt)),
+      expenses: movement.expenses.filter((entry) => isTodayEntry(entry.createdAt)),
+    };
+    const hasTodayEndpointsData = todayMovement.income.length > 0 || todayMovement.expenses.length > 0;
+    const sourceMovement = periodView === "today" ? (hasTodayEndpointsData ? todayMovement : fallbackTodayMovement) : movement;
     const base = [
-      ...movement.income.map((entry, index) => ({
+      ...sourceMovement.income.map((entry, index) => ({
         id: `income-${index}-${entry.name}`,
         concept: entry.name?.trim() || "Ingreso",
         amount: Math.abs(Number(entry.amount ?? 0)),
@@ -115,7 +122,7 @@ export const PosV2FinancePage = () => {
         createdAt: entry.createdAt,
         occurredAt: parseFinanceDate(entry.createdAt),
       })),
-      ...movement.expenses.map((entry, index) => ({
+      ...sourceMovement.expenses.map((entry, index) => ({
         id: `expense-${index}-${entry.name}`,
         concept: entry.name?.trim() || "Egreso",
         amount: Math.abs(Number(entry.amount ?? 0)),
@@ -128,11 +135,10 @@ export const PosV2FinancePage = () => {
     const normalizedSearch = search.trim().toLowerCase();
 
     return base
-      .filter((item) => (periodView === "today" ? isTodayEntry(item.createdAt) : true))
       .filter((item) => (typeFilter === "all" ? true : item.type === typeFilter))
       .filter((item) => (normalizedSearch ? item.concept.toLowerCase().includes(normalizedSearch) : true))
       .sort((a, b) => (b.occurredAt?.getTime() ?? 0) - (a.occurredAt?.getTime() ?? 0));
-  }, [movement, periodView, typeFilter, search]);
+  }, [movement, todayMovement, periodView, typeFilter, search]);
 
   const activeCategories = formMode === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
@@ -143,8 +149,8 @@ export const PosV2FinancePage = () => {
     const monthIncome = overview.monthIncome > 0 ? overview.monthIncome : fallbackMonthIncome;
     const monthExpenses = overview.monthExpenses > 0 ? overview.monthExpenses : fallbackMonthExpenses;
 
-    const todayIncome = overview.todayIncome > 0 ? overview.todayIncome : sumAmounts(movement.income.filter((entry) => isTodayEntry(entry.createdAt)));
-    const todayExpenses = overview.todayExpenses > 0 ? overview.todayExpenses : sumAmounts(movement.expenses.filter((entry) => isTodayEntry(entry.createdAt)));
+    const todayIncome = overview.todayIncome > 0 ? overview.todayIncome : sumAmounts(todayMovement.income);
+    const todayExpenses = overview.todayExpenses > 0 ? overview.todayExpenses : sumAmounts(todayMovement.expenses);
 
     const monthBalance = monthIncome - monthExpenses;
     const monthBurnRate = monthIncome > 0 ? Math.min((monthExpenses / monthIncome) * 100, 100) : 0;
@@ -159,7 +165,7 @@ export const PosV2FinancePage = () => {
       monthBurnRate: Number(monthBurnRate.toFixed(1)),
       todayNet,
     };
-  }, [movement.expenses, movement.income, overview]);
+  }, [movement.expenses, movement.income, overview, todayMovement.expenses, todayMovement.income]);
 
   const refreshData = useCallback(async () => {
     if (!hasSession) {
@@ -170,9 +176,10 @@ export const PosV2FinancePage = () => {
     setLoading(true);
     setError(null);
 
-    const [overviewResult, movementResult] = await Promise.allSettled([
+    const [overviewResult, movementResult, todayMovementResult] = await Promise.allSettled([
       page.loadOverview(session.businessId, session.token),
       page.loadMonthMovement(session.businessId, month, session.token),
+      page.loadTodayMovement(session.businessId, session.token),
     ]);
 
     if (overviewResult.status === "fulfilled") {
@@ -185,11 +192,17 @@ export const PosV2FinancePage = () => {
       setMovement({ income: [], expenses: [] });
     }
 
-    if (overviewResult.status === "rejected" && movementResult.status === "rejected") {
+    if (todayMovementResult.status === "fulfilled") {
+      setTodayMovement(todayMovementResult.value);
+    } else {
+      setTodayMovement({ income: [], expenses: [] });
+    }
+
+    if (overviewResult.status === "rejected" && movementResult.status === "rejected" && todayMovementResult.status === "rejected") {
       setError("No se pudieron cargar ingresos y egresos. Verifica sesión o disponibilidad del API.");
     } else if (overviewResult.status === "rejected") {
       setError("No se pudo cargar el resumen, pero sí los movimientos.");
-    } else if (movementResult.status === "rejected") {
+    } else if (movementResult.status === "rejected" && todayMovementResult.status === "rejected") {
       setError("No se pudo cargar el detalle de ingresos/egresos del periodo seleccionado.");
     }
 

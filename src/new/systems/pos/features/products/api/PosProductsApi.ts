@@ -62,6 +62,10 @@ type LegacyVariantResponse = {
   barcode?: string | null;
   Color?: string | null;
   color?: string | null;
+  Size?: string | null;
+  size?: string | null;
+  Talla?: string | null;
+  talla?: string | null;
   Price?: number | null;
   price?: number | null;
   PromotionPrice?: number | null;
@@ -246,6 +250,7 @@ export class PosProductsApi implements IProductsRepository {
       description: variant.Description ?? variant.description ?? "",
       barcode: variant.Barcode ?? variant.barcode ?? null,
       color: variant.Color ?? variant.color ?? null,
+      size: variant.Size ?? variant.size ?? variant.Talla ?? variant.talla ?? null,
       price: variant.Price ?? variant.price ?? null,
       promotionPrice: variant.PromotionPrice ?? variant.promotionPrice ?? null,
       costPerItem: variant.CostPerItem ?? variant.costPerItem ?? null,
@@ -257,12 +262,15 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   private toLegacyVariant(variant: ProductVariant): LegacyVariantResponse {
+    const normalizedSize = variant.size ?? null;
+
     return {
       Id: variant.id,
       Product_Id: variant.productId,
       Description: variant.description,
       Barcode: variant.barcode ?? null,
       Color: variant.color ?? null,
+      ...(normalizedSize ? { Size: normalizedSize, Talla: normalizedSize } : {}),
       Price: variant.price ?? null,
       PromotionPrice: variant.promotionPrice ?? null,
       CostPerItem: variant.costPerItem ?? null,
