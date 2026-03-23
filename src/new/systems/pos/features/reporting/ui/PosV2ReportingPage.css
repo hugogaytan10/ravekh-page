@@ -306,6 +306,19 @@
   padding: 0.2rem 0;
 }
 
+.pos-v2-reporting__card,
+.pos-v2-reporting__line-chart,
+.pos-v2-reporting__mini-line,
+.pos-v2-reporting__doughnut {
+  min-width: 0;
+}
+
+.pos-v2-reporting__line-chart canvas,
+.pos-v2-reporting__mini-line canvas,
+.pos-v2-reporting__doughnut canvas {
+  max-width: 100%;
+}
+
 .pos-v2-reporting__mini-line {
   height: 190px;
   padding-top: 0.2rem;
@@ -569,6 +582,10 @@
 }
 
 @media (max-width: 640px) {
+  .pos-v2-reporting {
+    overflow-x: clip;
+  }
+
   .pos-v2-reporting__session > * {
     width: 100%;
   }
@@ -592,8 +609,18 @@
 
   .pos-v2-reporting__sales-controls,
   .pos-v2-reporting__sales-controls label,
-  .pos-v2-reporting__sales-controls select {
+  .pos-v2-reporting__sales-controls select,
+  .pos-v2-reporting__payment-tabs,
+  .pos-v2-reporting__payment-tabs button {
     width: 100%;
+  }
+
+  .pos-v2-reporting__line-chart {
+    height: 180px;
+  }
+
+  .pos-v2-reporting__mini-line {
+    height: 160px;
   }
 }
 

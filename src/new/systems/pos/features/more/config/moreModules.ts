@@ -28,6 +28,8 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
       { id: "customers", title: "Clientes", description: "Catálogo de clientes y seguimiento.", path: "/v2/customers", status: "available", actionType: "route" },
       { id: "employees", title: "Empleados", description: "Administración de personal y permisos.", path: "/v2/employees", status: "available", actionType: "route" },
       { id: "cash-closing", title: "Corte de caja", description: "Cierres de caja al final de turno.", path: previewPath("cash-closing"), status: "beta", actionType: "beta-action" },
+      { id: "roles", title: "Roles y permisos", description: "Administra perfiles y permisos operativos del POS.", path: previewPath("roles"), status: "preview", actionType: "route" },
+      { id: "printers", title: "Impresoras", description: "Configura tickets y dispositivos de impresión.", path: previewPath("printers"), status: "preview", actionType: "route" },
     ],
   },
   {
@@ -38,6 +40,7 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
       { id: "online-store", title: "Tienda en línea", description: "Gestión de pedidos del canal online.", path: "/v2/online-store", status: "available", actionType: "route" },
       { id: "loyalty", title: "Cupones y visitas", description: "Herramientas de fidelización y recompensas.", path: previewPath("loyalty"), status: "beta", actionType: "beta-action" },
       { id: "support", title: "Ayuda", description: "Centro de ayuda y soporte para el negocio.", path: previewPath("support"), status: "preview", actionType: "route" },
+      { id: "branches", title: "Sucursales", description: "Administra múltiples sucursales y su operación.", path: previewPath("branches"), status: "preview", actionType: "route" },
       { id: "delete-account", title: "Borrar cuenta", description: "Proceso de cierre de sesión/seguridad.", path: previewPath("delete-account"), status: "preview", actionType: "route" },
     ],
   },

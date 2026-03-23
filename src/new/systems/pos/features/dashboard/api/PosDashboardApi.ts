@@ -3,38 +3,80 @@ import { IDashboardRepository } from "../interface/IDashboardRepository";
 import { ComparisonMetric, DashboardSnapshot, TopSellingItem } from "../model/DashboardMetrics";
 
 type ComparisonResponse = { current?: number; previous?: number; Current?: number; Previous?: number };
-type TopItemResponse = { Id?: number; id?: number; Name?: string; name?: string; Quantity?: number; quantity?: number };
+type TopItemResponse = {
+  Id?: number;
+  id?: number;
+  Name?: string;
+  name?: string;
+  ProductName?: string;
+  productName?: string;
+  CategoryName?: string;
+  categoryName?: string;
+  Quantity?: number;
+  quantity?: number;
+  TotalSales?: number;
+  totalSales?: number;
+};
+
+type DataWrapper<T> = { Data?: T; data?: T; Result?: T; result?: T; Payload?: T; payload?: T };
 
 export class PosDashboardApi implements IDashboardRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
   async getAveragePurchaseComparison(businessId: number, token: string): Promise<ComparisonMetric> {
-    const data = await this.httpClient.get<ComparisonResponse>(`report2/average-purchase-comparison/${businessId}`, token);
-    return this.mapComparison(data);
+    const payload = await this.httpClient.request<ComparisonResponse | DataWrapper<ComparisonResponse>>({
+      method: "GET",
+      path: `report2/average-purchase-comparison/${businessId}`,
+      token,
+    });
+    return this.mapComparison(this.unwrapPayload(payload));
   }
 
   async getIncomeComparisonByMonth(businessId: number, token: string): Promise<ComparisonMetric> {
-    const data = await this.httpClient.get<ComparisonResponse>(`report2/income-comparison-by-month/${businessId}`, token);
-    return this.mapComparison(data);
+    const payload = await this.httpClient.request<ComparisonResponse | DataWrapper<ComparisonResponse>>({
+      method: "GET",
+      path: `report2/income-comparison-by-month/${businessId}`,
+      token,
+    });
+    return this.mapComparison(this.unwrapPayload(payload));
   }
 
   async getBalanceComparisonByMonth(businessId: number, token: string): Promise<ComparisonMetric> {
-    const data = await this.httpClient.get<ComparisonResponse>(`report2/balance-comparison-by-month/${businessId}`, token);
-    return this.mapComparison(data);
+    const payload = await this.httpClient.request<ComparisonResponse | DataWrapper<ComparisonResponse>>({
+      method: "GET",
+      path: `report2/balance-comparison-by-month/${businessId}`,
+      token,
+    });
+    return this.mapComparison(this.unwrapPayload(payload));
   }
 
   async getMostSoldProductsByMonth(businessId: number, month: number, token: string): Promise<TopSellingItem[]> {
-    const data = await this.httpClient.get<TopItemResponse[]>(`report2/most-sold-products-by-month/${businessId}/${month}`, token);
-    return this.mapTopItems(data);
+    const monthToken = String(month).padStart(2, "0");
+    const payload = await this.httpClient.request<TopItemResponse[] | DataWrapper<TopItemResponse[]>>({
+      method: "GET",
+      path: `report2/most-sold-products-by-month/${businessId}/${monthToken}`,
+      token,
+    });
+    return this.mapTopItems(this.normalizeTopItemsInput(this.unwrapPayload(payload)));
   }
 
   async getMostSoldCategoriesByMonth(businessId: number, month: number, token: string): Promise<TopSellingItem[]> {
-    const data = await this.httpClient.get<TopItemResponse[]>(`report2/most-sold-categories-by-month/${businessId}/${month}`, token);
-    return this.mapTopItems(data);
+    const monthToken = String(month).padStart(2, "0");
+    const payload = await this.httpClient.request<TopItemResponse[] | DataWrapper<TopItemResponse[]>>({
+      method: "GET",
+      path: `report2/most-sold-categories-by-month/${businessId}/${monthToken}`,
+      token,
+    });
+    return this.mapTopItems(this.normalizeTopItemsInput(this.unwrapPayload(payload)));
   }
 
   async getNewCustomersToday(businessId: number, token: string): Promise<number> {
-    const data = await this.httpClient.get<{ total?: number; Total?: number }>(`report2/customers-added-today/${businessId}`, token);
+    const payload = await this.httpClient.request<{ total?: number; Total?: number } | DataWrapper<{ total?: number; Total?: number }>>({
+      method: "GET",
+      path: `report2/customers-added-today/${businessId}`,
+      token,
+    });
+    const data = this.unwrapPayload(payload);
     return Number(data.total ?? data.Total ?? 0);
   }
 
@@ -55,6 +97,54 @@ export class PosDashboardApi implements IDashboardRepository {
   }
 
   private mapTopItems(response: TopItemResponse[] = []): TopSellingItem[] {
-    return response.map((item) => new TopSellingItem(Number(item.id ?? item.Id ?? 0), item.name ?? item.Name ?? "Unknown", Number(item.quantity ?? item.Quantity ?? 0)));
+    return response
+      .map(
+        (item) =>
+          new TopSellingItem(
+            Number(item.id ?? item.Id ?? 0),
+            item.name ?? item.Name ?? item.productName ?? item.ProductName ?? item.categoryName ?? item.CategoryName ?? "Sin nombre",
+            Number(item.quantity ?? item.Quantity ?? item.totalSales ?? item.TotalSales ?? 0),
+          ),
+      )
+      .filter((item) => item.name.trim().length > 0 && Number.isFinite(item.quantity) && item.quantity >= 0);
+  }
+
+  private normalizeTopItemsInput(payload: unknown): TopItemResponse[] {
+    if (Array.isArray(payload)) {
+      return payload as TopItemResponse[];
+    }
+
+    if (payload && typeof payload === "object") {
+      const record = payload as Record<string, unknown>;
+      const candidates = [
+        record.items,
+        record.Items,
+        record.rows,
+        record.Rows,
+        record.top,
+        record.Top,
+        record.products,
+        record.Products,
+        record.categories,
+        record.Categories,
+      ];
+
+      for (const candidate of candidates) {
+        if (Array.isArray(candidate)) {
+          return candidate as TopItemResponse[];
+        }
+      }
+    }
+
+    return [];
+  }
+
+  private unwrapPayload<T>(payload: T | DataWrapper<T>): T {
+    if (payload && typeof payload === "object") {
+      const wrapped = payload as DataWrapper<T>;
+      return wrapped.data ?? wrapped.Data ?? wrapped.result ?? wrapped.Result ?? wrapped.payload ?? wrapped.Payload ?? (payload as T);
+    }
+
+    return payload as T;
   }
 }

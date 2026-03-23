@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArcElement,
+  BarElement,
   CategoryScale,
   Chart as ChartJS,
   Filler,
@@ -11,7 +12,7 @@ import {
   PointElement,
   Tooltip,
 } from "chart.js";
-import { Doughnut, Line } from "react-chartjs-2";
+import { Bar, Doughnut, Line } from "react-chartjs-2";
 import { ModernSystemsFactory } from "../../../../../index";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import type { IncomePoint, ReportRange, ReportSale } from "../model/SalesReport";
@@ -49,7 +50,7 @@ const DEFAULT_SUMMARY: ReportSummaryViewModel = {
   bestCategory: "Sin datos",
 };
 
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, Tooltip, Legend, Filler);
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, BarElement, Tooltip, Legend, Filler);
 
 type ToastState = { type: "success" | "error"; message: string } | null;
 
@@ -275,17 +276,6 @@ export const PosV2ReportingPage = () => {
     [summary],
   );
 
-  const statCards = useMemo(
-    () => [
-      { label: "Balance", value: moneyFormatter.format(summary.balance) },
-      { label: "Ingresos", value: moneyFormatter.format(summary.income) },
-      { label: "Ganancia", value: moneyFormatter.format(summary.earnings) },
-      { label: "Ticket promedio", value: moneyFormatter.format(summary.averageSale) },
-      { label: "Total ventas", value: String(summary.totalSales) },
-    ],
-    [summary],
-  );
-
   const monthOptions = useMemo(
     () => Array.from({ length: 12 }, (_, index) => ({
       value: index + 1,
@@ -346,15 +336,16 @@ export const PosV2ReportingPage = () => {
     },
   }), []);
 
-  const quantityLineOptions = useMemo(() => ({
+  const quantityBarOptions = useMemo(() => ({
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: { display: false },
     },
     scales: {
-      x: { grid: { display: false } },
+      x: { grid: { display: false }, ticks: { color: "#475569" } },
       y: {
+        beginAtZero: true,
         ticks: {
           callback: (value: string | number) => `${Number(value) || 0} u.`,
         },
@@ -363,34 +354,40 @@ export const PosV2ReportingPage = () => {
   }), []);
 
   const topProductsChartData = useMemo(() => ({
-    labels: topProducts.map((item) => item.name),
+    labels: topProducts.map((item, index) => item.name || `Producto ${index + 1}`),
     datasets: [
       {
         label: "Productos más vendidos",
         data: topProducts.map((item) => item.quantity),
-        borderColor: "#3b82f6",
-        backgroundColor: "rgba(59, 130, 246, 0.14)",
-        fill: true,
-        tension: 0.35,
-        pointRadius: 3,
+        borderRadius: 8,
+        borderSkipped: false,
+        backgroundColor: ["#3b82f6", "#60a5fa", "#93c5fd", "#38bdf8", "#0ea5e9"],
       },
     ],
   }), [topProducts]);
 
   const topCategoriesChartData = useMemo(() => ({
-    labels: topCategories.map((item) => item.name),
+    labels: topCategories.map((item, index) => item.name || `Categoría ${index + 1}`),
     datasets: [
       {
         label: "Categorías más vendidas",
         data: topCategories.map((item) => item.quantity),
-        borderColor: "#0ea5e9",
-        backgroundColor: "rgba(14, 165, 233, 0.14)",
-        fill: true,
-        tension: 0.35,
-        pointRadius: 3,
+        backgroundColor: ["#06b6d4", "#22d3ee", "#67e8f9", "#0ea5e9", "#0284c7"],
+        borderWidth: 0,
       },
     ],
   }), [topCategories]);
+
+  const businessOverviewData = useMemo(() => ({
+    labels: ["Ingresos", "Ganancia", "Ticket promedio"],
+    datasets: [
+      {
+        data: [summary.income, summary.earnings, summary.averageSale],
+        backgroundColor: ["#7c3aed", "#10b981", "#f59e0b"],
+        borderWidth: 0,
+      },
+    ],
+  }), [summary.averageSale, summary.earnings, summary.income]);
 
   if (!session.hasSession) {
     return (
@@ -415,9 +412,6 @@ export const PosV2ReportingPage = () => {
             <p>Métricas accionables, diseño limpio y visualización moderna para móvil, tablet y desktop.</p>
           </div>
           <div className="pos-v2-reporting__filters">
-            <button type="button" className="pos-v2-reporting__back" onClick={() => navigate("/v2/MainSales")}>
-              ← Volver a Ventas
-            </button>
             <label>
               Rango
               <select value={range} onChange={(event) => setRange(event.target.value as ReportRange)}>
@@ -437,19 +431,6 @@ export const PosV2ReportingPage = () => {
           <span><i className="is-cash" />Efectivo</span>
           <span><i className="is-card" />Tarjeta</span>
           <span><i className="is-trend" />Tendencia de ingresos</span>
-        </section>
-
-        <section className="pos-v2-reporting__stats">
-          {loading
-            ? statCards.map((card) => (
-              <article key={`skeleton-${card.label}`} className="is-skeleton">
-                <span />
-                <strong />
-              </article>
-            ))
-            : statCards.map((card) => (
-              <article key={card.label}><span>{card.label}</span><strong>{card.value}</strong></article>
-            ))}
         </section>
 
         <section className="pos-v2-reporting__content">
@@ -474,8 +455,17 @@ export const PosV2ReportingPage = () => {
           <article className="pos-v2-reporting__card">
             <h3>Top desempeño</h3>
             <p>Producto más vendido: <strong>{summary.bestSeller}</strong></p>
-            <p>Categoría líder: <strong>{summary.bestCategory}</strong></p>
+            <p>Categoría líder: <strong>{summary.bestCategory || "Sin datos"}</strong></p>
             <p>Nuevos clientes hoy: <strong>{newCustomersToday}</strong></p>
+          </article>
+
+          <article className="pos-v2-reporting__card">
+            <h3>Resumen comercial</h3>
+            <div className="pos-v2-reporting__doughnut">
+              <Doughnut data={businessOverviewData} options={doughnutOptions} />
+            </div>
+            <p>Ingresos: <strong>{moneyFormatter.format(summary.income)}</strong></p>
+            <p>Ganancia: <strong>{moneyFormatter.format(summary.earnings)}</strong></p>
           </article>
 
           <article className="pos-v2-reporting__card">
@@ -487,7 +477,7 @@ export const PosV2ReportingPage = () => {
             </header>
             {topChartsLoading ? <div className="pos-v2-reporting__chart-skeleton" aria-hidden="true" /> : null}
             {!topChartsLoading && topProducts.length === 0 ? <p className="is-empty">Sin datos de productos para el mes.</p> : null}
-            {!topChartsLoading && topProducts.length > 0 ? <div className="pos-v2-reporting__mini-line"><Line data={topProductsChartData} options={quantityLineOptions} /></div> : null}
+            {!topChartsLoading && topProducts.length > 0 ? <div className="pos-v2-reporting__mini-line"><Bar data={topProductsChartData} options={quantityBarOptions} /></div> : null}
           </article>
 
           <article className="pos-v2-reporting__card">
@@ -499,37 +489,7 @@ export const PosV2ReportingPage = () => {
             </header>
             {topChartsLoading ? <div className="pos-v2-reporting__chart-skeleton" aria-hidden="true" /> : null}
             {!topChartsLoading && topCategories.length === 0 ? <p className="is-empty">Sin datos de categorías para el mes.</p> : null}
-            {!topChartsLoading && topCategories.length > 0 ? <div className="pos-v2-reporting__mini-line"><Line data={topCategoriesChartData} options={quantityLineOptions} /></div> : null}
-          </article>
-
-          <article className="pos-v2-reporting__card is-full">
-            <header>
-              <h3>Serie de ingresos</h3>
-              <span>{trendData.length} puntos</span>
-            </header>
-            {trendData.length > 0 ? (
-              <div className="pos-v2-reporting__line-chart">
-                <Line data={trendChartData} options={lineChartOptions} />
-              </div>
-            ) : null}
-            {trendData.length === 0 ? <p className="is-empty">Sin puntos de ingreso para este rango.</p> : (
-              <ul>
-                {trendData.map((point, index) => (
-                  <li key={`${point.dateLabel}-${index}`}>
-                    <button type="button" className="pos-v2-reporting__point" onClick={() => setSelectedPoint(point)}>
-                      <div>
-                        <span>{point.dateLabel || `Punto ${index + 1}`}</span>
-                        <small>{point.deltaLabel}</small>
-                      </div>
-                      <div className="pos-v2-reporting__bar">
-                        <span style={{ width: `${point.widthPercentage}%` }} />
-                      </div>
-                      <strong>{moneyFormatter.format(point.amount)}</strong>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
+            {!topChartsLoading && topCategories.length > 0 ? <div className="pos-v2-reporting__mini-line"><Doughnut data={topCategoriesChartData} options={doughnutOptions} /></div> : null}
           </article>
 
           <article className="pos-v2-reporting__card is-full">
