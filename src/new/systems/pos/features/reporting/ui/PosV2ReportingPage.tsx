@@ -120,6 +120,8 @@ export const PosV2ReportingPage = () => {
   const [newCustomersToday, setNewCustomersToday] = useState(0);
   const [insightMonth, setInsightMonth] = useState(() => new Date().getMonth() + 1);
   const [tableRange, setTableRange] = useState<ReportRange>("DAY");
+  const [salesQuery, setSalesQuery] = useState("");
+  const [salesStatus, setSalesStatus] = useState<"TODOS" | "PENDIENTE" | "ENTREGADO">("TODOS");
   const reportRequestRef = useRef(0);
   const salesRequestRef = useRef(0);
   const topChartsRequestRef = useRef(0);
@@ -389,6 +391,66 @@ export const PosV2ReportingPage = () => {
     ],
   }), [summary.averageSale, summary.earnings, summary.income]);
 
+  const filteredSales = useMemo(() => {
+    const query = salesQuery.trim().toLowerCase();
+
+    return sales.filter((sale) => {
+      const matchesStatus =
+        salesStatus === "TODOS"
+          ? true
+          : salesStatus === "PENDIENTE"
+            ? sale.status.toLowerCase().includes("pend")
+            : !sale.status.toLowerCase().includes("pend");
+
+      if (!matchesStatus) return false;
+      if (!query) return true;
+
+      const searchable = `${sale.productName} ${sale.address} ${sale.status}`.toLowerCase();
+      return searchable.includes(query);
+    });
+  }, [sales, salesQuery, salesStatus]);
+
+  const salesTotals = useMemo(() => ({
+    totalRows: filteredSales.length,
+    totalAmount: filteredSales.reduce((acc, sale) => acc + (Number(sale.total) || 0), 0),
+  }), [filteredSales]);
+
+  const exportSalesCsv = () => {
+    if (filteredSales.length === 0) {
+      showToast("error", "No hay filas para exportar.");
+      return;
+    }
+
+    const headers = ["Producto", "Dirección", "Fecha", "Cantidad", "Monto", "Estado"];
+    const rows = filteredSales.map((sale) => [
+      sale.productName,
+      sale.address,
+      formatDate(sale.date),
+      String(sale.quantity),
+      String(Number(sale.total).toFixed(2)),
+      sale.status,
+    ]);
+
+    const csv = [headers, ...rows]
+      .map((line) => line.map((item) => `"${String(item).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, "0");
+    const dd = String(now.getDate()).padStart(2, "0");
+    link.href = url;
+    link.download = `reporte-ventas-v2-${yyyy}${mm}${dd}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+    showToast("success", "CSV exportado correctamente.");
+  };
+
   if (!session.hasSession) {
     return (
       <PosV2Shell title="Reportes" subtitle="Analítica operacional v2 moderna y desacoplada">
@@ -515,16 +577,39 @@ export const PosV2ReportingPage = () => {
                     </button>
                   ))}
                 </div>
+                <label>
+                  Buscar
+                  <input
+                    value={salesQuery}
+                    onChange={(event) => setSalesQuery(event.target.value)}
+                    placeholder="Producto, dirección o estado"
+                    disabled={salesLoading || !hasToken}
+                  />
+                </label>
+                <label>
+                  Estado
+                  <select value={salesStatus} onChange={(event) => setSalesStatus(event.target.value as "TODOS" | "PENDIENTE" | "ENTREGADO")}>
+                    <option value="TODOS">Todos</option>
+                    <option value="PENDIENTE">Pendientes</option>
+                    <option value="ENTREGADO">Entregados</option>
+                  </select>
+                </label>
+                <button type="button" onClick={exportSalesCsv} disabled={salesLoading || !hasToken || filteredSales.length === 0}>
+                  Exportar CSV
+                </button>
               </div>
             </header>
+            <p className="pos-v2-reporting__table-summary">
+              {salesTotals.totalRows} registros · Total {moneyFormatter.format(salesTotals.totalAmount)}
+            </p>
             {!hasToken ? <p className="is-empty">Para ventas detalladas ingresa token POS v2.</p> : null}
             {hasToken && salesLoading ? (
               <div className="pos-v2-reporting__table-skeleton" aria-hidden="true">
                 {Array.from({ length: 4 }).map((_, index) => <span key={`table-skeleton-${index}`} />)}
               </div>
             ) : null}
-            {hasToken && !salesLoading && sales.length === 0 ? <p className="is-empty">Sin ventas para este rango/filtro.</p> : null}
-            {hasToken && sales.length > 0 ? (
+            {hasToken && !salesLoading && filteredSales.length === 0 ? <p className="is-empty">Sin ventas para este rango/filtro.</p> : null}
+            {hasToken && filteredSales.length > 0 ? (
               <div className="pos-v2-reporting__table-wrap">
                 <table className="pos-v2-reporting__table">
                   <thead>
@@ -538,7 +623,7 @@ export const PosV2ReportingPage = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {sales.slice(0, 15).map((sale) => (
+                    {filteredSales.slice(0, 30).map((sale) => (
                       <tr key={`${sale.type}-${sale.id}`}>
                         <td>{sale.productName}</td>
                         <td>{sale.address}</td>

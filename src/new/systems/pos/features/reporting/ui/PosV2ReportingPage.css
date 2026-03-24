@@ -758,3 +758,9 @@
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
+
+.pos-v2-reporting__table-summary {
+  margin: 0;
+  color: var(--report-muted);
+  font-size: 0.84rem;
+}

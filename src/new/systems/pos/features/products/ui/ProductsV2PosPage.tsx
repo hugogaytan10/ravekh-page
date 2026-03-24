@@ -107,6 +107,7 @@ export const ProductsV2PosPage = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [archivingId, setArchivingId] = useState<number | null>(null);
+  const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
@@ -366,6 +367,72 @@ export const ProductsV2PosPage = () => {
     }
   };
 
+  const cloneSavePayload = (detail: Awaited<ReturnType<typeof service.getProduct>>): SaveManagedProductDto => ({
+    id: detail?.id,
+    businessId,
+    name: detail?.name ?? "",
+    description: detail?.description ?? "",
+    forSale: detail?.forSale ?? true,
+    showInStore: detail?.showInStore ?? true,
+    available: detail?.available ?? true,
+    color: detail?.color ?? null,
+    volume: detail?.volume ?? false,
+    price: detail?.price ?? null,
+    promotionPrice: detail?.promotionPrice ?? null,
+    stock: detail?.stock ?? null,
+    expDate: detail?.expDate ?? null,
+    minStock: detail?.minStock ?? null,
+    optStock: detail?.optStock ?? null,
+    quantity: detail?.quantity ?? null,
+    image: detail?.image ?? undefined,
+    images: detail?.images ?? [],
+    costPerItem: detail?.costPerItem ?? null,
+    barcode: detail?.barcode ?? null,
+    categoryId: detail?.categoryId ?? null,
+    variants: detail?.variants ?? [],
+    extras: detail?.extras ?? [],
+  });
+
+  const handleRestore = async (productId: number) => {
+    if (!token) {
+      setToast({ type: "error", message: "Token es obligatorio para restaurar." });
+      return;
+    }
+
+    setActionLoadingId(productId);
+    try {
+      const detail = await service.getProduct(productId, token);
+      if (!detail) throw new Error("No encontramos el producto para restaurar.");
+      await service.saveProduct({ ...cloneSavePayload(detail), available: true }, token);
+      setToast({ type: "success", message: `Producto "${detail.name}" restaurado.` });
+      await loadProducts();
+    } catch (cause) {
+      setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo restaurar producto." });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleDuplicate = async (productId: number) => {
+    if (!token) {
+      setToast({ type: "error", message: "Token es obligatorio para duplicar." });
+      return;
+    }
+
+    setActionLoadingId(productId);
+    try {
+      const detail = await service.getProduct(productId, token);
+      if (!detail) throw new Error("No encontramos el producto para duplicar.");
+      await service.saveProduct({ ...cloneSavePayload(detail), id: undefined, name: `${detail.name} (copia)`, available: true }, token);
+      setToast({ type: "success", message: `Producto "${detail.name}" duplicado.` });
+      await loadProducts();
+    } catch (cause) {
+      setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo duplicar producto." });
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
   const handleEdit = async (productId: number) => {
     if (!token) {
       setError("Token es obligatorio para editar.");
@@ -604,11 +671,28 @@ export const ProductsV2PosPage = () => {
 
                     <div className="pos-v2-products__card-actions">
                       <button type="button" className="is-edit" onClick={() => handleEdit(product.id)}>Editar</button>
+                      <button
+                        type="button"
+                        className="is-clone"
+                        onClick={() => handleDuplicate(product.id)}
+                        disabled={actionLoadingId === product.id}
+                      >
+                        {actionLoadingId === product.id ? "Procesando..." : "Duplicar"}
+                      </button>
                       {product.available ? (
                         <button type="button" onClick={() => requestArchive(product.id, product.name)} disabled={archivingId === product.id}>
                           {archivingId === product.id ? "Eliminando..." : "Eliminar"}
                         </button>
-                      ) : null}
+                      ) : (
+                        <button
+                          type="button"
+                          className="is-restore"
+                          onClick={() => handleRestore(product.id)}
+                          disabled={actionLoadingId === product.id}
+                        >
+                          {actionLoadingId === product.id ? "Procesando..." : "Restaurar"}
+                        </button>
+                      )}
                     </div>
                   </article>
                 );

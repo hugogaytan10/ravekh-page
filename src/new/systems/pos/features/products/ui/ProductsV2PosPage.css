@@ -109,6 +109,8 @@
 .pos-v2-products__card-actions { display: flex; flex-wrap: wrap; gap: .45rem; }
 .pos-v2-products__card-actions button { border: none; border-radius: 9999px; background: #f3f4f6; color: #111827; font-weight: 700; padding: .56rem .74rem; min-height: 40px; }
 .pos-v2-products__card-actions button.is-edit { background: #ede9fe; color: #5b21b6; }
+.pos-v2-products__card-actions button.is-clone { background: #e0f2fe; color: #075985; }
+.pos-v2-products__card-actions button.is-restore { background: #dcfce7; color: #166534; }
 
 .pos-v2-products__empty { margin: 0; border: 1px dashed #d1d5db; border-radius: 10px; padding: .8rem; color: var(--product-muted); }
 .pos-v2-products__error { margin: 0; border: 1px solid #fecaca; background: #fef2f2; color: #991b1b; border-radius: 10px; padding: .55rem; }
