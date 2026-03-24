@@ -7,6 +7,7 @@
   --product-overlay: rgba(17, 24, 39, 0.55);
   display: grid;
   gap: 1rem;
+  overflow-x: hidden;
 }
 .pos-v2-products__header { display: flex; justify-content: space-between; gap: 1rem; align-items: center; flex-wrap: wrap; }
 .pos-v2-products__header h2 { margin: 0; }
@@ -98,6 +99,13 @@
 
 .pos-v2-products__card-headline { display: flex; justify-content: space-between; gap: .5rem; align-items: flex-start; }
 .pos-v2-products__card-headline h4 { margin: 0; font-size: .96rem; }
+.pos-v2-products__card-content,
+.pos-v2-products__card-headline,
+.pos-v2-products__card-meta,
+.pos-v2-products__simple-meta {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 .pos-v2-products__card-headline span { border-radius: 9999px; padding: .18rem .45rem; font-size: .72rem; font-weight: 700; }
 .pos-v2-products__card-headline .is-ok { color: #065f46; background: #ecfdf5; }
 .pos-v2-products__card-headline .is-muted { color: var(--product-muted); background: #f3f4f6; }
@@ -183,6 +191,11 @@
 .pos-v2-products__category-list { display: grid; gap: .55rem; max-height: 45vh; overflow: auto; padding-right: .2rem; }
 .pos-v2-products__category-item { display: grid; grid-template-columns: auto 1fr auto auto; gap: .5rem; align-items: center; border: 1px solid #e5e7eb; border-radius: 10px; padding: .6rem; }
 .pos-v2-products__category-dot { width: 12px; height: 12px; border-radius: 9999px; }
+.pos-v2-products__category-item strong,
+.pos-v2-products__category-item small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
 
 .pos-v2-products__form-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
 .pos-v2-products__form-actions.is-modal { justify-content: flex-end; }
@@ -215,6 +228,43 @@
     border-radius: 18px 18px 0 0;
     max-height: 92vh;
   }
+}
+
+:root[data-theme="dark"] .pos-v2-products {
+  --product-bg: #111827;
+  --product-soft-bg: #0f172a;
+  --product-border: #374151;
+  --product-muted: #cbd5e1;
+  --product-text: #f9fafb;
+  --product-overlay: rgba(2, 6, 23, 0.72);
+}
+
+:root[data-theme="dark"] .pos-v2-products__access label,
+:root[data-theme="dark"] .pos-v2-products__switch,
+:root[data-theme="dark"] .pos-v2-products__form label {
+  color: var(--product-muted);
+}
+
+:root[data-theme="dark"] .pos-v2-products__access input,
+:root[data-theme="dark"] .pos-v2-products__form input,
+:root[data-theme="dark"] .pos-v2-products__form textarea,
+:root[data-theme="dark"] .pos-v2-products__controls input,
+:root[data-theme="dark"] .pos-v2-products__variants input,
+:root[data-theme="dark"] .pos-v2-products__chips button,
+:root[data-theme="dark"] .pos-v2-products__view-toggle,
+:root[data-theme="dark"] .pos-v2-products__card-actions button,
+:root[data-theme="dark"] .pos-v2-products__toggle-card,
+:root[data-theme="dark"] .pos-v2-products__variants,
+:root[data-theme="dark"] .pos-v2-products__variant-item,
+:root[data-theme="dark"] .pos-v2-products__category-item {
+  background: var(--product-soft-bg);
+  color: var(--product-text);
+  border-color: var(--product-border);
+}
+
+:root[data-theme="dark"] .pos-v2-products__card-headline .is-muted {
+  background: #1f2937;
+  color: #d1d5db;
 }
 
 @media (prefers-color-scheme: dark) {

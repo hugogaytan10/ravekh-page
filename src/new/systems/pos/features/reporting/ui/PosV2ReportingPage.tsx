@@ -493,6 +493,10 @@ export const PosV2ReportingPage = () => {
           <span><i className="is-cash" />Efectivo</span>
           <span><i className="is-card" />Tarjeta</span>
           <span><i className="is-trend" />Tendencia de ingresos</span>
+          <span><i className="is-profit" />Ganancia</span>
+          <span><i className="is-ticket" />Ticket promedio</span>
+          <span><i className="is-products" />Top productos</span>
+          <span><i className="is-categories" />Top categorías</span>
         </section>
 
         <section className="pos-v2-reporting__content">
@@ -645,11 +649,11 @@ export const PosV2ReportingPage = () => {
         </section>
 
         {selectedPoint ? (
-          <section className="pos-v2-reporting__modal" role="dialog" aria-modal="true" aria-label="Detalle de punto de ingreso">
-            <article>
+          <section className="pos-v2-reporting__modal" role="dialog" aria-modal="true" aria-label="Detalle de punto de ingreso" onClick={() => setSelectedPoint(null)}>
+            <article onClick={(event) => event.stopPropagation()}>
               <header>
                 <h3>{selectedPoint.dateLabel}</h3>
-                <button type="button" onClick={() => setSelectedPoint(null)} aria-label="Cerrar detalle">✕</button>
+                <button type="button" onClick={() => setSelectedPoint(null)} aria-label="Regresar al reporte">← Regresar</button>
               </header>
               <p>Monto: <strong>{moneyFormatter.format(selectedPoint.amount)}</strong></p>
               <p>Variación: <strong>{selectedPoint.deltaLabel}</strong></p>

@@ -703,10 +703,10 @@ export const ProductsV2PosPage = () => {
 
         {isFormOpen ? (
           <div className="pos-v2-products__modal-backdrop" role="presentation" onClick={closeFormModal}>
-            <section className="pos-v2-products__modal" role="dialog" aria-modal="true" aria-label="Formulario de producto" onClick={(event) => event.stopPropagation()}>
+            <section className="pos-v2-products__modal w-full max-h-[92vh] overflow-y-auto" role="dialog" aria-modal="true" aria-label="Formulario de producto" onClick={(event) => event.stopPropagation()}>
               <header className="pos-v2-products__modal-head">
                 <h3>{editingId ? `Editar producto #${editingId}` : "Nuevo producto"}</h3>
-                <button type="button" className="pos-v2-products__secondary" onClick={closeFormModal}>Cerrar</button>
+                <button type="button" className="pos-v2-products__secondary" onClick={closeFormModal} aria-label="Regresar al catálogo">← Regresar</button>
               </header>
 
               <form className="pos-v2-products__form" onSubmit={handleSubmit}>
@@ -830,7 +830,7 @@ export const ProductsV2PosPage = () => {
 
         {archiveDialog ? (
           <div className="pos-v2-products__modal-backdrop is-sheet" role="presentation" onClick={() => setArchiveDialog(null)}>
-            <section className="pos-v2-products__modal pos-v2-products__modal-sheet" role="dialog" aria-modal="true" aria-label="Confirmar eliminación" onClick={(event) => event.stopPropagation()}>
+            <section className="pos-v2-products__modal pos-v2-products__modal-sheet w-full max-h-[85vh] overflow-y-auto" role="dialog" aria-modal="true" aria-label="Confirmar eliminación" onClick={(event) => event.stopPropagation()}>
               <header className="pos-v2-products__modal-head">
                 <h3>¿Eliminar producto?</h3>
               </header>
@@ -848,10 +848,10 @@ export const ProductsV2PosPage = () => {
 
         {showCategoryManager ? (
           <div className="pos-v2-products__modal-backdrop" role="presentation" onClick={() => setShowCategoryManager(false)}>
-            <section className="pos-v2-products__modal pos-v2-products__modal--compact" role="dialog" aria-modal="true" aria-label="Gestión de categorías" onClick={(event) => event.stopPropagation()}>
+            <section className="pos-v2-products__modal pos-v2-products__modal--compact w-full max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true" aria-label="Gestión de categorías" onClick={(event) => event.stopPropagation()}>
               <header className="pos-v2-products__modal-head">
                 <h3>Gestionar categorías</h3>
-                <button type="button" className="pos-v2-products__secondary" onClick={() => setShowCategoryManager(false)}>Cerrar</button>
+                <button type="button" className="pos-v2-products__secondary" onClick={() => setShowCategoryManager(false)} aria-label="Regresar al catálogo">← Regresar</button>
               </header>
 
               <div className="pos-v2-products__field-grid">

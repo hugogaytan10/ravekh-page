@@ -36,10 +36,10 @@ const PAYMENT_METHOD_OPTIONS: Array<{
   label: string;
   Icon: typeof FiDollarSign;
 }> = [
-  { value: "Efectivo", label: "Efectivo", Icon: FiDollarSign },
-  { value: "Tarjeta", label: "Tarjeta", Icon: FiCreditCard },
-  { value: "Transferencia", label: "Transferencia", Icon: FiRepeat },
-];
+    { value: "Efectivo", label: "Efectivo", Icon: FiDollarSign },
+    { value: "Tarjeta", label: "Tarjeta", Icon: FiCreditCard },
+    { value: "Transferencia", label: "Transferencia", Icon: FiRepeat },
+  ];
 
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
 const TOKEN_KEY = "pos-v2-token";
@@ -47,12 +47,6 @@ const BUSINESS_ID_KEY = "pos-v2-business-id";
 const EMPLOYEE_ID_KEY = "pos-v2-employee-id";
 const DEFAULT_TABLE_OPTIONS = ["Para llevar"];
 const DEBUG_KEY = "pos-v2-debug";
-
-type TableZoneResponse = {
-  Id?: number;
-  Name?: string;
-  Active?: boolean | number | null;
-};
 
 type TokenPayload = {
   Id?: number | string;
@@ -99,6 +93,7 @@ export const PosV2SalesHomePage = () => {
   const [selectedTable, setSelectedTable] = useState("Para llevar");
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
   const [isMobileTablesOpen, setIsMobileTablesOpen] = useState(false);
+  const [loadingTables, setLoadingTables] = useState(false);
   const [tablesError, setTablesError] = useState<string | null>(null);
   const [customers, setCustomers] = useState<CustomerVm[]>([]);
   const [customersError, setCustomersError] = useState<string | null>(null);
@@ -186,30 +181,20 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
-    fetch(new URL(`table_zones/business/${businessId}`, API_BASE_URL).toString(), {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        token,
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then(async (response) => {
-        const responseData = (await response.json().catch(() => [])) as TableZoneResponse[] | { message?: string };
-        if (!response.ok) {
-          const message = !Array.isArray(responseData) ? responseData?.message : undefined;
-          throw new Error(message ?? "No se pudieron cargar las mesas.");
-        }
-        return Array.isArray(responseData) ? responseData : [];
-      })
+    const factory = new ModernSystemsFactory(API_BASE_URL);
+    const tableZonePage = factory.createPosTableZonePage();
+    setLoadingTables(true);
+
+    tableZonePage
+      .getTableZoneCards(businessId, token)
       .then((zones) => {
         const activeZones = zones
-          .filter((zone) => zone?.Active === true || zone?.Active === 1 || zone?.Active == null)
-          .map((zone) => zone?.Name?.trim())
-          .filter((name): name is string => Boolean(name));
+          .filter((zone) => zone.isActive)
+          .sort((a, b) => a.id - b.id)
+          .map((zone) => zone.name.trim())
+          .filter(Boolean);
         const normalizedTables = Array.from(new Set([...activeZones, "Para llevar"]));
-
-        debugLog("Mesas cargadas desde API:", normalizedTables);
+        debugLog("Mesas cargadas desde capa moderna:", normalizedTables);
         setTables(normalizedTables.length ? normalizedTables : DEFAULT_TABLE_OPTIONS);
         setTablesError(null);
       })
@@ -217,7 +202,8 @@ export const PosV2SalesHomePage = () => {
         console.error("[POS-V2-SALES] Error al cargar mesas", error);
         setTables(DEFAULT_TABLE_OPTIONS);
         setTablesError(error instanceof Error ? error.message : "No se pudieron cargar las mesas.");
-      });
+      })
+      .finally(() => setLoadingTables(false));
   }, []);
 
   useEffect(() => {
@@ -418,16 +404,16 @@ export const PosV2SalesHomePage = () => {
       const endpoint = selectedTable === "Para llevar" ? "orders" : "commands";
       const payload = selectedTable === "Para llevar"
         ? {
-            Order: payloadByTable,
-            OrderDetails: lineItems,
-          }
+          Order: payloadByTable,
+          OrderDetails: lineItems,
+        }
         : {
-            Command: {
-              ...payloadByTable,
-              Table_Id: selectedTable,
-            },
-            Commands_has_Products: lineItems,
-          };
+          Command: {
+            ...payloadByTable,
+            Table_Id: selectedTable,
+          },
+          Commands_has_Products: lineItems,
+        };
 
       const response = await fetch(new URL(endpoint, API_BASE_URL).toString(), {
         method: "POST",
@@ -491,7 +477,7 @@ export const PosV2SalesHomePage = () => {
         </div>
 
         <section className={`pos-v2-sales-home__catalog ${mobileStep === "catalog" ? "is-mobile-active" : ""}`}>
-       
+
 
           <div className="pos-v2-sales-home__toolbar">
             <div className="pos-v2-sales-home__search">
@@ -656,10 +642,14 @@ export const PosV2SalesHomePage = () => {
 
             <label>
               Mesa
-              <select value={selectedTable} onChange={(event) => setSelectedTable(event.target.value)}>
-                {tables.map((table) => (
-                  <option key={table} value={table}>{table}</option>
-                ))}
+              <select value={selectedTable} onChange={(event) => setSelectedTable(event.target.value)} disabled={loadingTables}>
+                <option value="">Mesa Uno</option>
+
+                {
+                  tables.length === 0 && !tablesError &&
+                  tables.map((table) => (
+                    <option key={table} value={table}>{table}</option>
+                  ))}
               </select>
             </label>
 
@@ -667,12 +657,13 @@ export const PosV2SalesHomePage = () => {
               Cliente (opcional)
               <select value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)}>
                 <option value="">Venta general</option>
-                {customers.map((customer) => (
-                  <option key={customer.id} value={customer.id}>{customer.name}</option>
-                ))}
+                {
+                  customers.length === 0 &&
+                  customers.map((customer) => (
+                    <option key={customer.id} value={customer.id}>{customer.name}</option>
+                  ))}
               </select>
             </label>
-            {customersError ? <small className="pos-v2-sales-home__customer-hint is-error">{customersError}</small> : null}
             {!customersError && customers.length > 0 ? <small className="pos-v2-sales-home__customer-hint">Puedes vincular la venta a cliente para historial y recompensas.</small> : null}
 
             <div className="pos-v2-sales-home__totals">
@@ -711,7 +702,11 @@ export const PosV2SalesHomePage = () => {
       ) : null}
 
       <div className="pos-v2-sales-home__tables-bar" aria-label="Barra de mesas">
-        {tables.map((table) => {
+        {loadingTables ? (
+          <div className="pos-v2-sales-home__tables-skeleton" aria-hidden="true">
+            {Array.from({ length: 4 }).map((_, index) => <span key={`tables-skeleton-${index}`} />)}
+          </div>
+        ) : tables.map((table) => {
           const isActive = table === selectedTable;
           const isOccupied = isActive && totals.items > 0;
 
@@ -729,7 +724,7 @@ export const PosV2SalesHomePage = () => {
       </div>
 
       <div className="pos-v2-sales-home__mobile-legacy-dock">
-                <button type="button" onClick={() => setIsMobileTablesOpen(true)}>Mesas</button>
+        <button type="button" onClick={() => setIsMobileTablesOpen(true)}>Mesas</button>
         <button type="button" className="is-summary" onClick={() => setMobileStep("cart")}>
           {totals.items.toFixed(2)}x Items = ${totals.total.toFixed(2)}
         </button>
@@ -744,7 +739,11 @@ export const PosV2SalesHomePage = () => {
             </div>
 
             <div className="pos-v2-sales-home__tables-modal-grid">
-              {tables.map((table) => {
+              {loadingTables ? (
+                <div className="pos-v2-sales-home__tables-skeleton" aria-hidden="true">
+                  {Array.from({ length: 6 }).map((_, index) => <span key={`modal-table-skeleton-${index}`} />)}
+                </div>
+              ) : tables.map((table) => {
                 const isActive = table === selectedTable;
                 return (
                   <button

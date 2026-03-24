@@ -137,6 +137,10 @@
 .pos-v2-reporting__legend .is-cash { background: #8b5cf6; }
 .pos-v2-reporting__legend .is-card { background: #06b6d4; }
 .pos-v2-reporting__legend .is-trend { background: #7c3aed; }
+.pos-v2-reporting__legend .is-profit { background: #10b981; }
+.pos-v2-reporting__legend .is-ticket { background: #f59e0b; }
+.pos-v2-reporting__legend .is-products { background: #3b82f6; }
+.pos-v2-reporting__legend .is-categories { background: #0ea5e9; }
 
 .pos-v2-reporting__perf {
   border: 1px dashed #cbd5e1;
@@ -539,7 +543,8 @@
   inset: 0;
   background: var(--report-overlay);
   display: grid;
-  place-items: center;
+  align-items: end;
+  justify-items: center;
   padding: 1rem;
   z-index: 50;
 }
@@ -547,11 +552,13 @@
 .pos-v2-reporting__modal article {
   width: min(460px, 100%);
   background: var(--report-bg);
-  border-radius: 16px;
+  border-radius: 18px 18px 0 0;
   border: 1px solid var(--report-border);
   padding: 1rem;
   display: grid;
   gap: 0.75rem;
+  max-height: 86vh;
+  overflow: auto;
 }
 
 .pos-v2-reporting__modal article header {
@@ -578,6 +585,14 @@
 
   .pos-v2-reporting__content {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pos-v2-reporting__modal {
+    align-items: center;
+  }
+
+  .pos-v2-reporting__modal article {
+    border-radius: 16px;
   }
 }
 
@@ -621,6 +636,10 @@
 
   .pos-v2-reporting__mini-line {
     height: 160px;
+  }
+
+  .pos-v2-reporting__modal {
+    padding: 0;
   }
 }
 

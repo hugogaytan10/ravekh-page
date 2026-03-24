@@ -43,7 +43,7 @@ export const PosV2TableZonesPage = () => {
     try {
       const cards = await page.getTableZoneCards(businessId, cleanToken, search.trim());
       setZones(cards);
-      setIsTableOrderEnabled(cards.some((zone) => zone.isActive));
+      setIsTableOrderEnabled(cards.length > 0);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudieron cargar las mesas.");
     } finally {
@@ -130,23 +130,7 @@ export const PosV2TableZonesPage = () => {
             <h2>Mesas y zonas</h2>
             <p>Crea, edita y consulta mesas para pedidos en salón con arquitectura moderna.</p>
           </div>
-          <button type="button" onClick={loadZones} disabled={loading || !hasSession}>{loading ? "Actualizando..." : "Actualizar"}</button>
         </header>
-
-        <section className="pos-v2-table-zones__session">
-          <label>
-            Token
-            <input value={token} onChange={(event) => setToken(event.target.value)} placeholder="Token POS v2" />
-          </label>
-          <label>
-            Business ID
-            <input value={businessIdInput} onChange={(event) => setBusinessIdInput(event.target.value.replace(/[^\d]/g, ""))} inputMode="numeric" placeholder="Ej. 12" />
-          </label>
-          <button type="button" onClick={handleSaveSession}>Conectar</button>
-        </section>
-
-        {error ? <p className="pos-v2-table-zones__error">{error}</p> : null}
-        {successMessage ? <p className="pos-v2-table-zones__success">{successMessage}</p> : null}
 
         <section className="pos-v2-table-zones__controls">
           <article>
@@ -184,7 +168,14 @@ export const PosV2TableZonesPage = () => {
           </header>
 
           <ul>
-            {zones.length === 0 ? <li className="is-empty">Sin mesas registradas para este negocio.</li> : zones.map((zone) => (
+            {loading ? (
+              <li className="is-skeleton" aria-hidden="true">
+                <span />
+                <span />
+                <span />
+              </li>
+            ) : null}
+            {!loading && zones.length === 0 ? <li className="is-empty">Sin mesas registradas para este negocio.</li> : zones.map((zone) => (
               <li key={zone.id}>
                 <div>
                   <strong>{zone.name}</strong>

@@ -592,6 +592,20 @@
   color: #065f46;
 }
 
+.pos-v2-sales-home__tables-skeleton {
+  display: inline-flex;
+  gap: 0.45rem;
+}
+
+.pos-v2-sales-home__tables-skeleton span {
+  width: 82px;
+  height: 34px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f1f5f9 20%, #e2e8f0 45%, #f1f5f9 70%);
+  background-size: 200% 100%;
+  animation: pos-v2-tables-skeleton 1.2s linear infinite;
+}
+
 .pos-v2-sales-home__tables-modal {
   position: fixed;
   inset: 0;
@@ -648,6 +662,11 @@
   border-color: #6d01d1;
   color: #6d01d1;
   background: #f5edff;
+}
+
+@keyframes pos-v2-tables-skeleton {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
 }
 
 @media (max-width: 420px) {
@@ -1001,6 +1020,11 @@
     color: #e5e7eb;
   }
 
+  .pos-v2-sales-home__tables-skeleton span {
+    background: linear-gradient(90deg, #1f2937 20%, #334155 45%, #1f2937 70%);
+    background-size: 200% 100%;
+  }
+
   .pos-v2-sales-home__tables-modal-card,
   .pos-v2-sales-home__mobile-legacy-dock,
   .pos-v2-sales-home__legacy-ad {
@@ -1044,4 +1068,9 @@
 :root[data-theme="dark"] .pos-v2-sales-home__cart-list small,
 :root[data-theme="dark"] .pos-v2-sales-home__empty {
   color: #9ca3af;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__tables-skeleton span {
+  background: linear-gradient(90deg, #1f2937 20%, #334155 45%, #1f2937 70%);
+  background-size: 200% 100%;
 }

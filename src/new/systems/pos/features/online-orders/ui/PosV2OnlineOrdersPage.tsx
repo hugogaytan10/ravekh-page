@@ -21,10 +21,17 @@ export const PosV2OnlineOrdersPage = () => {
   const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<OnlineOrderCardViewModel[]>([]);
+  const [businessBranding, setBusinessBranding] = useState<{ name: string; logo: string }>({
+    name: "Ravekh POS",
+    logo: "",
+  });
 
-  const page = useMemo(() => {
+  const { page, brandingPage } = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
-    return factory.createPosOnlineOrderPage();
+    return {
+      page: factory.createPosOnlineOrderPage(),
+      brandingPage: factory.createPosBrandingPage(),
+    };
   }, []);
 
   const loadOrders = async () => {
@@ -62,6 +69,23 @@ export const PosV2OnlineOrdersPage = () => {
     return () => window.removeEventListener("afterprint", clearPrinting);
   }, []);
 
+  useEffect(() => {
+    const loadBranding = async () => {
+      if (!token || !Number.isFinite(businessId) || businessId <= 0) return;
+      try {
+        const profile = await brandingPage.loadProfile(businessId, token);
+        setBusinessBranding({
+          name: profile.name || "Ravekh POS",
+          logo: profile.logo || "",
+        });
+      } catch {
+        setBusinessBranding({ name: "Ravekh POS", logo: "" });
+      }
+    };
+
+    loadBranding();
+  }, [brandingPage, businessId, token]);
+
   const filteredOrders = useMemo(() => {
     const normalized = search.trim().toLowerCase();
     if (!normalized) return orders;
@@ -71,8 +95,9 @@ export const PosV2OnlineOrdersPage = () => {
   const stats = useMemo(() => {
     const pending = orders.filter((order) => order.status.toUpperCase() === "PEDIDO").length;
     const completed = orders.filter((order) => order.status.toUpperCase() === "ENTREGADO").length;
+    const cancelled = orders.filter((order) => ["CANCELADO", "CANCELLED"].includes(order.status.toUpperCase())).length;
     const totalAmount = orders.reduce((acc, order) => acc + (Number(order.total) || 0), 0);
-    return { total: orders.length, pending, completed, totalAmount };
+    return { total: orders.length, pending, completed, cancelled, totalAmount };
   }, [orders]);
 
   const openOrderDetails = async (orderId: number) => {
@@ -93,9 +118,8 @@ export const PosV2OnlineOrdersPage = () => {
     try {
       const updated = await page.changeOrderStatus(orderId, status, token);
       setOrders((current) => current.map((order) => (order.id === updated.id ? updated : order)));
-      if (selectedOrder?.id === updated.id) {
-        setSelectedOrder(updated);
-      }
+      if (selectedOrder?.id === updated.id) setSelectedOrder(null);
+      await loadOrders();
       setToast({ type: "success", message: `Pedido #${orderId} actualizado a ${status}.` });
     } catch (cause) {
       setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo actualizar el estado." });
@@ -151,6 +175,7 @@ export const PosV2OnlineOrdersPage = () => {
           <article><span>Total</span><strong>{stats.total}</strong></article>
           <article><span>Pendientes</span><strong>{stats.pending}</strong></article>
           <article><span>Completados</span><strong>{stats.completed}</strong></article>
+          <article><span>Cancelados</span><strong>{stats.cancelled}</strong></article>
           <article><span>Monto total</span><strong>{formatCurrency(stats.totalAmount)}</strong></article>
         </section>
 
@@ -170,7 +195,11 @@ export const PosV2OnlineOrdersPage = () => {
 
         {error ? <p className="pos-v2-online-orders__error">{error}</p> : null}
         {toast ? <p className={`pos-v2-online-orders__toast is-${toast.type}`}>{toast.message}</p> : null}
-        {loading ? <p>Cargando pedidos...</p> : null}
+        {loading ? (
+          <div className="pos-v2-online-orders__skeletons" aria-hidden="true">
+            {Array.from({ length: 3 }).map((_, index) => <span key={`skeleton-order-${index}`} />)}
+          </div>
+        ) : null}
 
         {!loading ? (
           <ul>
@@ -178,6 +207,7 @@ export const PosV2OnlineOrdersPage = () => {
               <li key={order.id}>
                 <strong>Pedido #{order.id}</strong>
                 <span>{order.customerName}</span>
+                <span className={`status status-${order.status.toLowerCase()}`}>{order.status}</span>
                 <div className="pos-v2-online-orders__actions">
                   <button type="button" className="is-light" onClick={() => openOrderDetails(order.id)}>
                     Ver detalle
@@ -211,7 +241,7 @@ export const PosV2OnlineOrdersPage = () => {
                 <>
                   <header>
                     <h3>Pedido #{selectedOrder.id}</h3>
-                    <button type="button" className="is-light" onClick={() => setSelectedOrder(null)}>Cerrar</button>
+                    <button type="button" className="is-light" onClick={() => setSelectedOrder(null)} aria-label="Regresar al listado">← Regresar</button>
                   </header>
                   <p><strong>Cliente:</strong> {selectedOrder.customerName}</p>
                   <p><strong>Estado:</strong> {selectedOrder.status}</p>
@@ -251,9 +281,14 @@ export const PosV2OnlineOrdersPage = () => {
 
         {printingOrder ? (
           <section className="pos-v2-online-orders__printable" aria-label={`PDF pedido ${printingOrder.id}`}>
+            <header className="print-brand">
+              {businessBranding.logo ? <img src={businessBranding.logo} alt={businessBranding.name} className="print-brand__logo" /> : null}
+              <div>
+                <h1>{businessBranding.name}</h1>
+                <p>Ravekh POS · Tienda en línea</p>
+              </div>
+            </header>
             <h1>Pedido #{printingOrder.id}</h1>
-            <p>Negocio: <strong>{printingOrder.businessName || "No disponible"}</strong></p>
-            <p>Ravekh POS · Tienda en línea</p>
             <div className="print-card">
               <p><strong>Cliente:</strong> {printingOrder.customerName || "No disponible"}</p>
               <p><strong>Estado:</strong> {printingOrder.status || "No disponible"}</p>
@@ -269,7 +304,7 @@ export const PosV2OnlineOrdersPage = () => {
                   {summarizeItems(printingOrder.items).map((item, index) => (
                     <li key={`print-${printingOrder.id}-${item.name}-${index}`}>
                       <div className="flex items-center gap-2">
-                        {item.image ? <img src={item.image} alt={item.name} className="h-16 w-16 rounded-md"/> : null}
+                        {item.image ? <img src={item.image} alt={item.name} className="h-16 w-16 rounded-md" /> : null}
                         <span>{item.name} x{item.quantity}</span>
                       </div>
                       <strong>{formatCurrency(item.price * item.quantity)}</strong>

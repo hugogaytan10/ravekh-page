@@ -13,6 +13,11 @@ type OrderCatalogResponse = {
   PhoneNumber?: string;
 };
 
+type UpdateOrderStatusResponse = OrderCatalogResponse | {
+  order?: OrderCatalogResponse;
+  Order?: OrderCatalogResponse;
+};
+
 type OrderDetailItemResponse = {
   Id?: number;
   Name?: string;
@@ -51,18 +56,34 @@ export class PosOnlineOrderApi implements IOnlineOrderRepository {
   }
 
   async updateStatus(orderId: number, payload: UpdateOnlineOrderStatusDto, token: string): Promise<OnlineOrder> {
-    const response = await this.httpClient.request<OrderCatalogResponse>({
-      method: "PUT",
-      path: `ordersCatalog/${orderId}`,
-      token,
-      body: {
-        Order: {
-          Status: payload.status,
-        },
-      },
-    });
+    const statusAlternatives = this.resolveStatusAlternatives(payload.status);
+    let lastError: unknown = null;
 
-    return this.toDomain(response);
+    for (const status of statusAlternatives) {
+      try {
+        const response = await this.httpClient.request<UpdateOrderStatusResponse>({
+          method: "PUT",
+          path: `ordersCatalog/${orderId}`,
+          token,
+          body: {
+            Order: {
+              Status: status,
+            },
+          },
+        });
+
+        const parsed = this.extractOrderResponse(response);
+        if (parsed) {
+          return this.toDomain(parsed);
+        }
+
+        return this.getById(orderId, token);
+      } catch (cause) {
+        lastError = cause;
+      }
+    }
+
+    throw lastError instanceof Error ? lastError : new Error("No se pudo actualizar el estatus del pedido.");
   }
 
   private toDomain(order: OrderCatalogResponse, details: OrderDetailItemResponse[] = []): OnlineOrder {
@@ -85,5 +106,33 @@ export class PosOnlineOrderApi implements IOnlineOrderRepository {
       order.PhoneNumber ?? "",
       items,
     );
+  }
+
+  private extractOrderResponse(response: UpdateOrderStatusResponse): OrderCatalogResponse | null {
+    if ("Id" in response) {
+      return response;
+    }
+
+    if ("order" in response && response.order) {
+      return response.order;
+    }
+
+    if ("Order" in response && response.Order) {
+      return response.Order;
+    }
+
+    return null;
+  }
+
+  private resolveStatusAlternatives(status: UpdateOnlineOrderStatusDto["status"]): UpdateOnlineOrderStatusDto["status"][] {
+    if (status === "CANCELADO") {
+      return ["CANCELADO", "cancelled"];
+    }
+
+    if (status === "ENTREGADO") {
+      return ["ENTREGADO", "completed"];
+    }
+
+    return [status];
   }
 }
