@@ -13,6 +13,7 @@ const suites = [
   { name: "unit-more-module-page", entry: "tests/new/pos/more/more.module.page.unit.ts" },
   { name: "integration-reporting-api", entry: "tests/new/pos/reporting/reporting.api.integration.ts" },
   { name: "integration-dashboard-api", entry: "tests/new/pos/reporting/dashboard.api.integration.ts" },
+  { name: "unit-online-orders-page", entry: "tests/new/pos/online-orders/online-orders.page.unit.ts" },
   { name: "decoupling-no-legacy-imports", entry: "tests/new/architecture/decoupling.no-legacy-imports.ts" },
 ];
 

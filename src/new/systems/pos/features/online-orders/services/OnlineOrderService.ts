@@ -4,6 +4,10 @@ import { OnlineOrder, UpdateOnlineOrderStatusDto } from "../model/OnlineOrder";
 export class OnlineOrderService {
   constructor(private readonly repository: IOnlineOrderRepository) {}
 
+  async getAllOrders(businessId: number, token: string): Promise<OnlineOrder[]> {
+    return this.repository.listByBusiness(businessId, token);
+  }
+
   async getPendingOrders(businessId: number, token: string): Promise<OnlineOrder[]> {
     const orders = await this.repository.listByBusiness(businessId, token);
     return orders.filter((order) => order.isPending());

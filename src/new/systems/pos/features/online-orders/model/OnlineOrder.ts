@@ -1,3 +1,11 @@
+export type OnlineOrderItem = {
+  id: number;
+  name: string;
+  price: number;
+  quantity: number;
+  image: string;
+};
+
 export class OnlineOrder {
   constructor(
     public readonly id: number,
@@ -5,13 +13,18 @@ export class OnlineOrder {
     public readonly status: string,
     public readonly customerName: string,
     public readonly total: number,
+    public readonly address: string = "",
+    public readonly paymentMethod: string = "",
+    public readonly phoneNumber: string = "",
+    public readonly items: OnlineOrderItem[] = [],
   ) {}
 
   isPending(): boolean {
-    return this.status.toLowerCase() === "pending";
+    const normalized = this.status.trim().toLowerCase();
+    return normalized === "pending" || normalized === "pedido";
   }
 }
 
 export interface UpdateOnlineOrderStatusDto {
-  status: "pending" | "accepted" | "preparing" | "completed" | "cancelled";
+  status: "ENTREGADO" | "CANCELADO" | "PEDIDO" | "pending" | "accepted" | "preparing" | "completed" | "cancelled";
 }
