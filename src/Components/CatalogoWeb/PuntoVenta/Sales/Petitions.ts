@@ -17,6 +17,22 @@ const parseJsonSafely = async (response: Response) => {
     }
 };
 
+const logSalesEndpointRequest = (label: string, url: string, method: string, body?: unknown) => {
+    console.log(`[Sales][${label}] Request`, {
+        method,
+        url,
+        body: body ?? null,
+    });
+};
+
+const logSalesEndpointResponse = (label: string, response: Response, data: unknown) => {
+    console.log(`[Sales][${label}] Response`, {
+        status: response.status,
+        ok: response.ok,
+        data,
+    });
+};
+
 export const getProduct = (idUser: number, token: string) => {
     try {
         const productNullStock = fetch(`${URL}products/stocknull/${idUser}`, {
@@ -58,6 +74,134 @@ export const getProduct = (idUser: number, token: string) => {
         return [];
     }
 }
+
+type SalesProductResponse = {
+    products: Item[];
+    pagination: {
+        page: number;
+        totalPages: number;
+        categoryIds: number[];
+    };
+};
+
+const normalizeProductsPayload = (data: any): Item[] => {
+    if (Array.isArray(data)) {
+        return data;
+    }
+
+    if (Array.isArray(data?.products)) {
+        return data.products;
+    }
+
+    if (Array.isArray(data?.data)) {
+        return data.data;
+    }
+
+    return [];
+};
+
+const normalizePaginationPayload = (data: any, fallbackPage: number): SalesProductResponse["pagination"] => {
+    const pagination = data?.pagination ?? {};
+
+    const parsedCategoryIds = Array.isArray(pagination?.categoryIds)
+        ? pagination.categoryIds
+            .map((id: unknown) => Number(id))
+            .filter((id: number) => Number.isFinite(id))
+        : [];
+
+    return {
+        page: Number(pagination?.page) || fallbackPage,
+        totalPages: Math.max(1, Number(pagination?.totalPages) || 1),
+        categoryIds: parsedCategoryIds,
+    };
+};
+
+export const getProductsAvailableByBusiness = async (
+    businessId: number,
+    _token: string,
+    limit: string,
+    page: number
+): Promise<SalesProductResponse> => {
+    try {
+        const requestUrl = `${URL}products/stock/availablegtzero/${businessId}?page=${page}`;
+        const requestBody = { Limit: limit };
+
+        logSalesEndpointRequest(
+            "getProductsAvailableByBusiness",
+            requestUrl,
+            "POST",
+            requestBody
+        );
+
+        const response = await fetch(requestUrl, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestBody),
+        });
+
+        const data = await parseJsonSafely(response);
+        logSalesEndpointResponse("getProductsAvailableByBusiness", response, data);
+        const products = normalizeProductsPayload(data);
+
+        return {
+            products,
+            pagination: normalizePaginationPayload(data, page),
+        };
+    } catch {
+        return {
+            products: [],
+            pagination: {
+                page,
+                totalPages: 1,
+                categoryIds: [],
+            },
+        };
+    }
+};
+
+export const getProductsByCategory = async (
+    categoryId: number,
+    _token: string,
+    limit: string,
+    page: number
+): Promise<SalesProductResponse> => {
+    try {
+        const requestUrl = `${URL}products/category/${categoryId}?limit=${encodeURIComponent(limit)}&page=${page}`;
+
+        logSalesEndpointRequest(
+            "getProductsByCategory",
+            requestUrl,
+            "GET"
+        );
+
+        const response = await fetch(requestUrl, {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+
+        const data = await parseJsonSafely(response);
+        logSalesEndpointResponse("getProductsByCategory", response, data);
+        const products = normalizeProductsPayload(data);
+
+        return {
+            products,
+            pagination: normalizePaginationPayload(data, page),
+        };
+    } catch {
+        return {
+            products: [],
+            pagination: {
+                page,
+                totalPages: 1,
+                categoryIds: [],
+            },
+        };
+    }
+};
 
 export const insertProduct = async (product: Item, token: string, variants?: Variant[]): Promise<MutationResult> => {
     try {

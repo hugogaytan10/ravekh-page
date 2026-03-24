@@ -5,9 +5,10 @@ import { List } from "./List";
 import PlusIcon from "../../../../assets/POS/PlusIcon";
 import {
   getBusinessInformation,
-  getProduct,
   getTaxes,
   getCategoriesByBusiness,
+  getProductsAvailableByBusiness,
+  getProductsByCategory,
 } from "./Petitions";
 import "./Css/MainSales.css";
 import { Item } from "../Model/Item";
@@ -33,17 +34,31 @@ export const MainSales: React.FC = () => {
   const [categories, setCategories] = useState<Category[]>([]);
   const [selectedCategoryKey, setSelectedCategoryKey] = useState<string>("all");
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
+  const [availableCategoryIds, setAvailableCategoryIds] = useState<number[]>([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
   const skeletonCards = useMemo(() => Array.from({ length: 8 }), []);
+  const productLimit = useMemo(() => {
+    const planFromBusiness = (context.store?.Plan ?? "").trim();
+    if (planFromBusiness) {
+      return planFromBusiness;
+    }
+
+    const planFromStorage = (localStorage.getItem("plan") ?? "").trim();
+    return planFromStorage;
+  }, [context.store?.Plan]);
 
   const categoryOptions = useMemo<CategoryOption[]>(() => {
-    const dynamic = categories.map((category) => ({
+    const dynamic = categories
+      .filter((category) => availableCategoryIds.includes(Number(category.Id)))
+      .map((category) => ({
       key: String(category.Id),
       label: category.Name,
       categoryId: category.Id,
-    }));
+      }));
 
-    return [{ key: "all", label: "Ver todos", categoryId: null }, ...dynamic];
-  }, [categories]);
+    return [{ key: "all", label: "Todos", categoryId: null }, ...dynamic];
+  }, [availableCategoryIds, categories]);
 
   const selectedCategoryOption = useMemo(() => {
     return (
@@ -51,16 +66,6 @@ export const MainSales: React.FC = () => {
       categoryOptions[0]
     );
   }, [categoryOptions, selectedCategoryKey]);
-
-  const filteredProducts = useMemo(() => {
-    if (!selectedCategoryOption || selectedCategoryOption.categoryId === null) {
-      return products;
-    }
-
-    return products.filter(
-      (product) => Number(product.Category_Id) === selectedCategoryOption.categoryId,
-    );
-  }, [products, selectedCategoryOption]);
 
   const moveCategory = useCallback(
     (direction: "prev" | "next") => {
@@ -89,25 +94,49 @@ export const MainSales: React.FC = () => {
   useEffect(() => {
     if (!context.user?.Business_Id || !context.user?.Token) {
       setLoader(false);
+      setProducts([]);
       return;
     }
 
+    const selectedCategoryId = selectedCategoryOption?.categoryId ?? null;
+
     setLoader(true);
-    getProduct(context.user.Business_Id, context.user.Token)
-      .then((data: any) => {
-        if (data?.length > 0) {
-          const filteredData = [...data[0], ...data[1]].filter(Boolean);
-          const normalized = filteredData.map((product: Item) => ({
-            ...product,
-            Image: product.Image || product.Images?.[0] || "",
-          }));
-          setProducts(normalized);
-        } else {
-          setProducts([]);
+    const fetchProducts = selectedCategoryId === null
+      ? getProductsAvailableByBusiness(
+        context.user.Business_Id,
+        context.user.Token,
+        productLimit,
+        currentPage,
+      )
+      : getProductsByCategory(
+        selectedCategoryId,
+        context.user.Token,
+        productLimit,
+        currentPage,
+      );
+
+    fetchProducts
+      .then((response) => {
+        const normalized = response.products.map((product: Item) => ({
+          ...product,
+          Image: (product as Item & { Image?: string }).Image || product.Images?.[0] || "",
+        }));
+        setProducts(normalized);
+        if (selectedCategoryId === null) {
+          setAvailableCategoryIds(response.pagination.categoryIds);
         }
+        setCurrentPage(response.pagination.page);
+        setTotalPages(response.pagination.totalPages);
       })
       .finally(() => setLoader(false));
-  }, [context.user.Business_Id, context.user.Token, context.stockFlag]);
+  }, [
+    context.user.Business_Id,
+    context.user.Token,
+    context.stockFlag,
+    selectedCategoryOption?.categoryId,
+    currentPage,
+    productLimit,
+  ]);
 
   useEffect(() => {
     if (!context.user?.Business_Id || !context.user?.Token) {
@@ -121,8 +150,10 @@ export const MainSales: React.FC = () => {
 
         if (mapped.length > 0) {
           setSelectedCategoryKey((prev) => {
-            const prevExists = mapped.some((category) => String(category.Id) === prev);
-            return prevExists ? prev : String(mapped[0].Id);
+            const prevExists = mapped.some(
+              (category) => String(category.Id) === prev || prev === "all",
+            );
+            return prevExists ? prev : "all";
           });
           return;
         }
@@ -134,6 +165,10 @@ export const MainSales: React.FC = () => {
         setSelectedCategoryKey("all");
       });
   }, [context.user.Business_Id, context.user.Token, context.stockFlag]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategoryKey]);
 
   useEffect(() => {
     if (!context.user?.Business_Id || !context.user?.Token) {
@@ -175,13 +210,13 @@ export const MainSales: React.FC = () => {
     () => (
       <div className="py-2">
         <ProductList
-          products={filteredProducts}
+          products={products}
           onAddProduct={handleAddProduct}
           storeColor={context.store.Color}
         />
       </div>
     ),
-    [filteredProducts, handleAddProduct, context.store.Color]
+    [products, handleAddProduct, context.store.Color]
   );
 
   return (
@@ -208,7 +243,7 @@ export const MainSales: React.FC = () => {
           className="text-sm font-semibold text-gray-800 px-3 py-1 rounded-md hover:bg-gray-100"
           onClick={() => setIsCategoryModalOpen(true)}
         >
-          {selectedCategoryOption?.label || "Ver todos"}
+          {selectedCategoryOption?.label || "Todos"}
         </button>
         <button
           type="button"
@@ -290,9 +325,30 @@ export const MainSales: React.FC = () => {
               <span>Agregar Producto</span>
             </button>
 
-            <List Products={filteredProducts} />
+            <List Products={products} />
           </div>
         )}
+        <div className="px-3 py-2 border-t border-gray-200 bg-white flex items-center justify-between">
+          <button
+            type="button"
+            className="px-3 py-1 rounded-md border text-sm disabled:opacity-50"
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={loader || currentPage <= 1}
+          >
+            Anterior
+          </button>
+          <span className="text-sm text-gray-700">
+            Página {currentPage} de {totalPages}
+          </span>
+          <button
+            type="button"
+            className="px-3 py-1 rounded-md border text-sm disabled:opacity-50"
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={loader || currentPage >= totalPages}
+          >
+            Siguiente
+          </button>
+        </div>
 
         <footer className={loader ? "sales-footer-loader" : "sales-footer"}>
           <div className="cart-info">
