@@ -30,6 +30,8 @@ export const PosV2TableZonesPage = () => {
   const businessId = Number(businessIdInput);
   const cleanToken = token.trim();
   const hasSession = Boolean(cleanToken) && Number.isFinite(businessId) && businessId > 0;
+  const activeZones = zones.filter((zone) => zone.isActive).length;
+  const inactiveZones = zones.length - activeZones;
 
   const loadZones = useCallback(async () => {
     if (!hasSession) {
@@ -156,6 +158,21 @@ export const PosV2TableZonesPage = () => {
           </form>
         </section>
 
+        <section className="pos-v2-table-zones__stats" aria-label="Resumen de mesas y zonas">
+          <article>
+            <span>Total registradas</span>
+            <strong>{zones.length}</strong>
+          </article>
+          <article>
+            <span>Activas</span>
+            <strong>{activeZones}</strong>
+          </article>
+          <article>
+            <span>Inactivas</span>
+            <strong>{inactiveZones}</strong>
+          </article>
+        </section>
+
         <section className="pos-v2-table-zones__list">
           <header>
             <h3>Listado de mesas</h3>
@@ -179,7 +196,7 @@ export const PosV2TableZonesPage = () => {
               <li key={zone.id}>
                 <div>
                   <strong>{zone.name}</strong>
-                  <span>{zone.isActive ? "Activa" : "Inactiva"}</span>
+                  <span>{zone.isActive ? "Activa" : "Inactiva"} · ID {zone.id}</span>
                 </div>
                 <button type="button" onClick={() => {
                   setTableZoneId(zone.id);

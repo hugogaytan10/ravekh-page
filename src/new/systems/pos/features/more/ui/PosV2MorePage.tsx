@@ -17,6 +17,7 @@ const SUPPORT_WHATSAPP_URL = "https://wa.me/525561736886";
 export const PosV2MorePage = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
+  const [viewMode, setViewMode] = useState<"working" | "development">("working");
   const [statusFilter, setStatusFilter] = useState<"all" | MoreModuleStatus>("all");
   const [betaLoadingId, setBetaLoadingId] = useState<string | null>(null);
   const [betaResult, setBetaResult] = useState<{ id: string; title: string; payload: string } | null>(null);
@@ -36,7 +37,8 @@ export const PosV2MorePage = () => {
 
   const modulePage = useMemo(() => new MoreModulePage(new MoreModuleService(API_BASE_URL)), []);
   const allItems = useMemo(() => MORE_MODULE_SECTIONS.flatMap((section) => section.items), []);
-  const availableCount = allItems.filter((item) => item.status === "available").length;
+  const workingItems = useMemo(() => allItems.filter((item) => item.status === "available"), [allItems]);
+  const developmentItems = useMemo(() => allItems.filter((item) => item.status !== "available"), [allItems]);
   const favoriteItems = allItems
     .filter((item) => favorites.includes(item.id))
     .sort((a, b) => a.title.localeCompare(b.title, "es-MX"));
@@ -45,9 +47,15 @@ export const PosV2MorePage = () => {
   const catalogLink = businessId > 0 ? `https://ravekh.com/catalogo/${businessId}` : "https://ravekh.com/catalogo";
 
   const filteredSections = useMemo(() => {
+    const shouldIncludeItem = (status: MoreModuleStatus): boolean => {
+      if (viewMode === "working") return status === "available";
+      if (statusFilter === "all") return status !== "available";
+      return status === statusFilter;
+    };
+
     return MORE_MODULE_SECTIONS.map((section) => {
       const items = section.items.filter((item) => {
-        const matchesStatus = statusFilter === "all" ? true : item.status === statusFilter;
+        const matchesStatus = shouldIncludeItem(item.status);
         const matchesQuery = normalizedQuery.length === 0
           ? true
           : `${item.title} ${item.description}`.toLowerCase().includes(normalizedQuery);
@@ -57,16 +65,7 @@ export const PosV2MorePage = () => {
 
       return { ...section, items };
     }).filter((section) => section.items.length > 0);
-  }, [normalizedQuery, statusFilter]);
-  const sectionStats = useMemo(
-    () =>
-      filteredSections.map((section) => ({
-        title: section.title,
-        total: section.items.length,
-        available: section.items.filter((item) => item.status === "available").length,
-      })),
-    [filteredSections],
-  );
+  }, [normalizedQuery, statusFilter, viewMode]);
 
   useEffect(() => {
     window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
@@ -141,7 +140,8 @@ export const PosV2MorePage = () => {
 
   const openModule = async (item: MoreModuleLink) => {
     if (item.id === "delete-account") {
-      handleSignOut();
+      setActionMessage("⚠️ Antes de cerrar sesión verifica cortes pendientes y respaldo de datos.");
+      setShowSignOutConfirm(true);
       return;
     }
 
@@ -165,8 +165,7 @@ export const PosV2MorePage = () => {
         <header className="pos-v2-more__header">
           <h2>Centro de operaciones</h2>
           <p>
-            Todo abre dentro de la SPA sin refrescar la página. Lo productivo está marcado como <strong>Disponible</strong> y
-            lo pendiente como <strong>Vista previa</strong>.
+            Vista limpia del POS v2: solo módulos que ya funcionan o los que seguimos desarrollando en la nueva arquitectura.
           </p>
           <button type="button" className="pos-v2-more__back" onClick={() => navigate("/v2/MainSales")}>
             ← Volver a Ventas
@@ -174,37 +173,33 @@ export const PosV2MorePage = () => {
           <div className="pos-v2-more__toolbar">
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar módulo..." aria-label="Buscar módulo" />
             <div className="pos-v2-more__chips">
-              <button type="button" className={statusFilter === "all" ? "is-active" : ""} onClick={() => setStatusFilter("all")}>Todos</button>
-              <button type="button" className={statusFilter === "available" ? "is-active" : ""} onClick={() => setStatusFilter("available")}>Disponibles</button>
-              <button type="button" className={statusFilter === "beta" ? "is-active" : ""} onClick={() => setStatusFilter("beta")}>Beta</button>
-              <button type="button" className={statusFilter === "preview" ? "is-active" : ""} onClick={() => setStatusFilter("preview")}>Vista previa</button>
+              <button type="button" className={viewMode === "working" ? "is-active" : ""} onClick={() => {
+                setViewMode("working");
+                setStatusFilter("all");
+              }}>Funciona hoy</button>
+              <button type="button" className={viewMode === "development" ? "is-active" : ""} onClick={() => {
+                setViewMode("development");
+                setStatusFilter("all");
+              }}>En desarrollo</button>
+              {viewMode === "development" ? (
+                <>
+                  <button type="button" className={statusFilter === "all" ? "is-active" : ""} onClick={() => setStatusFilter("all")}>Todos</button>
+                  <button type="button" className={statusFilter === "beta" ? "is-active" : ""} onClick={() => setStatusFilter("beta")}>Beta</button>
+                  <button type="button" className={statusFilter === "preview" ? "is-active" : ""} onClick={() => setStatusFilter("preview")}>Vista previa</button>
+                </>
+              ) : null}
             </div>
           </div>
         </header>
-
-        <section className="pos-v2-more__qa" aria-label="Estado de pruebas del sistema">
-          <h3>Checklist de testing</h3>
-          <p>{availableCount} módulos listos y {allItems.length - availableCount} en vista previa.</p>
-          <div className="pos-v2-more__qa-grid">
-            {allItems.map((item) => (
-              <button key={`qa-${item.id}`} type="button" className="pos-v2-more__qa-item" onClick={() => openModule(item)}>
-                <span>{item.title}</span>
-                <small className={item.status === "available" ? "is-available" : item.status === "beta" ? "is-beta" : "is-preview"}>
-                  {item.status === "available" ? "Disponible" : item.status === "beta" ? "Beta" : "Vista previa"}
-                </small>
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="pos-v2-more__section-stats" aria-label="Resumen por secciones">
-          {sectionStats.map((section) => (
-            <article key={`stats-${section.title}`}>
-              <h4>{section.title}</h4>
-              <p>{section.total} módulo(s)</p>
-              <small>{section.available} disponibles</small>
-            </article>
-          ))}
+        <section className="pos-v2-more__summary" aria-label="Resumen de módulos">
+          <article>
+            <h3>Funcionales</h3>
+            <p>{workingItems.length} módulo(s)</p>
+          </article>
+          <article>
+            <h3>En desarrollo</h3>
+            <p>{developmentItems.length} módulo(s)</p>
+          </article>
         </section>
 
         {favoriteItems.length > 0 ? (
@@ -248,11 +243,38 @@ export const PosV2MorePage = () => {
             <button type="button" onClick={() => navigate("/v2/online-store")}>Tienda en línea</button>
             <button type="button" onClick={() => navigate("/v2/customers")}>Clientes</button>
             <button type="button" onClick={() => navigate("/v2/employees")}>Empleados</button>
+            <button type="button" onClick={() => navigate("/v2/more/preview/sales-tax")}>Impuestos</button>
+            <button type="button" onClick={() => navigate("/v2/more/preview/exports")}>Exportar reportes</button>
+            <button type="button" onClick={() => navigate("/v2/more/preview/cash-closing")}>Corte de caja</button>
             <button type="button" onClick={() => window.open(catalogLink, "_blank", "noopener,noreferrer")}>Abrir catálogo público</button>
           </div>
           <div className="pos-v2-more__catalog-copy">
             <input type="text" value={catalogLink} readOnly aria-label="Enlace de catálogo público" />
             <button type="button" onClick={copyCatalogLink}>{copiedCatalogLink ? "Copiado" : "Copiar enlace"}</button>
+          </div>
+        </section>
+
+        <section className="pos-v2-more__warnings" aria-label="Módulos sensibles">
+          <div className="pos-v2-more__section-head">
+            <h3>Módulos sensibles</h3>
+            <p>Accesos con advertencia para evitar errores operativos en producción.</p>
+          </div>
+          <div className="pos-v2-more__warning-grid">
+            <article>
+              <h4>Información del negocio</h4>
+              <p>Revisa datos fiscales y comerciales antes de guardar para no afectar facturación.</p>
+              <button type="button" onClick={() => navigate("/v2/more/preview/business")}>Abrir con advertencia</button>
+            </article>
+            <article>
+              <h4>Corte de caja</h4>
+              <p>Valida turno, ingresos y método de pago antes de cerrar para evitar diferencias.</p>
+              <button type="button" onClick={() => navigate("/v2/more/preview/cash-closing")}>Abrir con advertencia</button>
+            </article>
+            <article>
+              <h4>Borrar cuenta</h4>
+              <p>Proceso irreversible. Solo continuar con respaldo y autorización del negocio.</p>
+              <button type="button" onClick={() => navigate("/v2/more/preview/delete-account")}>Revisar advertencia</button>
+            </article>
           </div>
         </section>
 

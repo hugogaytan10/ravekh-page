@@ -532,6 +532,42 @@
   background: #dcfce7;
 }
 
+.pos-v2-reporting__module-grid {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
+}
+
+.pos-v2-reporting__module-card {
+  border: 1px solid var(--report-border) !important;
+  background: var(--report-soft-bg) !important;
+  color: var(--report-text) !important;
+  border-radius: 12px !important;
+  padding: 0.7rem !important;
+  min-height: 110px !important;
+  display: grid !important;
+  gap: 0.3rem;
+  text-align: left;
+  align-content: start;
+}
+
+.pos-v2-reporting__module-card small {
+  color: var(--report-muted);
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.pos-v2-reporting__module-card span {
+  color: #7c3aed;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.pos-v2-reporting__hint {
+  color: var(--report-muted) !important;
+  font-size: 0.8rem;
+}
+
 .pos-v2-reporting__sales-list li small,
 .pos-v2-reporting__sales-list li time {
   color: var(--report-muted);

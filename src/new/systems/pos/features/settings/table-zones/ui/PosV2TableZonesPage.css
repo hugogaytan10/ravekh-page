@@ -89,6 +89,26 @@
   gap: 0.75rem;
 }
 
+.pos-v2-table-zones__stats {
+  display: grid;
+  gap: 0.65rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.pos-v2-table-zones__stats article {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.7rem;
+  display: grid;
+  gap: 0.2rem;
+}
+
+.pos-v2-table-zones__stats span {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
 .pos-v2-table-zones__controls article,
 .pos-v2-table-zones__controls form {
   border: 1px solid #f1f5f9;
@@ -182,4 +202,21 @@
   .pos-v2-table-zones__controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+}
+
+:root[data-theme="dark"] .pos-v2-table-zones__session,
+:root[data-theme="dark"] .pos-v2-table-zones__controls,
+:root[data-theme="dark"] .pos-v2-table-zones__list,
+:root[data-theme="dark"] .pos-v2-table-zones__stats article,
+:root[data-theme="dark"] .pos-v2-table-zones__list li,
+:root[data-theme="dark"] .pos-v2-table-zones input {
+  background: #111827;
+  border-color: #374151;
+  color: #f9fafb;
+}
+
+:root[data-theme="dark"] .pos-v2-table-zones__header p,
+:root[data-theme="dark"] .pos-v2-table-zones__stats span,
+:root[data-theme="dark"] .pos-v2-table-zones__list li span {
+  color: #9ca3af;
 }

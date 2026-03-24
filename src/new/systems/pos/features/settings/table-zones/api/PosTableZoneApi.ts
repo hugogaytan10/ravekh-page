@@ -18,8 +18,9 @@ export class PosTableZoneApi implements ITableZoneRepository {
       path: `table_zones/business/${businessId}`,
       token,
     });
+    const rows = Array.isArray(response) ? response : [];
 
-    return response.map((zone) => this.toDomain(zone));
+    return rows.map((zone) => this.toDomain(zone));
   }
 
   async create(payload: UpsertTableZoneDto, token: string): Promise<TableZone> {
@@ -51,8 +52,9 @@ export class PosTableZoneApi implements ITableZoneRepository {
       token,
       body: { active: isActive },
     });
+    const rows = Array.isArray(response) ? response : [];
 
-    return response.some((zone) => this.toBoolean(zone.Active));
+    return rows.some((zone) => this.toBoolean(zone.Active));
   }
 
   private toApiPayload(payload: UpsertTableZoneDto): Record<string, unknown> {

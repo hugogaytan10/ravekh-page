@@ -101,6 +101,11 @@
   gap: 0.25rem;
 }
 
+.pos-v2-online-orders li small {
+  color: #64748b;
+  font-size: 0.8rem;
+}
+
 .pos-v2-online-orders__thumb {
   width: 100%;
   max-width: 92px;
@@ -306,7 +311,8 @@
 
 :root[data-theme="dark"] .pos-v2-online-orders header p,
 :root[data-theme="dark"] .pos-v2-online-orders__stats span,
-:root[data-theme="dark"] .pos-v2-online-orders li.is-empty {
+:root[data-theme="dark"] .pos-v2-online-orders li.is-empty,
+:root[data-theme="dark"] .pos-v2-online-orders li small {
   color: #9ca3af;
 }
 

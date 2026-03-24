@@ -37,6 +37,11 @@ const PAYMENT_OPTIONS: Array<{ value: "TODOS" | "EFECTIVO" | "TARJETA"; label: s
   { value: "EFECTIVO", label: "Efectivo" },
   { value: "TARJETA", label: "Tarjeta" },
 ];
+const PENDING_MODULES = [
+  { id: "sales-tax", title: "Impuestos", detail: "Configuración fiscal por negocio" },
+  { id: "exports", title: "Exportar reportes", detail: "Descargas para contabilidad y auditoría" },
+  { id: "cash-closing", title: "Cortes de caja", detail: "Cierre de turnos con resumen de efectivo" },
+];
 
 const DEFAULT_SUMMARY: ReportSummaryViewModel = {
   balance: 0,
@@ -355,30 +360,57 @@ export const PosV2ReportingPage = () => {
     },
   }), []);
 
+  const fallbackTopProducts = useMemo(() => {
+    const grouped = new Map<string, number>();
+    for (const sale of sales) {
+      const key = (sale.productName || "Sin detalle").trim();
+      grouped.set(key, (grouped.get(key) ?? 0) + (Number(sale.quantity) || 0));
+    }
+    return Array.from(grouped.entries())
+      .map(([name, quantity]) => ({ name, quantity }))
+      .sort((a, b) => b.quantity - a.quantity)
+      .slice(0, 5);
+  }, [sales]);
+
+  const fallbackTopCategories = useMemo<TopChartItem[]>(() => {
+    const grouped = new Map<string, number>();
+    for (const sale of sales) {
+      const label = sale.type === "ORDER" ? "Pedidos online" : "Comandas";
+      grouped.set(label, (grouped.get(label) ?? 0) + (Number(sale.quantity) || 0));
+    }
+    return Array.from(grouped.entries())
+      .map(([name, quantity]) => ({ name, quantity }))
+      .sort((a, b) => b.quantity - a.quantity);
+  }, [sales]);
+
+  const displayTopProducts = topProducts.length > 0 ? topProducts : fallbackTopProducts;
+  const displayTopCategories = topCategories.length > 0 ? topCategories : fallbackTopCategories;
+  const hasOverviewValues = summary.income > 0 || summary.earnings > 0 || summary.averageSale > 0;
+
   const topProductsChartData = useMemo(() => ({
-    labels: topProducts.map((item, index) => item.name || `Producto ${index + 1}`),
+    labels: displayTopProducts.map((item, index) => item.name || `Producto ${index + 1}`),
     datasets: [
       {
         label: "Productos más vendidos",
-        data: topProducts.map((item) => item.quantity),
+        data: displayTopProducts.map((item) => item.quantity),
         borderRadius: 8,
         borderSkipped: false,
         backgroundColor: ["#3b82f6", "#60a5fa", "#93c5fd", "#38bdf8", "#0ea5e9"],
       },
     ],
-  }), [topProducts]);
+  }), [displayTopProducts]);
 
   const topCategoriesChartData = useMemo(() => ({
-    labels: topCategories.map((item, index) => item.name || `Categoría ${index + 1}`),
+    labels: displayTopCategories.map((item, index) => item.name || `Categoría ${index + 1}`),
     datasets: [
       {
         label: "Categorías más vendidas",
-        data: topCategories.map((item) => item.quantity),
+        data: displayTopCategories.map((item) => item.quantity),
         backgroundColor: ["#06b6d4", "#22d3ee", "#67e8f9", "#0ea5e9", "#0284c7"],
         borderWidth: 0,
       },
     ],
-  }), [topCategories]);
+  }), [displayTopCategories]);
 
   const businessOverviewData = useMemo(() => ({
     labels: ["Ingresos", "Ganancia", "Ticket promedio"],
@@ -500,11 +532,16 @@ export const PosV2ReportingPage = () => {
         </section>
 
         <section className="pos-v2-reporting__content">
+
           <article className="pos-v2-reporting__card">
             <h3>Mix de cobro</h3>
-            <div className="pos-v2-reporting__doughnut">
-              <Doughnut data={paymentChartData} options={doughnutOptions} />
-            </div>
+            {(derivedKpis.cashRatio > 0 || derivedKpis.cardRatio > 0) ? (
+              <div className="pos-v2-reporting__doughnut">
+                <Doughnut data={paymentChartData} options={doughnutOptions} />
+              </div>
+            ) : (
+              <p className="is-empty">Sin cobros para este rango. Prueba con otro periodo.</p>
+            )}
             <div className="pos-v2-reporting__progress">
               <span style={{ width: `${derivedKpis.cashRatio}%` }} />
               <span style={{ width: `${derivedKpis.cardRatio}%` }} />
@@ -527,9 +564,13 @@ export const PosV2ReportingPage = () => {
 
           <article className="pos-v2-reporting__card">
             <h3>Resumen comercial</h3>
-            <div className="pos-v2-reporting__doughnut">
-              <Doughnut data={businessOverviewData} options={doughnutOptions} />
-            </div>
+            {hasOverviewValues ? (
+              <div className="pos-v2-reporting__doughnut">
+                <Doughnut data={businessOverviewData} options={doughnutOptions} />
+              </div>
+            ) : (
+              <p className="is-empty">Aún no hay datos consolidados de ingresos/ganancia.</p>
+            )}
             <p>Ingresos: <strong>{moneyFormatter.format(summary.income)}</strong></p>
             <p>Ganancia: <strong>{moneyFormatter.format(summary.earnings)}</strong></p>
           </article>
@@ -542,8 +583,13 @@ export const PosV2ReportingPage = () => {
               </select>
             </header>
             {topChartsLoading ? <div className="pos-v2-reporting__chart-skeleton" aria-hidden="true" /> : null}
-            {!topChartsLoading && topProducts.length === 0 ? <p className="is-empty">Sin datos de productos para el mes.</p> : null}
-            {!topChartsLoading && topProducts.length > 0 ? <div className="pos-v2-reporting__mini-line"><Bar data={topProductsChartData} options={quantityBarOptions} /></div> : null}
+            {!topChartsLoading && displayTopProducts.length === 0 ? <p className="is-empty">Sin datos de productos para el mes.</p> : null}
+            {!topChartsLoading && displayTopProducts.length > 0 ? (
+              <>
+                {topProducts.length === 0 ? <p className="pos-v2-reporting__hint">Mostrando estimación con ventas del periodo seleccionado.</p> : null}
+                <div className="pos-v2-reporting__mini-line"><Bar data={topProductsChartData} options={quantityBarOptions} /></div>
+              </>
+            ) : null}
           </article>
 
           <article className="pos-v2-reporting__card">
@@ -554,8 +600,13 @@ export const PosV2ReportingPage = () => {
               </select>
             </header>
             {topChartsLoading ? <div className="pos-v2-reporting__chart-skeleton" aria-hidden="true" /> : null}
-            {!topChartsLoading && topCategories.length === 0 ? <p className="is-empty">Sin datos de categorías para el mes.</p> : null}
-            {!topChartsLoading && topCategories.length > 0 ? <div className="pos-v2-reporting__mini-line"><Doughnut data={topCategoriesChartData} options={doughnutOptions} /></div> : null}
+            {!topChartsLoading && displayTopCategories.length === 0 ? <p className="is-empty">Sin datos de categorías para el mes.</p> : null}
+            {!topChartsLoading && displayTopCategories.length > 0 ? (
+              <>
+                {topCategories.length === 0 ? <p className="pos-v2-reporting__hint">Estimación basada en tipo de venta (pedido/comanda).</p> : null}
+                <div className="pos-v2-reporting__mini-line"><Doughnut data={topCategoriesChartData} options={doughnutOptions} /></div>
+              </>
+            ) : null}
           </article>
 
           <article className="pos-v2-reporting__card is-full">
@@ -645,6 +696,22 @@ export const PosV2ReportingPage = () => {
                 </table>
               </div>
             ) : null}
+          </article>
+
+          <article className="pos-v2-reporting__card is-full">
+            <header>
+              <h3>Módulos en ruta (v2)</h3>
+              <span>UX lista para integrar endpoints existentes del legacy</span>
+            </header>
+            <div className="pos-v2-reporting__module-grid">
+              {PENDING_MODULES.map((module) => (
+                <button key={module.id} type="button" className="pos-v2-reporting__module-card" onClick={() => navigate(`/v2/more/preview/${module.id}`)}>
+                  <strong>{module.title}</strong>
+                  <small>{module.detail}</small>
+                  <span>Abrir vista previa</span>
+                </button>
+              ))}
+            </div>
           </article>
         </section>
 

@@ -22,6 +22,15 @@
   font-weight: 700;
 }
 
+.pos-v2-module-preview__warning {
+  border: 1px solid #fdba74;
+  background: #fff7ed;
+  color: #9a3412 !important;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+  font-weight: 600;
+}
+
 .pos-v2-module-preview__actions {
   display: flex;
   gap: 0.55rem;
@@ -151,6 +160,12 @@
 
 :root[data-theme="dark"] .pos-v2-module-preview__eta {
   color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-module-preview__warning {
+  border-color: rgba(251, 146, 60, 0.45);
+  background: rgba(124, 45, 18, 0.35);
+  color: #fed7aa !important;
 }
 
 :root[data-theme="dark"] .pos-v2-module-preview__ok {

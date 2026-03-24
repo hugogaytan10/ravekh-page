@@ -413,26 +413,6 @@ export const ProductsV2PosPage = () => {
     }
   };
 
-  const handleDuplicate = async (productId: number) => {
-    if (!token) {
-      setToast({ type: "error", message: "Token es obligatorio para duplicar." });
-      return;
-    }
-
-    setActionLoadingId(productId);
-    try {
-      const detail = await service.getProduct(productId, token);
-      if (!detail) throw new Error("No encontramos el producto para duplicar.");
-      await service.saveProduct({ ...cloneSavePayload(detail), id: undefined, name: `${detail.name} (copia)`, available: true }, token);
-      setToast({ type: "success", message: `Producto "${detail.name}" duplicado.` });
-      await loadProducts();
-    } catch (cause) {
-      setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo duplicar producto." });
-    } finally {
-      setActionLoadingId(null);
-    }
-  };
-
   const handleEdit = async (productId: number) => {
     if (!token) {
       setError("Token es obligatorio para editar.");
@@ -603,12 +583,6 @@ export const ProductsV2PosPage = () => {
             <div className="pos-v2-products__controls">
               <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nombre o descripción" aria-label="Buscar productos" />
 
-              <label className="pos-v2-products__switch" aria-label="Mostrar archivados">
-                <input type="checkbox" checked={showArchived} onChange={(event) => setShowArchived(event.target.checked)} />
-                <span className="pos-v2-products__switch-ui" aria-hidden="true" />
-                <span>Mostrar archivados</span>
-              </label>
-
               <div className="pos-v2-products__view-toggle" role="group" aria-label="Cambiar vista">
                 <button type="button" className={viewMode === "grid" ? "is-active" : ""} onClick={() => setViewMode("grid")}>Cuadrícula</button>
                 <button type="button" className={viewMode === "list" ? "is-active" : ""} onClick={() => setViewMode("list")}>Lista</button>
@@ -671,14 +645,7 @@ export const ProductsV2PosPage = () => {
 
                     <div className="pos-v2-products__card-actions">
                       <button type="button" className="is-edit" onClick={() => handleEdit(product.id)}>Editar</button>
-                      <button
-                        type="button"
-                        className="is-clone"
-                        onClick={() => handleDuplicate(product.id)}
-                        disabled={actionLoadingId === product.id}
-                      >
-                        {actionLoadingId === product.id ? "Procesando..." : "Duplicar"}
-                      </button>
+
                       {product.available ? (
                         <button type="button" onClick={() => requestArchive(product.id, product.name)} disabled={archivingId === product.id}>
                           {archivingId === product.id ? "Eliminando..." : "Eliminar"}

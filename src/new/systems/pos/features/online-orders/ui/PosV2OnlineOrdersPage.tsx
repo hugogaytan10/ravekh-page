@@ -7,6 +7,14 @@ import "./PosV2OnlineOrdersPage.css";
 const TOKEN_KEY = "pos-v2-token";
 const BUSINESS_ID_KEY = "pos-v2-business-id";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
+const STATUS_COPY: Record<string, string> = {
+  PEDIDO: "Pendiente",
+  PENDING: "Pendiente",
+  ENTREGADO: "Entregado",
+  COMPLETED: "Entregado",
+  CANCELADO: "Cancelado",
+  CANCELLED: "Cancelado",
+};
 
 export const PosV2OnlineOrdersPage = () => {
   const [token] = useState(() => window.localStorage.getItem(TOKEN_KEY) ?? "");
@@ -129,6 +137,7 @@ export const PosV2OnlineOrdersPage = () => {
   };
 
   const formatCurrency = (value: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(value);
+  const getStatusLabel = (status: string) => STATUS_COPY[status.toUpperCase()] ?? status;
 
   const summarizeItems = (items: OnlineOrderCardViewModel["items"]) => {
     const grouped = new Map<string, { name: string; quantity: number; price: number; image: string }>();
@@ -205,9 +214,12 @@ export const PosV2OnlineOrdersPage = () => {
           <ul>
             {filteredOrders.map((order) => (
               <li key={order.id}>
-                <strong>Pedido #{order.id}</strong>
+                <div className="pos-v2-online-orders__item-head">
+                  <strong>Pedido #{order.id}</strong>
+                  <span className={`status status-${order.status.toLowerCase()}`}>{getStatusLabel(order.status)}</span>
+                </div>
                 <span>{order.customerName}</span>
-                <span className={`status status-${order.status.toLowerCase()}`}>{order.status}</span>
+                <small>Total del pedido: {formatCurrency(order.total)}</small>
                 <div className="pos-v2-online-orders__actions">
                   <button type="button" className="is-light" onClick={() => openOrderDetails(order.id)}>
                     Ver detalle
@@ -244,7 +256,7 @@ export const PosV2OnlineOrdersPage = () => {
                     <button type="button" className="is-light" onClick={() => setSelectedOrder(null)} aria-label="Regresar al listado">← Regresar</button>
                   </header>
                   <p><strong>Cliente:</strong> {selectedOrder.customerName}</p>
-                  <p><strong>Estado:</strong> {selectedOrder.status}</p>
+                  <p><strong>Estado:</strong> {getStatusLabel(selectedOrder.status)}</p>
                   <p><strong>Teléfono:</strong> {selectedOrder.phoneNumber || "No disponible"}</p>
                   <p><strong>Dirección:</strong> {selectedOrder.address || "No disponible"}</p>
                   <p><strong>Método de pago:</strong> {selectedOrder.paymentMethod || "No disponible"}</p>

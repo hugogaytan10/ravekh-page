@@ -13,6 +13,7 @@ type PreviewData = {
   title: string;
   description: string;
   eta: string;
+  warning?: string;
 };
 
 const PREVIEW_MODULES: Record<string, PreviewData> = {
@@ -30,6 +31,19 @@ const PREVIEW_MODULES: Record<string, PreviewData> = {
     title: "Borrar cuenta",
     description: "Flujo sensible en diseño para cumplir UX y validaciones de seguridad.",
     eta: "Sprint seguridad v2",
+    warning: "Esta acción puede ser irreversible. Asegura respaldo y autorización antes de continuar.",
+  },
+  "cash-closing": {
+    title: "Corte de caja",
+    description: "Preparado para validar cierres diarios sin depender del UI legacy.",
+    eta: "Sprint cierre de caja v2",
+    warning: "Verifica montos por método de pago y turno activo antes de confirmar el cierre.",
+  },
+  business: {
+    title: "Información del negocio",
+    description: "Consulta y actualización de datos fiscales/comerciales en la capa moderna.",
+    eta: "Sprint configuración v2",
+    warning: "Los cambios impactan facturación y catálogos públicos; valida antes de guardar.",
   },
 };
 
@@ -168,6 +182,7 @@ export const PosV2ModulePreviewPage = () => {
         <h2>{data.title}</h2>
         <p>{data.description}</p>
         <p className="pos-v2-module-preview__eta">Entrega estimada: {data.eta}</p>
+        {data.warning ? <p className="pos-v2-module-preview__warning">⚠️ {data.warning}</p> : null}
 
         {modulePage.supportsInlineExecution(moduleId) ? (
           <section className="pos-v2-module-preview__beta">
