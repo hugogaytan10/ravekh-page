@@ -16,6 +16,7 @@ import { VariantDraft } from "./variantTypes";
 import { draftsToVariants, syncDraftColors } from "./variantUtils";
 import VariantsEditor from "./VariantsEditor";
 import { OperationResultModal } from "../../Products/CRUDProducts/OperationResultModal";
+import { ExtrasSection, ProductExtraDraft } from "../../Products/CRUDProducts/ExtrasSection";
 
 export const AddProductSales: React.FC = () => {
   const context = useContext(AppContext);
@@ -47,6 +48,7 @@ export const AddProductSales: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const formLoadedRef = useRef(false);
   const [variantDrafts, setVariantDrafts] = useState<VariantDraft[]>([]);
+  const [extrasDrafts, setExtrasDrafts] = useState<ProductExtraDraft[]>([]);
   const [feedbackModal, setFeedbackModal] = useState({
     isVisible: false,
     title: "",
@@ -81,6 +83,7 @@ export const AddProductSales: React.FC = () => {
       setIsAvailableForSale(draft.isAvailableForSale);
       setIsDisplayedInStore(draft.isDisplayedInStore);
       setVariantDrafts(draft.variantDrafts || []);
+      setExtrasDrafts(draft.extrasDrafts || []);
     }
 
     formLoadedRef.current = true;
@@ -109,6 +112,7 @@ export const AddProductSales: React.FC = () => {
       isDisplayedInStore,
       available: true,
       variantDrafts,
+      extrasDrafts,
     });
   }, [
     productName,
@@ -126,6 +130,7 @@ export const AddProductSales: React.FC = () => {
     isAvailableForSale,
     isDisplayedInStore,
     variantDrafts,
+    extrasDrafts,
     context.setProductFormState,
   ]);
 
@@ -151,6 +156,7 @@ export const AddProductSales: React.FC = () => {
     setMainImage(null);
     setGalleryImages([]);
     setVariantDrafts([]);
+    setExtrasDrafts([]);
     context.setCategorySelected({ Id: 0, Name: "", Color: "" } as Category);
     context.setProductFormState(null);
   };
@@ -218,8 +224,12 @@ export const AddProductSales: React.FC = () => {
       };
 
       const variantsPayload = draftsToVariants(variantDrafts, colorSelected);
+      const extrasPayload = extrasDrafts.map((extra) => ({
+        Description: extra.Description,
+        Type: extra.Type,
+      }));
 
-      const result = await insertProduct(product, context.user?.Token, variantsPayload);
+      const result = await insertProduct(product, context.user?.Token, variantsPayload, extrasPayload);
 
       if (!result.success) {
         setNavigateAfterModal(false);
@@ -676,6 +686,8 @@ export const AddProductSales: React.FC = () => {
             </div>
           )}
         </div>
+
+        <ExtrasSection extras={extrasDrafts} onChange={setExtrasDrafts} />
       </div>
 
       {/* Footer */}

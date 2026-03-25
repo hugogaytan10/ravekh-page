@@ -24,4 +24,9 @@ export interface ProductFormState {
   available: boolean;
   variantDrafts?: VariantDraft[];
   variantOriginals?: Variant[];
+  extrasDrafts?: {
+    Id?: number;
+    Description: string;
+    Type: "COLOR" | "TALLA";
+  }[];
 }

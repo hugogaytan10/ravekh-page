@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { FixedSizeGrid } from "react-window";
 import { Item } from "../Model/Item";
 import "./Css/ProductList.css";
@@ -12,56 +12,21 @@ interface CardProps {
 
 const Card: React.FC<CardProps> = React.memo(({ product, handleAddItem, storeColor }) => {
   const { Name, Image, Price, PromotionPrice, Color, ForSale } = product;
-  const imageTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [isImageLoading, setIsImageLoading] = useState(!!Image); // Solo inicia en true si hay imagen
+  const [isImageLoading, setIsImageLoading] = useState(!!Image);
   const [hasImageError, setHasImageError] = useState(false);
 
-  const failedImagesRef = useRef<Set<string>>(new Set());
-
   const handleLoad = useCallback(() => {
-    if (imageTimeoutRef.current) {
-      clearTimeout(imageTimeoutRef.current);
-      imageTimeoutRef.current = null;
-    }
     setIsImageLoading(false);
   }, []);
 
   const handleError = useCallback(() => {
-    if (Image) {
-      failedImagesRef.current.add(Image);
-    }
-    if (imageTimeoutRef.current) {
-      clearTimeout(imageTimeoutRef.current);
-      imageTimeoutRef.current = null;
-    }
     setIsImageLoading(false);
     setHasImageError(true);
-  }, [Image]);
+  }, []);
 
   useEffect(() => {
-    if (imageTimeoutRef.current) {
-      clearTimeout(imageTimeoutRef.current);
-      imageTimeoutRef.current = null;
-    }
-
-    const hasCachedError = Image ? failedImagesRef.current.has(Image) : false;
-    setHasImageError(hasCachedError);
-    setIsImageLoading(Boolean(Image && !hasCachedError));
-
-    if (Image && !hasCachedError) {
-      imageTimeoutRef.current = setTimeout(() => {
-        failedImagesRef.current.add(Image);
-        setIsImageLoading(false);
-        setHasImageError(true);
-      }, 5000);
-    }
-
-    return () => {
-      if (imageTimeoutRef.current) {
-        clearTimeout(imageTimeoutRef.current);
-        imageTimeoutRef.current = null;
-      }
-    };
+    setHasImageError(false);
+    setIsImageLoading(Boolean(Image));
   }, [Image]);
 
   if (!ForSale) return null;
@@ -146,7 +111,6 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onAddProduct
   const [columns, setColumns] = useState(3);
   const [gridWidth, setGridWidth] = useState(window.innerWidth);
   const rowHeight = 250;
-  const maxRowsVisible = 3;
   const { handleProductSelection, modalState, isFetchingVariants } =
     useVariantSelection({
       onCartUpdated: () => navigator.vibrate?.(50),
@@ -181,7 +145,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onAddProduct
 
   const totalItems = products.length + 1;
   const rowCount = Math.ceil(totalItems / columns);
-  const gridHeight = rowHeight * maxRowsVisible;
+  const gridHeight = Math.max(1, rowCount) * (rowHeight + 15);
 
   return (
     <div className="product-list-main-sales">

@@ -19,7 +19,7 @@
   .sales-container {
     flex-grow: 1; /* Permite que esta sección se expanda */
     overflow-y: auto;
-    padding-bottom: 30px;
+    padding-bottom: 220px;
   }
  
 .sales-footer-loader {

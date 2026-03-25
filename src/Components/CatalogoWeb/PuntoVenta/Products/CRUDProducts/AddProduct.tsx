@@ -16,6 +16,7 @@ import { VariantDraft } from "./variantTypes";
 import { draftsToVariants, syncDraftColors } from "./variantUtils";
 import VariantsEditor from "./VariantsEditor";
 import { OperationResultModal } from "./OperationResultModal";
+import { ExtrasSection, ProductExtraDraft } from "./ExtrasSection";
 
 export const AddProduct: React.FC = () => {
   const context = useContext(AppContext);
@@ -47,6 +48,7 @@ export const AddProduct: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const formLoadedRef = useRef(false);
   const [variantDrafts, setVariantDrafts] = useState<VariantDraft[]>([]);
+  const [extrasDrafts, setExtrasDrafts] = useState<ProductExtraDraft[]>([]);
   const [feedbackModal, setFeedbackModal] = useState({
     isVisible: false,
     title: "",
@@ -81,6 +83,7 @@ export const AddProduct: React.FC = () => {
       setIsAvailableForSale(draft.isAvailableForSale);
       setIsDisplayedInStore(draft.isDisplayedInStore);
       setVariantDrafts(draft.variantDrafts || []);
+      setExtrasDrafts(draft.extrasDrafts || []);
     }
 
     formLoadedRef.current = true;
@@ -109,6 +112,7 @@ export const AddProduct: React.FC = () => {
       isDisplayedInStore,
       available: true,
       variantDrafts,
+      extrasDrafts,
     });
   }, [
     productName,
@@ -126,12 +130,25 @@ export const AddProduct: React.FC = () => {
     isAvailableForSale,
     isDisplayedInStore,
     variantDrafts,
+    extrasDrafts,
     context.setProductFormState,
   ]);
 
   useEffect(() => {
     setVariantDrafts((prev) => syncDraftColors(prev, colorSelected));
   }, [colorSelected]);
+
+  useEffect(() => {
+    const extrasBlocks = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-add-product-extras='true']"),
+    );
+    if (extrasBlocks.length <= 1) {
+      return;
+    }
+    extrasBlocks.slice(0, -1).forEach((block) => {
+      block.style.display = "none";
+    });
+  });
 
   const resetFormState = () => {
     formLoadedRef.current = false;
@@ -151,6 +168,7 @@ export const AddProduct: React.FC = () => {
     setMainImage(null);
     setGalleryImages([]);
     setVariantDrafts([]);
+    setExtrasDrafts([]);
     context.setCategorySelected({ Id: 0, Name: "", Color: "" } as Category);
     context.setProductFormState(null);
   };
@@ -219,7 +237,16 @@ export const AddProduct: React.FC = () => {
 
       const variantsPayload = draftsToVariants(variantDrafts, colorSelected);
 
-      const result = await insertProduct(product, context.user?.Token, variantsPayload);
+      const extrasPayload = extrasDrafts.map((extra) => ({
+        Description: extra.Description,
+        Type: extra.Type,
+      }));
+      const result = await insertProduct(
+        product,
+        context.user?.Token,
+        variantsPayload,
+        extrasPayload,
+      );
 
       if (!result.success) {
         setNavigateAfterModal(false);
@@ -267,21 +294,20 @@ export const AddProduct: React.FC = () => {
         message={feedbackModal.message}
         error={feedbackModal.error}
         isSuccess={feedbackModal.isSuccess}
-        onClose={() =>
-          {
-            setFeedbackModal({
-              isVisible: false,
-              title: "",
-              message: "",
-              error: "",
-              isSuccess: false,
-            });
+        onClose={() => {
+          setFeedbackModal({
+            isVisible: false,
+            title: "",
+            message: "",
+            error: "",
+            isSuccess: false,
+          });
 
-            if (navigateAfterModal) {
-              setNavigateAfterModal(false);
-              navigation("/main-products/items");
-            }
+          if (navigateAfterModal) {
+            setNavigateAfterModal(false);
+            navigation("/main-products/items");
           }
+        }
         }
       />
       {/* Header */}
@@ -415,6 +441,7 @@ export const AddProduct: React.FC = () => {
             }}
           />
         </div>
+
 
         {/* Imágenes adicionales */}
         <div className="w-full mb-6">
@@ -625,12 +652,12 @@ export const AddProduct: React.FC = () => {
                     type="checkbox"
                     className="h-6 w-6 bg-white rounded"
                     style={{
-                    backgroundColor: isAvailableForSale
-                    ? accentColor
-                    : "white",
-                  }}
-                  checked={isAvailableForSale}
-                  onChange={() => setIsAvailableForSale(!isAvailableForSale)}
+                      backgroundColor: isAvailableForSale
+                        ? accentColor
+                        : "white",
+                    }}
+                    checked={isAvailableForSale}
+                    onChange={() => setIsAvailableForSale(!isAvailableForSale)}
                   />
                 </label>
               </div>
@@ -641,15 +668,15 @@ export const AddProduct: React.FC = () => {
                     type="checkbox"
                     className="h-6 w-6 bg-white rounded border-2"
                     style={{
-                    borderColor: isDisplayedInStore
-                    ? accentColor
-                    : "#e2e8f0",
-                    backgroundColor: isDisplayedInStore
-                    ? accentColor
-                    : "white",
-                  }}
-                  checked={isDisplayedInStore}
-                  onChange={() => setIsDisplayedInStore(!isDisplayedInStore)}
+                      borderColor: isDisplayedInStore
+                        ? accentColor
+                        : "#e2e8f0",
+                      backgroundColor: isDisplayedInStore
+                        ? accentColor
+                        : "white",
+                    }}
+                    checked={isDisplayedInStore}
+                    onChange={() => setIsDisplayedInStore(!isDisplayedInStore)}
                   />
                 </label>
               </div>
@@ -678,6 +705,7 @@ export const AddProduct: React.FC = () => {
             </div>
           )}
         </div>
+        <ExtrasSection extras={extrasDrafts} onChange={setExtrasDrafts} />
       </div>
 
       {/* Footer */}

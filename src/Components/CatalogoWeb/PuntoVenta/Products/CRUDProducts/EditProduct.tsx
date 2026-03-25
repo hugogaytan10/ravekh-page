@@ -2,13 +2,17 @@ import React, { useState, useEffect, useContext, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { AppContext } from "../../../Context/AppContext";
 import {
+  deleteExtra,
   getProduct,
+  getExtrasByProductId,
   updateProduct,
   deleteProduct,
   getVariantsByProductId,
   insertVariant as insertVariantRequest,
   updateVariant as updateVariantRequest,
   deleteVariant as deleteVariantRequest,
+  updateExtra,
+  insertExtra,
 } from "../Petitions";
 import { uploadImage } from "../../Cloudinary/Cloudinary";
 import { PickerColor } from "../../CustomizeApp/PickerColor";
@@ -30,6 +34,7 @@ import {
   calculateVariantChanges,
 } from "./variantUtils";
 import { OperationResultModal } from "./OperationResultModal";
+import { ExtrasSection, ProductExtraDraft } from "./ExtrasSection";
 
 export const EditProduct: React.FC = () => {
   const { productId } = useParams<{ productId: string }>();
@@ -60,6 +65,8 @@ export const EditProduct: React.FC = () => {
   const [available, setAvailable] = useState<boolean>(true);
   const [variantDrafts, setVariantDrafts] = useState<VariantDraft[]>([]);
   const [originalVariants, setOriginalVariants] = useState<Variant[]>([]);
+  const [extrasDrafts, setExtrasDrafts] = useState<ProductExtraDraft[]>([]);
+  const [originalExtras, setOriginalExtras] = useState<ProductExtraDraft[]>([]);
   const [feedbackModal, setFeedbackModal] = useState({
     isVisible: false,
     title: "",
@@ -97,6 +104,7 @@ export const EditProduct: React.FC = () => {
       setIsDisplayedInStore(draft.isDisplayedInStore);
       setVariantDrafts(draft.variantDrafts || []);
       setOriginalVariants(draft.variantOriginals || []);
+      setExtrasDrafts(draft.extrasDrafts || []);
       formLoadedRef.current = true;
     }
   }, [context.productFormState, context.store.Color, productId]);
@@ -155,19 +163,40 @@ export const EditProduct: React.FC = () => {
           setAvailable(response.Available ?? true);
           const token = context.user?.Token;
           if (token) {
-            getVariantsByProductId(currentId, token)
-              .then((variants) => {
+            Promise.all([
+              getVariantsByProductId(currentId, token),
+              getExtrasByProductId(currentId, token),
+            ])
+              .then(([variants, extras]) => {
                 setOriginalVariants(variants);
                 setVariantDrafts(variantsToDrafts(variants, highlightColor));
+                const flattenedExtras: ProductExtraDraft[] = [
+                  ...((extras?.TALLA ?? []).map((extra) => ({
+                    Id: extra.Id,
+                    Description: extra.Description,
+                    Type: "TALLA" as const,
+                  }))),
+                  ...((extras?.COLOR ?? []).map((extra) => ({
+                    Id: extra.Id,
+                    Description: extra.Description,
+                    Type: "COLOR" as const,
+                  }))),
+                ];
+                setOriginalExtras(flattenedExtras);
+                setExtrasDrafts(flattenedExtras);
               })
               .catch((error) => {
                 console.error("Error loading product variants:", error);
                 setOriginalVariants([]);
                 setVariantDrafts([]);
+                setOriginalExtras([]);
+                setExtrasDrafts([]);
               });
           } else {
             setOriginalVariants([]);
             setVariantDrafts([]);
+            setOriginalExtras([]);
+            setExtrasDrafts([]);
           }
           context.setCategorySelected({
             Id: response.Category_Id || 0,
@@ -210,6 +239,7 @@ export const EditProduct: React.FC = () => {
       available,
       variantDrafts,
       variantOriginals: originalVariants,
+      extrasDrafts,
     });
   }, [
     productId,
@@ -230,6 +260,7 @@ export const EditProduct: React.FC = () => {
     available,
     variantDrafts,
     originalVariants,
+    extrasDrafts,
     context.setProductFormState,
   ]);
 
@@ -257,6 +288,8 @@ export const EditProduct: React.FC = () => {
     setGalleryImages([]);
     setVariantDrafts([]);
     setOriginalVariants([]);
+    setExtrasDrafts([]);
+    setOriginalExtras([]);
     context.setCategorySelected({ Id: 0, Name: "", Color: "", Business_Id: 0 } as Category);
     context.setProductFormState(null);
   };
@@ -369,6 +402,39 @@ export const EditProduct: React.FC = () => {
           );
           setOriginalVariants(refreshed);
           setVariantDrafts(variantsToDrafts(refreshed, accentColor));
+
+          const existingExtrasById = new Map(
+            originalExtras
+              .filter((item) => typeof item.Id === "number")
+              .map((item) => [item.Id as number, item]),
+          );
+          const draftIds = new Set(
+            extrasDrafts
+              .filter((item) => typeof item.Id === "number")
+              .map((item) => item.Id as number),
+          );
+
+          for (const extra of extrasDrafts) {
+            const payload = {
+              Product_Id: product.Id,
+              Description: extra.Description,
+              Type: extra.Type,
+            } as const;
+
+            if (typeof extra.Id === "number") {
+              await updateExtra(extra.Id, payload, context.user.Token);
+            } else {
+              await insertExtra(payload, context.user.Token);
+            }
+          }
+
+          for (const [extraId] of existingExtrasById) {
+            if (!draftIds.has(extraId)) {
+              await deleteExtra(extraId, context.user.Token);
+            }
+          }
+
+          setOriginalExtras(extrasDrafts);
         } catch (variantError) {
           console.error("Error updating variants:", variantError);
         }
@@ -767,6 +833,8 @@ export const EditProduct: React.FC = () => {
             </div>
           )}
         </div>
+
+        <ExtrasSection extras={extrasDrafts} onChange={setExtrasDrafts} />
       </div>
 
       {/* Footer */}

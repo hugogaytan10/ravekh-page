@@ -36,7 +36,12 @@ export const PrintTicket = (
                 (item) => `
                 <tr>
                   <td>${item.Quantity}</td>
-                  <td>${truncateText(item.Name, 15)}</td>
+                  <td>
+                    ${truncateText(item.Name, 15)}
+                    ${item.SizeDescription || item.ColorDescription
+                      ? `<br/><small>${item.SizeDescription ? `Talla: ${item.SizeDescription}` : ""}${item.SizeDescription && item.ColorDescription ? " · " : ""}${item.ColorDescription ? `Color: ${item.ColorDescription}` : ""}</small>`
+                      : ""}
+                  </td>
                   <td>$${(item.Price * item.Quantity).toFixed(2)}</td>
                 </tr>
               `
