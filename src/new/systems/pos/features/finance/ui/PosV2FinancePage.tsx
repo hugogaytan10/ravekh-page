@@ -167,6 +167,12 @@ export const PosV2FinancePage = () => {
     };
   }, [movement.expenses, movement.income, overview, todayMovement.expenses, todayMovement.income]);
 
+  const burnRateStatus = useMemo(() => {
+    if (derivedOverview.monthBurnRate < 45) return { label: "Saludable", tone: "is-good", description: "Tus egresos están bajo control." };
+    if (derivedOverview.monthBurnRate < 75) return { label: "Atención", tone: "is-warning", description: "Monitorea costos para proteger margen." };
+    return { label: "Crítico", tone: "is-danger", description: "Tus egresos están consumiendo gran parte de ingresos." };
+  }, [derivedOverview.monthBurnRate]);
+
   const refreshData = useCallback(async () => {
     if (!hasSession) {
       setError("No hay sesión activa para cargar finanzas.");
@@ -332,17 +338,30 @@ export const PosV2FinancePage = () => {
         {toast ? <p className={`pos-v2-finance__toast is-${toast.type}`}>{toast.message}</p> : null}
 
         <section className="pos-v2-finance__stats">
-          <article><span>Entradas del mes</span><strong>{moneyFormatter.format(derivedOverview.monthIncome)}</strong></article>
-          <article><span>Salidas del mes</span><strong>{moneyFormatter.format(derivedOverview.monthExpenses)}</strong></article>
-          <article><span>Resultado operativo hoy</span><strong className={derivedOverview.todayNet >= 0 ? "is-income" : "is-expense"}>{derivedOverview.todayNet >= 0 ? "+" : ""}{moneyFormatter.format(derivedOverview.todayNet)}</strong></article>
-          <article><span>Movimientos registrados</span><strong>{financeTimeline.length}</strong></article>
+          {loading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <article key={`finance-stat-skeleton-${index}`} className="is-skeleton" aria-hidden="true"><span /><strong /></article>
+            ))
+          ) : (
+            <>
+              <article><span>Entradas del mes</span><strong>{moneyFormatter.format(derivedOverview.monthIncome)}</strong></article>
+              <article><span>Salidas del mes</span><strong>{moneyFormatter.format(derivedOverview.monthExpenses)}</strong></article>
+              <article><span>Resultado operativo hoy</span><strong className={derivedOverview.todayNet >= 0 ? "is-income" : "is-expense"}>{derivedOverview.todayNet >= 0 ? "+" : ""}{moneyFormatter.format(derivedOverview.todayNet)}</strong></article>
+              <article><span>Movimientos registrados</span><strong>{financeTimeline.length}</strong></article>
+            </>
+          )}
         </section>
 
         <section className="pos-v2-finance__insights">
           <article>
             <h3>Salud mensual</h3>
-            <p>Uso de egresos vs ingresos: <strong>{derivedOverview.monthBurnRate}%</strong></p>
+            <p>Egresos del mes: <strong>{moneyFormatter.format(derivedOverview.monthExpenses)}</strong> de <strong>{moneyFormatter.format(derivedOverview.monthIncome)}</strong> en ingresos.</p>
             <div className="pos-v2-finance__progress" role="presentation" aria-hidden="true"><span style={{ width: `${derivedOverview.monthBurnRate}%` }} /></div>
+            <div className="pos-v2-finance__health-row">
+              <small>Uso: <strong>{derivedOverview.monthBurnRate}%</strong></small>
+              <span className={`pos-v2-finance__health-badge ${burnRateStatus.tone}`}>{burnRateStatus.label}</span>
+            </div>
+            <small>{burnRateStatus.description}</small>
           </article>
           <article>
             <h3>Resultado de hoy</h3>
@@ -378,7 +397,11 @@ export const PosV2FinancePage = () => {
             <input className="pos-v2-finance__search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por concepto" aria-label="Buscar movimientos" />
 
             <ul>
-              {financeTimeline.length === 0 ? <li className="is-empty">Sin movimientos para los filtros seleccionados.</li> : financeTimeline.map((entry) => (
+              {loading ? (
+                Array.from({ length: 4 }).map((_, index) => <li key={`finance-line-skeleton-${index}`} className="is-skeleton" aria-hidden="true"><span /><strong /></li>)
+              ) : null}
+              {!loading && financeTimeline.length === 0 ? <li className="is-empty">Sin movimientos para los filtros seleccionados.</li> : null}
+              {!loading && financeTimeline.map((entry) => (
                 <li key={entry.id}>
                   <div>
                     <strong>{entry.concept || "Sin concepto"}</strong>

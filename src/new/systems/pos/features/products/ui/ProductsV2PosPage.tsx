@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../index";
 import { ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
@@ -108,6 +108,7 @@ export const ProductsV2PosPage = () => {
   const [saving, setSaving] = useState(false);
   const [archivingId, setArchivingId] = useState<number | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
+  const [importing, setImporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
@@ -116,6 +117,7 @@ export const ProductsV2PosPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [archiveDialog, setArchiveDialog] = useState<ArchiveDialogState>(null);
   const [toast, setToast] = useState<ToastState>(null);
+  const [formMessage, setFormMessage] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -130,6 +132,8 @@ export const ProductsV2PosPage = () => {
   const [colorsInput, setColorsInput] = useState("");
   const [storedImages, setStoredImages] = useState<string[]>([]);
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
+  const categoryCarouselRef = useRef<HTMLDivElement | null>(null);
+  const excelInputRef = useRef<HTMLInputElement | null>(null);
 
   const service = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
@@ -156,11 +160,13 @@ export const ProductsV2PosPage = () => {
   const closeFormModal = () => {
     if (saving) return;
     setIsFormOpen(false);
+    setFormMessage(null);
     resetForm();
   };
 
   const openCreateModal = () => {
     resetForm();
+    setFormMessage(null);
     setError(null);
     setIsFormOpen(true);
   };
@@ -355,9 +361,10 @@ export const ProductsV2PosPage = () => {
         extras: [...parseExtrasFromInput(sizesInput, "TALLA"), ...parseExtrasFromInput(colorsInput, "COLOR")],
       };
 
-      await service.saveProduct(payload, token);
+      const saved = await service.saveProduct(payload, token);
+      setEditingId(saved.id);
+      setFormMessage(editingId ? `Cambios guardados correctamente en #${saved.id}.` : `Producto creado con éxito (#${saved.id}).`);
       setToast({ type: "success", message: editingId ? "Producto actualizado correctamente." : "Producto creado correctamente." });
-      closeFormModal();
       await loadProducts();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo guardar producto.");
@@ -456,6 +463,7 @@ export const ProductsV2PosPage = () => {
       );
       setError(null);
       setIsFormOpen(true);
+      setFormMessage(null);
       setToast(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo cargar el producto para edición.");
@@ -510,7 +518,10 @@ export const ProductsV2PosPage = () => {
 
   const saveCategory = async () => {
     if (!token || !businessId) return;
-    if (!categoryNameInput.trim()) return;
+    if (!categoryNameInput.trim()) {
+      setToast({ type: "error", message: "El nombre de categoría es obligatorio." });
+      return;
+    }
 
     try {
       if (editingCategoryId) {
@@ -548,6 +559,34 @@ export const ProductsV2PosPage = () => {
     }
   };
 
+  const scrollCategoryChips = (direction: "left" | "right") => {
+    if (!categoryCarouselRef.current) return;
+    const offset = direction === "left" ? -220 : 220;
+    categoryCarouselRef.current.scrollBy({ left: offset, behavior: "smooth" });
+  };
+
+  const handleImportProducts = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+
+    if (!file) return;
+    if (!token || !businessId) {
+      setToast({ type: "error", message: "Conecta tu sesión para importar productos." });
+      return;
+    }
+
+    setImporting(true);
+    try {
+      const result = await service.importProducts(businessId, file, token);
+      setToast({ type: "success", message: `${result.message} (${result.imported} productos procesados)` });
+      await loadProducts();
+    } catch (cause) {
+      setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo importar el archivo." });
+    } finally {
+      setImporting(false);
+    }
+  };
+
   return (
     <PosV2Shell title="Productos" subtitle="Catálogo moderno para operar tu POS de forma rápida.">
       <section className="pos-v2-products">
@@ -560,10 +599,20 @@ export const ProductsV2PosPage = () => {
           <div className="pos-v2-products__header-actions">
             <button type="button" className="pos-v2-products__secondary" onClick={openCreateModal}>+ Nuevo</button>
             <button type="button" className="pos-v2-products__secondary" onClick={() => setShowCategoryManager(true)}>Categorías</button>
+            <button type="button" className="pos-v2-products__secondary" onClick={() => excelInputRef.current?.click()} disabled={importing || !token || !businessId}>
+              {importing ? "Importando..." : "Importar Excel"}
+            </button>
             <button type="button" className="pos-v2-products__refresh" onClick={loadProducts} disabled={loading || !token || !businessId}>
               {loading ? "Actualizando..." : "Actualizar"}
             </button>
           </div>
+          <input
+            ref={excelInputRef}
+            type="file"
+            accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+            className="pos-v2-products__hidden-input"
+            onChange={handleImportProducts}
+          />
         </header>
 
         {error ? <p className="pos-v2-products__error" role="alert">{error}</p> : null}
@@ -690,19 +739,25 @@ export const ProductsV2PosPage = () => {
                 <fieldset className="pos-v2-products__variants" aria-label="Categoría de producto">
                   <div className="pos-v2-products__variants-head">
                     <h4>Categoría</h4>
+                    <small>Selecciona una opción para clasificar el producto.</small>
                   </div>
-                  <div className="pos-v2-products__chips">
-                    <button type="button" className={selectedCategoryId == null ? "is-active" : ""} onClick={() => setSelectedCategoryId(null)}>Sin categoría</button>
-                    {categories.map((category) => (
-                      <button
-                        key={category.id}
-                        type="button"
-                        className={selectedCategoryId === category.id ? "is-active" : ""}
-                        onClick={() => setSelectedCategoryId(category.id)}
-                      >
-                        {category.name}
-                      </button>
-                    ))}
+                  <div className="pos-v2-products__chips-carousel">
+                    <button type="button" className="is-arrow" onClick={() => scrollCategoryChips("left")} aria-label="Desplazar categorías a la izquierda">←</button>
+                    <div className="pos-v2-products__chips" ref={categoryCarouselRef}>
+                      <button type="button" className={selectedCategoryId == null ? "is-active" : ""} onClick={() => setSelectedCategoryId(null)}>Sin categoría</button>
+                      {categories.map((category) => (
+                        <button
+                          key={category.id}
+                          type="button"
+                          className={selectedCategoryId === category.id ? "is-active" : ""}
+                          onClick={() => setSelectedCategoryId(category.id)}
+                          title={category.name}
+                        >
+                          {category.name}
+                        </button>
+                      ))}
+                    </div>
+                    <button type="button" className="is-arrow" onClick={() => scrollCategoryChips("right")} aria-label="Desplazar categorías a la derecha">→</button>
                   </div>
                 </fieldset>
 
@@ -787,6 +842,7 @@ export const ProductsV2PosPage = () => {
                 </fieldset>
 
                 <div className="pos-v2-products__form-actions is-modal">
+                  {formMessage ? <p className="pos-v2-products__inline-success">{formMessage}</p> : null}
                   <button type="button" className="pos-v2-products__secondary" onClick={closeFormModal}>Cancelar</button>
                   <button type="submit" className="pos-v2-products__primary" disabled={saving}>{saving ? "Guardando..." : editingId ? "Guardar cambios" : "Guardar producto"}</button>
                 </div>
@@ -820,19 +876,30 @@ export const ProductsV2PosPage = () => {
                 <h3>Gestionar categorías</h3>
                 <button type="button" className="pos-v2-products__secondary" onClick={() => setShowCategoryManager(false)} aria-label="Regresar al catálogo">← Regresar</button>
               </header>
+              <p className="pos-v2-products__hint">
+                Completa los campos para crear o editar categorías. El nombre es obligatorio y el color ayuda a reconocerlas rápidamente.
+              </p>
+              {editingCategoryId ? <p className="pos-v2-products__inline-success">Editando categoría #{editingCategoryId}. Guarda cambios o cancela edición.</p> : null}
 
               <div className="pos-v2-products__field-grid">
                 <label>
-                  Nombre categoría
-                  <input value={categoryNameInput} onChange={(event) => setCategoryNameInput(event.target.value)} placeholder="Ej. Bebidas" />
+                  Nombre categoría <span aria-hidden="true">*</span>
+                  <input value={categoryNameInput} onChange={(event) => setCategoryNameInput(event.target.value)} placeholder="Ej. Bebidas frías" required />
                 </label>
                 <label>
                   Color
-                  <input type="color" value={categoryColorInput} onChange={(event) => setCategoryColorInput(event.target.value)} />
+                  <div className="pos-v2-products__color-picker-wrap">
+                    <input type="color" value={categoryColorInput} onChange={(event) => setCategoryColorInput(event.target.value)} />
+                    <small>{categoryColorInput.toUpperCase()}</small>
+                  </div>
                 </label>
               </div>
+              <div className="pos-v2-products__category-preview" aria-live="polite">
+                <span className="pos-v2-products__category-dot" style={{ backgroundColor: categoryColorInput }} aria-hidden="true" />
+                <strong>{categoryNameInput.trim() || "Vista previa de categoría"}</strong>
+              </div>
               <div className="pos-v2-products__form-actions">
-                <button type="button" className="pos-v2-products__secondary" onClick={resetCategoryForm}>Limpiar</button>
+                <button type="button" className="pos-v2-products__secondary" onClick={resetCategoryForm}>{editingCategoryId ? "Cancelar edición" : "Limpiar"}</button>
                 <button type="button" className="pos-v2-products__primary" onClick={saveCategory}>{editingCategoryId ? "Guardar cambios" : "Crear categoría"}</button>
               </div>
 

@@ -53,6 +53,50 @@ export const MODULE_BETA_ACTIONS: Record<string, ModuleBetaAction> = {
     requiresBusinessId: true,
     run: ({ businessId, token }, factory) => factory.createPosOnlineOrderPage().loadPendingOrders(businessId, token),
   },
+  "catalog-settings": {
+    requiresBusinessId: true,
+    run: ({ businessId, token }, factory) => factory.createCatalogPage().loadPublishedProducts(businessId, token),
+  },
+  roles: {
+    requiresBusinessId: true,
+    run: async ({ businessId }) => ({
+      businessId,
+      status: "pending-integration",
+      message: "Roles y permisos preparados en v2, falta endpoint de permisos granulares.",
+    }),
+  },
+  printers: {
+    requiresBusinessId: true,
+    run: async ({ businessId }) => ({
+      businessId,
+      status: "pending-integration",
+      message: "Vista de impresoras habilitada en beta; esperando integración de dispositivos.",
+    }),
+  },
+  support: {
+    requiresBusinessId: true,
+    run: async ({ businessId }) => ({
+      businessId,
+      status: "pending-integration",
+      message: "Centro de ayuda v2 activo con datos de demostración.",
+    }),
+  },
+  branches: {
+    requiresBusinessId: true,
+    run: async ({ businessId }) => ({
+      businessId,
+      status: "pending-integration",
+      message: "Gestión multi-sucursal lista para endpoint de sucursales reales.",
+    }),
+  },
+  "delete-account": {
+    requiresBusinessId: true,
+    run: async ({ businessId }) => ({
+      businessId,
+      status: "protected",
+      message: "El módulo está bloqueado hasta completar validaciones legales de eliminación.",
+    }),
+  },
   loyalty: {
     requiresBusinessId: true,
     run: async () => ({ message: "Módulo loyalty en transición. Próximo paso: conectar RewardsManagementPage UI." }),

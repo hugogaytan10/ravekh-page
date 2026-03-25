@@ -3,6 +3,7 @@ import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import MoreIcon from "../../../../../../assets/POS/MoreIcon";
 import { Basket } from "../../../../../../assets/POS/Basket";
 import MoneyIcon from "../../../../../../assets/POS/MoneyIcon";
+import { Trash } from "../../../../../../assets/POS/Trash";
 import { FiCreditCard, FiDollarSign, FiRepeat } from "react-icons/fi";
 import { jwtDecode } from "jwt-decode";
 import "./PosV2SalesHomePage.css";
@@ -553,6 +554,11 @@ export const PosV2SalesHomePage = () => {
           <h2>Mesa · {selectedTable}</h2>
 
           <div className={`pos-v2-sales-home__cart-content ${mobileStep === "cart" ? "is-mobile-active" : ""}`}>
+            <div className="pos-v2-sales-home__cart-mobile-actions">
+              <button type="button" className="pos-v2-sales-home__back" onClick={() => setMobileStep("catalog")}>
+                Regresar al catálogo
+              </button>
+            </div>
             {cartItems.length === 0 ? <p className="pos-v2-sales-home__empty">No hay productos agregados.</p> : null}
 
             {cartItems.length > 0 ? (
@@ -564,7 +570,9 @@ export const PosV2SalesHomePage = () => {
                       <small>${item.price.toFixed(2)}</small>
                     </div>
                     <div className="pos-v2-sales-home__qty-controls">
-                      <button type="button" onClick={() => updateQuantity(item.id, -1)}>-1</button>
+                      <button type="button" className="is-danger" onClick={() => setQuantity(item.id, 0)} aria-label={`Eliminar ${item.name} del carrito`}>
+                        <Trash width={14} height={14} fill="#b91c1c" />
+                      </button>
                       <input
                         type="number"
                         min="0"
@@ -643,10 +651,10 @@ export const PosV2SalesHomePage = () => {
             <label>
               Mesa
               <select value={selectedTable} onChange={(event) => setSelectedTable(event.target.value)} disabled={loadingTables}>
-                <option value="">Mesa Uno</option>
+                <option value="" disabled>Selecciona mesa</option>
 
                 {
-                  tables.length === 0 && !tablesError &&
+                  tables.length > 0 &&
                   tables.map((table) => (
                     <option key={table} value={table}>{table}</option>
                   ))}
@@ -658,7 +666,7 @@ export const PosV2SalesHomePage = () => {
               <select value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)}>
                 <option value="">Venta general</option>
                 {
-                  customers.length === 0 &&
+                  customers.length > 0 &&
                   customers.map((customer) => (
                     <option key={customer.id} value={customer.id}>{customer.name}</option>
                   ))}

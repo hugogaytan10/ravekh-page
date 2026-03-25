@@ -11,4 +11,5 @@ export interface IProductsRepository {
   createCategory(category: ProductCategory, token: string): Promise<ProductCategory>;
   updateCategory(category: ProductCategory, token: string): Promise<ProductCategory>;
   deleteCategory(categoryId: number, token: string): Promise<void>;
+  importProducts(businessId: number, file: File, token: string): Promise<{ imported: number; message: string }>;
 }

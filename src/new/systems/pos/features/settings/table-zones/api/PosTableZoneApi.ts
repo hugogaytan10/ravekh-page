@@ -3,10 +3,15 @@ import { ITableZoneRepository } from "../interface/ITableZoneRepository";
 import { TableZone, UpsertTableZoneDto } from "../model/TableZone";
 
 type TableZoneResponse = {
-  Id: number;
-  Business_Id: number;
-  Name: string;
-  Active: boolean | number | null;
+  Id?: number;
+  id?: number;
+  Business_Id?: number;
+  business_Id?: number;
+  businessId?: number;
+  Name?: string;
+  name?: string;
+  Active?: boolean | number | string | null;
+  active?: boolean | number | string | null;
 };
 
 export class PosTableZoneApi implements ITableZoneRepository {
@@ -66,10 +71,15 @@ export class PosTableZoneApi implements ITableZoneRepository {
   }
 
   private toDomain(response: TableZoneResponse): TableZone {
-    return new TableZone(response.Id, response.Business_Id, response.Name, this.toBoolean(response.Active));
+    return new TableZone(
+      response.Id ?? response.id ?? 0,
+      response.Business_Id ?? response.business_Id ?? response.businessId ?? 0,
+      response.Name ?? response.name ?? "",
+      this.toBoolean(response.Active ?? response.active),
+    );
   }
 
-  private toBoolean(value: boolean | number | null): boolean {
-    return value === true || value === 1;
+  private toBoolean(value: boolean | number | string | null | undefined): boolean {
+    return value === true || value === 1 || value === "1" || value === "true";
   }
 }

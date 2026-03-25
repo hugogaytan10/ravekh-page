@@ -35,4 +35,8 @@ export class ProductsService {
   async deleteCategory(categoryId: number, token: string): Promise<void> {
     return this.repository.deleteCategory(categoryId, token);
   }
+
+  async importProducts(businessId: number, file: File, token: string): Promise<{ imported: number; message: string }> {
+    return this.repository.importProducts(businessId, file, token);
+  }
 }

@@ -37,7 +37,9 @@ export const PosV2MorePage = () => {
 
   const modulePage = useMemo(() => new MoreModulePage(new MoreModuleService(API_BASE_URL)), []);
   const allItems = useMemo(() => MORE_MODULE_SECTIONS.flatMap((section) => section.items), []);
-  const workingItems = useMemo(() => allItems.filter((item) => item.status === "available"), [allItems]);
+  const isReadyModule = (item: MoreModuleLink): boolean =>
+    item.status === "available" || (item.actionType === "beta-action" && modulePage.supportsInlineExecution(item.id));
+  const workingItems = useMemo(() => allItems.filter((item) => isReadyModule(item)), [allItems]);
   const developmentItems = useMemo(() => allItems.filter((item) => item.status !== "available"), [allItems]);
   const favoriteItems = allItems
     .filter((item) => favorites.includes(item.id))
@@ -47,15 +49,15 @@ export const PosV2MorePage = () => {
   const catalogLink = businessId > 0 ? `https://ravekh.com/catalogo/${businessId}` : "https://ravekh.com/catalogo";
 
   const filteredSections = useMemo(() => {
-    const shouldIncludeItem = (status: MoreModuleStatus): boolean => {
-      if (viewMode === "working") return status === "available";
-      if (statusFilter === "all") return status !== "available";
-      return status === statusFilter;
+    const shouldIncludeItem = (item: MoreModuleLink): boolean => {
+      if (viewMode === "working") return isReadyModule(item);
+      if (statusFilter === "all") return item.status !== "available";
+      return item.status === statusFilter;
     };
 
     return MORE_MODULE_SECTIONS.map((section) => {
       const items = section.items.filter((item) => {
-        const matchesStatus = shouldIncludeItem(item.status);
+        const matchesStatus = shouldIncludeItem(item);
         const matchesQuery = normalizedQuery.length === 0
           ? true
           : `${item.title} ${item.description}`.toLowerCase().includes(normalizedQuery);
@@ -65,7 +67,7 @@ export const PosV2MorePage = () => {
 
       return { ...section, items };
     }).filter((section) => section.items.length > 0);
-  }, [normalizedQuery, statusFilter, viewMode]);
+  }, [normalizedQuery, statusFilter, viewMode, modulePage]);
 
   useEffect(() => {
     window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
@@ -240,12 +242,11 @@ export const PosV2MorePage = () => {
             <p>Acciones operativas que sí usamos en el día a día.</p>
           </div>
           <div className="pos-v2-more__quick-tools-grid">
-            <button type="button" onClick={() => navigate("/v2/online-store")}>Tienda en línea</button>
-            <button type="button" onClick={() => navigate("/v2/customers")}>Clientes</button>
-            <button type="button" onClick={() => navigate("/v2/employees")}>Empleados</button>
-            <button type="button" onClick={() => navigate("/v2/more/preview/sales-tax")}>Impuestos</button>
-            <button type="button" onClick={() => navigate("/v2/more/preview/exports")}>Exportar reportes</button>
-            <button type="button" onClick={() => navigate("/v2/more/preview/cash-closing")}>Corte de caja</button>
+            {allItems
+              .filter((item) => ["online-store", "customers", "employees", "sales-tax", "exports", "cash-closing"].includes(item.id))
+              .map((item) => (
+                <button key={item.id} type="button" onClick={() => openModule(item)}>{item.title}</button>
+              ))}
             <button type="button" onClick={() => window.open(catalogLink, "_blank", "noopener,noreferrer")}>Abrir catálogo público</button>
           </div>
           <div className="pos-v2-more__catalog-copy">

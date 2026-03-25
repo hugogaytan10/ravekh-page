@@ -14,9 +14,8 @@ export class FetchHttpClient implements HttpClient {
       });
     }
 
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
+    const isFormData = request.body instanceof FormData;
+    const headers: Record<string, string> = isFormData ? {} : { "Content-Type": "application/json" };
 
     if (request.token) {
       headers.Authorization = `Bearer ${request.token}`;
@@ -26,7 +25,7 @@ export class FetchHttpClient implements HttpClient {
     const response = await fetch(url.toString(), {
       method: request.method,
       headers,
-      body: request.body ? JSON.stringify(request.body) : undefined,
+      body: request.body ? (isFormData ? request.body : JSON.stringify(request.body)) : undefined,
     });
 
     const responseData = (await response.json().catch(() => null)) as TResponse | { message?: string } | null;

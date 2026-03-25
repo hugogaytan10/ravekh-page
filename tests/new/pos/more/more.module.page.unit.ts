@@ -7,7 +7,7 @@ export async function run(): Promise<void> {
   const page = new MoreModulePage(service);
 
   assert.equal(page.supportsInlineExecution("business"), true);
-  assert.equal(page.supportsInlineExecution("catalog-settings"), false);
+  assert.equal(page.supportsInlineExecution("catalog-settings"), true);
 
   let failed = false;
   try {

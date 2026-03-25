@@ -153,16 +153,28 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   async create(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct> {
-    const response = await this.httpClient.request<ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null>({
-      method: "POST",
-      path: "products",
-      token,
-      body: {
-        Product: this.toLegacy(payload),
-        Variants: payload.variants?.length ? payload.variants.map((variant) => this.toLegacyVariant(variant)) : null,
-        Extras: payload.extras?.length ? payload.extras.map((extra) => this.toLegacyCreateExtra(extra)) : null,
-      },
-    });
+    let response: ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null;
+    try {
+      response = await this.httpClient.request<ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null>({
+        method: "POST",
+        path: "products",
+        token,
+        body: this.toMutationBody(payload, true),
+      });
+    } catch (cause) {
+      if (!payload.extras?.length) throw cause;
+      response = await this.httpClient.request<ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null>({
+        method: "POST",
+        path: "products",
+        token,
+        body: this.toMutationBody(payload, false),
+      });
+      const created = this.extractCreatedProduct(response);
+      const productId = created?.Id ?? created?.id;
+      if (productId) {
+        await this.persistExtras(productId, payload.extras, token);
+      }
+    }
 
     const created = this.extractCreatedProduct(response);
     if (created) {
@@ -202,27 +214,26 @@ export class PosProductsApi implements IProductsRepository {
       throw new Error("Product id is required for updates.");
     }
 
-    const updated = await this.httpClient.request<ProductResponse | null>({
-      method: "PUT",
-      path: `products/${payload.id}`,
-      token,
-      body: {
-        Product: this.toLegacy(payload),
-        Variants: payload.variants?.length ? payload.variants.map((variant) => this.toLegacyVariant(variant)) : null,
-      },
-    });
+    let updated: ProductResponse | null;
+    try {
+      updated = await this.httpClient.request<ProductResponse | null>({
+        method: "PUT",
+        path: `products/${payload.id}`,
+        token,
+        body: this.toLegacy(payload),
+      });
+    } catch (cause) {
+      if (!payload.extras?.length && !(payload.variants?.length)) throw cause;
+      updated = await this.httpClient.request<ProductResponse | null>({
+        method: "PUT",
+        path: `products/${payload.id}`,
+        token,
+        body: this.toMutationBody(payload, true),
+      });
+    }
 
     if (payload.extras?.length) {
-      await Promise.all(
-        payload.extras
-          .filter((extra) => extra.description.trim().length > 0)
-          .map((extra) => this.httpClient.request<void>({
-            method: "POST",
-            path: "extras",
-            token,
-            body: this.toLegacyPersistedExtra(payload.id as number, extra),
-          })),
-      );
+      await this.persistExtras(payload.id, payload.extras, token);
     }
 
     if (!updated) {
@@ -294,6 +305,27 @@ export class PosProductsApi implements IProductsRepository {
       token,
       body: { Available: false },
     });
+  }
+
+  async importProducts(businessId: number, file: File, token: string): Promise<{ imported: number; message: string }> {
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await this.httpClient.request<{ imported?: number; message?: string; total?: number; created?: number; updated?: number }>({
+      method: "POST",
+      path: `products/import/${businessId}`,
+      token,
+      body: formData,
+    });
+
+    const imported = Number(response?.imported ?? response?.total ?? 0);
+    const created = Number(response?.created ?? 0);
+    const updated = Number(response?.updated ?? 0);
+
+    return {
+      imported: Number.isFinite(imported) && imported > 0 ? imported : Math.max(created + updated, 0),
+      message: response?.message ?? "Importación completada.",
+    };
   }
 
   private toDomain(product: ProductResponse, extras: ProductExtra[] = []): ManagedProduct {
@@ -418,12 +450,35 @@ export class PosProductsApi implements IProductsRepository {
     };
   }
 
-  private toLegacyPersistedExtra(productId: number, extra: ProductExtra): { Product_Id: number; Description: string; Type: string } {
+  private toMutationBody(
+    payload: SaveManagedProductDto,
+    includeExtras: boolean,
+  ): { Product: ProductResponse; Variants: LegacyVariantResponse[] | null; Extras?: Array<{ Description: string; Type: string }> | null } {
+    const normalizedExtras = (payload.extras ?? [])
+      .map((extra) => ({ description: extra.description.trim(), type: String(extra.type || "").trim() || "COLOR" }))
+      .filter((extra) => extra.description.length > 0);
+
     return {
-      Product_Id: productId,
-      Description: extra.description.trim(),
-      Type: extra.type,
+      Product: this.toLegacy(payload),
+      Variants: payload.variants?.length ? payload.variants.map((variant) => this.toLegacyVariant(variant)) : null,
+      ...(includeExtras ? { Extras: normalizedExtras.length ? normalizedExtras.map((extra) => this.toLegacyCreateExtra(extra)) : null } : {}),
     };
+  }
+
+  private async persistExtras(productId: number, extras: ProductExtra[], token: string): Promise<void> {
+    const normalizedExtras = extras
+      .map((extra) => ({ description: extra.description.trim(), type: String(extra.type || "").trim() || "COLOR" }))
+      .filter((extra) => extra.description.length > 0);
+    if (normalizedExtras.length === 0) return;
+
+    await Promise.all(
+      normalizedExtras.map((extra) => this.httpClient.request<void>({
+        method: "POST",
+        path: "extras",
+        token,
+        body: { Product_Id: productId, Description: extra.description, Type: extra.type },
+      })),
+    );
   }
 
   private extractCreatedProduct(response: ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null): ProductResponse | null {

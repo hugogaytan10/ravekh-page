@@ -16,6 +16,7 @@ export async function run(): Promise<void> {
     createCategory: async () => ({ id: 1, businessId: 10, parentId: null, name: "General", color: "#111" }),
     updateCategory: async () => ({ id: 1, businessId: 10, parentId: null, name: "General", color: "#222" }),
     deleteCategory: async () => undefined,
+    importProducts: async () => ({ imported: 3, message: "Importación OK" }),
   };
 
   const createService = new ProductsService(createRepo);
@@ -74,4 +75,7 @@ export async function run(): Promise<void> {
   const categoryService = new ProductsService(createRepo);
   const category = await categoryService.createCategory({ businessId: 10, name: "General", color: "#111" }, "token");
   assert.equal(category.name, "General");
+
+  const importResult = await categoryService.importProducts(10, new File(["csv"], "products.csv", { type: "text/csv" }), "token");
+  assert.equal(importResult.imported, 3);
 }

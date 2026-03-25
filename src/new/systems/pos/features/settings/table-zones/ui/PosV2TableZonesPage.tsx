@@ -92,6 +92,12 @@ export const PosV2TableZonesPage = () => {
 
     try {
       await page.upsertTableZone(cleanToken, { businessId, name: safeName, isActive: true }, tableZoneId ?? undefined);
+      setZones((current) => {
+        if (tableZoneId) {
+          return current.map((zone) => (zone.id === tableZoneId ? { ...zone, name: safeName, isActive: true } : zone));
+        }
+        return [{ id: Date.now(), name: safeName, isActive: true }, ...current];
+      });
       setName("");
       setTableZoneId(null);
       setSuccessMessage(tableZoneId ? "Mesa actualizada correctamente." : "Mesa creada correctamente.");
@@ -132,7 +138,13 @@ export const PosV2TableZonesPage = () => {
             <h2>Mesas y zonas</h2>
             <p>Crea, edita y consulta mesas para pedidos en salón con arquitectura moderna.</p>
           </div>
+          <button type="button" onClick={loadZones} disabled={loading || !hasSession}>
+            {loading ? "Actualizando..." : "Actualizar listado"}
+          </button>
         </header>
+
+        {error ? <p className="pos-v2-table-zones__error">{error}</p> : null}
+        {successMessage ? <p className="pos-v2-table-zones__success">{successMessage}</p> : null}
 
         <section className="pos-v2-table-zones__controls">
           <article>
@@ -145,6 +157,7 @@ export const PosV2TableZonesPage = () => {
 
           <form onSubmit={handleSubmit}>
             <h3>{tableZoneId ? "Editar mesa" : "Nueva mesa"}</h3>
+            {tableZoneId ? <p className="pos-v2-table-zones__success">Estás editando la mesa ID {tableZoneId}. Cambia nombre y guarda.</p> : null}
             <label>
               Nombre
               <input
@@ -154,6 +167,7 @@ export const PosV2TableZonesPage = () => {
                 maxLength={50}
               />
             </label>
+            {tableZoneId ? <button type="button" className="is-secondary" onClick={() => { setTableZoneId(null); setName(""); }}>Cancelar edición</button> : null}
             <button type="submit" disabled={saving || !hasSession}>{saving ? "Guardando..." : tableZoneId ? "Guardar cambios" : "Crear mesa"}</button>
           </form>
         </section>

@@ -19,7 +19,7 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
     items: [
       { id: "tables", title: "Mesas y zonas", description: "Gestión de mesas para consumo en salón.", path: "/v2/settings/table-zones", status: "available", actionType: "route" },
       { id: "business", title: "Información del negocio", description: "Datos fiscales/comerciales del negocio.", path: previewPath("business"), status: "beta", actionType: "beta-action" },
-      { id: "catalog-settings", title: "Configuración catálogo", description: "Preferencias de publicación del catálogo.", path: previewPath("catalog-settings"), status: "preview", actionType: "route" },
+      { id: "catalog-settings", title: "Configuración catálogo", description: "Preferencias de publicación del catálogo.", path: previewPath("catalog-settings"), status: "beta", actionType: "beta-action" },
       { id: "sales-tax", title: "Impuesto de venta", description: "Ajustes de impuestos aplicados en ventas.", path: previewPath("sales-tax"), status: "beta", actionType: "beta-action" },
       { id: "payment-methods", title: "Métodos de pago", description: "Configura efectivo, tarjeta y pagos en línea.", path: previewPath("payment-methods"), status: "beta", actionType: "beta-action" },
       { id: "branding", title: "Color de app", description: "Branding de colores para el POS.", path: previewPath("branding"), status: "beta", actionType: "beta-action" },
@@ -39,9 +39,9 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
       { id: "health", title: "Salud de API", description: "Verifica conectividad y disponibilidad backend.", path: "/v2/health", status: "available", actionType: "route" },
       { id: "online-store", title: "Tienda en línea", description: "Gestión de pedidos del canal online.", path: "/v2/online-store", status: "available", actionType: "route" },
       { id: "loyalty", title: "Cupones y visitas", description: "Herramientas de fidelización y recompensas.", path: previewPath("loyalty"), status: "beta", actionType: "beta-action" },
-      { id: "support", title: "Ayuda", description: "Centro de ayuda y soporte para el negocio.", path: previewPath("support"), status: "preview", actionType: "route" },
+      { id: "support", title: "Ayuda", description: "Centro de ayuda y soporte para el negocio.", path: previewPath("support"), status: "available", actionType: "route" },
       { id: "branches", title: "Sucursales", description: "Administra múltiples sucursales y su operación.", path: previewPath("branches"), status: "preview", actionType: "route" },
-      { id: "delete-account", title: "Borrar cuenta", description: "Proceso de cierre de sesión/seguridad.", path: previewPath("delete-account"), status: "preview", actionType: "route" },
+      { id: "delete-account", title: "Borrar cuenta", description: "Proceso de cierre de sesión/seguridad.", path: previewPath("delete-account"), status: "available", actionType: "route" },
     ],
   },
 ];

@@ -98,6 +98,29 @@
 .pos-v2-finance__stats span { font-size: 0.8rem; color: #6b7280; }
 .pos-v2-finance__stats strong { font-size: 1.05rem; color: #111827; }
 
+.pos-v2-finance__stats article.is-skeleton span,
+.pos-v2-finance__stats article.is-skeleton strong,
+.pos-v2-finance__timeline li.is-skeleton span,
+.pos-v2-finance__timeline li.is-skeleton strong {
+  display: block;
+  border-radius: 9999px;
+  background: linear-gradient(90deg, #f1f5f9 20%, #e2e8f0 45%, #f1f5f9 70%);
+  background-size: 200% 100%;
+  animation: pos-v2-finance-skeleton 1.2s linear infinite;
+}
+
+.pos-v2-finance__stats article.is-skeleton span,
+.pos-v2-finance__timeline li.is-skeleton span {
+  width: 62%;
+  min-height: 12px;
+}
+
+.pos-v2-finance__stats article.is-skeleton strong,
+.pos-v2-finance__timeline li.is-skeleton strong {
+  width: 45%;
+  min-height: 18px;
+}
+
 .pos-v2-finance__insights {
   display: grid;
   gap: 0.65rem;
@@ -106,6 +129,35 @@
 .pos-v2-finance__insights h3 { margin: 0; font-size: 0.95rem; }
 .pos-v2-finance__insights p { margin: 0; color: #334155; }
 .pos-v2-finance__insights small { color: #64748b; }
+.pos-v2-finance__health-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.pos-v2-finance__health-badge {
+  border-radius: 9999px;
+  padding: 0.2rem 0.55rem;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.pos-v2-finance__health-badge.is-good {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.pos-v2-finance__health-badge.is-warning {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.pos-v2-finance__health-badge.is-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
 
 .pos-v2-finance__progress {
   background: #ede9fe;
@@ -216,6 +268,12 @@
 .pos-v2-finance__timeline .is-expense { color: #b91c1c; }
 
 .pos-v2-finance__timeline li.is-empty { justify-content: center; color: #64748b; }
+.pos-v2-finance__timeline li.is-skeleton { justify-content: space-between; }
+
+@keyframes pos-v2-finance-skeleton {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
 
 .pos-v2-finance__desktop-form {
   display: none;

@@ -532,8 +532,17 @@ export const PosV2ReportingPage = () => {
         </section>
 
         <section className="pos-v2-reporting__content">
+          {loading ? (
+            Array.from({ length: 4 }).map((_, index) => (
+              <article key={`reporting-skeleton-${index}`} className="pos-v2-reporting__card is-loading" aria-hidden="true">
+                <div className="pos-v2-reporting__card-skeleton-title" />
+                <div className="pos-v2-reporting__card-skeleton-line" />
+                <div className="pos-v2-reporting__card-skeleton-line short" />
+              </article>
+            ))
+          ) : null}
 
-          <article className="pos-v2-reporting__card">
+          {!loading ? <article className="pos-v2-reporting__card">
             <h3>Mix de cobro</h3>
             {(derivedKpis.cashRatio > 0 || derivedKpis.cardRatio > 0) ? (
               <div className="pos-v2-reporting__doughnut">
@@ -548,21 +557,21 @@ export const PosV2ReportingPage = () => {
             </div>
             <p>Efectivo: <strong>{derivedKpis.cashRatio}%</strong></p>
             <p>Tarjeta: <strong>{derivedKpis.cardRatio}%</strong></p>
-          </article>
+          </article> : null}
 
-          <article className="pos-v2-reporting__card">
+          {!loading ? <article className="pos-v2-reporting__card">
             <h3>Rentabilidad</h3>
             <p>Margen bruto: <strong>{derivedKpis.margin}%</strong></p>
-          </article>
+          </article> : null}
 
-          <article className="pos-v2-reporting__card">
+          {!loading ? <article className="pos-v2-reporting__card">
             <h3>Top desempeño</h3>
             <p>Producto más vendido: <strong>{summary.bestSeller}</strong></p>
             <p>Categoría líder: <strong>{summary.bestCategory || "Sin datos"}</strong></p>
             <p>Nuevos clientes hoy: <strong>{newCustomersToday}</strong></p>
-          </article>
+          </article> : null}
 
-          <article className="pos-v2-reporting__card">
+          {!loading ? <article className="pos-v2-reporting__card">
             <h3>Resumen comercial</h3>
             {hasOverviewValues ? (
               <div className="pos-v2-reporting__doughnut">
@@ -573,7 +582,7 @@ export const PosV2ReportingPage = () => {
             )}
             <p>Ingresos: <strong>{moneyFormatter.format(summary.income)}</strong></p>
             <p>Ganancia: <strong>{moneyFormatter.format(summary.earnings)}</strong></p>
-          </article>
+          </article> : null}
 
           <article className="pos-v2-reporting__card">
             <header>

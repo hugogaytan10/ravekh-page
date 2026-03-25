@@ -8,6 +8,7 @@ export async function run(): Promise<void> {
   let createBody: unknown;
   let updateBody: unknown;
   const extraBodies: unknown[] = [];
+  let importBody: unknown;
   let createCategoryBody: unknown;
   let updateCategoryBody: unknown;
 
@@ -45,6 +46,11 @@ export async function run(): Promise<void> {
 
       if (method === "PUT" && path === "products/available/8") {
         return undefined;
+      }
+
+      if (method === "POST" && path === "products/import/7") {
+        importBody = body;
+        return { imported: 4, message: "Importación OK" };
       }
 
       if (method === "GET" && path === "categories/business/7") {
@@ -119,6 +125,7 @@ export async function run(): Promise<void> {
   await page.archiveProduct(8, "token");
 
   const categories = await page.loadCategories(7, "token");
+  const importResult = await page.importProducts(7, new File(["id,name\n1,Café"], "productos.csv", { type: "text/csv" }), "token");
   const createdCategory = await page.createCategory({ businessId: 7, name: "Pan", color: "#222" }, "token");
   const updatedCategory = await page.updateCategory({ id: 2, businessId: 7, name: "Pan dulce", color: "#333" }, "token");
   await page.deleteCategory(2, "token");
@@ -158,45 +165,27 @@ export async function run(): Promise<void> {
   });
 
   assert.deepEqual(updateBody, {
-    Product: {
-      Id: 9,
-      Business_Id: 7,
-      Category_Id: undefined,
-      Name: "Té chai",
-      Description: "Bebida caliente",
-      Color: null,
-      ForSale: true,
-      ShowInStore: true,
-      Available: true,
-      Image: undefined,
-      Images: [],
-      Barcode: undefined,
-      Price: undefined,
-      PromotionPrice: null,
-      CostPerItem: undefined,
-      Stock: undefined,
-      ExpDate: null,
-      MinStock: null,
-      OptStock: null,
-      Quantity: null,
-      Volume: false,
-    },
-    Variants: [
-      {
-        Id: undefined,
-        Product_Id: undefined,
-        Description: "Grande",
-        Barcode: null,
-        Color: null,
-        Price: 42,
-        PromotionPrice: null,
-        CostPerItem: null,
-        Stock: null,
-        ExpDate: null,
-        MinStock: null,
-        OptStock: null,
-      },
-    ],
+    Id: 9,
+    Business_Id: 7,
+    Category_Id: undefined,
+    Name: "Té chai",
+    Description: "Bebida caliente",
+    Color: null,
+    ForSale: true,
+    ShowInStore: true,
+    Available: true,
+    Image: undefined,
+    Images: [],
+    Barcode: undefined,
+    Price: undefined,
+    PromotionPrice: null,
+    CostPerItem: undefined,
+    Stock: undefined,
+    ExpDate: null,
+    MinStock: null,
+    OptStock: null,
+    Quantity: null,
+    Volume: false,
   });
 
   assert.deepEqual(extraBodies, [
@@ -205,6 +194,9 @@ export async function run(): Promise<void> {
   ]);
 
   assert.deepEqual(categories, [{ id: 1, name: "Bebidas", color: "#111" }]);
+  assert.equal(importResult.imported, 4);
+  assert.equal(importResult.message, "Importación OK");
+  assert.equal(importBody instanceof FormData, true);
   assert.deepEqual(createdCategory, { id: 2, name: "Pan", color: "#222" });
   assert.deepEqual(updatedCategory, { id: 2, name: "Pan dulce", color: "#333" });
 
@@ -232,6 +224,7 @@ export async function run(): Promise<void> {
     "POST extras",
     "PUT products/available/8",
     "GET categories/business/7",
+    "POST products/import/7",
     "POST categories",
     "PUT categories/2",
     "DELETE categories/2",

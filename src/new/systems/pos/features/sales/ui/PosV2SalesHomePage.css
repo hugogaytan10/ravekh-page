@@ -334,6 +334,13 @@
   padding: 0 0.35rem;
 }
 
+.pos-v2-sales-home__qty-controls button.is-danger {
+  background: #fef2f2;
+  border-color: #fecaca;
+  min-width: 34px;
+  padding: 0;
+}
+
 .pos-v2-sales-home__qty-controls input {
   width: 64px;
   height: 30px;
@@ -352,6 +359,7 @@
 .pos-v2-sales-home__checkout-content {
   display: grid;
   gap: 0.7rem;
+  padding-bottom: 0.35rem;
 }
 
 .pos-v2-sales-home__checkout h3 {
@@ -405,6 +413,10 @@
 .pos-v2-sales-home__checkout-actions {
   display: grid;
   gap: 0.55rem;
+}
+
+.pos-v2-sales-home__cart-mobile-actions {
+  display: none;
 }
 
 .pos-v2-sales-home__continue,
@@ -489,7 +501,7 @@
   position: fixed;
   left: 50%;
   transform: translateX(-50%);
-  bottom: 7.6rem;
+  bottom: calc(8rem + env(safe-area-inset-bottom, 0px));
   width: min(94vw, 460px);
   border: none;
   border-radius: 14px;
@@ -559,7 +571,7 @@
   position: fixed;
   left: 0;
   right: 0;
-  bottom: 4.05rem;
+  bottom: calc(4.05rem + env(safe-area-inset-bottom, 0px));
   z-index: 45;
   display: flex;
   gap: 0.45rem;
@@ -724,7 +736,7 @@
 
 @media (max-width: 1023px) {
   .pos-v2-sales-home {
-    padding-bottom: 4.9rem;
+    padding-bottom: 11rem;
   }
 
   .pos-v2-sales-home__catalog,
@@ -745,6 +757,14 @@
   .pos-v2-sales-home__cart-content.is-mobile-active,
   .pos-v2-sales-home__checkout-content.is-mobile-active {
     display: grid;
+  }
+
+  .pos-v2-sales-home__cart-panel {
+    padding-bottom: 1.15rem;
+  }
+
+  .pos-v2-sales-home__cart-mobile-actions {
+    display: block;
   }
 
   .pos-v2-sales-home__search {
@@ -962,6 +982,11 @@
     background: #1f2937;
     color: #f9fafb;
     border-color: #4b5563;
+  }
+
+  .pos-v2-sales-home__qty-controls button.is-danger {
+    background: #3b1111;
+    border-color: #7f1d1d;
   }
 
   .pos-v2-sales-home__qty-controls input {
