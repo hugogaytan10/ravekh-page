@@ -138,6 +138,18 @@ export const AddProduct: React.FC = () => {
     setVariantDrafts((prev) => syncDraftColors(prev, colorSelected));
   }, [colorSelected]);
 
+  useEffect(() => {
+    const extrasBlocks = Array.from(
+      document.querySelectorAll<HTMLElement>("[data-add-product-extras='true']"),
+    );
+    if (extrasBlocks.length <= 1) {
+      return;
+    }
+    extrasBlocks.slice(0, -1).forEach((block) => {
+      block.style.display = "none";
+    });
+  });
+
   const resetFormState = () => {
     formLoadedRef.current = false;
     setProductName("");
@@ -696,7 +708,6 @@ export const AddProduct: React.FC = () => {
           )}
         </div>
 
-        <ExtrasSection extras={extrasDrafts} onChange={setExtrasDrafts} />
       </div>
 
       {/* Footer */}
