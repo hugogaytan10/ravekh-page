@@ -111,6 +111,28 @@ const valueToString = (value?: string | number | null): string => {
   return value ?? '';
 };
 
+const toDateInputValue = (value?: string | number | null): string => {
+  const normalized = valueToString(value).trim();
+  if (!normalized) {
+    return '';
+  }
+
+  const plainDateMatch = normalized.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (plainDateMatch) {
+    return plainDateMatch[1];
+  }
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return normalized;
+  }
+
+  const year = parsed.getUTCFullYear();
+  const month = `${parsed.getUTCMonth() + 1}`.padStart(2, '0');
+  const day = `${parsed.getUTCDate()}`.padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const variantsToDrafts = (
   variants: Variant[],
   defaultColor?: string,
@@ -127,7 +149,7 @@ export const variantsToDrafts = (
     draft.stock = valueToString(variant.Stock);
     draft.minStock = valueToString(variant.MinStock);
     draft.optStock = valueToString(variant.OptStock);
-    draft.expDate = valueToString(variant.ExpDate);
+    draft.expDate = toDateInputValue(variant.ExpDate);
     return draft;
   });
 

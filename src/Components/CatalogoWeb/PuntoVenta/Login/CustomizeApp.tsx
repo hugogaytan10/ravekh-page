@@ -310,7 +310,7 @@ export const InitialCustomizeApp: React.FC<{ navigation: any }> = ({
 
         {/* Selector de color */}
         <button
-          className="customize-app-color-btn flex items-center justify-around bg-white rounded-lg w-[40%] h-10 mt-6"
+          className="customize-app-color-btn flex items-center justify-around bg-white rounded-lg w-[40%] h-10 mt-4"
           onClick={() => {
             setIsVisible(!isVisible);
           }}

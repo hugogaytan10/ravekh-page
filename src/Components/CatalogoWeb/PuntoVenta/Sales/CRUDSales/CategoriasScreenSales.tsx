@@ -11,7 +11,8 @@ import { useNavigate } from "react-router-dom";
 export const CategoriasScreenSales: React.FC = () => {
   const context = useContext(AppContext);
   const [categories, setCategories] = useState<Category[]>([]);
-    const navigate = useNavigate();
+  const navigate = useNavigate();
+  const safeCategories = Array.isArray(categories) ? categories : [];
   const chooseCategory = (category: Category) => {
     // Actualizar el contexto con la categoría seleccionada
     context.setCategorySelected(category);
@@ -23,7 +24,7 @@ export const CategoriasScreenSales: React.FC = () => {
       context.user.Business_Id.toString(),
       context.user.Token
     ).then((data) => {
-      setCategories(data);
+      setCategories(Array.isArray(data) ? data : []);
     });
   }, [context.stockFlag]);
 
@@ -40,7 +41,7 @@ export const CategoriasScreenSales: React.FC = () => {
           <ChevronBack />
         </button>
         <h1 className="text-lg font-bold">
-          Categorías ({categories ? categories.length : 0})
+          Categorías ({safeCategories.length})
         </h1>
       </header>
 
@@ -61,9 +62,9 @@ export const CategoriasScreenSales: React.FC = () => {
         </button>
 
         {/* Lista de Categorías */}
-        {categories.length > 0 ? (
+        {safeCategories.length > 0 ? (
           <ul className="space-y-2">
-            {categories.map((category) => (
+            {safeCategories.map((category) => (
               <li
                 key={category.Id}
                 className="flex items-center justify-between py-3 px-4 bg-gray-50 rounded shadow-sm cursor-pointer list-item-categorias-screen"

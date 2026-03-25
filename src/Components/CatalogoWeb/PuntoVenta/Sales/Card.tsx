@@ -145,8 +145,9 @@ interface ProductListProps {
 export const ProductList: React.FC<ProductListProps> = ({ products, onAddProduct, storeColor  }) => {
   const [columns, setColumns] = useState(3);
   const [gridWidth, setGridWidth] = useState(window.innerWidth);
+  const [viewportHeight, setViewportHeight] = useState(window.innerHeight);
   const rowHeight = 250;
-  const maxRowsVisible = 3;
+  const rowGap = 15;
   const { handleProductSelection, modalState, isFetchingVariants } =
     useVariantSelection({
       onCartUpdated: () => navigator.vibrate?.(50),
@@ -165,6 +166,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onAddProduct
         setColumns(5);
       }
       setGridWidth(width);
+      setViewportHeight(window.innerHeight);
     };
 
     handleResize();
@@ -181,7 +183,10 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onAddProduct
 
   const totalItems = products.length + 1;
   const rowCount = Math.ceil(totalItems / columns);
-  const gridHeight = rowHeight * maxRowsVisible;
+  const totalContentHeight = rowCount * (rowHeight + rowGap);
+  const reservedLayoutHeight = 290; // Barra superior + selector + sección de pedidos + navegación inferior
+  const availableHeight = Math.max(rowHeight + rowGap, viewportHeight - reservedLayoutHeight);
+  const gridHeight = Math.min(totalContentHeight, availableHeight);
 
   return (
     <div className="product-list-main-sales">
@@ -189,7 +194,7 @@ export const ProductList: React.FC<ProductListProps> = ({ products, onAddProduct
         columnCount={columns}
         rowCount={rowCount}
         columnWidth={gridWidth / columns - 10}
-        rowHeight={rowHeight + 15}
+        rowHeight={rowHeight + rowGap}
         width={gridWidth}
         height={gridHeight}
         overscanRowCount={3} // Precarga más filas para evitar eliminar imágenes

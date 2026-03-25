@@ -315,12 +315,11 @@ const VariantsEditor: React.FC<Props> = ({
 
                       {/* Fecha de caducidad */}
                       <input
-                        placeholder="Fecha de caducidad"
                         value={variant.expDate}
                         onChange={(e) =>
                           handleFieldChange(index, "expDate", e.target.value)
                         }
-                        type="text"
+                        type="date"
                         className="w-full bg-white text-slate-900 placeholder:text-slate-500 px-3 py-2 rounded-lg border border-slate-300 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                       />
                     </div>
