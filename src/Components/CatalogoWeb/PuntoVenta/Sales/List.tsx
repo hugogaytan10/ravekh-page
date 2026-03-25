@@ -125,7 +125,7 @@ export const List: React.FC<ListProps> = ({ Products }: ListProps) => {
   };
   
   return (
-    <div className="flex flex-col gap-2 sm:grid sm:grid-cols-2 sm:gap-4 mt-4 pb-40">
+    <div className="flex flex-col gap-2 sm:grid sm:grid-cols-2 sm:gap-4 mt-4 pb-56">
       {(context.store.Plan === "GRATUITO"
         ? products.slice(0, 10)
         : products

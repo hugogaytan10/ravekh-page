@@ -79,7 +79,11 @@ type SalesProductResponse = {
     products: Item[];
     pagination: {
         page: number;
+        pageSize: number;
+        total: number;
         totalPages: number;
+        hasNext: boolean;
+        hasPrev: boolean;
         categoryIds: number[];
     };
 };
@@ -111,7 +115,11 @@ const normalizePaginationPayload = (data: any, fallbackPage: number): SalesProdu
 
     return {
         page: Number(pagination?.page) || fallbackPage,
+        pageSize: Math.max(1, Number(pagination?.pageSize) || 20),
+        total: Math.max(0, Number(pagination?.total) || 0),
         totalPages: Math.max(1, Number(pagination?.totalPages) || 1),
+        hasNext: Boolean(pagination?.hasNext),
+        hasPrev: Boolean(pagination?.hasPrev),
         categoryIds: parsedCategoryIds,
     };
 };
@@ -154,7 +162,11 @@ export const getProductsAvailableByBusiness = async (
             products: [],
             pagination: {
                 page,
+                pageSize: 20,
+                total: 0,
                 totalPages: 1,
+                hasNext: false,
+                hasPrev: false,
                 categoryIds: [],
             },
         };
@@ -196,14 +208,23 @@ export const getProductsByCategory = async (
             products: [],
             pagination: {
                 page,
+                pageSize: 20,
+                total: 0,
                 totalPages: 1,
+                hasNext: false,
+                hasPrev: false,
                 categoryIds: [],
             },
         };
     }
 };
 
-export const insertProduct = async (product: Item, token: string, variants?: Variant[]): Promise<MutationResult> => {
+export const insertProduct = async (
+    product: Item,
+    token: string,
+    variants?: Variant[],
+    extras?: Array<{ Description: string; Type: "COLOR" | "TALLA" }>
+): Promise<MutationResult> => {
     try {
         const response = await fetch(`${URL}products`, {
             method: 'POST',
@@ -214,6 +235,7 @@ export const insertProduct = async (product: Item, token: string, variants?: Var
             body: JSON.stringify({
                 Product: product,
                 Variants: variants && variants.length ? variants : null,
+                Extras: extras && extras.length ? extras : null,
             })
         });
 

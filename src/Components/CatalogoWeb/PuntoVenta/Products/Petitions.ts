@@ -62,6 +62,45 @@ export type ProductExtraPayload = {
     Type: "COLOR" | "TALLA";
 };
 
+export type ProductsByBusinessPagination = {
+    page: number;
+    pageSize: number;
+    total: number;
+    totalPages: number;
+    hasNext: boolean;
+    hasPrev: boolean;
+};
+
+export type ProductsByBusinessResponse = {
+    products: Item[];
+    pagination: ProductsByBusinessPagination;
+};
+
+const normalizeProductRows = (payload: unknown): Item[] => {
+    if (Array.isArray(payload)) {
+        return payload as Item[];
+    }
+    if (payload && typeof payload === "object" && Array.isArray((payload as any).data)) {
+        return (payload as any).data as Item[];
+    }
+    return [];
+};
+
+const normalizeProductsPagination = (payload: any, fallbackPage: number): ProductsByBusinessPagination => {
+    const pagination = payload?.pagination ?? {};
+    const totalPages = Math.max(1, Number(pagination.totalPages) || 1);
+    const page = Math.max(1, Number(pagination.page) || fallbackPage);
+
+    return {
+        page,
+        pageSize: Math.max(1, Number(pagination.pageSize) || 20),
+        total: Math.max(0, Number(pagination.total) || 0),
+        totalPages,
+        hasNext: Boolean(pagination.hasNext) || page < totalPages,
+        hasPrev: Boolean(pagination.hasPrev) || page > 1,
+    };
+};
+
 export const getProducts = async (token: string, Business_Id: string) => {
     try {
         const response = await fetch(`${URL}products/business/${Business_Id}`, {
@@ -92,6 +131,46 @@ export const getProducts = async (token: string, Business_Id: string) => {
         return [];
     }
 }
+
+export const getProductsByBusinessPaginated = async (
+    token: string,
+    businessId: string,
+    page: number,
+    limit: string
+): Promise<ProductsByBusinessResponse> => {
+    try {
+        const requestUrl = `${URL}products/business/${businessId}?page=${page}&limit=${encodeURIComponent(limit)}`;
+        const response = await fetch(requestUrl, {
+            headers: {
+                token,
+            },
+        });
+
+        const payload = await parseJsonSafely(response);
+        const rows = normalizeProductRows(payload);
+        const products = rows.map((product: Item & { Images?: string[] }) => ({
+            ...product,
+            Image: (product as any).Image || (product.Images && product.Images[0]) || "",
+        }));
+
+        return {
+            products,
+            pagination: normalizeProductsPagination(payload, page),
+        };
+    } catch {
+        return {
+            products: [],
+            pagination: {
+                page,
+                pageSize: 20,
+                total: 0,
+                totalPages: 1,
+                hasNext: false,
+                hasPrev: false,
+            },
+        };
+    }
+};
 
 export const getProduct = async (id: number, token: string) => {
     try {
@@ -262,6 +341,22 @@ export const updateExtra = async (extraId: number, extra: ProductExtraPayload, t
     try {
         const response = await fetch(`${URL}extras/${extraId}`, {
             method: "PUT",
+            headers: {
+                "Content-Type": "application/json",
+                token,
+            },
+            body: JSON.stringify(extra),
+        });
+        return response.ok;
+    } catch (e) {
+        return false;
+    }
+};
+
+export const insertExtra = async (extra: ProductExtraPayload, token: string) => {
+    try {
+        const response = await fetch(`${URL}extras`, {
+            method: "POST",
             headers: {
                 "Content-Type": "application/json",
                 token,

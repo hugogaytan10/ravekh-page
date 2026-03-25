@@ -1,6 +1,6 @@
 import React, { useContext, useEffect, useMemo, useRef, useState } from "react";
 import { AppContext } from "../../../Context/AppContext";
-import { getProducts } from "../Petitions";
+import { getProductsByBusinessPaginated } from "../Petitions";
 import { ThemeLight } from "../../Theme/Theme";
 import { ChevronGo } from "../../../../../assets/POS/ChevronGo";
 import PlusIcon from "../../../../../assets/POS/PlusIcon";
@@ -37,6 +37,10 @@ type ListProps = {
 export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true); // Estado de carga
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPrevPage, setHasPrevPage] = useState(false);
   const [showModalPremium, setShowModalPremium] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
@@ -45,19 +49,31 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
   const context = useContext(AppContext);
   const navigation = useNavigate();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const productLimit = (context.store?.Plan ?? localStorage.getItem("plan") ?? "").trim();
   const truncate = (text: string, length: number) =>
     text.length > length ? `${text.substring(0, length)}...` : text;
 
   const fetchProducts = () => {
     setLoading(true); // Activar el estado de carga
-    getProducts(context.user.Token, context.user.Business_Id + "").then(
+    if (!productLimit) {
+      setProducts([]);
+      setLoading(false);
+      return;
+    }
+    getProductsByBusinessPaginated(
+      context.user.Token,
+      context.user.Business_Id + "",
+      currentPage,
+      productLimit,
+    ).then(
       (response) => {
-        if (response) {
-          if (context.store.Plan === "GRATUITO") {
-            response = response.slice(0, 10);
-          }
+        if (response?.products) {
+          setCurrentPage(response.pagination.page);
+          setTotalPages(response.pagination.totalPages);
+          setHasNextPage(response.pagination.hasNext);
+          setHasPrevPage(response.pagination.hasPrev);
           setProducts(
-            response.map((product: Product) => {
+            response.products.map((product: Product) => {
               const mainImage = product.Image || product.Images?.[0] || "";
               return {
                 ...product,
@@ -82,7 +98,11 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
 
   useEffect(() => {
     fetchProducts();
-  }, [context.stockFlag]);
+  }, [context.stockFlag, currentPage, productLimit]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [barCode]);
 
   const handleImportClick = () => {
     fileInputRef.current?.click();
@@ -536,6 +556,29 @@ export const List: React.FC<ListProps> = ({ barCode }: ListProps) => {
           </div>
         ))}
       </div>
+      {totalPages > 1 && (
+        <div className="mt-2 px-1 py-2 border-t border-gray-200 bg-white/95 flex items-center justify-between">
+          <button
+            type="button"
+            className="px-3 py-1 rounded-md border text-sm disabled:opacity-50"
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={!hasPrevPage}
+          >
+            Anterior
+          </button>
+          <span className="text-sm text-gray-700 font-medium">
+            Página {currentPage} de {totalPages}
+          </span>
+          <button
+            type="button"
+            className="px-3 py-1 rounded-md border text-sm disabled:opacity-50"
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={!hasNextPage}
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
     </div>
   );
 };

@@ -695,6 +695,8 @@ export const AddProduct: React.FC = () => {
             </div>
           )}
         </div>
+
+        <ExtrasSection extras={extrasDrafts} onChange={setExtrasDrafts} />
       </div>
 
       {/* Footer */}

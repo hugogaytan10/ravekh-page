@@ -12,6 +12,7 @@ import {
   updateVariant as updateVariantRequest,
   deleteVariant as deleteVariantRequest,
   updateExtra,
+  insertExtra,
 } from "../Petitions";
 import { uploadImage } from "../../Cloudinary/Cloudinary";
 import { PickerColor } from "../../CustomizeApp/PickerColor";
@@ -414,15 +415,17 @@ export const EditProduct: React.FC = () => {
           );
 
           for (const extra of extrasDrafts) {
-            await updateExtra(
-              extra.Id ?? 0,
-              {
-                Product_Id: product.Id,
-                Description: extra.Description,
-                Type: extra.Type,
-              },
-              context.user.Token,
-            );
+            const payload = {
+              Product_Id: product.Id,
+              Description: extra.Description,
+              Type: extra.Type,
+            } as const;
+
+            if (typeof extra.Id === "number") {
+              await updateExtra(extra.Id, payload, context.user.Token);
+            } else {
+              await insertExtra(payload, context.user.Token);
+            }
           }
 
           for (const [extraId] of existingExtrasById) {

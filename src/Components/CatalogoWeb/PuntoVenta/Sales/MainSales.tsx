@@ -37,6 +37,8 @@ export const MainSales: React.FC = () => {
   const [availableCategoryIds, setAvailableCategoryIds] = useState<number[]>([]);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPrevPage, setHasPrevPage] = useState(false);
   const skeletonCards = useMemo(() => Array.from({ length: 8 }), []);
   const productLimit = useMemo(() => {
     const planFromBusiness = (context.store?.Plan ?? "").trim();
@@ -97,8 +99,14 @@ export const MainSales: React.FC = () => {
       setProducts([]);
       return;
     }
+    if (!productLimit) {
+      setLoader(false);
+      setProducts([]);
+      return;
+    }
 
     const selectedCategoryId = selectedCategoryOption?.categoryId ?? null;
+    let isMounted = true;
 
     setLoader(true);
     const fetchProducts = selectedCategoryId === null
@@ -117,6 +125,7 @@ export const MainSales: React.FC = () => {
 
     fetchProducts
       .then((response) => {
+        if (!isMounted) return;
         const normalized = response.products.map((product: Item) => ({
           ...product,
           Image: (product as Item & { Image?: string }).Image || product.Images?.[0] || "",
@@ -127,8 +136,17 @@ export const MainSales: React.FC = () => {
         }
         setCurrentPage(response.pagination.page);
         setTotalPages(response.pagination.totalPages);
+        setHasNextPage(response.pagination.hasNext || response.pagination.page < response.pagination.totalPages);
+        setHasPrevPage(response.pagination.hasPrev || response.pagination.page > 1);
       })
-      .finally(() => setLoader(false));
+      .finally(() => {
+        if (!isMounted) return;
+        setLoader(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, [
     context.user.Business_Id,
     context.user.Token,
@@ -168,6 +186,7 @@ export const MainSales: React.FC = () => {
 
   useEffect(() => {
     setCurrentPage(1);
+    setHasPrevPage(false);
   }, [selectedCategoryKey]);
 
   useEffect(() => {
@@ -290,7 +309,7 @@ export const MainSales: React.FC = () => {
         </div>
       )}
 
-      <div className={`sales-container ${view ? "overflow-hidden" : "overflow-y-auto"}`}>
+      <div className="sales-container overflow-y-auto">
         {loader ? (
           view ? (
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 p-3">
@@ -328,28 +347,6 @@ export const MainSales: React.FC = () => {
             <List Products={products} />
           </div>
         )}
-        <div className="px-3 py-2 border-t border-gray-200 bg-white flex items-center justify-between">
-          <button
-            type="button"
-            className="px-3 py-1 rounded-md border text-sm disabled:opacity-50"
-            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-            disabled={loader || currentPage <= 1}
-          >
-            Anterior
-          </button>
-          <span className="text-sm text-gray-700">
-            Página {currentPage} de {totalPages}
-          </span>
-          <button
-            type="button"
-            className="px-3 py-1 rounded-md border text-sm disabled:opacity-50"
-            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-            disabled={loader || currentPage >= totalPages}
-          >
-            Siguiente
-          </button>
-        </div>
-
         <footer className={loader ? "sales-footer-loader" : "sales-footer"}>
           <div className="cart-info">
             <span>Pedidos</span>
@@ -368,6 +365,29 @@ export const MainSales: React.FC = () => {
           </button>
         </footer>
       </div>
+      {totalPages > 1 && (
+        <div className="fixed left-0 right-0 z-40 bottom-[148px] px-3 py-2 border-t border-gray-200 bg-white/95 backdrop-blur flex items-center justify-between">
+          <button
+            type="button"
+            className="px-3 py-1 rounded-md border text-sm disabled:opacity-50"
+            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+            disabled={loader || !hasPrevPage}
+          >
+            Anterior
+          </button>
+          <span className="text-sm text-gray-700 font-medium">
+            Página {currentPage} de {totalPages}
+          </span>
+          <button
+            type="button"
+            className="px-3 py-1 rounded-md border text-sm disabled:opacity-50"
+            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+            disabled={loader || !hasNextPage}
+          >
+            Siguiente
+          </button>
+        </div>
+      )}
     </div>
   );
 };

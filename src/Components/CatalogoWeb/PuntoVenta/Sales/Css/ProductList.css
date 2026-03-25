@@ -2,7 +2,7 @@
 .product-list-main-sales {
   background-color: #fff;
   padding: 0px;
-  min-height: 100vh;
+  min-height: 0;
   padding-bottom: 120px;
 }
 
