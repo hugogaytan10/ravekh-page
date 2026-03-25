@@ -294,21 +294,20 @@ export const AddProduct: React.FC = () => {
         message={feedbackModal.message}
         error={feedbackModal.error}
         isSuccess={feedbackModal.isSuccess}
-        onClose={() =>
-          {
-            setFeedbackModal({
-              isVisible: false,
-              title: "",
-              message: "",
-              error: "",
-              isSuccess: false,
-            });
+        onClose={() => {
+          setFeedbackModal({
+            isVisible: false,
+            title: "",
+            message: "",
+            error: "",
+            isSuccess: false,
+          });
 
-            if (navigateAfterModal) {
-              setNavigateAfterModal(false);
-              navigation("/main-products/items");
-            }
+          if (navigateAfterModal) {
+            setNavigateAfterModal(false);
+            navigation("/main-products/items");
           }
+        }
         }
       />
       {/* Header */}
@@ -443,7 +442,6 @@ export const AddProduct: React.FC = () => {
           />
         </div>
 
-        <ExtrasSection extras={extrasDrafts} onChange={setExtrasDrafts} />
 
         {/* Imágenes adicionales */}
         <div className="w-full mb-6">
@@ -654,12 +652,12 @@ export const AddProduct: React.FC = () => {
                     type="checkbox"
                     className="h-6 w-6 bg-white rounded"
                     style={{
-                    backgroundColor: isAvailableForSale
-                    ? accentColor
-                    : "white",
-                  }}
-                  checked={isAvailableForSale}
-                  onChange={() => setIsAvailableForSale(!isAvailableForSale)}
+                      backgroundColor: isAvailableForSale
+                        ? accentColor
+                        : "white",
+                    }}
+                    checked={isAvailableForSale}
+                    onChange={() => setIsAvailableForSale(!isAvailableForSale)}
                   />
                 </label>
               </div>
@@ -670,15 +668,15 @@ export const AddProduct: React.FC = () => {
                     type="checkbox"
                     className="h-6 w-6 bg-white rounded border-2"
                     style={{
-                    borderColor: isDisplayedInStore
-                    ? accentColor
-                    : "#e2e8f0",
-                    backgroundColor: isDisplayedInStore
-                    ? accentColor
-                    : "white",
-                  }}
-                  checked={isDisplayedInStore}
-                  onChange={() => setIsDisplayedInStore(!isDisplayedInStore)}
+                      borderColor: isDisplayedInStore
+                        ? accentColor
+                        : "#e2e8f0",
+                      backgroundColor: isDisplayedInStore
+                        ? accentColor
+                        : "white",
+                    }}
+                    checked={isDisplayedInStore}
+                    onChange={() => setIsDisplayedInStore(!isDisplayedInStore)}
                   />
                 </label>
               </div>
@@ -707,7 +705,7 @@ export const AddProduct: React.FC = () => {
             </div>
           )}
         </div>
-
+        <ExtrasSection extras={extrasDrafts} onChange={setExtrasDrafts} />
       </div>
 
       {/* Footer */}
