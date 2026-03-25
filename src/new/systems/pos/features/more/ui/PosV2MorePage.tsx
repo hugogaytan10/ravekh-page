@@ -141,7 +141,7 @@ export const PosV2MorePage = () => {
   };
 
   const openModule = async (item: MoreModuleLink) => {
-    if (item.id === "delete-account") {
+    if (item.id === "delete-account" || item.id === "switch-user") {
       setActionMessage("⚠️ Antes de cerrar sesión verifica cortes pendientes y respaldo de datos.");
       setShowSignOutConfirm(true);
       return;

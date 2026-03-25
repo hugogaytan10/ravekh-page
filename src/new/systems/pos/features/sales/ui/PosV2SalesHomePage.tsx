@@ -233,6 +233,8 @@ export const PosV2SalesHomePage = () => {
   }, [category, products, search]);
 
   const cartItems = useMemo(() => Object.entries(cart).map(([id, value]) => ({ id: Number(id), ...value })), [cart]);
+  const hasTableSelection = useMemo(() => tables.some((table) => table !== "Para llevar"), [tables]);
+  const hasCustomers = customers.length > 0;
 
   const totals = useMemo(() => {
     const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -648,31 +650,30 @@ export const PosV2SalesHomePage = () => {
               </select>
             </label>
 
-            <label>
-              Mesa
-              <select value={selectedTable} onChange={(event) => setSelectedTable(event.target.value)} disabled={loadingTables}>
-                <option value="" disabled>Selecciona mesa</option>
-
-                {
-                  tables.length > 0 &&
-                  tables.map((table) => (
+            {hasTableSelection ? (
+              <label>
+                Mesa
+                <select value={selectedTable} onChange={(event) => setSelectedTable(event.target.value)} disabled={loadingTables}>
+                  <option value="" disabled>Selecciona mesa</option>
+                  {tables.map((table) => (
                     <option key={table} value={table}>{table}</option>
                   ))}
-              </select>
-            </label>
+                </select>
+              </label>
+            ) : null}
 
-            <label>
-              Cliente (opcional)
-              <select value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)}>
-                <option value="">Venta general</option>
-                {
-                  customers.length > 0 &&
-                  customers.map((customer) => (
+            {hasCustomers ? (
+              <label>
+                Cliente (opcional)
+                <select value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)}>
+                  <option value="">Venta general</option>
+                  {customers.map((customer) => (
                     <option key={customer.id} value={customer.id}>{customer.name}</option>
                   ))}
-              </select>
-            </label>
-            {!customersError && customers.length > 0 ? <small className="pos-v2-sales-home__customer-hint">Puedes vincular la venta a cliente para historial y recompensas.</small> : null}
+                </select>
+              </label>
+            ) : null}
+            {!customersError && hasCustomers ? <small className="pos-v2-sales-home__customer-hint">Puedes vincular la venta a cliente para historial y recompensas.</small> : null}
 
             <div className="pos-v2-sales-home__totals">
               <p><span>Subtotal</span><strong>${totals.subtotal.toFixed(2)}</strong></p>
@@ -709,36 +710,38 @@ export const PosV2SalesHomePage = () => {
         </button>
       ) : null}
 
-      <div className="pos-v2-sales-home__tables-bar" aria-label="Barra de mesas">
-        {loadingTables ? (
-          <div className="pos-v2-sales-home__tables-skeleton" aria-hidden="true">
-            {Array.from({ length: 4 }).map((_, index) => <span key={`tables-skeleton-${index}`} />)}
-          </div>
-        ) : tables.map((table) => {
-          const isActive = table === selectedTable;
-          const isOccupied = isActive && totals.items > 0;
+      {hasTableSelection ? (
+        <div className="pos-v2-sales-home__tables-bar" aria-label="Barra de mesas">
+          {loadingTables ? (
+            <div className="pos-v2-sales-home__tables-skeleton" aria-hidden="true">
+              {Array.from({ length: 4 }).map((_, index) => <span key={`tables-skeleton-${index}`} />)}
+            </div>
+          ) : tables.map((table) => {
+            const isActive = table === selectedTable;
+            const isOccupied = isActive && totals.items > 0;
 
-          return (
-            <button
-              key={table}
-              type="button"
-              className={`${isActive ? "is-active" : ""} ${isOccupied ? "is-occupied" : ""}`.trim()}
-              onClick={() => setSelectedTable(table)}
-            >
-              {table}
-            </button>
-          );
-        })}
-      </div>
+            return (
+              <button
+                key={table}
+                type="button"
+                className={`${isActive ? "is-active" : ""} ${isOccupied ? "is-occupied" : ""}`.trim()}
+                onClick={() => setSelectedTable(table)}
+              >
+                {table}
+              </button>
+            );
+          })}
+        </div>
+      ) : null}
 
       <div className="pos-v2-sales-home__mobile-legacy-dock">
-        <button type="button" onClick={() => setIsMobileTablesOpen(true)}>Mesas</button>
+        {hasTableSelection ? <button type="button" onClick={() => setIsMobileTablesOpen(true)}>Mesas</button> : null}
         <button type="button" className="is-summary" onClick={() => setMobileStep("cart")}>
           {totals.items.toFixed(2)}x Items = ${totals.total.toFixed(2)}
         </button>
       </div>
 
-      {isMobileTablesOpen ? (
+      {isMobileTablesOpen && hasTableSelection ? (
         <div className="pos-v2-sales-home__tables-modal" role="dialog" aria-modal="true" aria-label="Seleccionar mesa">
           <div className="pos-v2-sales-home__tables-modal-card">
             <div className="pos-v2-sales-home__tables-modal-header">

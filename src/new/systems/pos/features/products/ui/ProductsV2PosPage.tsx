@@ -102,6 +102,7 @@ export const ProductsV2PosPage = () => {
   const [categories, setCategories] = useState<ProductCategoryVm[]>([]);
   const [categoryNameInput, setCategoryNameInput] = useState("");
   const [categoryColorInput, setCategoryColorInput] = useState("#4F46E5");
+  const [categorySearch, setCategorySearch] = useState("");
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -134,6 +135,7 @@ export const ProductsV2PosPage = () => {
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
   const categoryCarouselRef = useRef<HTMLDivElement | null>(null);
   const excelInputRef = useRef<HTMLInputElement | null>(null);
+  const categoryNameInputRef = useRef<HTMLInputElement | null>(null);
 
   const service = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
@@ -282,20 +284,29 @@ export const ProductsV2PosPage = () => {
     }));
 
   const formImagePreviews = useMemo(() => {
-    const remote = storedImages.map((img) => toImageUrl(img)).filter(Boolean) as string[];
-    const local = selectedImageFiles.map((file) => URL.createObjectURL(file));
+    const remote = storedImages
+      .map((img, index) => ({ key: `stored-${index}`, source: "stored" as const, index, src: toImageUrl(img) }))
+      .filter((item) => Boolean(item.src))
+      .map((item) => ({ ...item, src: item.src as string }));
+    const local = selectedImageFiles.map((file, index) => ({ key: `local-${index}`, source: "local" as const, index, src: URL.createObjectURL(file) }));
     return [...remote, ...local];
   }, [storedImages, selectedImageFiles]);
 
   useEffect(() => {
     return () => {
-      formImagePreviews.forEach((src) => {
-        if (src.startsWith("blob:")) {
-          URL.revokeObjectURL(src);
+      formImagePreviews.forEach((image) => {
+        if (image.src.startsWith("blob:")) {
+          URL.revokeObjectURL(image.src);
         }
       });
     };
   }, [formImagePreviews]);
+
+  useEffect(() => {
+    if (!showCategoryManager) return;
+    const timeout = window.setTimeout(() => categoryNameInputRef.current?.focus(), 90);
+    return () => window.clearTimeout(timeout);
+  }, [showCategoryManager, editingCategoryId]);
 
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -333,7 +344,7 @@ export const ProductsV2PosPage = () => {
 
     try {
       const selectedImages = await Promise.all(selectedImageFiles.map((file) => toDataUrl(file)));
-      const allImages = Array.from(new Set([...storedImages, ...selectedImages].filter(Boolean)));
+      const allImages = Array.from(new Set([...selectedImages, ...storedImages].filter(Boolean)));
 
       const payload: SaveManagedProductDto = {
         id: editingId ?? undefined,
@@ -511,6 +522,8 @@ export const ProductsV2PosPage = () => {
   };
 
   const removeVariant = (key: string) => setVariants((current) => current.filter((variant) => variant.key !== key));
+  const removeStoredImage = (indexToRemove: number) => setStoredImages((current) => current.filter((_, index) => index !== indexToRemove));
+  const removeSelectedImage = (indexToRemove: number) => setSelectedImageFiles((current) => current.filter((_, index) => index !== indexToRemove));
 
   const updateVariant = (key: string, field: keyof VariantFormVm, value: string) => {
     setVariants((current) => current.map((variant) => (variant.key === key ? { ...variant, [field]: value } : variant)));
@@ -558,6 +571,12 @@ export const ProductsV2PosPage = () => {
       setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo eliminar categoría." });
     }
   };
+
+  const visibleCategories = useMemo(() => {
+    const normalized = categorySearch.trim().toLowerCase();
+    if (!normalized) return categories;
+    return categories.filter((category) => category.name.toLowerCase().includes(normalized) || category.color.toLowerCase().includes(normalized));
+  }, [categories, categorySearch]);
 
   const scrollCategoryChips = (direction: "left" | "right") => {
     if (!categoryCarouselRef.current) return;
@@ -780,8 +799,18 @@ export const ProductsV2PosPage = () => {
 
                 {formImagePreviews.length > 0 ? (
                   <div className="pos-v2-products__image-preview" aria-label="Vista previa de fotos">
-                    {formImagePreviews.slice(0, 8).map((photo, index) => (
-                      <img key={`preview-${index}`} src={photo} alt={`Vista previa ${index + 1}`} loading="lazy" />
+                    {formImagePreviews.map((photo, index) => (
+                      <figure key={photo.key} className="pos-v2-products__image-card">
+                        <img src={photo.src} alt={`Vista previa ${index + 1}`} loading="lazy" />
+                        <button
+                          type="button"
+                          className="pos-v2-products__remove-photo"
+                          onClick={() => (photo.source === "stored" ? removeStoredImage(photo.index) : removeSelectedImage(photo.index))}
+                          aria-label={`Eliminar foto ${index + 1}`}
+                        >
+                          Eliminar
+                        </button>
+                      </figure>
                     ))}
                   </div>
                 ) : null}
@@ -881,10 +910,16 @@ export const ProductsV2PosPage = () => {
               </p>
               {editingCategoryId ? <p className="pos-v2-products__inline-success">Editando categoría #{editingCategoryId}. Guarda cambios o cancela edición.</p> : null}
 
-              <div className="pos-v2-products__field-grid">
+              <div className="pos-v2-products__field-grid pos-v2-products__category-form-grid">
                 <label>
                   Nombre categoría <span aria-hidden="true">*</span>
-                  <input value={categoryNameInput} onChange={(event) => setCategoryNameInput(event.target.value)} placeholder="Ej. Bebidas frías" required />
+                  <input
+                    ref={categoryNameInputRef}
+                    value={categoryNameInput}
+                    onChange={(event) => setCategoryNameInput(event.target.value)}
+                    placeholder="Ej. Bebidas frías"
+                    required
+                  />
                 </label>
                 <label>
                   Color
@@ -903,10 +938,16 @@ export const ProductsV2PosPage = () => {
                 <button type="button" className="pos-v2-products__primary" onClick={saveCategory}>{editingCategoryId ? "Guardar cambios" : "Crear categoría"}</button>
               </div>
 
+              <label className="pos-v2-products__category-search">
+                Buscar categoría
+                <input value={categorySearch} onChange={(event) => setCategorySearch(event.target.value)} placeholder="Nombre o color" />
+              </label>
+
               <div className="pos-v2-products__category-list">
                 {categories.length === 0 ? <p className="pos-v2-products__variants-empty">Aún no hay categorías.</p> : null}
-                {categories.map((category) => (
-                  <article key={category.id} className="pos-v2-products__category-item">
+                {categories.length > 0 && visibleCategories.length === 0 ? <p className="pos-v2-products__variants-empty">No hay coincidencias para tu búsqueda.</p> : null}
+                {visibleCategories.map((category) => (
+                  <article key={category.id} className={`pos-v2-products__category-item ${editingCategoryId === category.id ? "is-editing" : ""}`}>
                     <span className="pos-v2-products__category-dot" style={{ backgroundColor: category.color }} aria-hidden="true" />
                     <strong>{category.name}</strong>
                     <small>{category.color}</small>

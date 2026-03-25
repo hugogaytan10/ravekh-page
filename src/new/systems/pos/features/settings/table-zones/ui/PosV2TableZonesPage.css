@@ -34,6 +34,10 @@
   padding: 0.55rem 0.7rem;
   background: #fff;
 }
+.pos-v2-table-zones input:focus-visible {
+  outline: 2px solid #6d01d1;
+  outline-offset: 2px;
+}
 
 .pos-v2-table-zones button {
   border: none;
@@ -162,6 +166,11 @@
   align-items: center;
   gap: 0.65rem;
 }
+.pos-v2-table-zones__list li.is-editing {
+  border-color: #6d01d1;
+  box-shadow: 0 0 0 2px rgba(109, 1, 209, 0.15);
+  background: #faf5ff;
+}
 
 .pos-v2-table-zones__list li div {
   display: grid;
@@ -224,4 +233,8 @@
 :root[data-theme="dark"] .pos-v2-table-zones__stats span,
 :root[data-theme="dark"] .pos-v2-table-zones__list li span {
   color: #9ca3af;
+}
+:root[data-theme="dark"] .pos-v2-table-zones__list li.is-editing {
+  background: #312e81;
+  border-color: #a78bfa;
 }

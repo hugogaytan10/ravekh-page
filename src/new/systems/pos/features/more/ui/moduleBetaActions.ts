@@ -17,6 +17,15 @@ export const MODULE_BETA_ACTIONS: Record<string, ModuleBetaAction> = {
     requiresBusinessId: true,
     run: ({ businessId, token }, factory) => factory.createPosBusinessSettingsPage().load(businessId, token),
   },
+  "settings-hub": {
+    requiresBusinessId: true,
+    run: async ({ businessId }) => ({
+      businessId,
+      status: "ready",
+      areas: ["Información del negocio", "Catálogo", "Impuestos", "Métodos de pago", "Branding"],
+      message: "Ajustes generales consolidados para navegación desacoplada v2.",
+    }),
+  },
   "sales-tax": {
     requiresBusinessId: true,
     run: ({ businessId, token }, factory) => factory.createPosSalesTaxPage().getSalesTaxSettings(businessId, token),
@@ -100,5 +109,28 @@ export const MODULE_BETA_ACTIONS: Record<string, ModuleBetaAction> = {
   loyalty: {
     requiresBusinessId: true,
     run: async () => ({ message: "Módulo loyalty en transición. Próximo paso: conectar RewardsManagementPage UI." }),
+  },
+  coupons: {
+    requiresBusinessId: true,
+    run: async ({ businessId }) => ({
+      businessId,
+      status: "beta",
+      message: "Cupones v2 habilitado para pruebas. Próximo paso: editor de campañas.",
+    }),
+  },
+  visits: {
+    requiresBusinessId: true,
+    run: async ({ businessId }) => ({
+      businessId,
+      status: "beta",
+      message: "Visitas v2 habilitado para pruebas. Próximo paso: historial de recompensas por cliente.",
+    }),
+  },
+  "switch-user": {
+    requiresBusinessId: true,
+    run: async () => ({
+      status: "secure-action",
+      message: "Confirma cambio de usuario desde Más para limpiar sesión de forma segura.",
+    }),
   },
 };

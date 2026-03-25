@@ -60,6 +60,24 @@ export const PosV2ModulePreviewPage = () => {
   const [taxSaving, setTaxSaving] = useState(false);
   const [taxError, setTaxError] = useState("");
   const [taxSuccess, setTaxSuccess] = useState("");
+  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalogError, setCatalogError] = useState("");
+  const [catalogProducts, setCatalogProducts] = useState<Array<{ id: number; title: string; description: string }>>([]);
+  const [exportLoading, setExportLoading] = useState(false);
+  const [exportError, setExportError] = useState("");
+  const [exportRows, setExportRows] = useState<Array<{ label: string; quantity: number; total: number }>>([]);
+  const [exportScope, setExportScope] = useState<"products" | "employees" | "customers">("products");
+  const [exportPeriod, setExportPeriod] = useState<"today" | "month" | "year">("month");
+  const [cashClosingLoading, setCashClosingLoading] = useState(false);
+  const [cashClosingError, setCashClosingError] = useState("");
+  const [cashClosingInfo, setCashClosingInfo] = useState<{
+    id: number;
+    employeeId: number;
+    expectedAmount: number;
+    countedAmount: number;
+    difference: number;
+    balanced: boolean;
+  } | null>(null);
   const [taxForm, setTaxForm] = useState({
     enabled: false,
     description: "",
@@ -145,9 +163,60 @@ export const PosV2ModulePreviewPage = () => {
       }
     };
 
+    const loadCatalog = async () => {
+      if (moduleId !== "catalog-settings") return;
+      setCatalogLoading(true);
+      setCatalogError("");
+      try {
+        const products = await factory.createCatalogPage().loadPublishedProducts(businessId, token);
+        setCatalogProducts(products);
+      } catch (cause) {
+        setCatalogError(cause instanceof Error ? cause.message : "No fue posible cargar productos publicados.");
+      } finally {
+        setCatalogLoading(false);
+      }
+    };
+
+    const loadExportPreview = async () => {
+      if (moduleId !== "exports") return;
+      setExportLoading(true);
+      setExportError("");
+      try {
+        const report = await factory.createPosExportReportPage().load(businessId, exportScope, exportPeriod, token);
+        setExportRows(report);
+      } catch (cause) {
+        setExportError(cause instanceof Error ? cause.message : "No fue posible cargar el reporte.");
+      } finally {
+        setExportLoading(false);
+      }
+    };
+
+    const loadCashClosing = async () => {
+      if (moduleId !== "cash-closing") return;
+      const employeeId = Number(employeeIdInput);
+      if (!Number.isFinite(employeeId) || employeeId <= 0) {
+        setCashClosingInfo(null);
+        setCashClosingError("No encontramos employee id activo para consultar corte de caja.");
+        return;
+      }
+      setCashClosingLoading(true);
+      setCashClosingError("");
+      try {
+        const closing = await factory.createPosCashClosingPage().loadCurrent(employeeId, token);
+        setCashClosingInfo(closing);
+      } catch (cause) {
+        setCashClosingError(cause instanceof Error ? cause.message : "No fue posible cargar el corte de caja.");
+      } finally {
+        setCashClosingLoading(false);
+      }
+    };
+
     loadBusiness();
     loadTax();
-  }, [factory, moduleId, businessIdInput, token]);
+    loadCatalog();
+    loadExportPreview();
+    loadCashClosing();
+  }, [factory, moduleId, businessIdInput, token, employeeIdInput, exportScope, exportPeriod]);
 
   const saveTax = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -238,6 +307,77 @@ export const PosV2ModulePreviewPage = () => {
                 <button type="submit" disabled={taxSaving}>{taxSaving ? "Guardando..." : "Guardar cambios"}</button>
               </form>
             ) : null}
+          </section>
+        ) : null}
+
+        {moduleId === "catalog-settings" ? (
+          <section className="pos-v2-module-preview__beta">
+            <h3>Configuración catálogo</h3>
+            <p>Listado moderno de productos publicados para validar sincronización.</p>
+            {catalogLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
+            {catalogError ? <p className="pos-v2-module-preview__error">{catalogError}</p> : null}
+            {!catalogLoading && !catalogError ? (
+              <div className="pos-v2-module-preview__table">
+                <p><strong>Productos publicados:</strong> {catalogProducts.length}</p>
+                {catalogProducts.length === 0 ? <p>Aún no hay productos publicados.</p> : null}
+                {catalogProducts.slice(0, 8).map((item) => (
+                  <article key={item.id} className="pos-v2-module-preview__row">
+                    <strong>{item.title}</strong>
+                    <small>{item.description || "Sin descripción"}</small>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {moduleId === "exports" ? (
+          <section className="pos-v2-module-preview__beta">
+            <h3>Exportar reportes</h3>
+            <div className="pos-v2-module-preview__inputs">
+              <select value={exportScope} onChange={(event) => setExportScope(event.target.value as "products" | "employees" | "customers")}>
+                <option value="products">Productos</option>
+                <option value="employees">Empleados</option>
+                <option value="customers">Clientes</option>
+              </select>
+              <select value={exportPeriod} onChange={(event) => setExportPeriod(event.target.value as "today" | "month" | "year")}>
+                <option value="today">Hoy</option>
+                <option value="month">Mes</option>
+                <option value="year">Año</option>
+              </select>
+            </div>
+            {exportLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
+            {exportError ? <p className="pos-v2-module-preview__error">{exportError}</p> : null}
+            {!exportLoading && !exportError ? (
+              <div className="pos-v2-module-preview__table">
+                <p><strong>Filas:</strong> {exportRows.length}</p>
+                {exportRows.length === 0 ? <p>No hay datos para el filtro seleccionado.</p> : null}
+                {exportRows.slice(0, 10).map((row, index) => (
+                  <article key={`${row.label}-${index}`} className="pos-v2-module-preview__row is-inline">
+                    <strong>{row.label}</strong>
+                    <small>Cant: {row.quantity} · Total: ${row.total.toFixed(2)}</small>
+                  </article>
+                ))}
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {moduleId === "cash-closing" ? (
+          <section className="pos-v2-module-preview__beta">
+            <h3>Corte de caja actual</h3>
+            {cashClosingLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
+            {cashClosingError ? <p className="pos-v2-module-preview__error">{cashClosingError}</p> : null}
+            {!cashClosingLoading && !cashClosingError && cashClosingInfo ? (
+              <div className="pos-v2-module-preview__kv">
+                <p><strong>ID corte:</strong> {cashClosingInfo.id}</p>
+                <p><strong>Esperado:</strong> ${cashClosingInfo.expectedAmount.toFixed(2)}</p>
+                <p><strong>Contado:</strong> ${cashClosingInfo.countedAmount.toFixed(2)}</p>
+                <p><strong>Diferencia:</strong> ${cashClosingInfo.difference.toFixed(2)}</p>
+                <p><strong>Balanceado:</strong> {cashClosingInfo.balanced ? "Sí" : "No"}</p>
+              </div>
+            ) : null}
+            {!cashClosingLoading && !cashClosingError && !cashClosingInfo ? <p>No hay corte de caja activo para este usuario.</p> : null}
           </section>
         ) : null}
 

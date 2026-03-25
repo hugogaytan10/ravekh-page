@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../../index";
 import { PosV2Shell } from "../../../../shared/ui/PosV2Shell";
 import "./PosV2TableZonesPage.css";
@@ -21,6 +21,7 @@ export const PosV2TableZonesPage = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const tableNameInputRef = useRef<HTMLInputElement | null>(null);
 
   const page = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
@@ -58,6 +59,11 @@ export const PosV2TableZonesPage = () => {
       loadZones();
     }
   }, [hasSession, loadZones]);
+
+  useEffect(() => {
+    const timeout = window.setTimeout(() => tableNameInputRef.current?.focus(), 100);
+    return () => window.clearTimeout(timeout);
+  }, [tableZoneId]);
 
   const handleSaveSession = () => {
     if (!hasSession) {
@@ -130,6 +136,13 @@ export const PosV2TableZonesPage = () => {
     }
   };
 
+  const openCreateMode = () => {
+    setTableZoneId(null);
+    setName("");
+    setSuccessMessage(null);
+    tableNameInputRef.current?.focus();
+  };
+
   return (
     <PosV2Shell title="Mesas" subtitle="Configuración v2 de mesas desacoplada del legacy">
       <section className="pos-v2-table-zones">
@@ -161,13 +174,14 @@ export const PosV2TableZonesPage = () => {
             <label>
               Nombre
               <input
+                ref={tableNameInputRef}
                 value={name}
                 onChange={(event) => setName(sanitizeTableName(event.target.value))}
                 placeholder="Ej. Mesa terraza"
                 maxLength={50}
               />
             </label>
-            {tableZoneId ? <button type="button" className="is-secondary" onClick={() => { setTableZoneId(null); setName(""); }}>Cancelar edición</button> : null}
+            {tableZoneId ? <button type="button" className="is-secondary" onClick={openCreateMode}>Cancelar edición</button> : null}
             <button type="submit" disabled={saving || !hasSession}>{saving ? "Guardando..." : tableZoneId ? "Guardar cambios" : "Crear mesa"}</button>
           </form>
         </section>
@@ -207,7 +221,7 @@ export const PosV2TableZonesPage = () => {
               </li>
             ) : null}
             {!loading && zones.length === 0 ? <li className="is-empty">Sin mesas registradas para este negocio.</li> : zones.map((zone) => (
-              <li key={zone.id}>
+              <li key={zone.id} className={tableZoneId === zone.id ? "is-editing" : ""}>
                 <div>
                   <strong>{zone.name}</strong>
                   <span>{zone.isActive ? "Activa" : "Inactiva"} · ID {zone.id}</span>
@@ -215,8 +229,9 @@ export const PosV2TableZonesPage = () => {
                 <button type="button" onClick={() => {
                   setTableZoneId(zone.id);
                   setName(zone.name);
+                  setSuccessMessage(`Editando mesa "${zone.name}".`);
                 }}>
-                  Editar
+                  {tableZoneId === zone.id ? "Editando..." : "Editar"}
                 </button>
               </li>
             ))}
