@@ -12,7 +12,7 @@ const BUSINESS_ID_KEY = "pos-v2-business-id";
 const EMPLOYEE_ID_KEY = "pos-v2-employee-id";
 const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
 const FAVORITES_KEY = "pos-v2-more-favorites";
-const SUPPORT_WHATSAPP_URL = "https://wa.me/525561736886";
+const SUPPORT_WHATSAPP_URL = "https://wa.me/525653989702";
 
 export const PosV2MorePage = () => {
   const navigate = useNavigate();
@@ -169,40 +169,12 @@ export const PosV2MorePage = () => {
           <p>
             Vista limpia del POS v2: solo módulos que ya funcionan o los que seguimos desarrollando en la nueva arquitectura.
           </p>
-          <button type="button" className="pos-v2-more__back" onClick={() => navigate("/v2/MainSales")}>
-            ← Volver a Ventas
-          </button>
+         
           <div className="pos-v2-more__toolbar">
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar módulo..." aria-label="Buscar módulo" />
-            <div className="pos-v2-more__chips">
-              <button type="button" className={viewMode === "working" ? "is-active" : ""} onClick={() => {
-                setViewMode("working");
-                setStatusFilter("all");
-              }}>Funciona hoy</button>
-              <button type="button" className={viewMode === "development" ? "is-active" : ""} onClick={() => {
-                setViewMode("development");
-                setStatusFilter("all");
-              }}>En desarrollo</button>
-              {viewMode === "development" ? (
-                <>
-                  <button type="button" className={statusFilter === "all" ? "is-active" : ""} onClick={() => setStatusFilter("all")}>Todos</button>
-                  <button type="button" className={statusFilter === "beta" ? "is-active" : ""} onClick={() => setStatusFilter("beta")}>Beta</button>
-                  <button type="button" className={statusFilter === "preview" ? "is-active" : ""} onClick={() => setStatusFilter("preview")}>Vista previa</button>
-                </>
-              ) : null}
-            </div>
           </div>
         </header>
-        <section className="pos-v2-more__summary" aria-label="Resumen de módulos">
-          <article>
-            <h3>Funcionales</h3>
-            <p>{workingItems.length} módulo(s)</p>
-          </article>
-          <article>
-            <h3>En desarrollo</h3>
-            <p>{developmentItems.length} módulo(s)</p>
-          </article>
-        </section>
+        
 
         {favoriteItems.length > 0 ? (
           <section className="pos-v2-more__favorites" aria-label="Accesos rápidos">
@@ -243,7 +215,7 @@ export const PosV2MorePage = () => {
           </div>
           <div className="pos-v2-more__quick-tools-grid">
             {allItems
-              .filter((item) => ["online-store", "customers", "employees", "sales-tax", "exports", "cash-closing"].includes(item.id))
+              .filter((item) => ["online-store", "customers", "employees", "exports", "cash-closing"].includes(item.id))
               .map((item) => (
                 <button key={item.id} type="button" onClick={() => openModule(item)}>{item.title}</button>
               ))}
@@ -255,30 +227,7 @@ export const PosV2MorePage = () => {
           </div>
         </section>
 
-        <section className="pos-v2-more__warnings" aria-label="Módulos sensibles">
-          <div className="pos-v2-more__section-head">
-            <h3>Módulos sensibles</h3>
-            <p>Accesos con advertencia para evitar errores operativos en producción.</p>
-          </div>
-          <div className="pos-v2-more__warning-grid">
-            <article>
-              <h4>Información del negocio</h4>
-              <p>Revisa datos fiscales y comerciales antes de guardar para no afectar facturación.</p>
-              <button type="button" onClick={() => navigate("/v2/more/preview/business")}>Abrir con advertencia</button>
-            </article>
-            <article>
-              <h4>Corte de caja</h4>
-              <p>Valida turno, ingresos y método de pago antes de cerrar para evitar diferencias.</p>
-              <button type="button" onClick={() => navigate("/v2/more/preview/cash-closing")}>Abrir con advertencia</button>
-            </article>
-            <article>
-              <h4>Borrar cuenta</h4>
-              <p>Proceso irreversible. Solo continuar con respaldo y autorización del negocio.</p>
-              <button type="button" onClick={() => navigate("/v2/more/preview/delete-account")}>Revisar advertencia</button>
-            </article>
-          </div>
-        </section>
-
+  
         {filteredSections.map((section) => (
           <section key={section.title} className="pos-v2-more__section" aria-label={section.title}>
             <div className="pos-v2-more__section-head">

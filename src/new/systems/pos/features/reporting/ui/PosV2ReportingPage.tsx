@@ -339,7 +339,7 @@ export const PosV2ReportingPage = () => {
     maintainAspectRatio: false,
     cutout: "68%",
     plugins: {
-      legend: { display: false },
+      legend: { display: true },
     },
   }), []);
 
@@ -514,7 +514,6 @@ export const PosV2ReportingPage = () => {
                 ))}
               </select>
             </label>
-            <button type="button" onClick={loadReporting} disabled={loading}>{loading ? "Actualizando..." : "Actualizar"}</button>
           </div>
         </header>
 
