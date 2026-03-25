@@ -345,7 +345,8 @@ export const PosV2MorePage = () => {
             aria-label="Confirmar cierre de sesión"
             onClick={() => setShowSignOutConfirm(false)}
           >
-            <article onClick={(event) => event.stopPropagation()}>
+            <article onClick={(event) => event.stopPropagation()}
+              >
               <h3>¿Cambiar de usuario?</h3>
               <p>Se cerrará la sesión actual para iniciar con otra cuenta o negocio.</p>
               <div>

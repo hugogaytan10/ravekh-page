@@ -553,14 +553,16 @@ export const PosV2SalesHomePage = () => {
         </section>
 
         <aside className={`pos-v2-sales-home__cart-panel ${mobileStep === "cart" || mobileStep === "checkout" ? "is-mobile-active" : ""}`}>
-          <h2>Mesa · {selectedTable}</h2>
-
+          
           <div className={`pos-v2-sales-home__cart-content ${mobileStep === "cart" ? "is-mobile-active" : ""}`}>
             <div className="pos-v2-sales-home__cart-mobile-actions">
               <button type="button" className="pos-v2-sales-home__back" onClick={() => setMobileStep("catalog")}>
-                Regresar al catálogo
+                Regresar
               </button>
             </div>
+
+            <h2>Mesa · {selectedTable}</h2>
+
             {cartItems.length === 0 ? <p className="pos-v2-sales-home__empty">No hay productos agregados.</p> : null}
 
             {cartItems.length > 0 ? (
@@ -572,12 +574,13 @@ export const PosV2SalesHomePage = () => {
                       <small>${item.price.toFixed(2)}</small>
                     </div>
                     <div className="pos-v2-sales-home__qty-controls">
-                      <button type="button" className="is-danger" onClick={() => setQuantity(item.id, 0)} aria-label={`Eliminar ${item.name} del carrito`}>
+                      <button type="button" className="is-danger flex items-center justify-center" onClick={() => setQuantity(item.id, 0)} aria-label={`Eliminar ${item.name} del carrito`}>
                         <Trash width={14} height={14} fill="#b91c1c" />
                       </button>
                       <input
                         type="number"
                         min="0"
+                        className="flex items-center justify-center"
                         value={item.quantity}
                         onChange={(event) => setQuantity(item.id, Number(event.target.value))}
                         aria-label={`Cantidad de ${item.name}`}

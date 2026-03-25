@@ -329,7 +329,6 @@ export const PosV2FinancePage = () => {
                 {monthOptions.map((monthLabel, index) => <option key={monthLabel} value={index}>{monthLabel}</option>)}
               </select>
             </label>
-            <button type="button" className="pos-v2-finance__refresh" onClick={refreshData} disabled={loading}>{loading ? "Cargando..." : "Recargar"}</button>
             <button type="button" className="pos-v2-finance__new-mobile" onClick={() => setOpenFormModal(true)}>+ Nuevo</button>
           </div>
         </header>
@@ -419,7 +418,9 @@ export const PosV2FinancePage = () => {
             <article>
               <header>
                 <h3>Nuevo movimiento</h3>
-                <button type="button" onClick={() => setOpenFormModal(false)} aria-label="Cerrar">✕</button>
+                <button 
+                type="button" 
+                onClick={() => setOpenFormModal(false)} aria-label="Cerrar">Cerrar</button>
               </header>
               {renderMovementForm()}
             </article>

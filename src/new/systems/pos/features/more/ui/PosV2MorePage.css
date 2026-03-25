@@ -412,12 +412,11 @@
   display: grid;
   align-items: end;
   justify-items: center;
-  z-index: 40;
-  padding: 1rem;
+  z-index: 100;
 }
 
 .pos-v2-more__modal article {
-  width: min(460px, 100%);
+  width: 100%;
   background: #fff;
   border-radius: 18px 18px 0 0;
   border: 1px solid #e2e8f0;
