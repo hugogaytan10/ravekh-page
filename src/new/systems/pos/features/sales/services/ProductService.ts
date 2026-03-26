@@ -1,4 +1,4 @@
-import { IProductRepository } from "../interface/IProductRepository";
+import { IProductRepository, SalesProductsPaginatedResult } from "../interface/IProductRepository";
 import { CreateProductDto, Product } from "../model/Product";
 
 export class ProductService {
@@ -31,6 +31,28 @@ export class ProductService {
           product.available,
         );
       });
+  }
+
+  async getSellableProductsPaginated(
+    businessId: number,
+    token: string,
+    limit: string,
+    page: number,
+    categoryId?: number | null,
+  ): Promise<SalesProductsPaginatedResult> {
+    const response = categoryId
+      ? await this.repository.listByCategoryPaginated(categoryId, token, limit, page)
+      : await this.repository.listAvailableByBusinessPaginated(businessId, token, limit, page);
+
+    return {
+      products: response.products.filter((product) => product.hasStock() && product.canBeSold()),
+      pagination: response.pagination,
+    };
+  }
+
+
+  async getBusinessCategories(businessId: number, token: string) {
+    return this.repository.listCategoriesByBusiness(businessId, token);
   }
 
   async createProduct(payload: CreateProductDto, token: string): Promise<Product> {

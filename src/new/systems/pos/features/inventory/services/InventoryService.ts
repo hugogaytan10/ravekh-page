@@ -1,4 +1,4 @@
-import { IInventoryRepository } from "../interface/IInventoryRepository";
+import { IInventoryRepository, InventoryPaginatedResult } from "../interface/IInventoryRepository";
 import { InventoryItem } from "../model/InventoryItem";
 
 export class InventoryService {
@@ -6,6 +6,10 @@ export class InventoryService {
 
   async listItems(businessId: number, token: string): Promise<InventoryItem[]> {
     return this.repository.listByBusiness(businessId, token);
+  }
+
+  async listItemsPaginated(businessId: number, token: string, page: number, limit: number): Promise<InventoryPaginatedResult> {
+    return this.repository.listByBusinessPaginated(businessId, token, page, limit);
   }
 
   async listLowStockItems(businessId: number, token: string, threshold: number): Promise<InventoryItem[]> {

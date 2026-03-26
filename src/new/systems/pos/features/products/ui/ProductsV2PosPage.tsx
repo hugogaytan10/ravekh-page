@@ -8,7 +8,7 @@ import "./ProductsV2PosPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
 const DEFAULT_BUSINESS_ID = Number(import.meta.env.VITE_POS_BUSINESS_ID ?? 0);
-const PRODUCTS_PAGE_SIZE = 20;
+const DEFAULT_PRODUCTS_LIMIT = "EMPRENDEDOR";
 const TOKEN_KEY = "pos-v2-token";
 const BUSINESS_ID_KEY = "pos-v2-business-id";
 
@@ -127,6 +127,7 @@ export const ProductsV2PosPage = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [productsLimit, setProductsLimit] = useState(() => (window.localStorage.getItem("plan") ?? "").trim() || DEFAULT_PRODUCTS_LIMIT);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -191,6 +192,23 @@ export const ProductsV2PosPage = () => {
     setCategoryColorInput("#4F46E5");
   };
 
+  useEffect(() => {
+    if (!businessId || !token) return;
+
+    const factory = new ModernSystemsFactory(API_BASE_URL);
+    const businessService = factory.createPosBusinessSettingsService();
+
+    businessService
+      .getSettings(businessId, token)
+      .then((settings) => {
+        const normalizedPlan = (settings.plan ?? "").trim();
+        if (!normalizedPlan) return;
+        setProductsLimit(normalizedPlan);
+        window.localStorage.setItem("plan", normalizedPlan);
+      })
+      .catch(() => undefined);
+  }, [businessId, token]);
+
   const loadProducts = async (targetPage: number = currentPage) => {
     if (!businessId || !token) {
       setError("Inicia sesión para administrar productos.");
@@ -201,7 +219,7 @@ export const ProductsV2PosPage = () => {
     setError(null);
 
     try {
-      const response = await service.listProductsPaginated(businessId, token, targetPage, PRODUCTS_PAGE_SIZE);
+      const response = await service.listProductsPaginated(businessId, token, targetPage, productsLimit);
       const list = response.products;
       setProducts(
         list.map((product) => ({
@@ -254,7 +272,7 @@ export const ProductsV2PosPage = () => {
 
   useEffect(() => {
     loadProducts(1);
-  }, [businessId, token]);
+  }, [businessId, token, productsLimit]);
 
   const visibleProducts = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -405,7 +423,6 @@ export const ProductsV2PosPage = () => {
         variants: mappedVariants(),
         extras: [...extrasFromValues(sizes, "TALLA"), ...extrasFromValues(colors, "COLOR")],
       };
-
       const saved = await service.saveProduct(payload, token);
       const actionLabel = editingId ? "actualizó" : "creó";
       setSaveResult({ type: "success", message: `Se ${actionLabel} el producto #${saved.id} correctamente.` });
@@ -454,7 +471,7 @@ export const ProductsV2PosPage = () => {
     }
 
     setActionLoadingId(productId);
-    try {
+    try { 
       const detail = await service.getProduct(productId, token);
       if (!detail) throw new Error("No encontramos el producto para restaurar.");
       await service.saveProduct({ ...cloneSavePayload(detail), available: true }, token);

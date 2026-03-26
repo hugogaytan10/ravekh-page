@@ -14,6 +14,8 @@ const suites = [
   { name: "integration-reporting-api", entry: "tests/new/pos/reporting/reporting.api.integration.ts" },
   { name: "integration-dashboard-api", entry: "tests/new/pos/reporting/dashboard.api.integration.ts" },
   { name: "unit-online-orders-page", entry: "tests/new/pos/online-orders/online-orders.page.unit.ts" },
+  { name: "integration-inventory-api", entry: "tests/new/pos/inventory/inventory.api.integration.ts" },
+  { name: "integration-sales-pagination-api", entry: "tests/new/pos/sales/sales.pagination.integration.ts" },
   { name: "decoupling-no-legacy-imports", entry: "tests/new/architecture/decoupling.no-legacy-imports.ts" },
 ];
 

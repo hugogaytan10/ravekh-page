@@ -1,4 +1,6 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
+import { POS_ENDPOINTS } from "../../../shared/api/posEndpoints";
+import { toPaginationMeta } from "../../../shared/model/Pagination";
 import { IProductsRepository, ProductsPaginatedResult } from "../interface/IProductsRepository";
 import { ManagedProduct, ProductCategory, ProductExtra, ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 
@@ -117,7 +119,7 @@ export class PosProductsApi implements IProductsRepository {
   async listByBusiness(businessId: number, token: string): Promise<ManagedProduct[]> {
     const products = await this.httpClient.request<ProductResponse[] | { data?: ProductResponse[]; Data?: ProductResponse[]; Products?: ProductResponse[] }>({
       method: "GET",
-      path: `products/business/${businessId}`,
+      path: POS_ENDPOINTS.productsByBusiness(businessId),
       token,
     });
 
@@ -128,13 +130,13 @@ export class PosProductsApi implements IProductsRepository {
     return rows.map((product) => this.toDomain(product));
   }
 
-  async listByBusinessPaginated(businessId: number, token: string, page: number, limit: number): Promise<ProductsPaginatedResult> {
+  async listByBusinessPaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult> {
     const payload = await this.httpClient.request<
       ProductResponse[] |
       { products?: ProductResponse[]; data?: ProductResponse[]; pagination?: Record<string, unknown> }
     >({
       method: "GET",
-      path: `products/business/${businessId}`,
+      path: POS_ENDPOINTS.productsByBusiness(businessId),
       token,
       query: { page, limit },
     });
@@ -143,22 +145,15 @@ export class PosProductsApi implements IProductsRepository {
       ? payload
       : payload.products ?? payload.data ?? [];
 
-    const paginationPayload = Array.isArray(payload) ? {} : payload.pagination ?? {};
-    const totalPages = Math.max(1, Number(paginationPayload.totalPages ?? 1) || 1);
-    const normalizedPage = Math.max(1, Number(paginationPayload.page ?? page) || page);
-    const categoryIds = Array.isArray(paginationPayload.categoryIds)
+    const paginationPayload = Array.isArray(payload) ? undefined : payload.pagination;
+    const categoryIds = Array.isArray(paginationPayload?.categoryIds)
       ? paginationPayload.categoryIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
       : [];
 
     return {
       products: rows.map((product) => this.toDomain(product)),
       pagination: {
-        page: normalizedPage,
-        pageSize: Math.max(1, Number(paginationPayload.pageSize ?? limit) || limit),
-        total: Math.max(0, Number(paginationPayload.total ?? rows.length) || rows.length),
-        totalPages,
-        hasNext: Boolean(paginationPayload.hasNext) || normalizedPage < totalPages,
-        hasPrev: Boolean(paginationPayload.hasPrev) || normalizedPage > 1,
+        ...toPaginationMeta(paginationPayload, page, Number(limit) || 20, rows.length),
         categoryIds,
       },
     };
@@ -168,12 +163,12 @@ export class PosProductsApi implements IProductsRepository {
     const [product, extrasResponse] = await Promise.all([
       this.httpClient.request<ProductResponse | { data?: ProductResponse; Data?: ProductResponse } | null>({
         method: "GET",
-        path: `products/${productId}`,
+        path: POS_ENDPOINTS.productById(productId),
         token,
       }),
       this.httpClient.request<unknown>({
         method: "GET",
-        path: `extras/product/${productId}`,
+        path: POS_ENDPOINTS.productExtras(productId),
         token,
       }).catch(() => null),
     ]);
@@ -193,7 +188,7 @@ export class PosProductsApi implements IProductsRepository {
     try {
       response = await this.httpClient.request<ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null>({
         method: "POST",
-        path: "products",
+        path: POS_ENDPOINTS.products(),
         token,
         body: this.toMutationBody(payload, true),
       });
@@ -201,7 +196,7 @@ export class PosProductsApi implements IProductsRepository {
       if (!payload.extras?.length) throw cause;
       response = await this.httpClient.request<ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null>({
         method: "POST",
-        path: "products",
+        path: POS_ENDPOINTS.products(),
         token,
         body: this.toMutationBody(payload, false),
       });
@@ -254,7 +249,7 @@ export class PosProductsApi implements IProductsRepository {
     try {
       updated = await this.httpClient.request<ProductResponse | null>({
         method: "PUT",
-        path: `products/${payload.id}`,
+        path: POS_ENDPOINTS.productById(payload.id),
         token,
         body: this.toLegacy(payload),
       });
@@ -262,7 +257,7 @@ export class PosProductsApi implements IProductsRepository {
       if (!payload.extras?.length && !(payload.variants?.length)) throw cause;
       updated = await this.httpClient.request<ProductResponse | null>({
         method: "PUT",
-        path: `products/${payload.id}`,
+        path: POS_ENDPOINTS.productById(payload.id),
         token,
         body: this.toMutationBody(payload, true),
       });
@@ -288,7 +283,7 @@ export class PosProductsApi implements IProductsRepository {
   async archive(productId: number, token: string): Promise<void> {
     await this.httpClient.request<void>({
       method: "PUT",
-      path: `products/available/${productId}`,
+      path: POS_ENDPOINTS.productAvailability(productId),
       token,
       body: { Available: false },
     });
@@ -297,7 +292,7 @@ export class PosProductsApi implements IProductsRepository {
   async listCategoriesByBusiness(businessId: number, token: string): Promise<ProductCategory[]> {
     const payload = await this.httpClient.request<CategoryResponse[] | { data?: CategoryResponse[]; Data?: CategoryResponse[] }>({
       method: "GET",
-      path: `categories/business/${businessId}`,
+      path: POS_ENDPOINTS.categoriesByBusiness(businessId),
       token,
     });
 
@@ -311,7 +306,7 @@ export class PosProductsApi implements IProductsRepository {
   async createCategory(category: ProductCategory, token: string): Promise<ProductCategory> {
     const response = await this.httpClient.request<CategoryResponse | null>({
       method: "POST",
-      path: "categories",
+      path: POS_ENDPOINTS.categories(),
       token,
       body: this.toLegacyCategory(category),
     });
@@ -326,7 +321,7 @@ export class PosProductsApi implements IProductsRepository {
 
     const response = await this.httpClient.request<CategoryResponse | null>({
       method: "PUT",
-      path: `categories/${category.id}`,
+      path: POS_ENDPOINTS.categoryById(category.id),
       token,
       body: this.toLegacyCategory(category),
     });
@@ -337,7 +332,7 @@ export class PosProductsApi implements IProductsRepository {
   async deleteCategory(categoryId: number, token: string): Promise<void> {
     await this.httpClient.request<void>({
       method: "DELETE",
-      path: `categories/${categoryId}`,
+      path: POS_ENDPOINTS.categoryById(categoryId),
       token,
       body: { Available: false },
     });
@@ -349,7 +344,7 @@ export class PosProductsApi implements IProductsRepository {
 
     const response = await this.httpClient.request<{ imported?: number; message?: string; total?: number; created?: number; updated?: number }>({
       method: "POST",
-      path: `products/import/${businessId}`,
+      path: POS_ENDPOINTS.productImport(businessId),
       token,
       body: formData,
     });
@@ -510,7 +505,7 @@ export class PosProductsApi implements IProductsRepository {
     await Promise.all(
       normalizedExtras.map((extra) => this.httpClient.request<void>({
         method: "POST",
-        path: "extras",
+        path: POS_ENDPOINTS.extras(),
         token,
         body: { Product_Id: productId, Description: extra.description, Type: extra.type },
       })),

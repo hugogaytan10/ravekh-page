@@ -6,6 +6,8 @@ type BusinessResponse = {
   Id: number;
   Name: string;
   Taxes_Id?: number | null;
+  Plan?: string | null;
+  plan?: string | null;
 };
 
 type TableZoneResponse = {
@@ -74,6 +76,6 @@ export class PosBusinessSettingsApi implements IBusinessSettingsRepository {
   }
 
   private toDomain(business: BusinessResponse, tablesEnabled: boolean): BusinessSettings {
-    return new BusinessSettings(business.Id, business.Name, business.Taxes_Id ?? null, tablesEnabled);
+    return new BusinessSettings(business.Id, business.Name, business.Taxes_Id ?? null, tablesEnabled, business.Plan ?? business.plan ?? null);
   }
 }

@@ -34,6 +34,11 @@ type CustomerVm = {
   name: string;
 };
 
+type CategoryVm = {
+  id: number;
+  name: string;
+};
+
 const PAYMENT_METHOD_OPTIONS: Array<{
   value: PaymentMethod;
   label: string;
@@ -45,11 +50,11 @@ const PAYMENT_METHOD_OPTIONS: Array<{
   ];
 
 const API_BASE_URL = getPosApiBaseUrl();
-const SALES_PAGE_SIZE = 12;
 const TOKEN_KEY = "pos-v2-token";
 const BUSINESS_ID_KEY = "pos-v2-business-id";
 const EMPLOYEE_ID_KEY = "pos-v2-employee-id";
 const DEFAULT_TABLE_OPTIONS = ["Para llevar"];
+const DEFAULT_SALES_LIMIT = "EMPRENDEDOR";
 const DEBUG_KEY = "pos-v2-debug";
 
 type TokenPayload = {
@@ -82,9 +87,11 @@ const toAbsoluteImageUrl = (image?: string | null): string | undefined => {
 export const PosV2SalesHomePage = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("Todas");
+  const [categoryKey, setCategoryKey] = useState("all");
   const [isGrid, setIsGrid] = useState(true);
   const [products, setProducts] = useState<SaleItemVm[]>([]);
+  const [categories, setCategories] = useState<CategoryVm[]>([]);
+  const [availableCategoryIds, setAvailableCategoryIds] = useState<number[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [cart, setCart] = useState<Record<number, { name: string; price: number; quantity: number }>>({});
@@ -104,6 +111,10 @@ export const PosV2SalesHomePage = () => {
   const [customersError, setCustomersError] = useState<string | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPrevPage, setHasPrevPage] = useState(false);
+  const [planLimit, setPlanLimit] = useState(() => (window.localStorage.getItem("plan") ?? "").trim() || DEFAULT_SALES_LIMIT);
 
   const debugLog = (...args: unknown[]) => {
     if (window.localStorage.getItem(DEBUG_KEY) === "true") {
@@ -114,6 +125,7 @@ export const PosV2SalesHomePage = () => {
   useEffect(() => {
     const token = window.localStorage.getItem(TOKEN_KEY);
     const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY));
+    const categoryId = categoryKey === "all" ? null : Number(categoryKey);
 
     if (!token || !businessId) {
       setProducts([]);
@@ -128,28 +140,53 @@ export const PosV2SalesHomePage = () => {
     setLoadingProducts(true);
     setProductsError(null);
     productService
-      .getSellableProducts(businessId, token)
-      .then((items) => {
-        const mapped: SaleItemVm[] = items.map((item: {
-          id: number;
-          name: string;
-          price: number;
-          categoryName?: string | null;
-          image?: string | null;
-          images?: string[];
-        }) => ({
+      .getSellableProductsPaginated(businessId, token, planLimit, currentPage, Number.isFinite(categoryId) ? categoryId : null)
+      .then((response) => {
+        const mapped: SaleItemVm[] = response.products.map((item) => ({
           id: item.id,
           name: item.name,
           price: item.price,
           category: item.categoryName?.trim() || "General",
           image: toAbsoluteImageUrl(item.image || item.images?.find(Boolean)),
         }));
+
         setProducts(mapped);
+        setCurrentPage(response.pagination.page);
+        setTotalPages(response.pagination.totalPages);
+        setHasNextPage(response.pagination.hasNext || response.pagination.page < response.pagination.totalPages);
+        setHasPrevPage(response.pagination.hasPrev || response.pagination.page > 1);
+
+        if (categoryId === null) {
+          setAvailableCategoryIds(response.pagination.categoryIds);
+        }
       })
       .catch((error) => {
+        setProducts([]);
         setProductsError(error instanceof Error ? error.message : "No pudimos cargar tus productos.");
       })
       .finally(() => setLoadingProducts(false));
+  }, [categoryKey, currentPage, planLimit]);
+
+  useEffect(() => {
+    const token = window.localStorage.getItem(TOKEN_KEY);
+    const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY));
+
+    if (!token || !businessId) {
+      return;
+    }
+
+    const factory = new ModernSystemsFactory(API_BASE_URL);
+    const businessService = factory.createPosBusinessSettingsService();
+
+    businessService
+      .getSettings(businessId, token)
+      .then((settings) => {
+        const normalizedPlan = (settings.plan ?? "").trim();
+        if (!normalizedPlan) return;
+        setPlanLimit(normalizedPlan);
+        window.localStorage.setItem("plan", normalizedPlan);
+      })
+      .catch(() => undefined);
   }, []);
 
   useEffect(() => {
@@ -218,39 +255,42 @@ export const PosV2SalesHomePage = () => {
     }
   }, [tables, selectedTable]);
 
-  const categories = useMemo(() => {
-    const dynamic = Array.from(new Set(products.map((item) => item.category).filter(Boolean)));
-    return ["Todas", ...dynamic];
-  }, [products]);
+  useEffect(() => {
+    const token = window.localStorage.getItem(TOKEN_KEY);
+    const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY));
+
+    if (!token || !businessId) {
+      setCategories([]);
+      return;
+    }
+
+    const factory = new ModernSystemsFactory(API_BASE_URL);
+    const productService = factory.createPosProductService();
+
+    productService
+      .getBusinessCategories(businessId, token)
+      .then((rows) => setCategories(rows.map((row) => ({ id: row.id, name: row.name }))))
+      .catch(() => setCategories([]));
+  }, []);
+
+  const categoryOptions = useMemo(() => {
+    const dynamic = categories.filter((item) => availableCategoryIds.length === 0 || availableCategoryIds.includes(item.id));
+    return [{ key: "all", label: "Todas" }, ...dynamic.map((item) => ({ key: String(item.id), label: item.name }))];
+  }, [availableCategoryIds, categories]);
 
   useEffect(() => {
-    if (!categories.includes(category)) {
-      setCategory("Todas");
+    if (!categoryOptions.some((item) => item.key === categoryKey)) {
+      setCategoryKey("all");
     }
-  }, [categories, category]);
+  }, [categoryOptions, categoryKey]);
 
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
-      const matchCategory = category === "Todas" || product.category === category;
-      const matchSearch = product.name.toLowerCase().includes(search.toLowerCase());
-      return matchCategory && matchSearch;
-    });
-  }, [category, products, search]);
-
-  const totalProductPages = useMemo(() => Math.max(1, Math.ceil(filteredProducts.length / SALES_PAGE_SIZE)), [filteredProducts.length]);
-
-  const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * SALES_PAGE_SIZE;
-    return filteredProducts.slice(start, start + SALES_PAGE_SIZE);
-  }, [filteredProducts, currentPage]);
+    return products.filter((product) => product.name.toLowerCase().includes(search.toLowerCase()));
+  }, [products, search]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [category, search]);
-
-  useEffect(() => {
-    setCurrentPage((page) => Math.min(page, totalProductPages));
-  }, [totalProductPages]);
+  }, [categoryKey, search]);
 
   const cartItems = useMemo(() => Object.entries(cart).map(([id, value]) => ({ id: Number(id), ...value })), [cart]);
   const hasTableSelection = useMemo(() => tables.some((table) => table !== "Para llevar"), [tables]);
@@ -526,16 +566,16 @@ export const PosV2SalesHomePage = () => {
           </div>
 
           <div className="pos-v2-sales-home__categories">
-            {categories.map((item) => {
-              const active = item === category;
+            {categoryOptions.map((item) => {
+              const active = item.key === categoryKey;
               return (
                 <button
-                  key={item}
+                  key={item.key}
                   type="button"
-                  onClick={() => setCategory(item)}
+                  onClick={() => setCategoryKey(item.key)}
                   className={active ? "is-active" : ""}
                 >
-                  {item}
+                  {item.label}
                 </button>
               );
             })}
@@ -545,7 +585,7 @@ export const PosV2SalesHomePage = () => {
           {productsError ? <p className="pos-v2-sales-home__error">{productsError}</p> : null}
 
           <div className={`pos-v2-sales-home__products ${isGrid ? "is-grid" : "is-list"}`}>
-            {paginatedProducts.map((product) => (
+            {filteredProducts.map((product) => (
               <article
                 key={product.id}
                 className={`pos-v2-sales-home__product-card ${!isGrid ? "is-list-item" : ""}`}
@@ -575,13 +615,13 @@ export const PosV2SalesHomePage = () => {
             ) : null}
           </div>
 
-          {!loadingProducts && !productsError && filteredProducts.length > 0 ? (
+          {!loadingProducts && !productsError && totalPages > 1 ? (
             <nav className="pos-v2-sales-home__pagination" aria-label="Paginación de productos">
-              <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1}>
+              <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={!hasPrevPage}>
                 Anterior
               </button>
-              <span>Página {currentPage} de {totalProductPages}</span>
-              <button type="button" onClick={() => setCurrentPage((page) => Math.min(totalProductPages, page + 1))} disabled={currentPage === totalProductPages}>
+              <span>Página {currentPage} de {totalPages}</span>
+              <button type="button" onClick={() => setCurrentPage((page) => page + 1)} disabled={!hasNextPage}>
                 Siguiente
               </button>
             </nav>

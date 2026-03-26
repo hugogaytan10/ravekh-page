@@ -1,0 +1,16 @@
+export const POS_ENDPOINTS = {
+  products: () => "products",
+  productsByBusiness: (businessId: number) => `products/business/${businessId}`,
+  productsStockNull: (businessId: number) => `products/stocknull/${businessId}`,
+  productsStockGtZero: (businessId: number) => `products/stockgtzero/${businessId}`,
+  productsStockAvailableGtZero: (businessId: number) => `products/stock/availablegtzero/${businessId}`,
+  productsByCategory: (categoryId: number) => `products/category/${categoryId}`,
+  productById: (productId: number) => `products/${productId}`,
+  productAvailability: (productId: number) => `products/available/${productId}`,
+  productExtras: (productId: number) => `extras/product/${productId}`,
+  extras: () => "extras",
+  productImport: (businessId: number) => `products/import/${businessId}`,
+  categoriesByBusiness: (businessId: number) => `categories/business/${businessId}`,
+  categoryById: (categoryId: number) => `categories/${categoryId}`,
+  categories: () => "categories",
+} as const;

@@ -17,6 +17,7 @@ export class BusinessSettingsService {
       updated.businessName,
       updated.taxId,
       currentSettings.tablesEnabled,
+      currentSettings.plan,
     );
   }
 
