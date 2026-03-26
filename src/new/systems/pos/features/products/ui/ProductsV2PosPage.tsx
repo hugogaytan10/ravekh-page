@@ -4,6 +4,7 @@ import { ModernSystemsFactory } from "../../../../../index";
 import { ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
+import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import "./ProductsV2PosPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -67,14 +68,6 @@ const toImageUrl = (image?: string | null): string | null => {
     return null;
   }
 };
-
-const toDataUrl = (file: File): Promise<string> =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result ?? ""));
-    reader.onerror = () => reject(new Error("No se pudo leer la imagen seleccionada."));
-    reader.readAsDataURL(file);
-  });
 
 const createVariantDraft = (): VariantFormVm => ({
   key: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -395,8 +388,8 @@ export const ProductsV2PosPage = () => {
     setSaveResult(null);
 
     try {
-      const selectedImages = await Promise.all(selectedImageFiles.map((file) => toDataUrl(file)));
-      const allImages = Array.from(new Set([...selectedImages, ...storedImages].filter(Boolean)));
+      const uploadedImages = await Promise.all(selectedImageFiles.map((file) => uploadImageToCloudinary(file)));
+      const allImages = Array.from(new Set([...uploadedImages, ...storedImages].filter(Boolean)));
 
       const payload: SaveManagedProductDto = {
         id: editingId ?? undefined,

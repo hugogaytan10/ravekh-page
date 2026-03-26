@@ -245,27 +245,17 @@ export class PosProductsApi implements IProductsRepository {
       throw new Error("Product id is required for updates.");
     }
 
-    let updated: ProductResponse | null;
-    try {
-      updated = await this.httpClient.request<ProductResponse | null>({
-        method: "PUT",
-        path: POS_ENDPOINTS.productById(payload.id),
-        token,
-        body: this.toLegacy(payload),
-      });
-    } catch (cause) {
-      if (!payload.extras?.length && !(payload.variants?.length)) throw cause;
-      updated = await this.httpClient.request<ProductResponse | null>({
-        method: "PUT",
-        path: POS_ENDPOINTS.productById(payload.id),
-        token,
-        body: this.toMutationBody(payload, true),
-      });
-    }
+    const updated = await this.httpClient.request<ProductResponse | null>({
+      method: "PUT",
+      path: POS_ENDPOINTS.productById(payload.id),
+      token,
+      body: this.toLegacy(payload),
+    });
 
-    if (payload.extras?.length) {
-      await this.persistExtras(payload.id, payload.extras, token);
-    }
+    await Promise.all([
+      this.syncVariants(payload.id, payload.variants ?? [], token),
+      this.syncExtras(payload.id, payload.extras ?? [], token),
+    ]);
 
     if (!updated) {
       return this.toDomain(this.toLegacy(payload), payload.extras ?? []);
@@ -396,11 +386,10 @@ export class PosProductsApi implements IProductsRepository {
       Category_Id: payload.categoryId,
       Name: payload.name,
       Description: payload.description,
-      Color: payload.color ?? null,
+      Color: payload.color?.trim() || "#000000",
       ForSale: payload.forSale,
       ShowInStore: payload.showInStore,
       Available: payload.available,
-      Image: payload.image,
       Images: payload.images,
       Barcode: payload.barcode,
       Price: payload.price,
@@ -410,7 +399,6 @@ export class PosProductsApi implements IProductsRepository {
       ExpDate: payload.expDate ?? null,
       MinStock: payload.minStock ?? null,
       OptStock: payload.optStock ?? null,
-      Quantity: payload.quantity ?? null,
       Volume: payload.volume ?? false,
     };
   }
@@ -510,6 +498,108 @@ export class PosProductsApi implements IProductsRepository {
         body: { Product_Id: productId, Description: extra.description, Type: extra.type },
       })),
     );
+  }
+
+  private async syncVariants(productId: number, variants: ProductVariant[], token: string): Promise<void> {
+    const current = await this.httpClient.request<LegacyVariantResponse[] | null>({
+      method: "GET",
+      path: POS_ENDPOINTS.variantsByProduct(productId),
+      token,
+    }).catch(() => null);
+    const currentRows = Array.isArray(current) ? current.map((variant) => this.toDomainVariant(variant)) : [];
+
+    const desiredById = new Map(
+      variants
+        .filter((variant): variant is ProductVariant & { id: number } => typeof variant.id === "number")
+        .map((variant) => [variant.id, variant]),
+    );
+    const currentIds = new Set(currentRows.filter((variant) => typeof variant.id === "number").map((variant) => variant.id as number));
+
+    await Promise.all(
+      variants.map((variant) => {
+        const legacy = this.toLegacyVariant({ ...variant, productId });
+
+        if (typeof variant.id === "number") {
+          return this.httpClient.request<void>({
+            method: "PUT",
+            path: POS_ENDPOINTS.variantById(variant.id),
+            token,
+            body: legacy,
+          });
+        }
+
+        return this.httpClient.request<void>({
+          method: "POST",
+          path: POS_ENDPOINTS.variants(),
+          token,
+          body: legacy,
+        });
+      }),
+    );
+
+    const toDelete = [...currentIds].filter((id) => !desiredById.has(id));
+    if (toDelete.length === 0) return;
+
+    await Promise.all(
+      toDelete.map((variantId) => this.httpClient.request<void>({
+        method: "DELETE",
+        path: POS_ENDPOINTS.variantById(variantId),
+        token,
+      })),
+    );
+  }
+
+  private async syncExtras(productId: number, extras: ProductExtra[], token: string): Promise<void> {
+    const currentPayload = await this.httpClient.request<unknown>({
+      method: "GET",
+      path: POS_ENDPOINTS.productExtras(productId),
+      token,
+    }).catch(() => null);
+
+    const currentExtras = this.toDomainExtras(currentPayload);
+    const currentByKey = new Map(
+      currentExtras
+        .filter((extra) => typeof extra.id === "number")
+        .map((extra) => [this.toExtraKey(extra.description, extra.type), extra]),
+    );
+
+    const desiredRows = extras
+      .map((extra) => ({
+        description: extra.description.trim(),
+        type: String(extra.type || "").trim().toUpperCase() || "COLOR",
+      }))
+      .filter((extra) => extra.description.length > 0);
+    const desiredKeys = new Set(desiredRows.map((extra) => this.toExtraKey(extra.description, extra.type)));
+
+    await Promise.all(
+      desiredRows
+        .filter((extra) => !currentByKey.has(this.toExtraKey(extra.description, extra.type)))
+        .map((extra) => this.httpClient.request<void>({
+          method: "POST",
+          path: POS_ENDPOINTS.extras(),
+          token,
+          body: { Product_Id: productId, Description: extra.description, Type: extra.type },
+        })),
+    );
+
+    const extraIdsToDelete = currentExtras
+      .filter((extra) => typeof extra.id === "number")
+      .filter((extra) => !desiredKeys.has(this.toExtraKey(extra.description, extra.type)))
+      .map((extra) => extra.id as number);
+
+    if (extraIdsToDelete.length === 0) return;
+
+    await Promise.all(
+      extraIdsToDelete.map((extraId) => this.httpClient.request<void>({
+        method: "DELETE",
+        path: POS_ENDPOINTS.extraById(extraId),
+        token,
+      })),
+    );
+  }
+
+  private toExtraKey(description: string, type: string): string {
+    return `${description.trim().toLowerCase()}::${type.trim().toUpperCase()}`;
   }
 
   private extractCreatedProduct(response: ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null): ProductResponse | null {

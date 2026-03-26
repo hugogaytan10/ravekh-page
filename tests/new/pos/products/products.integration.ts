@@ -39,6 +39,18 @@ export async function run(): Promise<void> {
         return null;
       }
 
+      if (method === "GET" && path === "variants/product/9") {
+        return [];
+      }
+
+      if (method === "POST" && path === "variants") {
+        return { Id: 501 };
+      }
+
+      if (method === "GET" && path === "extras/product/9") {
+        return null;
+      }
+
       if (method === "POST" && path === "extras") {
         extraBodies.push(body);
         return { Id: 120 };
@@ -140,11 +152,10 @@ export async function run(): Promise<void> {
       Category_Id: 3,
       Name: "Té",
       Description: "Bebida",
-      Color: null,
+      Color: "#000000",
       ForSale: true,
       ShowInStore: true,
       Available: true,
-      Image: undefined,
       Images: [],
       Barcode: undefined,
       Price: undefined,
@@ -154,7 +165,6 @@ export async function run(): Promise<void> {
       ExpDate: null,
       MinStock: null,
       OptStock: null,
-      Quantity: null,
       Volume: false,
     },
     Variants: null,
@@ -170,11 +180,10 @@ export async function run(): Promise<void> {
     Category_Id: undefined,
     Name: "Té chai",
     Description: "Bebida caliente",
-    Color: null,
+    Color: "#000000",
     ForSale: true,
     ShowInStore: true,
     Available: true,
-    Image: undefined,
     Images: [],
     Barcode: undefined,
     Price: undefined,
@@ -184,7 +193,6 @@ export async function run(): Promise<void> {
     ExpDate: null,
     MinStock: null,
     OptStock: null,
-    Quantity: null,
     Volume: false,
   });
 
@@ -220,6 +228,9 @@ export async function run(): Promise<void> {
     "GET products/business/7",
     "POST products",
     "PUT products/9",
+    "GET variants/product/9",
+    "GET extras/product/9",
+    "POST variants",
     "POST extras",
     "POST extras",
     "PUT products/available/8",
