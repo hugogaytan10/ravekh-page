@@ -6,8 +6,10 @@ import MoneyIcon from "../../../../../../assets/POS/MoneyIcon";
 import { Trash } from "../../../../../../assets/POS/Trash";
 import { FiCreditCard, FiDollarSign, FiRepeat } from "react-icons/fi";
 import { jwtDecode } from "jwt-decode";
+import { useNavigate } from "react-router-dom";
 import "./PosV2SalesHomePage.css";
 import { ModernSystemsFactory } from "../../../../../index";
+import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 
 type SaleItemVm = {
   id: number;
@@ -42,7 +44,8 @@ const PAYMENT_METHOD_OPTIONS: Array<{
     { value: "Transferencia", label: "Transferencia", Icon: FiRepeat },
   ];
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
+const API_BASE_URL = getPosApiBaseUrl();
+const SALES_PAGE_SIZE = 12;
 const TOKEN_KEY = "pos-v2-token";
 const BUSINESS_ID_KEY = "pos-v2-business-id";
 const EMPLOYEE_ID_KEY = "pos-v2-employee-id";
@@ -77,6 +80,7 @@ const toAbsoluteImageUrl = (image?: string | null): string | undefined => {
 };
 
 export const PosV2SalesHomePage = () => {
+  const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Todas");
   const [isGrid, setIsGrid] = useState(true);
@@ -99,6 +103,7 @@ export const PosV2SalesHomePage = () => {
   const [customers, setCustomers] = useState<CustomerVm[]>([]);
   const [customersError, setCustomersError] = useState<string | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
+  const [currentPage, setCurrentPage] = useState(1);
 
   const debugLog = (...args: unknown[]) => {
     if (window.localStorage.getItem(DEBUG_KEY) === "true") {
@@ -231,6 +236,21 @@ export const PosV2SalesHomePage = () => {
       return matchCategory && matchSearch;
     });
   }, [category, products, search]);
+
+  const totalProductPages = useMemo(() => Math.max(1, Math.ceil(filteredProducts.length / SALES_PAGE_SIZE)), [filteredProducts.length]);
+
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * SALES_PAGE_SIZE;
+    return filteredProducts.slice(start, start + SALES_PAGE_SIZE);
+  }, [filteredProducts, currentPage]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [category, search]);
+
+  useEffect(() => {
+    setCurrentPage((page) => Math.min(page, totalProductPages));
+  }, [totalProductPages]);
 
   const cartItems = useMemo(() => Object.entries(cart).map(([id, value]) => ({ id: Number(id), ...value })), [cart]);
   const hasTableSelection = useMemo(() => tables.some((table) => table !== "Para llevar"), [tables]);
@@ -483,6 +503,10 @@ export const PosV2SalesHomePage = () => {
 
 
           <div className="pos-v2-sales-home__toolbar">
+            <div className="pos-v2-sales-home__toolbar-actions">
+              <button type="button" className="pos-v2-sales-home__back-main" onClick={() => navigate(-1)}>← Regresar</button>
+            </div>
+
             <div className="pos-v2-sales-home__search">
               <input
                 value={search}
@@ -521,7 +545,7 @@ export const PosV2SalesHomePage = () => {
           {productsError ? <p className="pos-v2-sales-home__error">{productsError}</p> : null}
 
           <div className={`pos-v2-sales-home__products ${isGrid ? "is-grid" : "is-list"}`}>
-            {filteredProducts.map((product) => (
+            {paginatedProducts.map((product) => (
               <article
                 key={product.id}
                 className={`pos-v2-sales-home__product-card ${!isGrid ? "is-list-item" : ""}`}
@@ -550,6 +574,18 @@ export const PosV2SalesHomePage = () => {
               <p className="pos-v2-sales-home__empty">No encontramos productos para esta categoría.</p>
             ) : null}
           </div>
+
+          {!loadingProducts && !productsError && filteredProducts.length > 0 ? (
+            <nav className="pos-v2-sales-home__pagination" aria-label="Paginación de productos">
+              <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={currentPage === 1}>
+                Anterior
+              </button>
+              <span>Página {currentPage} de {totalProductPages}</span>
+              <button type="button" onClick={() => setCurrentPage((page) => Math.min(totalProductPages, page + 1))} disabled={currentPage === totalProductPages}>
+                Siguiente
+              </button>
+            </nav>
+          ) : null}
         </section>
 
         <aside className={`pos-v2-sales-home__cart-panel ${mobileStep === "cart" || mobileStep === "checkout" ? "is-mobile-active" : ""}`}>

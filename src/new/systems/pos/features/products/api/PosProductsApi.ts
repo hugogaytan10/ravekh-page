@@ -1,5 +1,5 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
-import { IProductsRepository } from "../interface/IProductsRepository";
+import { IProductsRepository, ProductsPaginatedResult } from "../interface/IProductsRepository";
 import { ManagedProduct, ProductCategory, ProductExtra, ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 
 type ProductResponse = {
@@ -126,6 +126,42 @@ export class PosProductsApi implements IProductsRepository {
       : products.data ?? products.Data ?? products.Products ?? [];
 
     return rows.map((product) => this.toDomain(product));
+  }
+
+  async listByBusinessPaginated(businessId: number, token: string, page: number, limit: number): Promise<ProductsPaginatedResult> {
+    const payload = await this.httpClient.request<
+      ProductResponse[] |
+      { products?: ProductResponse[]; data?: ProductResponse[]; pagination?: Record<string, unknown> }
+    >({
+      method: "GET",
+      path: `products/business/${businessId}`,
+      token,
+      query: { page, limit },
+    });
+
+    const rows = Array.isArray(payload)
+      ? payload
+      : payload.products ?? payload.data ?? [];
+
+    const paginationPayload = Array.isArray(payload) ? {} : payload.pagination ?? {};
+    const totalPages = Math.max(1, Number(paginationPayload.totalPages ?? 1) || 1);
+    const normalizedPage = Math.max(1, Number(paginationPayload.page ?? page) || page);
+    const categoryIds = Array.isArray(paginationPayload.categoryIds)
+      ? paginationPayload.categoryIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
+      : [];
+
+    return {
+      products: rows.map((product) => this.toDomain(product)),
+      pagination: {
+        page: normalizedPage,
+        pageSize: Math.max(1, Number(paginationPayload.pageSize ?? limit) || limit),
+        total: Math.max(0, Number(paginationPayload.total ?? rows.length) || rows.length),
+        totalPages,
+        hasNext: Boolean(paginationPayload.hasNext) || normalizedPage < totalPages,
+        hasPrev: Boolean(paginationPayload.hasPrev) || normalizedPage > 1,
+        categoryIds,
+      },
+    };
   }
 
   async getById(productId: number, token: string): Promise<ManagedProduct | null> {

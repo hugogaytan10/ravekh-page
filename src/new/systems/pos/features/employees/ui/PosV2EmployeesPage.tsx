@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../index";
+import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { EmployeeRole } from "../model/Employee";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import "./PosV2EmployeesPage.css";
@@ -7,7 +8,7 @@ import "./PosV2EmployeesPage.css";
 const TOKEN_KEY = "pos-v2-token";
 const BUSINESS_ID_KEY = "pos-v2-business-id";
 const EMPLOYEE_ID_KEY = "pos-v2-employee-id";
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
+const API_BASE_URL = getPosApiBaseUrl();
 
 type EmployeeVm = {
   id: number;

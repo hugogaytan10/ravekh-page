@@ -24,6 +24,13 @@
   display: grid;
   gap: 0.6rem;
 }
+.pos-v2-more__toolbar-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
 
 .pos-v2-more__summary {
   display: grid;

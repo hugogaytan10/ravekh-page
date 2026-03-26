@@ -83,6 +83,18 @@
   display: grid;
   gap: 0.6rem;
 }
+.pos-v2-sales-home__toolbar-actions {
+  display: flex;
+  justify-content: flex-start;
+}
+.pos-v2-sales-home__back-main {
+  border: 1px solid #d1d5db;
+  border-radius: 9999px;
+  background: #fff;
+  color: #374151;
+  font-weight: 700;
+  padding: .4rem .8rem;
+}
 
 .pos-v2-sales-home__search {
   background: #fff;
@@ -1075,7 +1087,8 @@
 :root[data-theme="dark"] .pos-v2-sales-home__categories button,
 :root[data-theme="dark"] .pos-v2-sales-home__product-card,
 :root[data-theme="dark"] .pos-v2-sales-home__cart-panel,
-:root[data-theme="dark"] .pos-v2-sales-home__mobile-steps button {
+:root[data-theme="dark"] .pos-v2-sales-home__mobile-steps button,
+:root[data-theme="dark"] .pos-v2-sales-home__back-main {
   background: #111827;
   border-color: #374151;
   color: #e5e7eb;
@@ -1098,4 +1111,42 @@
 :root[data-theme="dark"] .pos-v2-sales-home__tables-skeleton span {
   background: linear-gradient(90deg, #1f2937 20%, #334155 45%, #1f2937 70%);
   background-size: 200% 100%;
+}
+
+.pos-v2-sales-home__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: .7rem;
+  flex-wrap: wrap;
+}
+
+.pos-v2-sales-home__pagination button {
+  border: 1px solid #d1d5db;
+  border-radius: 9999px;
+  background: #fff;
+  color: #374151;
+  font-weight: 700;
+  padding: .38rem .8rem;
+}
+
+.pos-v2-sales-home__pagination button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.pos-v2-sales-home__pagination span {
+  font-size: .86rem;
+  color: #6b7280;
+  font-weight: 600;
+}
+@media (prefers-color-scheme: dark) {
+  .pos-v2-sales-home__pagination button {
+    background: #111827;
+    border-color: #374151;
+    color: #e5e7eb;
+  }
+  .pos-v2-sales-home__pagination span {
+    color: #9ca3af;
+  }
 }

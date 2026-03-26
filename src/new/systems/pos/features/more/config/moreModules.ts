@@ -1,33 +1,34 @@
 import { MoreModuleSection } from "../model/MoreModule";
+import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 
-const previewPath = (id: string) => `/v2/more/preview/${id}`;
+const previewPath = (id: string) => POS_V2_PATHS.morePreview(id);
 
 export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
   {
     title: "Operación diaria",
     subtitle: "Flujos principales del POS funcionales en v2.",
     items: [
-      { id: "sales", title: "Ventas", description: "Punto de venta y cobro rápido.", path: "/v2/MainSales", status: "available", actionType: "route" },
-      { id: "products", title: "Productos", description: "Catálogo y edición de artículos.", path: "/v2/main-products/items", status: "available", actionType: "route" },
-      { id: "finances", title: "Finanzas", description: "Registro operativo de ingresos/egresos y flujo diario.", path: "/v2/MainFinances", status: "available", actionType: "route" },
-      { id: "reports", title: "Reportes", description: "Analítica ejecutiva, tendencias y gráficas de desempeño.", path: "/v2/dashboard", status: "available", actionType: "route" },
+      { id: "sales", title: "Ventas", description: "Punto de venta y cobro rápido.", path: POS_V2_PATHS.sales, status: "available", actionType: "route" },
+      { id: "products", title: "Productos", description: "Catálogo y edición de artículos.", path: POS_V2_PATHS.products, status: "available", actionType: "route" },
+      { id: "finances", title: "Finanzas", description: "Registro operativo de ingresos/egresos y flujo diario.", path: POS_V2_PATHS.finances, status: "available", actionType: "route" },
+      { id: "reports", title: "Reportes", description: "Analítica ejecutiva, tendencias y gráficas de desempeño.", path: POS_V2_PATHS.reports, status: "available", actionType: "route" },
     ],
   },
   {
     title: "Configuración",
     subtitle: "Paridad estructural con Ajustes legacy, implementado con servicios modernos.",
     items: [
-      { id: "tables", title: "Mesas y zonas", description: "Gestión de mesas para consumo en salón.", path: "/v2/settings/table-zones", status: "available", actionType: "route" },
+      { id: "tables", title: "Mesas y zonas", description: "Gestión de mesas para consumo en salón.", path: POS_V2_PATHS.tableZones, status: "available", actionType: "route" },
       { id: "settings-hub", title: "Ajustes generales", description: "Concentrador de configuración del POS v2 desacoplado.", path: previewPath("settings-hub"), status: "beta", actionType: "beta-action" },
       { id: "business", title: "Información del negocio", description: "Datos fiscales/comerciales del negocio.", path: previewPath("business"), status: "available", actionType: "route" },
       { id: "catalog-settings", title: "Configuración catálogo", description: "Preferencias de publicación del catálogo.", path: previewPath("catalog-settings"), status: "available", actionType: "route" },
       { id: "sales-tax", title: "Impuesto de venta", description: "Ajustes de impuestos aplicados en ventas.", path: previewPath("sales-tax"), status: "available", actionType: "route" },
-      { id: "payment-methods", title: "Métodos de pago", description: "Configura efectivo, tarjeta y pagos en línea.", path: previewPath("payment-methods"), status: "beta", actionType: "beta-action" },
-      { id: "branding", title: "Color de app", description: "Branding de colores para el POS.", path: previewPath("branding"), status: "beta", actionType: "beta-action" },
+      { id: "payment-methods", title: "Métodos de pago", description: "Configura efectivo, tarjeta y pagos en línea.", path: previewPath("payment-methods"), status: "available", actionType: "route" },
+      { id: "branding", title: "Color de app", description: "Branding de colores para el POS.", path: previewPath("branding"), status: "available", actionType: "route" },
       { id: "exports", title: "Exportar reportes", description: "Descarga reportes para contabilidad.", path: previewPath("exports"), status: "available", actionType: "route" },
       { id: "inventory", title: "Inventario", description: "Módulo de stock desacoplado para v2.", path: previewPath("inventory"), status: "beta", actionType: "beta-action" },
-      { id: "customers", title: "Clientes", description: "Catálogo de clientes y seguimiento.", path: "/v2/customers", status: "available", actionType: "route" },
-      { id: "employees", title: "Empleados", description: "Administración de personal y permisos.", path: "/v2/employees", status: "available", actionType: "route" },
+      { id: "customers", title: "Clientes", description: "Catálogo de clientes y seguimiento.", path: POS_V2_PATHS.customers, status: "available", actionType: "route" },
+      { id: "employees", title: "Empleados", description: "Administración de personal y permisos.", path: POS_V2_PATHS.employees, status: "available", actionType: "route" },
       { id: "cash-closing", title: "Corte de caja", description: "Cierres de caja al final de turno.", path: previewPath("cash-closing"), status: "available", actionType: "route" },
       { id: "roles", title: "Roles y permisos", description: "Administra perfiles y permisos operativos del POS.", path: previewPath("roles"), status: "preview", actionType: "route" },
       { id: "printers", title: "Impresoras", description: "Configura tickets y dispositivos de impresión.", path: previewPath("printers"), status: "preview", actionType: "route" },
@@ -37,8 +38,8 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
     title: "Servicios",
     subtitle: "Herramientas de soporte y operación extendida.",
     items: [
-      { id: "health", title: "Salud de API", description: "Verifica conectividad y disponibilidad backend.", path: "/v2/health", status: "available", actionType: "route" },
-      { id: "online-store", title: "Tienda en línea", description: "Gestión de pedidos del canal online.", path: "/v2/online-store", status: "available", actionType: "route" },
+      { id: "health", title: "Salud de API", description: "Verifica conectividad y disponibilidad backend.", path: POS_V2_PATHS.health, status: "available", actionType: "route" },
+      { id: "online-store", title: "Tienda en línea", description: "Gestión de pedidos del canal online.", path: POS_V2_PATHS.onlineStore, status: "available", actionType: "route" },
       { id: "coupons", title: "Cupones", description: "Administración de campañas y promociones para clientes.", path: previewPath("coupons"), status: "beta", actionType: "beta-action" },
       { id: "visits", title: "Visitas", description: "Seguimiento de visitas y recompensas por recurrencia.", path: previewPath("visits"), status: "beta", actionType: "beta-action" },
       { id: "loyalty", title: "Cupones y visitas", description: "Herramientas de fidelización y recompensas.", path: previewPath("loyalty"), status: "beta", actionType: "beta-action" },

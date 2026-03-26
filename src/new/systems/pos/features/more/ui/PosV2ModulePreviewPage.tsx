@@ -5,9 +5,11 @@ import { MoreModulePage } from "../pages/MoreModulePage";
 import { MoreModuleService } from "../services/MoreModuleService";
 import { MORE_MODULE_SECTIONS } from "../config/moreModules";
 import { ModernSystemsFactory } from "../../../../../index";
+import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
+import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import "./PosV2ModulePreviewPage.css";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
+const API_BASE_URL = getPosApiBaseUrl();
 
 type PreviewData = {
   title: string;
@@ -44,6 +46,16 @@ const PREVIEW_MODULES: Record<string, PreviewData> = {
     description: "Consulta y actualización de datos fiscales/comerciales en la capa moderna.",
     eta: "Sprint configuración v2",
     warning: "Los cambios impactan facturación y catálogos públicos; valida antes de guardar.",
+  },
+  "payment-methods": {
+    title: "Métodos de pago",
+    description: "Configura qué métodos estarán disponibles para cobrar en POS v2.",
+    eta: "Disponible en POS moderno",
+  },
+  branding: {
+    title: "Color de app",
+    description: "Personaliza identidad visual y datos de marca para POS y catálogo.",
+    eta: "Disponible en POS moderno",
   },
 };
 
@@ -84,6 +96,25 @@ export const PosV2ModulePreviewPage = () => {
     value: "0",
     isPercent: true,
     canBeRemovedAtSale: false,
+  });
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentSaving, setPaymentSaving] = useState(false);
+  const [paymentError, setPaymentError] = useState("");
+  const [paymentSettings, setPaymentSettings] = useState<{
+    globallyEnabled: boolean;
+    options: Array<{ type: "cash" | "card" | "online"; label: string; enabled: boolean; locked: boolean }>;
+  } | null>(null);
+  const [brandingLoading, setBrandingLoading] = useState(false);
+  const [brandingSaving, setBrandingSaving] = useState(false);
+  const [brandingError, setBrandingError] = useState("");
+  const [brandingSuccess, setBrandingSuccess] = useState("");
+  const [brandingForm, setBrandingForm] = useState({
+    name: "",
+    address: "",
+    phoneNumber: "",
+    logo: "",
+    color: "#6D01D1",
+    references: "",
   });
 
   const token = useMemo(() => window.localStorage.getItem("pos-v2-token") ?? "", []);
@@ -211,11 +242,56 @@ export const PosV2ModulePreviewPage = () => {
       }
     };
 
+    const loadPaymentMethods = async () => {
+      if (moduleId !== "payment-methods") return;
+      setPaymentLoading(true);
+      setPaymentError("");
+      try {
+        const vm = await factory.createPosPaymentMethodPage().getViewModel(businessId, token);
+        setPaymentSettings({
+          globallyEnabled: vm.globallyEnabled,
+          options: vm.options.map((option) => ({
+            type: option.type,
+            label: option.label,
+            enabled: option.enabled,
+            locked: option.locked,
+          })),
+        });
+      } catch (cause) {
+        setPaymentError(cause instanceof Error ? cause.message : "No fue posible cargar métodos de pago.");
+      } finally {
+        setPaymentLoading(false);
+      }
+    };
+
+    const loadBranding = async () => {
+      if (moduleId !== "branding") return;
+      setBrandingLoading(true);
+      setBrandingError("");
+      try {
+        const profile = await factory.createPosBrandingPage().loadProfile(businessId, token);
+        setBrandingForm({
+          name: profile.name,
+          address: profile.address,
+          phoneNumber: profile.phoneNumber,
+          logo: profile.logo,
+          color: profile.color || "#6D01D1",
+          references: profile.references,
+        });
+      } catch (cause) {
+        setBrandingError(cause instanceof Error ? cause.message : "No fue posible cargar branding.");
+      } finally {
+        setBrandingLoading(false);
+      }
+    };
+
     loadBusiness();
     loadTax();
     loadCatalog();
     loadExportPreview();
     loadCashClosing();
+    loadPaymentMethods();
+    loadBranding();
   }, [factory, moduleId, businessIdInput, token, employeeIdInput, exportScope, exportPeriod]);
 
   const saveTax = async (event: FormEvent<HTMLFormElement>) => {
@@ -245,6 +321,74 @@ export const PosV2ModulePreviewPage = () => {
     }
   };
 
+  const togglePaymentGlobal = async (enabled: boolean) => {
+    const businessId = Number(businessIdInput);
+    setPaymentSaving(true);
+    setPaymentError("");
+    try {
+      const vm = await factory.createPosPaymentMethodPage().toggleGlobal(businessId, enabled, token);
+      setPaymentSettings({
+        globallyEnabled: vm.globallyEnabled,
+        options: vm.options.map((option) => ({
+          type: option.type,
+          label: option.label,
+          enabled: option.enabled,
+          locked: option.locked,
+        })),
+      });
+    } catch (cause) {
+      setPaymentError(cause instanceof Error ? cause.message : "No fue posible actualizar configuración global.");
+    } finally {
+      setPaymentSaving(false);
+    }
+  };
+
+  const togglePaymentMethod = async (type: "cash" | "card" | "online", enabled: boolean) => {
+    const businessId = Number(businessIdInput);
+    setPaymentSaving(true);
+    setPaymentError("");
+    try {
+      const vm = await factory.createPosPaymentMethodPage().toggleMethod(businessId, type, enabled, token);
+      setPaymentSettings({
+        globallyEnabled: vm.globallyEnabled,
+        options: vm.options.map((option) => ({
+          type: option.type,
+          label: option.label,
+          enabled: option.enabled,
+          locked: option.locked,
+        })),
+      });
+    } catch (cause) {
+      setPaymentError(cause instanceof Error ? cause.message : "No fue posible actualizar método.");
+    } finally {
+      setPaymentSaving(false);
+    }
+  };
+
+  const saveBranding = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const businessId = Number(businessIdInput);
+    setBrandingSaving(true);
+    setBrandingError("");
+    setBrandingSuccess("");
+    try {
+      const saved = await factory.createPosBrandingPage().saveProfile(businessId, brandingForm, token);
+      setBrandingForm({
+        name: saved.name,
+        address: saved.address,
+        phoneNumber: saved.phoneNumber,
+        logo: saved.logo,
+        color: saved.color,
+        references: saved.references,
+      });
+      setBrandingSuccess("Branding guardado correctamente.");
+    } catch (cause) {
+      setBrandingError(cause instanceof Error ? cause.message : "No fue posible guardar branding.");
+    } finally {
+      setBrandingSaving(false);
+    }
+  };
+
   return (
     <PosV2Shell title={data.title} subtitle="Vista previa de módulo POS v2">
       <section className="pos-v2-module-preview">
@@ -253,7 +397,7 @@ export const PosV2ModulePreviewPage = () => {
         <p className="pos-v2-module-preview__eta">Entrega estimada: {data.eta}</p>
         {data.warning ? <p className="pos-v2-module-preview__warning">⚠️ {data.warning}</p> : null}
 
-        {modulePage.supportsInlineExecution(moduleId) ? (
+        {modulePage.supportsInlineExecution(moduleId) && !["payment-methods", "branding"].includes(moduleId) ? (
           <section className="pos-v2-module-preview__beta">
             <h3>Funciones beta disponibles</h3>
             <p>Ejecuta una lectura real del módulo para validar funcionalidad.</p>
@@ -381,9 +525,72 @@ export const PosV2ModulePreviewPage = () => {
           </section>
         ) : null}
 
+        {moduleId === "payment-methods" ? (
+          <section className="pos-v2-module-preview__beta">
+            <h3>Métodos de pago</h3>
+            {paymentLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
+            {paymentError ? <p className="pos-v2-module-preview__error">{paymentError}</p> : null}
+            {!paymentLoading && paymentSettings ? (
+              <div className="pos-v2-module-preview__form">
+                <label className="pos-v2-module-preview__switch">
+                  <input
+                    type="checkbox"
+                    checked={paymentSettings.globallyEnabled}
+                    onChange={(event) => togglePaymentGlobal(event.target.checked)}
+                    disabled={paymentSaving}
+                  />
+                  <span>Habilitar cobros en POS</span>
+                </label>
+                <div className="pos-v2-module-preview__table">
+                  {paymentSettings.options.map((option) => (
+                    <article key={option.type} className="pos-v2-module-preview__row is-inline">
+                      <strong>{option.label}</strong>
+                      <label className="pos-v2-module-preview__switch">
+                        <input
+                          type="checkbox"
+                          checked={option.enabled}
+                          disabled={paymentSaving || option.locked}
+                          onChange={(event) => togglePaymentMethod(option.type, event.target.checked)}
+                        />
+                        <span>{option.locked ? "Bloqueado por configuración global" : option.enabled ? "Activo" : "Inactivo"}</span>
+                      </label>
+                    </article>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {moduleId === "branding" ? (
+          <section className="pos-v2-module-preview__beta">
+            <h3>Branding de la app</h3>
+            {brandingLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
+            {!brandingLoading ? (
+              <form className="pos-v2-module-preview__form" onSubmit={saveBranding}>
+                <div className="pos-v2-module-preview__inputs">
+                  <input value={brandingForm.name} onChange={(event) => setBrandingForm((current) => ({ ...current, name: event.target.value }))} placeholder="Nombre comercial" />
+                  <input value={brandingForm.phoneNumber} onChange={(event) => setBrandingForm((current) => ({ ...current, phoneNumber: event.target.value }))} placeholder="Teléfono" />
+                </div>
+                <div className="pos-v2-module-preview__inputs">
+                  <input value={brandingForm.address} onChange={(event) => setBrandingForm((current) => ({ ...current, address: event.target.value }))} placeholder="Dirección" />
+                  <input value={brandingForm.logo} onChange={(event) => setBrandingForm((current) => ({ ...current, logo: event.target.value }))} placeholder="URL de logo" />
+                </div>
+                <div className="pos-v2-module-preview__inputs">
+                  <input value={brandingForm.references} onChange={(event) => setBrandingForm((current) => ({ ...current, references: event.target.value }))} placeholder="Referencias" />
+                  <input type="color" value={brandingForm.color} onChange={(event) => setBrandingForm((current) => ({ ...current, color: event.target.value }))} aria-label="Color principal" />
+                </div>
+                {brandingError ? <p className="pos-v2-module-preview__error">{brandingError}</p> : null}
+                {brandingSuccess ? <p className="pos-v2-module-preview__ok">{brandingSuccess}</p> : null}
+                <button type="submit" disabled={brandingSaving}>{brandingSaving ? "Guardando..." : "Guardar branding"}</button>
+              </form>
+            ) : null}
+          </section>
+        ) : null}
+
         <div className="pos-v2-module-preview__actions">
           <button type="button" onClick={() => navigate(-1)}>← Volver atrás</button>
-          <button type="button" onClick={() => navigate("/v2/more")}>Ir a Más</button>
+          <button type="button" onClick={() => navigate(POS_V2_PATHS.more)}>Ir a Más</button>
         </div>
       </section>
     </PosV2Shell>

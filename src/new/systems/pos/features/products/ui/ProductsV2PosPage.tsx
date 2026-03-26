@@ -1,11 +1,14 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
 import { ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
+import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import "./ProductsV2PosPage.css";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
+const API_BASE_URL = getPosApiBaseUrl();
 const DEFAULT_BUSINESS_ID = Number(import.meta.env.VITE_POS_BUSINESS_ID ?? 0);
+const PRODUCTS_PAGE_SIZE = 20;
 const TOKEN_KEY = "pos-v2-token";
 const BUSINESS_ID_KEY = "pos-v2-business-id";
 
@@ -52,6 +55,7 @@ type ViewMode = "grid" | "list";
 type ToastState = { type: "success" | "error"; message: string } | null;
 type ArchiveDialogState = { id: number; name: string } | null;
 type ProductCategoryVm = { id: number; name: string; color: string };
+type SaveResultState = { type: "success" | "error"; message: string } | null;
 
 const toImageUrl = (image?: string | null): string | null => {
   if (!image) return null;
@@ -93,6 +97,7 @@ const toNullableNumber = (value: string): number | null => {
 };
 
 export const ProductsV2PosPage = () => {
+  const navigate = useNavigate();
   const [businessId] = useState(() => {
     const storedBusinessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY) ?? 0);
     return storedBusinessId || DEFAULT_BUSINESS_ID;
@@ -118,7 +123,10 @@ export const ProductsV2PosPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [archiveDialog, setArchiveDialog] = useState<ArchiveDialogState>(null);
   const [toast, setToast] = useState<ToastState>(null);
-  const [formMessage, setFormMessage] = useState<string | null>(null);
+  const [saveResult, setSaveResult] = useState<SaveResultState>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalItems, setTotalItems] = useState(0);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -129,8 +137,10 @@ export const ProductsV2PosPage = () => {
   const [available, setAvailable] = useState(true);
   const [variants, setVariants] = useState<VariantFormVm[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
-  const [sizesInput, setSizesInput] = useState("");
-  const [colorsInput, setColorsInput] = useState("");
+  const [sizeDraft, setSizeDraft] = useState("");
+  const [colorDraft, setColorDraft] = useState("");
+  const [sizes, setSizes] = useState<string[]>([]);
+  const [colors, setColors] = useState<string[]>([]);
   const [storedImages, setStoredImages] = useState<string[]>([]);
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
   const categoryCarouselRef = useRef<HTMLDivElement | null>(null);
@@ -153,8 +163,10 @@ export const ProductsV2PosPage = () => {
     setAvailable(true);
     setVariants([]);
     setSelectedCategoryId(null);
-    setSizesInput("");
-    setColorsInput("");
+    setSizeDraft("");
+    setColorDraft("");
+    setSizes([]);
+    setColors([]);
     setStoredImages([]);
     setSelectedImageFiles([]);
   };
@@ -162,13 +174,13 @@ export const ProductsV2PosPage = () => {
   const closeFormModal = () => {
     if (saving) return;
     setIsFormOpen(false);
-    setFormMessage(null);
+    setSaveResult(null);
     resetForm();
   };
 
   const openCreateModal = () => {
     resetForm();
-    setFormMessage(null);
+    setSaveResult(null);
     setError(null);
     setIsFormOpen(true);
   };
@@ -179,7 +191,7 @@ export const ProductsV2PosPage = () => {
     setCategoryColorInput("#4F46E5");
   };
 
-  const loadProducts = async () => {
+  const loadProducts = async (targetPage: number = currentPage) => {
     if (!businessId || !token) {
       setError("Inicia sesión para administrar productos.");
       return;
@@ -189,7 +201,8 @@ export const ProductsV2PosPage = () => {
     setError(null);
 
     try {
-      const list = await service.listProducts(businessId, token);
+      const response = await service.listProductsPaginated(businessId, token, targetPage, PRODUCTS_PAGE_SIZE);
+      const list = response.products;
       setProducts(
         list.map((product) => ({
           id: product.id,
@@ -215,10 +228,15 @@ export const ProductsV2PosPage = () => {
           extras: product.extras,
         })),
       );
+      setCurrentPage(response.pagination.page);
+      setTotalPages(response.pagination.totalPages);
+      setTotalItems(response.pagination.total);
+
       const categoryRows = await service.listCategories(businessId, token);
       setCategories(
         categoryRows
           .filter((category) => typeof category.id === "number" && category.id > 0)
+          .filter((category) => response.pagination.categoryIds.length === 0 || response.pagination.categoryIds.includes(category.id as number))
           .map((category) => ({ id: category.id as number, name: category.name, color: category.color })),
       );
     } catch (cause) {
@@ -235,7 +253,7 @@ export const ProductsV2PosPage = () => {
   }, [toast]);
 
   useEffect(() => {
-    loadProducts();
+    loadProducts(1);
   }, [businessId, token]);
 
   const visibleProducts = useMemo(() => {
@@ -277,11 +295,26 @@ export const ProductsV2PosPage = () => {
       }));
   };
 
-  const parseExtrasFromInput = (value: string, type: "TALLA" | "COLOR") =>
-    Array.from(new Set(value.split(",").map((item) => item.trim()).filter(Boolean))).map((description) => ({
+  const extrasFromValues = (values: string[], type: "TALLA" | "COLOR") =>
+    Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).map((description) => ({
       description,
       type,
     }));
+
+  const pushUniqueTag = (value: string, setter: React.Dispatch<React.SetStateAction<string[]>>, inputSetter: React.Dispatch<React.SetStateAction<string>>) => {
+    const normalized = value.trim();
+    if (!normalized) return;
+
+    setter((current) => {
+      const alreadyExists = current.some((entry) => entry.toLowerCase() === normalized.toLowerCase());
+      return alreadyExists ? current : [...current, normalized];
+    });
+    inputSetter("");
+  };
+
+  const removeTag = (indexToRemove: number, setter: React.Dispatch<React.SetStateAction<string[]>>) => {
+    setter((current) => current.filter((_, index) => index !== indexToRemove));
+  };
 
   const formImagePreviews = useMemo(() => {
     const remote = storedImages
@@ -341,6 +374,7 @@ export const ProductsV2PosPage = () => {
 
     setSaving(true);
     setError(null);
+    setSaveResult(null);
 
     try {
       const selectedImages = await Promise.all(selectedImageFiles.map((file) => toDataUrl(file)));
@@ -369,16 +403,18 @@ export const ProductsV2PosPage = () => {
         barcode: null,
         categoryId: selectedCategoryId,
         variants: mappedVariants(),
-        extras: [...parseExtrasFromInput(sizesInput, "TALLA"), ...parseExtrasFromInput(colorsInput, "COLOR")],
+        extras: [...extrasFromValues(sizes, "TALLA"), ...extrasFromValues(colors, "COLOR")],
       };
 
       const saved = await service.saveProduct(payload, token);
-      setEditingId(saved.id);
-      setFormMessage(editingId ? `Cambios guardados correctamente en #${saved.id}.` : `Producto creado con éxito (#${saved.id}).`);
+      const actionLabel = editingId ? "actualizó" : "creó";
+      setSaveResult({ type: "success", message: `Se ${actionLabel} el producto #${saved.id} correctamente.` });
+      resetForm();
       setToast({ type: "success", message: editingId ? "Producto actualizado correctamente." : "Producto creado correctamente." });
-      await loadProducts();
+      await loadProducts(currentPage);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo guardar producto.");
+      setSaveResult({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo guardar producto." });
       setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo guardar producto." });
     } finally {
       setSaving(false);
@@ -423,7 +459,7 @@ export const ProductsV2PosPage = () => {
       if (!detail) throw new Error("No encontramos el producto para restaurar.");
       await service.saveProduct({ ...cloneSavePayload(detail), available: true }, token);
       setToast({ type: "success", message: `Producto "${detail.name}" restaurado.` });
-      await loadProducts();
+      await loadProducts(currentPage);
     } catch (cause) {
       setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo restaurar producto." });
     } finally {
@@ -454,8 +490,10 @@ export const ProductsV2PosPage = () => {
       setSelectedCategoryId(detail.categoryId ?? null);
       setStoredImages(Array.from(new Set([detail.image, ...detail.images].filter(Boolean) as string[])));
       setSelectedImageFiles([]);
-      setSizesInput(detail.extras.filter((extra) => extra.type.toUpperCase() === "TALLA").map((extra) => extra.description).join(", "));
-      setColorsInput(detail.extras.filter((extra) => extra.type.toUpperCase() === "COLOR").map((extra) => extra.description).join(", "));
+      setSizes(detail.extras.filter((extra) => extra.type.toUpperCase() === "TALLA").map((extra) => extra.description));
+      setColors(detail.extras.filter((extra) => extra.type.toUpperCase() === "COLOR").map((extra) => extra.description));
+      setSizeDraft("");
+      setColorDraft("");
       setVariants(
         detail.variants.map((variant, index) => ({
           key: `${detail.id}-${index}`,
@@ -474,7 +512,7 @@ export const ProductsV2PosPage = () => {
       );
       setError(null);
       setIsFormOpen(true);
-      setFormMessage(null);
+      setSaveResult(null);
       setToast(null);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo cargar el producto para edición.");
@@ -505,7 +543,7 @@ export const ProductsV2PosPage = () => {
       }
       setToast({ type: "success", message: `Producto "${archiveDialog.name}" archivado.` });
       setArchiveDialog(null);
-      await loadProducts();
+      await loadProducts(currentPage);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo eliminar/archivar producto.");
       setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo eliminar/archivar producto." });
@@ -545,7 +583,7 @@ export const ProductsV2PosPage = () => {
         setToast({ type: "success", message: "Categoría creada." });
       }
       resetCategoryForm();
-      await loadProducts();
+      await loadProducts(currentPage);
     } catch (cause) {
       setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo guardar categoría." });
     }
@@ -566,7 +604,7 @@ export const ProductsV2PosPage = () => {
         setSelectedCategoryId(null);
       }
       setToast({ type: "success", message: "Categoría eliminada." });
-      await loadProducts();
+      await loadProducts(currentPage);
     } catch (cause) {
       setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo eliminar categoría." });
     }
@@ -598,7 +636,7 @@ export const ProductsV2PosPage = () => {
     try {
       const result = await service.importProducts(businessId, file, token);
       setToast({ type: "success", message: `${result.message} (${result.imported} productos procesados)` });
-      await loadProducts();
+      await loadProducts(currentPage);
     } catch (cause) {
       setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo importar el archivo." });
     } finally {
@@ -616,12 +654,13 @@ export const ProductsV2PosPage = () => {
           </div>
 
           <div className="pos-v2-products__header-actions">
+            <button type="button" className="pos-v2-products__secondary" onClick={() => navigate(-1)}>← Regresar</button>
             <button type="button" className="pos-v2-products__secondary" onClick={openCreateModal}>+ Nuevo</button>
             <button type="button" className="pos-v2-products__secondary" onClick={() => setShowCategoryManager(true)}>Categorías</button>
             <button type="button" className="pos-v2-products__secondary" onClick={() => excelInputRef.current?.click()} disabled={importing || !token || !businessId}>
               {importing ? "Importando..." : "Importar Excel"}
             </button>
-            <button type="button" className="pos-v2-products__refresh" onClick={loadProducts} disabled={loading || !token || !businessId}>
+            <button type="button" className="pos-v2-products__refresh" onClick={() => loadProducts(currentPage)} disabled={loading || !token || !businessId}>
               {loading ? "Actualizando..." : "Actualizar"}
             </button>
           </div>
@@ -734,6 +773,14 @@ export const ProductsV2PosPage = () => {
               })}
             </div>
           ) : null}
+
+          {!loading && visibleProducts.length > 0 ? (
+            <nav className="pos-v2-products__pagination" aria-label="Paginación de productos">
+              <button type="button" onClick={() => loadProducts(Math.max(1, currentPage - 1))} disabled={currentPage <= 1}>Anterior</button>
+              <span>Página {currentPage} de {totalPages} · {totalItems} productos</span>
+              <button type="button" onClick={() => loadProducts(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages}>Siguiente</button>
+            </nav>
+          ) : null}
         </section>
 
         {isFormOpen ? (
@@ -743,6 +790,7 @@ export const ProductsV2PosPage = () => {
                 <h3>{editingId ? `Editar producto #${editingId}` : "Nuevo producto"}</h3>
                 <button type="button" className="pos-v2-products__secondary" onClick={closeFormModal} aria-label="Regresar al catálogo">← Regresar</button>
               </header>
+              {saveResult ? <p className={`pos-v2-products__save-result is-${saveResult.type}`}>{saveResult.message}</p> : null}
 
               <form className="pos-v2-products__form" onSubmit={handleSubmit}>
                 <label>
@@ -866,12 +914,69 @@ export const ProductsV2PosPage = () => {
                   <div className="pos-v2-products__variants-head">
                     <h4>Tallas y colores (Extras)</h4>
                   </div>
-                  <input value={sizesInput} onChange={(event) => setSizesInput(event.target.value)} placeholder="Tallas por coma. Ej: S, M, XL" aria-label="Tallas del producto" />
-                  <input value={colorsInput} onChange={(event) => setColorsInput(event.target.value)} placeholder="Colores por coma. Ej: AZUL, VERDE" aria-label="Colores del producto" />
+
+                  <div className="pos-v2-products__tag-editor">
+                    <label>
+                      Tallas
+                      <div className="pos-v2-products__tag-input-row">
+                        <input
+                          value={sizeDraft}
+                          onChange={(event) => setSizeDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              pushUniqueTag(sizeDraft, setSizes, setSizeDraft);
+                            }
+                          }}
+                          placeholder="Ej. S"
+                          aria-label="Agregar talla"
+                        />
+                        <button type="button" onClick={() => pushUniqueTag(sizeDraft, setSizes, setSizeDraft)}>Agregar</button>
+                      </div>
+                    </label>
+                    <div className="pos-v2-products__tag-list" aria-live="polite">
+                      {sizes.length === 0 ? <small>Sin tallas agregadas.</small> : null}
+                      {sizes.map((item, index) => (
+                        <span key={`${item}-${index}`} className="pos-v2-products__tag-chip">
+                          {item}
+                          <button type="button" onClick={() => removeTag(index, setSizes)} aria-label={`Quitar talla ${item}`}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="pos-v2-products__tag-editor">
+                    <label>
+                      Colores
+                      <div className="pos-v2-products__tag-input-row">
+                        <input
+                          value={colorDraft}
+                          onChange={(event) => setColorDraft(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === "Enter") {
+                              event.preventDefault();
+                              pushUniqueTag(colorDraft, setColors, setColorDraft);
+                            }
+                          }}
+                          placeholder="Ej. Azul"
+                          aria-label="Agregar color"
+                        />
+                        <button type="button" onClick={() => pushUniqueTag(colorDraft, setColors, setColorDraft)}>Agregar</button>
+                      </div>
+                    </label>
+                    <div className="pos-v2-products__tag-list" aria-live="polite">
+                      {colors.length === 0 ? <small>Sin colores agregados.</small> : null}
+                      {colors.map((item, index) => (
+                        <span key={`${item}-${index}`} className="pos-v2-products__tag-chip">
+                          {item}
+                          <button type="button" onClick={() => removeTag(index, setColors)} aria-label={`Quitar color ${item}`}>×</button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
                 </fieldset>
 
                 <div className="pos-v2-products__form-actions is-modal">
-                  {formMessage ? <p className="pos-v2-products__inline-success">{formMessage}</p> : null}
                   <button type="button" className="pos-v2-products__secondary" onClick={closeFormModal}>Cancelar</button>
                   <button type="submit" className="pos-v2-products__primary" disabled={saving}>{saving ? "Guardando..." : editingId ? "Guardar cambios" : "Guardar producto"}</button>
                 </div>

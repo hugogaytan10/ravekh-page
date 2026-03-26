@@ -1,4 +1,4 @@
-import { IProductsRepository } from "../interface/IProductsRepository";
+import { IProductsRepository, ProductsPaginatedResult } from "../interface/IProductsRepository";
 import { ManagedProduct, ProductCategory, SaveManagedProductDto } from "../model/ManagedProduct";
 
 export class ProductsService {
@@ -6,6 +6,10 @@ export class ProductsService {
 
   async listProducts(businessId: number, token: string): Promise<ManagedProduct[]> {
     return this.repository.listByBusiness(businessId, token);
+  }
+
+  async listProductsPaginated(businessId: number, token: string, page: number, limit: number): Promise<ProductsPaginatedResult> {
+    return this.repository.listByBusinessPaginated(businessId, token, page, limit);
   }
 
   async getProduct(productId: number, token: string): Promise<ManagedProduct | null> {

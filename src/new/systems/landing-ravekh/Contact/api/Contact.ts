@@ -7,7 +7,7 @@ import { IContactRepository } from "../interface/IContactRepository";
 export class ContactApi implements IContactRepository {
   private readonly httpClient: FetchHttpClient;
 
-  constructor(baseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined) || "") {
+  constructor(baseUrl = ((import.meta.env as Record<string, string | undefined>).VITE_API_URL || "")) {
     this.httpClient = new FetchHttpClient(baseUrl);
   }
 

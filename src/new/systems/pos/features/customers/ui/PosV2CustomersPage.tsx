@@ -1,12 +1,13 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../index";
+import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { CustomerSalesPeriod, CustomerSex } from "../model/Customer";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import "./PosV2CustomersPage.css";
 
 const TOKEN_KEY = "pos-v2-token";
 const BUSINESS_ID_KEY = "pos-v2-business-id";
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
+const API_BASE_URL = getPosApiBaseUrl();
 
 type CustomerVm = {
   id: number;

@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../index";
+import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { HealthVm } from "../pages/HealthPage";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
+const API_BASE_URL = getPosApiBaseUrl();
 
 export const PosHealthV2Screen = () => {
   const [health, setHealth] = useState<HealthVm | null>(null);

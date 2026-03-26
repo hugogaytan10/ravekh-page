@@ -14,12 +14,13 @@ import {
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
 import { ModernSystemsFactory } from "../../../../../index";
+import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import type { IncomePoint, ReportRange, ReportSale } from "../model/SalesReport";
 import type { ReportSummaryViewModel } from "../pages/ReportingInsightsPage";
 import "./PosV2ReportingPage.css";
 
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
+const API_BASE_URL = getPosApiBaseUrl();
 const TOKEN_KEY = "pos-v2-token";
 const BUSINESS_ID_KEY = "pos-v2-business-id";
 

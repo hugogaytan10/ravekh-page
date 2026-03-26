@@ -5,12 +5,14 @@ import { MORE_MODULE_SECTIONS } from "../config/moreModules";
 import { MoreModuleLink, MoreModuleStatus } from "../model/MoreModule";
 import { MoreModuleService } from "../services/MoreModuleService";
 import { MoreModulePage } from "../pages/MoreModulePage";
+import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
+import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import "./PosV2MorePage.css";
 
 const TOKEN_KEY = "pos-v2-token";
 const BUSINESS_ID_KEY = "pos-v2-business-id";
 const EMPLOYEE_ID_KEY = "pos-v2-employee-id";
-const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL as string | undefined) ?? "https://apipos.ravekh.com/api/";
+const API_BASE_URL = getPosApiBaseUrl();
 const FAVORITES_KEY = "pos-v2-more-favorites";
 const SUPPORT_WHATSAPP_URL = "https://wa.me/525653989702";
 
@@ -41,6 +43,12 @@ export const PosV2MorePage = () => {
     item.status === "available" || (item.actionType === "beta-action" && modulePage.supportsInlineExecution(item.id));
   const workingItems = useMemo(() => allItems.filter((item) => isReadyModule(item)), [allItems]);
   const developmentItems = useMemo(() => allItems.filter((item) => item.status !== "available"), [allItems]);
+  const summary = useMemo(() => ({
+    total: allItems.length,
+    working: workingItems.length,
+    development: developmentItems.length,
+    favorites: favorites.length,
+  }), [allItems.length, workingItems.length, developmentItems.length, favorites.length]);
   const favoriteItems = allItems
     .filter((item) => favorites.includes(item.id))
     .sort((a, b) => a.title.localeCompare(b.title, "es-MX"));
@@ -108,7 +116,7 @@ export const PosV2MorePage = () => {
     window.localStorage.removeItem(TOKEN_KEY);
     window.localStorage.removeItem(BUSINESS_ID_KEY);
     window.localStorage.removeItem(EMPLOYEE_ID_KEY);
-    navigate("/v2/login-punto-venta");
+    navigate(POS_V2_PATHS.login);
   };
 
   const copyCatalogLink = async () => {
@@ -171,8 +179,29 @@ export const PosV2MorePage = () => {
           </p>
          
           <div className="pos-v2-more__toolbar">
+            <div className="pos-v2-more__toolbar-head">
+              <button type="button" className="pos-v2-more__back" onClick={() => navigate(-1)}>← Regresar</button>
+              <div className="pos-v2-more__chips" role="group" aria-label="Vista de módulos">
+                <button type="button" className={viewMode === "working" ? "is-active" : ""} onClick={() => { setViewMode("working"); setStatusFilter("all"); }}>Operativos</button>
+                <button type="button" className={viewMode === "development" ? "is-active" : ""} onClick={() => setViewMode("development")}>En desarrollo</button>
+              </div>
+            </div>
             <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar módulo..." aria-label="Buscar módulo" />
+            {viewMode === "development" ? (
+              <div className="pos-v2-more__chips" role="group" aria-label="Filtrar por estado">
+                <button type="button" className={statusFilter === "all" ? "is-active" : ""} onClick={() => setStatusFilter("all")}>Todos</button>
+                <button type="button" className={statusFilter === "beta" ? "is-active" : ""} onClick={() => setStatusFilter("beta")}>Beta</button>
+                <button type="button" className={statusFilter === "preview" ? "is-active" : ""} onClick={() => setStatusFilter("preview")}>Preview</button>
+              </div>
+            ) : null}
           </div>
+
+          <section className="pos-v2-more__summary" aria-label="Resumen de módulos">
+            <article><h3>Total módulos</h3><p>{summary.total}</p></article>
+            <article><h3>Operativos</h3><p>{summary.working}</p></article>
+            <article><h3>En desarrollo</h3><p>{summary.development}</p></article>
+            <article><h3>Favoritos</h3><p>{summary.favorites}</p></article>
+          </section>
         </header>
         
 
