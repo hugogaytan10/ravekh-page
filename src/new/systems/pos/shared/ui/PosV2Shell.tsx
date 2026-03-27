@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
 import "./PosV2Shell.css";
 import { SalesIcon } from "../../../../../assets/POS/SalesIcon";
@@ -13,6 +13,10 @@ type PosV2ShellProps = {
   children: ReactNode;
 };
 
+type UiTheme = "light" | "dark";
+
+const THEME_STORAGE_KEY = "pos-v2-ui-theme";
+
 const NAV_ITEMS = [
   { to: "/v2/MainSales", label: "Ventas", Icon: SalesIcon },
   { to: "/v2/main-products/items", label: "Productos", Icon: ProductIcon },
@@ -22,6 +26,24 @@ const NAV_ITEMS = [
 ];
 
 export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
+  const [theme, setTheme] = useState<UiTheme>(() => {
+    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (stored === "light" || stored === "dark") {
+      return stored;
+    }
+
+    if (window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
+      return "dark";
+    }
+
+    return "light";
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
+  }, [theme]);
+
   return (
     <div className="pos-v2-shell">
       <header className="pos-v2-shell__header">
@@ -30,7 +52,22 @@ export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
           <h1 className="pos-v2-shell__title">{title}</h1>
           {subtitle ? <p className="pos-v2-shell__subtitle">{subtitle}</p> : null}
         </div>
-        <span className="pos-v2-shell__badge">v2</span>
+        <div className="pos-v2-shell__header-actions">
+          <button
+            type="button"
+            className="pos-v2-shell__theme-toggle"
+            onClick={() => setTheme((current) => (current === "dark" ? "light" : "dark"))}
+            aria-label={`Cambiar a modo ${theme === "dark" ? "claro" : "oscuro"}`}
+            aria-pressed={theme === "dark"}
+          >
+            <span>Claro</span>
+            <span className={`pos-v2-shell__theme-toggle-track ${theme === "dark" ? "is-dark" : ""}`} aria-hidden="true">
+              <span className="pos-v2-shell__theme-toggle-thumb" />
+            </span>
+            <span>Oscuro</span>
+          </button>
+          <span className="pos-v2-shell__badge">v2</span>
+        </div>
       </header>
 
       <main className="pos-v2-shell__content">{children}</main>

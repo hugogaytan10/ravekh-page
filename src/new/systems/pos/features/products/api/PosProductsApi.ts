@@ -160,7 +160,7 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   async getById(productId: number, token: string): Promise<ManagedProduct | null> {
-    const [product, extrasResponse] = await Promise.all([
+    const [product, extrasResponse, variantsResponse] = await Promise.all([
       this.httpClient.request<ProductResponse | { data?: ProductResponse; Data?: ProductResponse } | null>({
         method: "GET",
         path: POS_ENDPOINTS.productById(productId),
@@ -169,6 +169,11 @@ export class PosProductsApi implements IProductsRepository {
       this.httpClient.request<unknown>({
         method: "GET",
         path: POS_ENDPOINTS.productExtras(productId),
+        token,
+      }).catch(() => null),
+      this.httpClient.request<LegacyVariantResponse[] | null>({
+        method: "GET",
+        path: POS_ENDPOINTS.variantsByProduct(productId),
         token,
       }).catch(() => null),
     ]);
@@ -180,17 +185,18 @@ export class PosProductsApi implements IProductsRepository {
     const normalized = "data" in product || "Data" in product ? product.data ?? product.Data ?? null : product;
     if (!normalized) return null;
 
-    return this.toDomain(normalized, this.toDomainExtras(extrasResponse));
+    return this.toDomain(normalized, this.toDomainExtras(extrasResponse), this.toDomainVariants(variantsResponse));
   }
 
   async create(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct> {
     let response: ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null;
+    let createdProductId: number | null = null;
     try {
       response = await this.httpClient.request<ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null>({
         method: "POST",
         path: POS_ENDPOINTS.products(),
         token,
-        body: this.toMutationBody(payload, true),
+        body: this.toMutationBody(payload, true, false),
       });
     } catch (cause) {
       if (!payload.extras?.length) throw cause;
@@ -198,16 +204,22 @@ export class PosProductsApi implements IProductsRepository {
         method: "POST",
         path: POS_ENDPOINTS.products(),
         token,
-        body: this.toMutationBody(payload, false),
+        body: this.toMutationBody(payload, false, false),
       });
       const created = this.extractCreatedProduct(response);
       const productId = created?.Id ?? created?.id;
       if (productId) {
+        createdProductId = Number(productId);
         await this.persistExtras(productId, payload.extras, token);
       }
     }
 
     const created = this.extractCreatedProduct(response);
+    createdProductId = createdProductId ?? (Number(created?.Id ?? created?.id ?? 0) || null);
+    if (createdProductId && (payload.variants?.length ?? 0) > 0) {
+      await this.syncVariants(createdProductId, payload.variants ?? [], token);
+    }
+
     if (created) {
       return this.toDomain(created, this.extractCreatedExtras(response));
     }
@@ -298,7 +310,11 @@ export class PosProductsApi implements IProductsRepository {
       method: "POST",
       path: POS_ENDPOINTS.categories(),
       token,
-      body: this.toLegacyCategory(category),
+      body: {
+        Name: category.name,
+        Color: category.color,
+        Business_Id: category.businessId,
+      },
     });
 
     return response ? this.toDomainCategory(response) : category;
@@ -313,7 +329,12 @@ export class PosProductsApi implements IProductsRepository {
       method: "PUT",
       path: POS_ENDPOINTS.categoryById(category.id),
       token,
-      body: this.toLegacyCategory(category),
+      body: {
+        Name: category.name,
+        Color: category.color,
+        Business_Id: category.businessId,
+        Parent_Id: category.parentId ?? null,
+      },
     });
 
     return response ? this.toDomainCategory(response) : category;
@@ -349,8 +370,8 @@ export class PosProductsApi implements IProductsRepository {
     };
   }
 
-  private toDomain(product: ProductResponse, extras: ProductExtra[] = []): ManagedProduct {
-    const variants = product.Variants ?? product.variants ?? [];
+  private toDomain(product: ProductResponse, extras: ProductExtra[] = [], forcedVariants?: ProductVariant[]): ManagedProduct {
+    const variants = forcedVariants ?? (product.Variants ?? product.variants ?? []).map((variant) => this.toDomainVariant(variant));
     return new ManagedProduct(
       product.Id ?? product.id ?? 0,
       product.Business_Id ?? product.business_Id ?? product.businessId ?? 0,
@@ -374,9 +395,16 @@ export class PosProductsApi implements IProductsRepository {
       product.Image ?? product.image ?? null,
       product.Images ?? product.images ?? [],
       product.Barcode ?? product.barcode ?? null,
-      variants.map((variant) => this.toDomainVariant(variant)),
+      variants,
       extras,
     );
+  }
+
+  private toDomainVariants(payload: LegacyVariantResponse[] | null): ProductVariant[] {
+    if (!Array.isArray(payload)) {
+      return [];
+    }
+    return payload.map((variant) => this.toDomainVariant(variant));
   }
 
   private toLegacy(payload: SaveManagedProductDto): ProductResponse {
@@ -429,7 +457,7 @@ export class PosProductsApi implements IProductsRepository {
       Product_Id: variant.productId,
       Description: variant.description,
       Barcode: variant.barcode ?? null,
-      Color: variant.color ?? null,
+      Color: variant.color?.trim() || null,
       ...(normalizedSize ? { Size: normalizedSize, Talla: normalizedSize } : {}),
       Price: variant.price ?? null,
       PromotionPrice: variant.promotionPrice ?? null,
@@ -472,6 +500,7 @@ export class PosProductsApi implements IProductsRepository {
   private toMutationBody(
     payload: SaveManagedProductDto,
     includeExtras: boolean,
+    includeVariants: boolean,
   ): { Product: ProductResponse; Variants: LegacyVariantResponse[] | null; Extras?: Array<{ Description: string; Type: string }> | null } {
     const normalizedExtras = (payload.extras ?? [])
       .map((extra) => ({ description: extra.description.trim(), type: String(extra.type || "").trim() || "COLOR" }))
@@ -479,7 +508,7 @@ export class PosProductsApi implements IProductsRepository {
 
     return {
       Product: this.toLegacy(payload),
-      Variants: payload.variants?.length ? payload.variants.map((variant) => this.toLegacyVariant(variant)) : null,
+      Variants: includeVariants && payload.variants?.length ? payload.variants.map((variant) => this.toLegacyVariant(variant)) : null,
       ...(includeExtras ? { Extras: normalizedExtras.length ? normalizedExtras.map((extra) => this.toLegacyCreateExtra(extra)) : null } : {}),
     };
   }
@@ -517,7 +546,7 @@ export class PosProductsApi implements IProductsRepository {
 
     await Promise.all(
       variants.map((variant) => {
-        const legacy = this.toLegacyVariant({ ...variant, productId });
+        const legacy = this.withoutVariantId(this.toLegacyVariant({ ...variant, productId }));
 
         if (typeof variant.id === "number") {
           return this.httpClient.request<void>({
@@ -600,6 +629,11 @@ export class PosProductsApi implements IProductsRepository {
 
   private toExtraKey(description: string, type: string): string {
     return `${description.trim().toLowerCase()}::${type.trim().toUpperCase()}`;
+  }
+
+  private withoutVariantId(variant: LegacyVariantResponse): Omit<LegacyVariantResponse, "Id" | "id"> {
+    const { Id: _legacyId, id: _camelId, ...rest } = variant;
+    return rest;
   }
 
   private extractCreatedProduct(response: ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null): ProductResponse | null {

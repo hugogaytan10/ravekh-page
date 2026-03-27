@@ -153,6 +153,8 @@
   border-color: #6d01d1;
   background: #f5edff;
   color: #6d01d1;
+  box-shadow: 0 0 0 2px rgba(109, 1, 209, 0.15);
+  transform: translateY(-1px);
 }
 
 .pos-v2-sales-home__products.is-grid {
@@ -1027,6 +1029,16 @@
     background: #1f2937;
   }
 
+  .pos-v2-sales-home__back-main,
+  .pos-v2-sales-home__continue,
+  .pos-v2-sales-home__back,
+  .pos-v2-sales-home__complete,
+  .pos-v2-sales-home__pagination button {
+    background: #1f2937;
+    border-color: #4b5563;
+    color: #f9fafb;
+  }
+
   .pos-v2-sales-home__mobile-steps button small {
     color: #c4b5fd;
   }
@@ -1094,6 +1106,15 @@
   color: #e5e7eb;
 }
 
+:root[data-theme="dark"] .pos-v2-sales-home__continue,
+:root[data-theme="dark"] .pos-v2-sales-home__back,
+:root[data-theme="dark"] .pos-v2-sales-home__complete,
+:root[data-theme="dark"] .pos-v2-sales-home__pagination button {
+  background: #1f2937;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
 :root[data-theme="dark"] .pos-v2-sales-home__search input,
 :root[data-theme="dark"] .pos-v2-sales-home__checkout input,
 :root[data-theme="dark"] .pos-v2-sales-home__checkout select {
@@ -1140,6 +1161,32 @@
   color: #6b7280;
   font-weight: 600;
 }
+
+.pos-v2-sales-home__pagination-goto {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .82rem;
+  color: #4b5563;
+  font-weight: 700;
+}
+
+.pos-v2-sales-home__pagination-goto input {
+  width: 66px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  text-align: center;
+  padding: .28rem .35rem;
+}
+
+.pos-v2-sales-home__pagination-goto button {
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background: #fff;
+  color: #374151;
+  padding: .28rem .55rem;
+  font-weight: 700;
+}
 @media (prefers-color-scheme: dark) {
   .pos-v2-sales-home__pagination button {
     background: #111827;
@@ -1148,6 +1195,15 @@
   }
   .pos-v2-sales-home__pagination span {
     color: #9ca3af;
+  }
+  .pos-v2-sales-home__pagination-goto {
+    color: #cbd5e1;
+  }
+  .pos-v2-sales-home__pagination-goto input,
+  .pos-v2-sales-home__pagination-goto button {
+    background: #111827;
+    border-color: #374151;
+    color: #e5e7eb;
   }
 }
 
@@ -1181,6 +1237,50 @@
   font-size: 0.9rem;
 }
 
+.pos-v2-sales-home__variant-summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.pos-v2-sales-home__variant-summary span {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  color: #334155;
+  border-radius: 9999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+}
+
+.pos-v2-sales-home__variant-section-label {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #475569;
+}
+
+.pos-v2-sales-home__variant-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+}
+
+.pos-v2-sales-home__variant-filters label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: #475569;
+}
+
+.pos-v2-sales-home__variant-filters select {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  color: #0f172a;
+  padding: 0.42rem 0.55rem;
+}
+
 .pos-v2-sales-home__variant-options {
   display: grid;
   gap: 0.55rem;
@@ -1195,7 +1295,21 @@
   background: #f8fafc;
   padding: 0.65rem;
   display: grid;
-  gap: 0.2rem;
+  gap: 0.24rem;
+  transition: border-color .18s ease, background-color .18s ease, transform .12s ease;
+}
+
+.pos-v2-sales-home__variant-options button:hover {
+  border-color: #c4b5fd;
+}
+
+.pos-v2-sales-home__variant-options button:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 1px;
+}
+
+.pos-v2-sales-home__variant-options button:active {
+  transform: scale(0.995);
 }
 
 .pos-v2-sales-home__variant-options button strong {
@@ -1228,6 +1342,17 @@
   border: 1px solid #cbd5e1;
 }
 
+.pos-v2-sales-home__variant-modal-card footer button {
+  min-height: 42px;
+  min-width: 140px;
+  font-size: 0.9rem;
+  border-radius: 10px;
+  border: 1px solid #6d01d1;
+  background: #6d01d1;
+  color: #ffffff;
+  font-weight: 700;
+}
+
 :root[data-theme="dark"] .pos-v2-sales-home__variant-modal-card {
   background: #111827;
   border-color: #374151;
@@ -1243,8 +1368,40 @@
   border-color: #374151;
 }
 
+:root[data-theme="dark"] .pos-v2-sales-home__variant-modal-card footer button {
+  background: #6d01d1;
+  border-color: #a78bfa;
+  color: #ffffff;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__variant-modal-card footer .is-secondary {
+  background: #1f2937;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+
 :root[data-theme="dark"] .pos-v2-sales-home__variant-options button strong {
   color: #e5e7eb;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__variant-summary span {
+  border-color: #374151;
+  background: #0f172a;
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__variant-section-label {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__variant-filters label {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__variant-filters select {
+  background: #0f172a;
+  color: #e5e7eb;
+  border-color: #334155;
 }
 
 .pos-v2-sales-home__quick-summary {
@@ -1294,4 +1451,38 @@
   border-color: #1d4ed8;
   background: #172554;
   color: #bfdbfe;
+}
+
+:root[data-theme="light"] .pos-v2-sales-home__search,
+:root[data-theme="light"] .pos-v2-sales-home__view-switch,
+:root[data-theme="light"] .pos-v2-sales-home__categories button,
+:root[data-theme="light"] .pos-v2-sales-home__product-card,
+:root[data-theme="light"] .pos-v2-sales-home__cart-panel,
+:root[data-theme="light"] .pos-v2-sales-home__mobile-steps button {
+  background: #fff;
+  border-color: #e5e7eb;
+  color: #111827;
+}
+
+:root[data-theme="light"] .pos-v2-sales-home__search input,
+:root[data-theme="light"] .pos-v2-sales-home__checkout input,
+:root[data-theme="light"] .pos-v2-sales-home__checkout select,
+:root[data-theme="light"] .pos-v2-sales-home__variant-filters select {
+  background: #fff;
+  color: #111827;
+  border-color: #d1d5db;
+}
+
+@media (max-width: 640px) {
+  .pos-v2-sales-home__variant-filters {
+    grid-template-columns: 1fr;
+  }
+
+  .pos-v2-sales-home__variant-modal-card footer {
+    flex-direction: column-reverse;
+  }
+
+  .pos-v2-sales-home__variant-modal-card footer button {
+    width: 100%;
+  }
 }

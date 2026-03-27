@@ -16,6 +16,7 @@ type SaleItemVm = {
   id: number;
   name: string;
   price: number;
+  stock: number | null;
   category: string;
   image?: string;
   variants: SaleVariantVm[];
@@ -38,6 +39,10 @@ type CartItemVm = {
   quantity: number;
   variantId: number | null;
   variantLabel: string | null;
+  colorId: number | null;
+  sizeId: number | null;
+  colorLabel: string | null;
+  sizeLabel: string | null;
 };
 
 type PaymentMethod = "Efectivo" | "Tarjeta" | "Transferencia";
@@ -58,6 +63,27 @@ type CustomerVm = {
 type CategoryVm = {
   id: number;
   name: string;
+};
+
+type ProductExtraOptionVm = {
+  id: number;
+  description: string;
+};
+
+type ProductExtrasVm = {
+  COLOR: ProductExtraOptionVm[];
+  TALLA: ProductExtraOptionVm[];
+} | null;
+
+type VariantApiResponse = {
+  Id?: number | null;
+  Description?: string | null;
+  Color?: string | null;
+  Size?: string | null;
+  Talla?: string | null;
+  Price?: number | null;
+  PromotionPrice?: number | null;
+  Stock?: number | null;
 };
 
 const PAYMENT_METHOD_OPTIONS: Array<{
@@ -103,7 +129,12 @@ const toAbsoluteImageUrl = (image?: string | null): string | undefined => {
   }
 };
 
-const toCartKey = (productId: number, variantId: number | null): string => `${productId}:${variantId ?? "base"}`;
+const toCartKey = (
+  productId: number,
+  variantId: number | null,
+  colorId: number | null = null,
+  sizeId: number | null = null,
+): string => `${productId}:${variantId ?? "base"}:${colorId ?? "none"}:${sizeId ?? "none"}`;
 
 const toVariantLabel = (variant: SaleVariantVm): string => {
   const parts = [variant.description, variant.color, variant.size]
@@ -139,15 +170,23 @@ export const PosV2SalesHomePage = () => {
   const [customersError, setCustomersError] = useState<string | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
   const [totalPages, setTotalPages] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPrevPage, setHasPrevPage] = useState(false);
   const [planLimit, setPlanLimit] = useState(() => (window.localStorage.getItem("plan") ?? "").trim() || DEFAULT_SALES_LIMIT);
   const [variantSelection, setVariantSelection] = useState<{
     product: SaleItemVm;
-    selectedKey: string | null;
+    variants: SaleVariantVm[];
+    extras: ProductExtrasVm;
+    selectedVariantKey: string | null;
+    selectedColorId: number | null;
+    selectedSizeId: number | null;
   } | null>(null);
+  const [extrasCache, setExtrasCache] = useState<Record<number, ProductExtrasVm>>({});
+  const [variantsCache, setVariantsCache] = useState<Record<number, SaleVariantVm[]>>({});
   const [uiMessage, setUiMessage] = useState<string>("");
+  const [variantModalError, setVariantModalError] = useState<string | null>(null);
 
   const debugLog = (...args: unknown[]) => {
     if (window.localStorage.getItem(DEBUG_KEY) === "true") {
@@ -180,6 +219,7 @@ export const PosV2SalesHomePage = () => {
           id: item.id,
           name: item.name,
           price: item.price,
+          stock: item.stock,
           category: item.categoryName?.trim() || "General",
           image: toAbsoluteImageUrl(item.image || item.images?.find(Boolean)),
           variants: item.variants.map((variant) => {
@@ -337,10 +377,26 @@ export const PosV2SalesHomePage = () => {
   }, [categoryKey, search]);
 
   useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
+
+  useEffect(() => {
     if (!uiMessage) return;
     const timeout = window.setTimeout(() => setUiMessage(""), 2200);
     return () => window.clearTimeout(timeout);
   }, [uiMessage]);
+
+  useEffect(() => {
+    if (!variantSelection) return;
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setVariantSelection(null);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [variantSelection]);
 
   const cartItems = useMemo(() => Object.values(cart), [cart]);
   const hasTableSelection = useMemo(() => tables.some((table) => table !== "Para llevar"), [tables]);
@@ -383,11 +439,117 @@ export const PosV2SalesHomePage = () => {
     [totals.items],
   );
 
-  const addToCartEntry = (product: SaleItemVm, variant: SaleVariantVm | null) => {
-    const cartKey = toCartKey(product.id, variant?.id ?? null);
+  const loadProductExtras = async (productId: number): Promise<ProductExtrasVm> => {
+    if (Object.prototype.hasOwnProperty.call(extrasCache, productId)) {
+      return extrasCache[productId];
+    }
+
+    const { token } = getCurrentSession();
+    if (!token) {
+      return null;
+    }
+
+    try {
+      const response = await fetch(new URL(`extras/product/${productId}`, API_BASE_URL).toString(), {
+        headers: {
+          "Content-Type": "application/json",
+          token,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("No se pudieron cargar extras.");
+      }
+
+      const data = (await response.json().catch(() => null)) as { COLOR?: unknown; TALLA?: unknown } | null;
+      const normalized: ProductExtrasVm = {
+        COLOR: Array.isArray(data?.COLOR)
+          ? data.COLOR
+            .map((item) => ({
+              id: Number((item as { Id?: number }).Id),
+              description: String((item as { Description?: string }).Description ?? "").trim(),
+            }))
+            .filter((item) => Number.isFinite(item.id) && item.id > 0 && item.description.length > 0)
+          : [],
+        TALLA: Array.isArray(data?.TALLA)
+          ? data.TALLA
+            .map((item) => ({
+              id: Number((item as { Id?: number }).Id),
+              description: String((item as { Description?: string }).Description ?? "").trim(),
+            }))
+            .filter((item) => Number.isFinite(item.id) && item.id > 0 && item.description.length > 0)
+          : [],
+      };
+
+      const sanitized = normalized.COLOR.length || normalized.TALLA.length ? normalized : null;
+      setExtrasCache((current) => ({ ...current, [productId]: sanitized }));
+      return sanitized;
+    } catch {
+      setExtrasCache((current) => ({ ...current, [productId]: null }));
+      return null;
+    }
+  };
+
+  const loadProductVariants = async (product: SaleItemVm): Promise<SaleVariantVm[]> => {
+    if (Object.prototype.hasOwnProperty.call(variantsCache, product.id)) {
+      return variantsCache[product.id];
+    }
+
+    const { token } = getCurrentSession();
+    if (!token) {
+      return product.variants;
+    }
+
+    try {
+      const response = await fetch(new URL(`variants/product/${product.id}`, API_BASE_URL).toString(), {
+        headers: {
+          "Content-Type": "application/json",
+          token,
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("No se pudieron cargar variantes.");
+      }
+
+      const payload = (await response.json().catch(() => [])) as VariantApiResponse[] | null;
+      const normalized = Array.isArray(payload)
+        ? payload.map((variant) => ({
+          id: typeof variant.Id === "number" && Number.isFinite(variant.Id) ? variant.Id : null,
+          description: (variant.Description ?? "").trim() || "Variante",
+          color: variant.Color?.trim() || null,
+          size: variant.Size?.trim() || variant.Talla?.trim() || null,
+          price: typeof variant.PromotionPrice === "number" && variant.PromotionPrice > 0
+            ? variant.PromotionPrice
+            : typeof variant.Price === "number" && Number.isFinite(variant.Price)
+              ? variant.Price
+              : product.price,
+          stock: typeof variant.Stock === "number" && Number.isFinite(variant.Stock) ? variant.Stock : null,
+        }))
+        : [];
+
+      const resolved = normalized.length > 0 ? normalized : product.variants;
+      setVariantsCache((current) => ({ ...current, [product.id]: resolved }));
+      return resolved;
+    } catch {
+      setVariantsCache((current) => ({ ...current, [product.id]: product.variants }));
+      return product.variants;
+    }
+  };
+
+  const addToCartEntry = (
+    product: SaleItemVm,
+    variant: SaleVariantVm | null,
+    colorOption?: ProductExtraOptionVm | null,
+    sizeOption?: ProductExtraOptionVm | null,
+  ) => {
+    const cartKey = toCartKey(product.id, variant?.id ?? null, colorOption?.id ?? null, sizeOption?.id ?? null);
     const basePrice = variant?.price ?? product.price;
     const variantLabel = variant ? toVariantLabel(variant) : null;
-    const itemName = variantLabel ? `${product.name} · ${variantLabel}` : product.name;
+    const extrasLabel = [colorOption?.description, sizeOption?.description].filter(Boolean).join(" · ");
+    const itemName = [product.name, variantLabel, extrasLabel].filter(Boolean).join(" · ");
 
     setCart((current) => {
       const existing = current[cartKey];
@@ -401,34 +563,65 @@ export const PosV2SalesHomePage = () => {
           quantity: (existing?.quantity ?? 0) + 1,
           variantId: variant?.id ?? null,
           variantLabel,
+          colorId: colorOption?.id ?? null,
+          sizeId: sizeOption?.id ?? null,
+          colorLabel: colorOption?.description ?? null,
+          sizeLabel: sizeOption?.description ?? null,
         },
       };
     });
     setUiMessage(`${itemName} agregado al carrito.`);
     setValidationError(null);
+    setVariantModalError(null);
   };
 
-  const addToCart = (product: SaleItemVm) => {
-    if (!product.variants.length) {
+  const addToCart = async (product: SaleItemVm) => {
+    const variants = await loadProductVariants(product);
+    const extras = await loadProductExtras(product.id);
+    const hasExtraColor = false;
+    const hasExtraSize = (extras?.TALLA.length ?? 0) > 0;
+    const hasBaseStock = product.stock === null || product.stock > 0;
+    const hasVariants = variants.length > 0;
+
+    if (!hasVariants && !hasExtraColor && !hasExtraSize) {
       addToCartEntry(product, null);
       return;
     }
 
-    const availableVariants = product.variants.filter((variant) => variant.stock === null || variant.stock > 0);
-    if (!availableVariants.length) {
-      setValidationError("Este producto no tiene variantes con stock disponible.");
+    const availableVariants = variants.filter((variant) => (variant.stock === null || variant.stock > 0) && variant.id !== null);
+    if (!availableVariants.length && !hasBaseStock) {
+      setValidationError("Este producto no tiene stock disponible ni en base ni en variantes.");
       return;
     }
 
-    if (availableVariants.length === 1) {
-      addToCartEntry(product, availableVariants[0]);
+    const modalVariants = hasBaseStock
+      ? [
+        {
+          id: null,
+          description: "Producto base",
+          color: null,
+          size: null,
+          price: product.price,
+          stock: product.stock,
+        },
+        ...availableVariants,
+      ]
+      : availableVariants;
+
+    if (modalVariants.length === 1 && !hasExtraColor && !hasExtraSize) {
+      addToCartEntry(product, modalVariants[0].id === null ? null : modalVariants[0]);
       return;
     }
 
     setVariantSelection({
       product,
-      selectedKey: toCartKey(product.id, availableVariants[0].id),
+      variants: modalVariants,
+      extras,
+      selectedVariantKey: modalVariants[0] ? toCartKey(product.id, modalVariants[0].id) : null,
+      selectedColorId: null,
+      selectedSizeId: null,
     });
+    setVariantModalError(null);
   };
 
   const setQuantity = (cartKey: string, quantity: number) => {
@@ -474,14 +667,33 @@ export const PosV2SalesHomePage = () => {
   };
 
   const confirmVariantSelection = () => {
-    if (!variantSelection || !variantSelection.selectedKey) return;
-    const variant = variantSelection.product.variants.find((item) => toCartKey(variantSelection.product.id, item.id) === variantSelection.selectedKey) ?? null;
-    if (!variant) return;
-    addToCartEntry(variantSelection.product, variant);
+    if (!variantSelection) return;
+    const variant = variantSelection.selectedVariantKey
+      ? variantSelection.variants.find((item) => toCartKey(variantSelection.product.id, item.id) === variantSelection.selectedVariantKey) ?? null
+      : null;
+
+    const selectedSize = variantSelection.extras?.TALLA.find((option) => option.id === variantSelection.selectedSizeId) ?? null;
+
+    const needsColor = false;
+    const needsSize = (variantSelection.extras?.TALLA.length ?? 0) > 0;
+    if ((needsColor) || (needsSize && !selectedSize)) {
+      setVariantModalError("Debes seleccionar los campos obligatorios antes de agregar.");
+      return;
+    }
+
+    addToCartEntry(variantSelection.product, variant, null, selectedSize);
     setVariantSelection(null);
+    setValidationError(null);
+    setVariantModalError(null);
   };
 
   const discountValue = Number(discountPercent);
+  const goToPage = () => {
+    const target = Number(pageInput);
+    if (!Number.isFinite(target)) return;
+    const normalized = Math.min(Math.max(1, Math.floor(target)), totalPages);
+    setCurrentPage(normalized);
+  };
 
   const resolveEmployeeId = (token: string): number => {
     const fromStorage = Number(window.localStorage.getItem(EMPLOYEE_ID_KEY));
@@ -534,6 +746,8 @@ export const PosV2SalesHomePage = () => {
       Price: item.price,
       Cost: 0,
       Variant_Id: item.variantId ?? undefined,
+      Color_Id: item.colorId ?? undefined,
+      Size_Id: item.sizeId ?? undefined,
     }));
 
     const payloadByTable = {
@@ -673,6 +887,7 @@ export const PosV2SalesHomePage = () => {
                   type="button"
                   onClick={() => setCategoryKey(item.key)}
                   className={active ? "is-active" : ""}
+                  aria-current={active ? "true" : undefined}
                 >
                   {item.label}
                 </button>
@@ -687,7 +902,8 @@ export const PosV2SalesHomePage = () => {
           <div className={`pos-v2-sales-home__products ${isGrid ? "is-grid" : "is-list"}`}>
             {filteredProducts.map((product) => {
               const sellableVariants = product.variants.filter((variant) => variant.stock === null || variant.stock > 0);
-              const hasBlockedVariants = product.variants.length > 0 && sellableVariants.length === 0;
+              const hasBaseStock = product.stock === null || product.stock > 0;
+              const hasBlockedVariants = !hasBaseStock && product.variants.length > 0 && sellableVariants.length === 0;
 
               return (
                 <article
@@ -712,7 +928,7 @@ export const PosV2SalesHomePage = () => {
                   </div>
                   <div className="pos-v2-sales-home__product-side">
                     <strong>${product.price.toFixed(2)}</strong>
-                    <button type="button" onClick={() => addToCart(product)} disabled={hasBlockedVariants}>
+                    <button type="button" onClick={() => void addToCart(product)} disabled={hasBlockedVariants}>
                       {product.variants.length > 0 ? "Elegir variante" : "Agregar"}
                     </button>
                   </div>
@@ -731,6 +947,23 @@ export const PosV2SalesHomePage = () => {
                 Anterior
               </button>
               <span>Página {currentPage} de {totalPages}</span>
+              <label className="pos-v2-sales-home__pagination-goto">
+                Ir a
+                <input
+                  type="number"
+                  min={1}
+                  max={totalPages}
+                  value={pageInput}
+                  onChange={(event) => setPageInput(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Enter") {
+                      event.preventDefault();
+                      goToPage();
+                    }
+                  }}
+                />
+                <button type="button" onClick={goToPage}>Ir</button>
+              </label>
               <button type="button" onClick={() => setCurrentPage((page) => page + 1)} disabled={!hasNextPage}>
                 Siguiente
               </button>
@@ -760,6 +993,8 @@ export const PosV2SalesHomePage = () => {
                       <small>
                         ${item.price.toFixed(2)}
                         {item.variantLabel ? ` · ${item.variantLabel}` : ""}
+                        {item.colorLabel ? ` · Color ${item.colorLabel}` : ""}
+                        {item.sizeLabel ? ` · Talla ${item.sizeLabel}` : ""}
                       </small>
                     </div>
                     <div className="pos-v2-sales-home__qty-controls">
@@ -899,36 +1134,79 @@ export const PosV2SalesHomePage = () => {
           <article className="pos-v2-sales-home__variant-modal-card" onClick={(event) => event.stopPropagation()}>
             <header>
               <h3>{variantSelection.product.name}</h3>
-              <p>Selecciona talla/color para agregar el producto correcto al comando.</p>
+              <p>Selecciona variante y extras para enviar la venta con el detalle correcto.</p>
             </header>
 
+            <div className="pos-v2-sales-home__variant-summary">
+              <span>{variantSelection.variants.length} opciones de variante</span>
+              <span>Color definido por producto/variante</span>
+              <span>{(variantSelection.extras?.TALLA.length ?? 0) > 0 ? "Talla requerida" : "Sin talla obligatoria"}</span>
+            </div>
+
+            {variantSelection.extras ? (
+              <div className="pos-v2-sales-home__variant-filters">
+                {variantSelection.extras.TALLA.length > 0 ? (
+                  <label>
+                    Talla
+                    <select
+                      value={variantSelection.selectedSizeId ?? ""}
+                      onChange={(event) => {
+                        const value = event.target.value ? Number(event.target.value) : null;
+                        setVariantSelection((current) => (current ? { ...current, selectedSizeId: value } : null));
+                        setVariantModalError(null);
+                      }}
+                    >
+                      <option value="">Selecciona talla</option>
+                      {variantSelection.extras.TALLA.map((size) => (
+                        <option key={size.id} value={size.id}>{size.description}</option>
+                      ))}
+                    </select>
+                  </label>
+                ) : null}
+              </div>
+            ) : null}
+
+            <p className="pos-v2-sales-home__variant-section-label">Variantes disponibles</p>
             <div className="pos-v2-sales-home__variant-options" role="listbox" aria-label="Variantes disponibles">
-              {variantSelection.product.variants
-                .filter((variant) => variant.stock === null || variant.stock > 0)
+              {variantSelection.variants.length > 0 ? variantSelection.variants
                 .map((variant) => {
                   const optionKey = toCartKey(variantSelection.product.id, variant.id);
-                  const isActive = optionKey === variantSelection.selectedKey;
+                  const isActive = optionKey === variantSelection.selectedVariantKey;
                   const chips = [variant.color, variant.size].filter(Boolean).join(" · ");
+                  const stockLabel = variant.stock == null ? "Stock abierto" : `Stock ${variant.stock}`;
 
                   return (
                     <button
                       key={optionKey}
                       type="button"
                       className={isActive ? "is-active" : ""}
-                      onClick={() => setVariantSelection((current) => (current ? { ...current, selectedKey: optionKey } : null))}
+                      role="option"
+                      aria-selected={isActive}
+                      onClick={() => {
+                        setVariantSelection((current) => (current ? { ...current, selectedVariantKey: optionKey } : null));
+                        setVariantModalError(null);
+                      }}
                     >
                       <strong>{variant.description || "Variante"}</strong>
                       <small>{chips || "Sin atributos adicionales"}</small>
+                      <small>{stockLabel}</small>
                       <span>${variant.price.toFixed(2)}</span>
                     </button>
                   );
-                })}
+                }) : <p className="pos-v2-sales-home__empty">Sin variantes: se agregará el producto base.</p>}
             </div>
 
             <footer>
               <button type="button" className="is-secondary" onClick={() => setVariantSelection(null)}>Cancelar</button>
-              <button type="button" onClick={confirmVariantSelection} disabled={!variantSelection.selectedKey}>Agregar al carrito</button>
+              <button
+                type="button"
+                onClick={confirmVariantSelection}
+                disabled={variantSelection.variants.length > 0 && !variantSelection.selectedVariantKey}
+              >
+                Confirmar y agregar
+              </button>
             </footer>
+            {variantModalError ? <p className="pos-v2-sales-home__error">{variantModalError}</p> : null}
           </article>
         </section>
       ) : null}

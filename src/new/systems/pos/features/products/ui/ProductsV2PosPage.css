@@ -23,9 +23,11 @@
 .pos-v2-products__access label { display: grid; gap: .3rem; font-size: .88rem; color: #374151; font-weight: 600; }
 .pos-v2-products__access input,
 .pos-v2-products__form input,
+.pos-v2-products__form select,
 .pos-v2-products__form textarea,
 .pos-v2-products__controls input,
-.pos-v2-products__variants input { border: 1px solid #d1d5db; border-radius: 10px; padding: .62rem .72rem; font-size: .95rem; width: 100%; min-height: 42px; }
+.pos-v2-products__variants input,
+.pos-v2-products__variants select { border: 1px solid #d1d5db; border-radius: 10px; padding: .62rem .72rem; font-size: .95rem; width: 100%; min-height: 42px; }
 .pos-v2-products__form textarea { min-height: 80px; resize: vertical; }
 
 .pos-v2-products__stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .6rem; }
@@ -196,6 +198,18 @@
 .pos-v2-products__variant-item { display: grid; gap: .55rem; border: 1px solid #e5e7eb; border-radius: 12px; padding: .65rem; background: #fafafa; }
 .pos-v2-products__variant-head { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
 .pos-v2-products__variant-grid { display: grid; gap: .45rem; grid-template-columns: 1fr; }
+.pos-v2-products__variant-color-field {
+  display: grid;
+  gap: .25rem;
+  font-size: .8rem;
+  color: var(--product-muted);
+  font-weight: 700;
+}
+
+.pos-v2-products__variant-color-field select:disabled {
+  opacity: .65;
+  cursor: not-allowed;
+}
 .pos-v2-products__variant-item .is-delete { border: none; border-radius: 9999px; background: #fef2f2; color: #991b1b; font-weight: 700; padding: .45rem .8rem; min-height: 36px; }
 .pos-v2-products__chips-carousel { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: .45rem; }
 .pos-v2-products__chips-carousel .is-arrow {
@@ -362,9 +376,11 @@
 
 :root[data-theme="dark"] .pos-v2-products__access input,
 :root[data-theme="dark"] .pos-v2-products__form input,
+:root[data-theme="dark"] .pos-v2-products__form select,
 :root[data-theme="dark"] .pos-v2-products__form textarea,
 :root[data-theme="dark"] .pos-v2-products__controls input,
 :root[data-theme="dark"] .pos-v2-products__variants input,
+:root[data-theme="dark"] .pos-v2-products__variants select,
 :root[data-theme="dark"] .pos-v2-products__chips button,
 :root[data-theme="dark"] .pos-v2-products__view-toggle,
 :root[data-theme="dark"] .pos-v2-products__card-actions button,
@@ -409,9 +425,11 @@
 
   .pos-v2-products__access input,
   .pos-v2-products__form input,
+  .pos-v2-products__form select,
   .pos-v2-products__form textarea,
   .pos-v2-products__controls input,
   .pos-v2-products__variants input,
+  .pos-v2-products__variants select,
   .pos-v2-products__chips button,
   .pos-v2-products__view-toggle,
   .pos-v2-products__card-actions button,

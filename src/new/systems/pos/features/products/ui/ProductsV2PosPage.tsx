@@ -43,6 +43,7 @@ type VariantFormVm = {
   id?: number;
   productId?: number;
   description: string;
+  color: string;
   price: string;
   promotionPrice: string;
   costPerItem: string;
@@ -73,6 +74,7 @@ const toImageUrl = (image?: string | null): string | null => {
 const createVariantDraft = (): VariantFormVm => ({
   key: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
   description: "",
+  color: "",
   price: "",
   promotionPrice: "",
   costPerItem: "",
@@ -130,6 +132,7 @@ export const ProductsV2PosPage = () => {
   const [forSale, setForSale] = useState(true);
   const [showInStore, setShowInStore] = useState(true);
   const [available, setAvailable] = useState(true);
+  const [productColor, setProductColor] = useState("#6D01D1");
   const [variants, setVariants] = useState<VariantFormVm[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [sizeDraft, setSizeDraft] = useState("");
@@ -156,6 +159,7 @@ export const ProductsV2PosPage = () => {
     setForSale(true);
     setShowInStore(true);
     setAvailable(true);
+    setProductColor("#6D01D1");
     setVariants([]);
     setSelectedCategoryId(null);
     setSizeDraft("");
@@ -248,7 +252,6 @@ export const ProductsV2PosPage = () => {
       setCategories(
         categoryRows
           .filter((category) => typeof category.id === "number" && category.id > 0)
-          .filter((category) => response.pagination.categoryIds.length === 0 || response.pagination.categoryIds.includes(category.id as number))
           .map((category) => ({ id: category.id as number, name: category.name, color: category.color })),
       );
     } catch (cause) {
@@ -293,7 +296,7 @@ export const ProductsV2PosPage = () => {
       .map((variant) => ({
         description: variant.description.trim(),
         barcode: variant.barcode.trim() || null,
-        color: null,
+        color: variant.color.trim() || null,
         size: null,
         id: variant.id,
         productId: variant.productId,
@@ -384,6 +387,12 @@ export const ProductsV2PosPage = () => {
       return;
     }
 
+      const hasVariantWithoutColor = variants.some((variant) => variant.description.trim() && !variant.color.trim());
+      if (hasVariantWithoutColor) {
+      setError("Cada variante debe seleccionar un color.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
     setSaveResult(null);
@@ -400,7 +409,7 @@ export const ProductsV2PosPage = () => {
         forSale,
         showInStore,
         available,
-        color: null,
+        color: productColor,
         volume: false,
         price: parsedPrice,
         promotionPrice: null,
@@ -421,6 +430,7 @@ export const ProductsV2PosPage = () => {
       const actionLabel = editingId ? "actualizó" : "creó";
       setSaveResult({ type: "success", message: `Se ${actionLabel} el producto #${saved.id} correctamente.` });
       resetForm();
+      setIsFormOpen(false);
       setToast({ type: "success", message: editingId ? "Producto actualizado correctamente." : "Producto creado correctamente." });
       await loadProducts(currentPage);
     } catch (cause) {
@@ -498,6 +508,7 @@ export const ProductsV2PosPage = () => {
       setForSale(detail.forSale);
       setShowInStore(detail.showInStore);
       setAvailable(detail.available);
+      setProductColor(detail.color ?? "#6D01D1");
       setSelectedCategoryId(detail.categoryId ?? null);
       setStoredImages(Array.from(new Set([detail.image, ...detail.images].filter(Boolean) as string[])));
       setSelectedImageFiles([]);
@@ -511,6 +522,7 @@ export const ProductsV2PosPage = () => {
           id: variant.id,
           productId: variant.productId,
           description: variant.description ?? "",
+          color: variant.color ?? "",
           price: variant.price == null ? "" : String(variant.price),
           promotionPrice: variant.promotionPrice == null ? "" : String(variant.promotionPrice),
           costPerItem: variant.costPerItem == null ? "" : String(variant.costPerItem),
@@ -849,6 +861,11 @@ export const ProductsV2PosPage = () => {
                     Stock (opcional)
                     <input type="number" min="0" step="1" inputMode="numeric" value={stock} onChange={(event) => setStock(event.target.value)} />
                   </label>
+
+                  <label>
+                    Color del producto
+                    <input type="color" value={productColor} onChange={(event) => setProductColor(event.target.value)} aria-label="Color del producto" />
+                  </label>
                 </div>
 
                 <label>
@@ -908,6 +925,23 @@ export const ProductsV2PosPage = () => {
                       </div>
                       <div className="pos-v2-products__variant-grid">
                         <input value={variant.description} onChange={(event) => updateVariant(variant.key, "description", event.target.value)} placeholder="Descripción" aria-label={`Nombre de variante ${index + 1}`} />
+                        <label className="pos-v2-products__variant-color-field">
+                          <span>Color de variante</span>
+                          <select
+                            value={variant.color}
+                            onChange={(event) => updateVariant(variant.key, "color", event.target.value)}
+                            aria-label={`Color de variante ${index + 1}`}
+                            disabled={colors.length === 0}
+                          >
+                            <option value="">Selecciona color</option>
+                            {colors.map((color) => (
+                              <option key={`${variant.key}-${color}`} value={color}>{color}</option>
+                            ))}
+                            {variant.color && !colors.includes(variant.color) ? (
+                              <option value={variant.color}>{variant.color} (actual)</option>
+                            ) : null}
+                          </select>
+                        </label>
                         <input value={variant.barcode} onChange={(event) => updateVariant(variant.key, "barcode", event.target.value)} placeholder="Código de barras" aria-label={`Código de barras de variante ${index + 1}`} />
                         <input value={variant.price} onChange={(event) => updateVariant(variant.key, "price", event.target.value)} placeholder="Precio" type="number" min="0" step="0.01" inputMode="decimal" aria-label={`Precio de variante ${index + 1}`} />
                         <input value={variant.promotionPrice} onChange={(event) => updateVariant(variant.key, "promotionPrice", event.target.value)} placeholder="Promoción" type="number" min="0" step="0.01" inputMode="decimal" aria-label={`Promoción de variante ${index + 1}`} />
