@@ -7,6 +7,8 @@ export const POS_V2_PATHS = {
   more: "/v2/more",
   morePreview: (moduleId = ":moduleId") => `/v2/more/preview/${moduleId}`,
   tableZones: "/v2/settings/table-zones",
+  cashClosing: "/v2/cash-closing",
+  inventory: "/v2/inventory",
   customers: "/v2/customers",
   employees: "/v2/employees",
   onlineStore: "/v2/online-store",
@@ -20,4 +22,6 @@ export const POS_V2_PATHS = {
   posMoreAlias: "/v2/pos/more",
   posTablesAlias: "/v2/pos/tables",
   posHealthAlias: "/v2/pos/health",
+  posInventoryAlias: "/v2/pos/inventory",
+  posCashClosingAlias: "/v2/pos/cash-closing",
 } as const;

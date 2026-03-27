@@ -8,6 +8,6 @@ export interface EmployeeSummary {
 export interface ICashClosingRepository {
   listEmployeesByBusiness(businessId: number, token: string): Promise<EmployeeSummary[]>;
   listByEmployee(employeeId: number, token: string): Promise<CashClosing[]>;
-  getCurrentByEmployee(employeeId: number, token: string): Promise<CashClosing | null>;
-  create(payload: CreateCashClosingDto, token: string): Promise<CashClosing>;
+  getCurrentTotalByEmployee(employeeId: number, token: string): Promise<number>;
+  create(payload: CreateCashClosingDto, token: string): Promise<void>;
 }

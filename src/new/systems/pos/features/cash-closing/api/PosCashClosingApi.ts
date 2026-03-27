@@ -10,11 +10,11 @@ type EmployeeResponse = {
 
 type CashClosingResponse = {
   Id: number;
-  Employees_Id: number;
-  OpeningAmount?: number;
-  ExpectedAmount?: number;
-  CountedAmount?: number;
-  Difference?: number;
+  Employee_Id?: number;
+  Employees_Id?: number;
+  Total?: number;
+  Date?: string;
+  Employee_Name?: string;
 };
 
 export class PosCashClosingApi implements ICashClosingRepository {
@@ -43,44 +43,37 @@ export class PosCashClosingApi implements ICashClosingRepository {
     return response.map((closing) => this.toDomain(closing));
   }
 
-  async getCurrentByEmployee(employeeId: number, token: string): Promise<CashClosing | null> {
-    const response = await this.httpClient.request<CashClosingResponse | null>({
+  async getCurrentTotalByEmployee(employeeId: number, token: string): Promise<number> {
+    const response = await this.httpClient.request<number | { total?: number } | null>({
       method: "GET",
       path: `cashclosing/total/${employeeId}`,
       token,
     });
 
-    if (!response) {
-      return null;
-    }
-
-    return this.toDomain(response);
+    if (typeof response === "number") return response;
+    if (response && typeof response.total === "number") return response.total;
+    return 0;
   }
 
-  async create(payload: CreateCashClosingDto, token: string): Promise<CashClosing> {
-    const response = await this.httpClient.request<CashClosingResponse>({
+  async create(payload: CreateCashClosingDto, token: string): Promise<void> {
+    await this.httpClient.request<unknown>({
       method: "POST",
       path: "cashclosing",
       token,
       body: {
-        Employees_Id: payload.employeeId,
-        OpeningAmount: payload.openingAmount,
-        ExpectedAmount: payload.expectedAmount,
-        CountedAmount: payload.countedAmount,
+        Employee_Id: payload.employeeId,
       },
     });
-
-    return this.toDomain(response);
   }
 
   private toDomain(response: CashClosingResponse): CashClosing {
+    const employeeId = response.Employee_Id ?? response.Employees_Id ?? 0;
     return new CashClosing(
       response.Id,
-      response.Employees_Id,
-      response.OpeningAmount ?? 0,
-      response.ExpectedAmount ?? 0,
-      response.CountedAmount ?? 0,
-      response.Difference ?? 0,
+      employeeId,
+      response.Total ?? 0,
+      response.Date ?? "",
+      response.Employee_Name ?? "",
     );
   }
 }

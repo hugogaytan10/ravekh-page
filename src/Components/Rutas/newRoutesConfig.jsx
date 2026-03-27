@@ -30,6 +30,8 @@ import { PosV2CustomersPage } from "../../new/systems/pos/features/customers/ui/
 import { PosV2EmployeesPage } from "../../new/systems/pos/features/employees/ui/PosV2EmployeesPage";
 import { PosV2TableZonesPage } from "../../new/systems/pos/features/settings/table-zones/ui/PosV2TableZonesPage";
 import { PosV2OnlineOrdersPage } from "../../new/systems/pos/features/online-orders/ui/PosV2OnlineOrdersPage";
+import { PosV2CashClosingPage } from "../../new/systems/pos/features/cash-closing/ui/PosV2CashClosingPage";
+import { PosV2InventoryPage } from "../../new/systems/pos/features/inventory/ui/PosV2InventoryPage";
 import { PosV2RequireAuth } from "../../new/systems/pos/routing/PosV2RequireAuth";
 
 export const NEW_PRIMARY_ROUTES = [
@@ -44,6 +46,8 @@ export const NEW_PRIMARY_ROUTES = [
   { path: "/v2/customers", element: <PosV2RequireAuth><PosV2CustomersPage /></PosV2RequireAuth> },
   { path: "/v2/employees", element: <PosV2RequireAuth><PosV2EmployeesPage /></PosV2RequireAuth> },
   { path: "/v2/settings/table-zones", element: <PosV2RequireAuth><PosV2TableZonesPage /></PosV2RequireAuth> },
+  { path: "/v2/cash-closing", element: <PosV2RequireAuth><PosV2CashClosingPage /></PosV2RequireAuth> },
+  { path: "/v2/inventory", element: <PosV2RequireAuth><PosV2InventoryPage /></PosV2RequireAuth> },
   { path: "/v2/online-store", element: <PosV2RequireAuth><PosV2OnlineOrdersPage /></PosV2RequireAuth> },
   { path: "/v2/health", element: <PosV2RequireAuth><PosHealthV2Screen /></PosV2RequireAuth> },
   // Compatibilidad temporal de rutas /v2/pos/*
@@ -56,6 +60,8 @@ export const NEW_PRIMARY_ROUTES = [
   { path: "/v2/pos/more", element: <Navigate to="/v2/more" replace /> },
   { path: "/v2/pos/customers", element: <Navigate to="/v2/customers" replace /> },
   { path: "/v2/pos/employees", element: <Navigate to="/v2/employees" replace /> },
+  { path: "/v2/pos/cash-closing", element: <Navigate to="/v2/cash-closing" replace /> },
+  { path: "/v2/pos/inventory", element: <Navigate to="/v2/inventory" replace /> },
   { path: "/v2/pos/health", element: <Navigate to="/v2/health" replace /> },
   { path: "/v2/pos/online-store", element: <Navigate to="/v2/online-store" replace /> },
   { path: "/", element: <LandingPageRavekhPage /> },

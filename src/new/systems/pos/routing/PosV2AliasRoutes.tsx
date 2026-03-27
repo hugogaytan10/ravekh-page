@@ -11,6 +11,8 @@ const LEGACY_ALIASES: Array<{ from: string; to: string }> = [
   { from: POS_V2_PATHS.posMoreAlias, to: POS_V2_PATHS.more },
   { from: POS_V2_PATHS.posTablesAlias, to: POS_V2_PATHS.tableZones },
   { from: POS_V2_PATHS.posHealthAlias, to: POS_V2_PATHS.health },
+  { from: POS_V2_PATHS.posInventoryAlias, to: POS_V2_PATHS.inventory },
+  { from: POS_V2_PATHS.posCashClosingAlias, to: POS_V2_PATHS.cashClosing },
 ];
 
 export const POS_V2_ALIAS_ROUTES = (

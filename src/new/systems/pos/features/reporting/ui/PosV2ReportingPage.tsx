@@ -19,6 +19,7 @@ import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import type { IncomePoint, ReportRange, ReportSale } from "../model/SalesReport";
 import type { ReportSummaryViewModel } from "../pages/ReportingInsightsPage";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
+import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import "./PosV2ReportingPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -715,10 +716,15 @@ export const PosV2ReportingPage = () => {
             </header>
             <div className="pos-v2-reporting__module-grid">
               {PENDING_MODULES.map((module) => (
-                <button key={module.id} type="button" className="pos-v2-reporting__module-card" onClick={() => navigate(`/v2/more/preview/${module.id}`)}>
+                <button
+                  key={module.id}
+                  type="button"
+                  className="pos-v2-reporting__module-card"
+                  onClick={() => navigate(module.id === "cash-closing" ? POS_V2_PATHS.cashClosing : POS_V2_PATHS.morePreview(module.id))}
+                >
                   <strong>{module.title}</strong>
                   <small>{module.detail}</small>
-                  <span>Abrir vista previa</span>
+                  <span>{module.id === "cash-closing" ? "Abrir módulo" : "Abrir vista previa"}</span>
                 </button>
               ))}
             </div>

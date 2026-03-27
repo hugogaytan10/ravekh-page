@@ -409,3 +409,69 @@
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 }
+
+:root[data-theme="dark"] .pos-v2-finance--empty,
+:root[data-theme="dark"] .pos-v2-finance__stats article,
+:root[data-theme="dark"] .pos-v2-finance__insights article,
+:root[data-theme="dark"] .pos-v2-finance__form,
+:root[data-theme="dark"] .pos-v2-finance__timeline,
+:root[data-theme="dark"] .pos-v2-finance__timeline li,
+:root[data-theme="dark"] .pos-v2-finance__modal article {
+  background: #111827;
+  border-color: #374151;
+}
+
+:root[data-theme="dark"] .pos-v2-finance__header p,
+:root[data-theme="dark"] .pos-v2-finance__stats span,
+:root[data-theme="dark"] .pos-v2-finance__insights p,
+:root[data-theme="dark"] .pos-v2-finance__insights small,
+:root[data-theme="dark"] .pos-v2-finance__timeline li span,
+:root[data-theme="dark"] .pos-v2-finance__timeline li.is-empty,
+:root[data-theme="dark"] .pos-v2-finance label {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-finance__stats strong {
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-finance input,
+:root[data-theme="dark"] .pos-v2-finance select,
+:root[data-theme="dark"] .pos-v2-finance__chips button,
+:root[data-theme="dark"] .pos-v2-finance .pos-v2-finance__refresh,
+:root[data-theme="dark"] .pos-v2-finance__mode-toggle,
+:root[data-theme="dark"] .pos-v2-finance__period-toggle {
+  background: #0f172a;
+  border-color: #475569;
+  color: #e2e8f0;
+}
+
+:root[data-theme="dark"] .pos-v2-finance__mode-toggle button,
+:root[data-theme="dark"] .pos-v2-finance__period-toggle button {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-finance__mode-toggle .is-active,
+:root[data-theme="dark"] .pos-v2-finance__period-toggle .is-active,
+:root[data-theme="dark"] .pos-v2-finance__chips .is-active {
+  background: #38bdf8;
+  color: #0b1120;
+}
+
+:root[data-theme="dark"] .pos-v2-finance button {
+  background: #38bdf8;
+  color: #0b1120;
+}
+
+:root[data-theme="dark"] .pos-v2-finance__error,
+:root[data-theme="dark"] .pos-v2-finance__toast.is-error {
+  border-color: rgba(220, 38, 38, 0.35);
+  color: #fecaca;
+  background: rgba(127, 29, 29, 0.35);
+}
+
+:root[data-theme="dark"] .pos-v2-finance__toast.is-success {
+  border-color: rgba(22, 163, 74, 0.35);
+  color: #bbf7d0;
+  background: rgba(20, 83, 45, 0.35);
+}

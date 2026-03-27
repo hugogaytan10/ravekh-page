@@ -12,11 +12,11 @@ export class CashClosingService {
     return this.repository.listByEmployee(employeeId, token);
   }
 
-  async getCurrentClosing(employeeId: number, token: string): Promise<CashClosing | null> {
-    return this.repository.getCurrentByEmployee(employeeId, token);
+  async getCurrentTotal(employeeId: number, token: string): Promise<number> {
+    return this.repository.getCurrentTotalByEmployee(employeeId, token);
   }
 
-  async registerClosing(payload: CreateCashClosingDto, token: string): Promise<CashClosing> {
-    return this.repository.create(payload, token);
+  async registerClosing(payload: CreateCashClosingDto, token: string): Promise<void> {
+    await this.repository.create(payload, token);
   }
 }

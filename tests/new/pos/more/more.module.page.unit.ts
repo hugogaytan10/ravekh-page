@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { MoreModulePage } from "../../../../src/new/systems/pos/features/more/pages/MoreModulePage";
 import { MoreModuleService } from "../../../../src/new/systems/pos/features/more/services/MoreModuleService";
 import { MORE_MODULE_SECTIONS } from "../../../../src/new/systems/pos/features/more/config/moreModules";
+import { POS_V2_PATHS } from "../../../../src/new/systems/pos/routing/PosV2Paths";
 
 const findModule = (moduleId: string) => {
   const module = MORE_MODULE_SECTIONS.flatMap((section) => section.items).find((item) => item.id === moduleId);
@@ -19,9 +20,14 @@ export async function run(): Promise<void> {
   const roles = findModule("roles");
   const printers = findModule("printers");
   const branches = findModule("branches");
+  const cashClosing = findModule("cash-closing");
+  const inventory = findModule("inventory");
   assert.equal(roles.actionType, "beta-action");
   assert.equal(printers.actionType, "beta-action");
   assert.equal(branches.actionType, "beta-action");
+  assert.equal(cashClosing.path, POS_V2_PATHS.cashClosing);
+  assert.equal(inventory.path, POS_V2_PATHS.inventory);
+  assert.equal(inventory.actionType, "route");
 
   let failed = false;
   try {

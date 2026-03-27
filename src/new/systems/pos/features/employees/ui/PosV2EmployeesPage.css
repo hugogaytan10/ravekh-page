@@ -198,3 +198,37 @@
     color: #fecaca;
   }
 }
+
+:root[data-theme="dark"] .pos-v2-employees {
+  --card-bg: #111827;
+  --card-border: #374151;
+  --text-muted: #9ca3af;
+  --input-bg: #0f172a;
+}
+
+:root[data-theme="dark"] .pos-v2-employees button {
+  background: #1f2937;
+  border-color: #4b5563;
+  color: #f9fafb;
+}
+
+:root[data-theme="dark"] .pos-v2-employees button.is-danger {
+  background: #3f1d2e;
+  border-color: #9f1239;
+  color: #fecdd3;
+}
+
+:root[data-theme="dark"] .pos-v2-employees button.is-primary {
+  background: #7c3aed;
+  border-color: #7c3aed;
+}
+
+:root[data-theme="dark"] .pos-v2-employees__help {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-employees__error {
+  background: #3f1d1d;
+  border-color: #7f1d1d;
+  color: #fecaca;
+}
