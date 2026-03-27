@@ -2,7 +2,18 @@ import { HttpClient } from "../../../../core/api/HttpClient";
 import { POS_ENDPOINTS } from "../../../shared/api/posEndpoints";
 import { toPaginationMeta } from "../../../shared/model/Pagination";
 import { IProductRepository, ProductCategory, SalesProductsPaginatedResult } from "../interface/IProductRepository";
-import { CreateProductDto, Product } from "../model/Product";
+import { CreateProductDto, Product, SalesProductVariant } from "../model/Product";
+
+type LegacyVariantResponse = {
+  Id?: number | null;
+  Description?: string | null;
+  Color?: string | null;
+  Size?: string | null;
+  Talla?: string | null;
+  Price?: number | null;
+  PromotionPrice?: number | null;
+  Stock?: number | null;
+};
 
 type ProductResponse = {
   Id: number;
@@ -16,6 +27,7 @@ type ProductResponse = {
   Images?: string[] | null;
   ForSale?: boolean;
   Available?: boolean;
+  Variants?: LegacyVariantResponse[] | null;
 };
 
 type CategoryResponse = {
@@ -143,6 +155,19 @@ export class PosProductApi implements IProductRepository {
       Array.isArray(item.Images) ? item.Images.filter(Boolean) : [],
       item.ForSale ?? true,
       item.Available ?? true,
+      Array.isArray(item.Variants) ? item.Variants.map((variant) => this.toDomainVariant(variant)) : [],
     );
+  }
+
+  private toDomainVariant(variant: LegacyVariantResponse): SalesProductVariant {
+    return {
+      id: typeof variant.Id === "number" && Number.isFinite(variant.Id) ? variant.Id : null,
+      description: (variant.Description ?? "").trim(),
+      color: variant.Color?.trim() || null,
+      size: variant.Size?.trim() || variant.Talla?.trim() || null,
+      price: typeof variant.Price === "number" && Number.isFinite(variant.Price) ? variant.Price : null,
+      promotionPrice: typeof variant.PromotionPrice === "number" && Number.isFinite(variant.PromotionPrice) ? variant.PromotionPrice : null,
+      stock: typeof variant.Stock === "number" && Number.isFinite(variant.Stock) ? variant.Stock : null,
+    };
   }
 }

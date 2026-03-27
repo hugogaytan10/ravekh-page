@@ -20,7 +20,7 @@ export interface MoreModuleSection {
 export type MoreModuleExecutionContext = {
   token: string;
   businessId: number;
-  employeeId?: number;
+  employeeId: number;
 };
 
 export type MoreModuleExecutionResult = {

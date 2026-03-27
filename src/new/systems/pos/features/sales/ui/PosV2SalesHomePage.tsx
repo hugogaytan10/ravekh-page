@@ -10,6 +10,7 @@ import { useNavigate } from "react-router-dom";
 import "./PosV2SalesHomePage.css";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
+import { POS_SESSION_STORAGE_KEYS, readPosSessionSnapshot } from "../../../shared/config/posSession";
 
 type SaleItemVm = {
   id: number;
@@ -17,6 +18,26 @@ type SaleItemVm = {
   price: number;
   category: string;
   image?: string;
+  variants: SaleVariantVm[];
+};
+
+type SaleVariantVm = {
+  id: number | null;
+  description: string;
+  color: string | null;
+  size: string | null;
+  price: number;
+  stock: number | null;
+};
+
+type CartItemVm = {
+  cartKey: string;
+  productId: number;
+  name: string;
+  price: number;
+  quantity: number;
+  variantId: number | null;
+  variantLabel: string | null;
 };
 
 type PaymentMethod = "Efectivo" | "Tarjeta" | "Transferencia";
@@ -50,9 +71,7 @@ const PAYMENT_METHOD_OPTIONS: Array<{
   ];
 
 const API_BASE_URL = getPosApiBaseUrl();
-const TOKEN_KEY = "pos-v2-token";
-const BUSINESS_ID_KEY = "pos-v2-business-id";
-const EMPLOYEE_ID_KEY = "pos-v2-employee-id";
+const EMPLOYEE_ID_KEY = POS_SESSION_STORAGE_KEYS.employeeId;
 const DEFAULT_TABLE_OPTIONS = ["Para llevar"];
 const DEFAULT_SALES_LIMIT = "EMPRENDEDOR";
 const DEBUG_KEY = "pos-v2-debug";
@@ -84,6 +103,15 @@ const toAbsoluteImageUrl = (image?: string | null): string | undefined => {
   }
 };
 
+const toCartKey = (productId: number, variantId: number | null): string => `${productId}:${variantId ?? "base"}`;
+
+const toVariantLabel = (variant: SaleVariantVm): string => {
+  const parts = [variant.description, variant.color, variant.size]
+    .map((segment) => (segment ?? "").trim())
+    .filter(Boolean);
+  return parts.length > 0 ? parts.join(" · ") : "Variante";
+};
+
 export const PosV2SalesHomePage = () => {
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
@@ -94,7 +122,7 @@ export const PosV2SalesHomePage = () => {
   const [availableCategoryIds, setAvailableCategoryIds] = useState<number[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [productsError, setProductsError] = useState<string | null>(null);
-  const [cart, setCart] = useState<Record<number, { name: string; price: number; quantity: number }>>({});
+  const [cart, setCart] = useState<Record<string, CartItemVm>>({});
   const [discountPercent, setDiscountPercent] = useState("0");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Efectivo");
   const [ticket, setTicket] = useState<string | null>(null);
@@ -115,6 +143,11 @@ export const PosV2SalesHomePage = () => {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPrevPage, setHasPrevPage] = useState(false);
   const [planLimit, setPlanLimit] = useState(() => (window.localStorage.getItem("plan") ?? "").trim() || DEFAULT_SALES_LIMIT);
+  const [variantSelection, setVariantSelection] = useState<{
+    product: SaleItemVm;
+    selectedKey: string | null;
+  } | null>(null);
+  const [uiMessage, setUiMessage] = useState<string>("");
 
   const debugLog = (...args: unknown[]) => {
     if (window.localStorage.getItem(DEBUG_KEY) === "true") {
@@ -122,9 +155,10 @@ export const PosV2SalesHomePage = () => {
     }
   };
 
+  const getCurrentSession = () => readPosSessionSnapshot();
+
   useEffect(() => {
-    const token = window.localStorage.getItem(TOKEN_KEY);
-    const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY));
+    const { token, businessId } = getCurrentSession();
     const categoryId = categoryKey === "all" ? null : Number(categoryKey);
 
     if (!token || !businessId) {
@@ -148,6 +182,20 @@ export const PosV2SalesHomePage = () => {
           price: item.price,
           category: item.categoryName?.trim() || "General",
           image: toAbsoluteImageUrl(item.image || item.images?.find(Boolean)),
+          variants: item.variants.map((variant) => {
+            const variantPrice = typeof variant.promotionPrice === "number" && variant.promotionPrice > 0
+              ? variant.promotionPrice
+              : variant.price ?? item.price;
+
+            return {
+              id: variant.id,
+              description: variant.description.trim(),
+              color: variant.color,
+              size: variant.size,
+              price: variantPrice,
+              stock: variant.stock,
+            };
+          }),
         }));
 
         setProducts(mapped);
@@ -168,8 +216,7 @@ export const PosV2SalesHomePage = () => {
   }, [categoryKey, currentPage, planLimit]);
 
   useEffect(() => {
-    const token = window.localStorage.getItem(TOKEN_KEY);
-    const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY));
+    const { token, businessId } = getCurrentSession();
 
     if (!token || !businessId) {
       return;
@@ -190,8 +237,7 @@ export const PosV2SalesHomePage = () => {
   }, []);
 
   useEffect(() => {
-    const token = window.localStorage.getItem(TOKEN_KEY);
-    const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY));
+    const { token, businessId } = getCurrentSession();
 
     if (!token || !businessId) {
       setCustomers([]);
@@ -215,8 +261,7 @@ export const PosV2SalesHomePage = () => {
   }, []);
 
   useEffect(() => {
-    const token = window.localStorage.getItem(TOKEN_KEY);
-    const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY));
+    const { token, businessId } = getCurrentSession();
 
     if (!token || !businessId) {
       setTables(DEFAULT_TABLE_OPTIONS);
@@ -256,8 +301,7 @@ export const PosV2SalesHomePage = () => {
   }, [tables, selectedTable]);
 
   useEffect(() => {
-    const token = window.localStorage.getItem(TOKEN_KEY);
-    const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY));
+    const { token, businessId } = getCurrentSession();
 
     if (!token || !businessId) {
       setCategories([]);
@@ -292,7 +336,13 @@ export const PosV2SalesHomePage = () => {
     setCurrentPage(1);
   }, [categoryKey, search]);
 
-  const cartItems = useMemo(() => Object.entries(cart).map(([id, value]) => ({ id: Number(id), ...value })), [cart]);
+  useEffect(() => {
+    if (!uiMessage) return;
+    const timeout = window.setTimeout(() => setUiMessage(""), 2200);
+    return () => window.clearTimeout(timeout);
+  }, [uiMessage]);
+
+  const cartItems = useMemo(() => Object.values(cart), [cart]);
   const hasTableSelection = useMemo(() => tables.some((table) => table !== "Para llevar"), [tables]);
   const hasCustomers = customers.length > 0;
 
@@ -333,34 +383,68 @@ export const PosV2SalesHomePage = () => {
     [totals.items],
   );
 
-  const addToCart = (product: SaleItemVm) => {
+  const addToCartEntry = (product: SaleItemVm, variant: SaleVariantVm | null) => {
+    const cartKey = toCartKey(product.id, variant?.id ?? null);
+    const basePrice = variant?.price ?? product.price;
+    const variantLabel = variant ? toVariantLabel(variant) : null;
+    const itemName = variantLabel ? `${product.name} · ${variantLabel}` : product.name;
+
     setCart((current) => {
-      const existing = current[product.id];
+      const existing = current[cartKey];
       return {
         ...current,
-        [product.id]: {
-          name: product.name,
-          price: product.price,
+        [cartKey]: {
+          cartKey,
+          productId: product.id,
+          name: itemName,
+          price: basePrice,
           quantity: (existing?.quantity ?? 0) + 1,
+          variantId: variant?.id ?? null,
+          variantLabel,
         },
       };
     });
+    setUiMessage(`${itemName} agregado al carrito.`);
+    setValidationError(null);
   };
 
-  const setQuantity = (id: number, quantity: number) => {
+  const addToCart = (product: SaleItemVm) => {
+    if (!product.variants.length) {
+      addToCartEntry(product, null);
+      return;
+    }
+
+    const availableVariants = product.variants.filter((variant) => variant.stock === null || variant.stock > 0);
+    if (!availableVariants.length) {
+      setValidationError("Este producto no tiene variantes con stock disponible.");
+      return;
+    }
+
+    if (availableVariants.length === 1) {
+      addToCartEntry(product, availableVariants[0]);
+      return;
+    }
+
+    setVariantSelection({
+      product,
+      selectedKey: toCartKey(product.id, availableVariants[0].id),
+    });
+  };
+
+  const setQuantity = (cartKey: string, quantity: number) => {
     const safeQuantity = Number.isNaN(quantity) ? 0 : Math.max(0, Math.floor(quantity));
 
     setCart((current) => {
-      const target = current[id];
+      const target = current[cartKey];
       if (!target) return current;
       if (safeQuantity <= 0) {
-        const { [id]: _, ...rest } = current;
+        const { [cartKey]: _, ...rest } = current;
         return rest;
       }
 
       return {
         ...current,
-        [id]: {
+        [cartKey]: {
           ...target,
           quantity: safeQuantity,
         },
@@ -368,25 +452,33 @@ export const PosV2SalesHomePage = () => {
     });
   };
 
-  const updateQuantity = (id: number, delta: number) => {
+  const updateQuantity = (cartKey: string, delta: number) => {
     setCart((current) => {
-      const target = current[id];
+      const target = current[cartKey];
       if (!target) return current;
 
       const nextQuantity = target.quantity + delta;
       if (nextQuantity <= 0) {
-        const { [id]: _, ...rest } = current;
+        const { [cartKey]: _, ...rest } = current;
         return rest;
       }
 
       return {
         ...current,
-        [id]: {
+        [cartKey]: {
           ...target,
           quantity: nextQuantity,
         },
       };
     });
+  };
+
+  const confirmVariantSelection = () => {
+    if (!variantSelection || !variantSelection.selectedKey) return;
+    const variant = variantSelection.product.variants.find((item) => toCartKey(variantSelection.product.id, item.id) === variantSelection.selectedKey) ?? null;
+    if (!variant) return;
+    addToCartEntry(variantSelection.product, variant);
+    setVariantSelection(null);
   };
 
   const discountValue = Number(discountPercent);
@@ -424,7 +516,7 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
-    const token = window.localStorage.getItem(TOKEN_KEY);
+    const { token } = getCurrentSession();
     const employeeId = token ? resolveEmployeeId(token) : 0;
 
     if (!token || !employeeId) {
@@ -437,10 +529,11 @@ export const PosV2SalesHomePage = () => {
     }
 
     const lineItems = cartItems.map((item) => ({
-      Product_Id: item.id,
+      Product_Id: item.productId,
       Quantity: item.quantity,
       Price: item.price,
       Cost: 0,
+      Variant_Id: item.variantId ?? undefined,
     }));
 
     const payloadByTable = {
@@ -565,6 +658,12 @@ export const PosV2SalesHomePage = () => {
             </div>
           </div>
 
+          <div className="pos-v2-sales-home__quick-summary" aria-label="Resumen rápido de ventas">
+            <span>{filteredProducts.length} productos visibles</span>
+            <span>{totals.items} artículos en carrito</span>
+            <span>{categoryOptions.find((item) => item.key === categoryKey)?.label ?? "Todas"} seleccionada</span>
+          </div>
+
           <div className="pos-v2-sales-home__categories">
             {categoryOptions.map((item) => {
               const active = item.key === categoryKey;
@@ -583,32 +682,43 @@ export const PosV2SalesHomePage = () => {
 
           {loadingProducts ? <p className="pos-v2-sales-home__empty">Cargando productos…</p> : null}
           {productsError ? <p className="pos-v2-sales-home__error">{productsError}</p> : null}
+          {uiMessage ? <p className="pos-v2-sales-home__info">{uiMessage}</p> : null}
 
           <div className={`pos-v2-sales-home__products ${isGrid ? "is-grid" : "is-list"}`}>
-            {filteredProducts.map((product) => (
-              <article
-                key={product.id}
-                className={`pos-v2-sales-home__product-card ${!isGrid ? "is-list-item" : ""}`}
-              >
-                {product.image ? (
-                  <img src={product.image} alt={product.name} className="pos-v2-sales-home__product-image" />
-                ) : (
-                  <div className="pos-v2-sales-home__product-image-placeholder" aria-hidden="true">
-                    {product.name.slice(0, 1).toUpperCase()}
+            {filteredProducts.map((product) => {
+              const sellableVariants = product.variants.filter((variant) => variant.stock === null || variant.stock > 0);
+              const hasBlockedVariants = product.variants.length > 0 && sellableVariants.length === 0;
+
+              return (
+                <article
+                  key={product.id}
+                  className={`pos-v2-sales-home__product-card ${!isGrid ? "is-list-item" : ""}`}
+                >
+                  {product.image ? (
+                    <img src={product.image} alt={product.name} className="pos-v2-sales-home__product-image" />
+                  ) : (
+                    <div className="pos-v2-sales-home__product-image-placeholder" aria-hidden="true">
+                      {product.name.slice(0, 1).toUpperCase()}
+                    </div>
+                  )}
+                  <div className="pos-v2-sales-home__product-content">
+                    <p className="pos-v2-sales-home__product-category">{product.category}</p>
+                    <h3>{product.name}</h3>
+                    {product.variants.length > 0 ? (
+                      <small className="pos-v2-sales-home__variant-badge">
+                        {sellableVariants.length}/{product.variants.length} variantes disponibles
+                      </small>
+                    ) : null}
                   </div>
-                )}
-                <div className="pos-v2-sales-home__product-content">
-                  <p className="pos-v2-sales-home__product-category">{product.category}</p>
-                  <h3>{product.name}</h3>
-                </div>
-                <div className="pos-v2-sales-home__product-side">
-                  <strong>${product.price.toFixed(2)}</strong>
-                  <button type="button" onClick={() => addToCart(product)}>
-                    Agregar
-                  </button>
-                </div>
-              </article>
-            ))}
+                  <div className="pos-v2-sales-home__product-side">
+                    <strong>${product.price.toFixed(2)}</strong>
+                    <button type="button" onClick={() => addToCart(product)} disabled={hasBlockedVariants}>
+                      {product.variants.length > 0 ? "Elegir variante" : "Agregar"}
+                    </button>
+                  </div>
+                </article>
+              );
+            })}
 
             {!loadingProducts && !productsError && filteredProducts.length === 0 ? (
               <p className="pos-v2-sales-home__empty">No encontramos productos para esta categoría.</p>
@@ -644,13 +754,16 @@ export const PosV2SalesHomePage = () => {
             {cartItems.length > 0 ? (
               <ul className="pos-v2-sales-home__cart-list">
                 {cartItems.map((item) => (
-                  <li key={item.id}>
+                  <li key={item.cartKey}>
                     <div>
                       <p>{item.name}</p>
-                      <small>${item.price.toFixed(2)}</small>
+                      <small>
+                        ${item.price.toFixed(2)}
+                        {item.variantLabel ? ` · ${item.variantLabel}` : ""}
+                      </small>
                     </div>
                     <div className="pos-v2-sales-home__qty-controls">
-                      <button type="button" className="is-danger flex items-center justify-center" onClick={() => setQuantity(item.id, 0)} aria-label={`Eliminar ${item.name} del carrito`}>
+                      <button type="button" className="is-danger flex items-center justify-center" onClick={() => setQuantity(item.cartKey, 0)} aria-label={`Eliminar ${item.name} del carrito`}>
                         <Trash width={14} height={14} fill="#b91c1c" />
                       </button>
                       <input
@@ -658,11 +771,11 @@ export const PosV2SalesHomePage = () => {
                         min="0"
                         className="flex items-center justify-center"
                         value={item.quantity}
-                        onChange={(event) => setQuantity(item.id, Number(event.target.value))}
+                        onChange={(event) => setQuantity(item.cartKey, Number(event.target.value))}
                         aria-label={`Cantidad de ${item.name}`}
                       />
-                      <button type="button" onClick={() => updateQuantity(item.id, 1)}>+1</button>
-                      <button type="button" onClick={() => updateQuantity(item.id, 10)}>+10</button>
+                      <button type="button" onClick={() => updateQuantity(item.cartKey, 1)}>+1</button>
+                      <button type="button" onClick={() => updateQuantity(item.cartKey, 10)}>+10</button>
                     </div>
                   </li>
                 ))}
@@ -780,6 +893,45 @@ export const PosV2SalesHomePage = () => {
           </div>
         </aside>
       </section>
+
+      {variantSelection ? (
+        <section className="pos-v2-sales-home__variant-modal" role="dialog" aria-modal="true" aria-label="Seleccionar variante" onClick={() => setVariantSelection(null)}>
+          <article className="pos-v2-sales-home__variant-modal-card" onClick={(event) => event.stopPropagation()}>
+            <header>
+              <h3>{variantSelection.product.name}</h3>
+              <p>Selecciona talla/color para agregar el producto correcto al comando.</p>
+            </header>
+
+            <div className="pos-v2-sales-home__variant-options" role="listbox" aria-label="Variantes disponibles">
+              {variantSelection.product.variants
+                .filter((variant) => variant.stock === null || variant.stock > 0)
+                .map((variant) => {
+                  const optionKey = toCartKey(variantSelection.product.id, variant.id);
+                  const isActive = optionKey === variantSelection.selectedKey;
+                  const chips = [variant.color, variant.size].filter(Boolean).join(" · ");
+
+                  return (
+                    <button
+                      key={optionKey}
+                      type="button"
+                      className={isActive ? "is-active" : ""}
+                      onClick={() => setVariantSelection((current) => (current ? { ...current, selectedKey: optionKey } : null))}
+                    >
+                      <strong>{variant.description || "Variante"}</strong>
+                      <small>{chips || "Sin atributos adicionales"}</small>
+                      <span>${variant.price.toFixed(2)}</span>
+                    </button>
+                  );
+                })}
+            </div>
+
+            <footer>
+              <button type="button" className="is-secondary" onClick={() => setVariantSelection(null)}>Cancelar</button>
+              <button type="button" onClick={confirmVariantSelection} disabled={!variantSelection.selectedKey}>Agregar al carrito</button>
+            </footer>
+          </article>
+        </section>
+      ) : null}
 
       {totals.items > 0 ? (
         <button type="button" className="pos-v2-sales-home__mobile-order-resume" onClick={() => setMobileStep("cart")}>

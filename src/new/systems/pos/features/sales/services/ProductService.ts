@@ -29,6 +29,7 @@ export class ProductService {
           product.images,
           product.forSale,
           product.available,
+          product.variants,
         );
       });
   }

@@ -18,11 +18,12 @@ import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import type { IncomePoint, ReportRange, ReportSale } from "../model/SalesReport";
 import type { ReportSummaryViewModel } from "../pages/ReportingInsightsPage";
+import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import "./PosV2ReportingPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
-const TOKEN_KEY = "pos-v2-token";
-const BUSINESS_ID_KEY = "pos-v2-business-id";
+const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
+const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 
 const moneyFormatter = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 });
 const dateFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });

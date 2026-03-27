@@ -3,11 +3,12 @@ import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { EmployeeRole } from "../model/Employee";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
+import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import "./PosV2EmployeesPage.css";
 
-const TOKEN_KEY = "pos-v2-token";
-const BUSINESS_ID_KEY = "pos-v2-business-id";
-const EMPLOYEE_ID_KEY = "pos-v2-employee-id";
+const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
+const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
+const EMPLOYEE_ID_KEY = POS_SESSION_STORAGE_KEYS.employeeId;
 const API_BASE_URL = getPosApiBaseUrl();
 
 type EmployeeVm = {

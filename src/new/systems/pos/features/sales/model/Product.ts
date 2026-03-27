@@ -1,3 +1,13 @@
+export interface SalesProductVariant {
+  id: number | null;
+  description: string;
+  color: string | null;
+  size: string | null;
+  price: number | null;
+  promotionPrice: number | null;
+  stock: number | null;
+}
+
 export class Product {
   constructor(
     public readonly id: number,
@@ -11,6 +21,7 @@ export class Product {
     public readonly images: string[],
     public readonly forSale: boolean,
     public readonly available: boolean,
+    public readonly variants: SalesProductVariant[] = [],
   ) {}
 
   hasStock(): boolean {
@@ -19,6 +30,10 @@ export class Product {
 
   canBeSold(): boolean {
     return this.forSale && this.available;
+  }
+
+  hasVariants(): boolean {
+    return this.variants.length > 0;
   }
 
   getPrimaryImage(): string | null {

@@ -2,19 +2,17 @@ import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { MORE_MODULE_SECTIONS } from "../config/moreModules";
-import { MoreModuleLink, MoreModuleStatus } from "../model/MoreModule";
+import { MoreModuleExecutionContext, MoreModuleLink, MoreModuleStatus } from "../model/MoreModule";
 import { MoreModuleService } from "../services/MoreModuleService";
 import { MoreModulePage } from "../pages/MoreModulePage";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
+import { buildPosPublicCatalogUrl, POS_SUPPORT_WHATSAPP_URL } from "../../../shared/config/posExternalLinks";
+import { clearPosSessionSnapshot, POS_SESSION_STORAGE_KEYS, readPosSessionSnapshot, readPosStringList, writePosStringList } from "../../../shared/config/posSession";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import "./PosV2MorePage.css";
 
-const TOKEN_KEY = "pos-v2-token";
-const BUSINESS_ID_KEY = "pos-v2-business-id";
-const EMPLOYEE_ID_KEY = "pos-v2-employee-id";
 const API_BASE_URL = getPosApiBaseUrl();
-const FAVORITES_KEY = "pos-v2-more-favorites";
-const SUPPORT_WHATSAPP_URL = "https://wa.me/525653989702";
+const FAVORITES_KEY = POS_SESSION_STORAGE_KEYS.moreFavorites;
 
 export const PosV2MorePage = () => {
   const navigate = useNavigate();
@@ -24,15 +22,7 @@ export const PosV2MorePage = () => {
   const [betaLoadingId, setBetaLoadingId] = useState<string | null>(null);
   const [betaResult, setBetaResult] = useState<{ id: string; title: string; payload: string } | null>(null);
   const [betaError, setBetaError] = useState<string>("");
-  const [favorites, setFavorites] = useState<string[]>(() => {
-    try {
-      const stored = window.localStorage.getItem(FAVORITES_KEY);
-      const parsed = stored ? JSON.parse(stored) : [];
-      return Array.isArray(parsed) ? parsed.filter((id) => typeof id === "string") : [];
-    } catch {
-      return [];
-    }
-  });
+  const [favorites, setFavorites] = useState<string[]>(() => readPosStringList(FAVORITES_KEY));
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [copiedCatalogLink, setCopiedCatalogLink] = useState(false);
   const [actionMessage, setActionMessage] = useState<string>("");
@@ -53,8 +43,8 @@ export const PosV2MorePage = () => {
     .filter((item) => favorites.includes(item.id))
     .sort((a, b) => a.title.localeCompare(b.title, "es-MX"));
   const normalizedQuery = query.trim().toLowerCase();
-  const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY) ?? "");
-  const catalogLink = businessId > 0 ? `https://ravekh.com/catalogo/${businessId}` : "https://ravekh.com/catalogo";
+  const { businessId } = readPosSessionSnapshot();
+  const catalogLink = buildPosPublicCatalogUrl(businessId);
 
   const filteredSections = useMemo(() => {
     const shouldIncludeItem = (item: MoreModuleLink): boolean => {
@@ -78,7 +68,7 @@ export const PosV2MorePage = () => {
   }, [normalizedQuery, statusFilter, viewMode, modulePage]);
 
   useEffect(() => {
-    window.localStorage.setItem(FAVORITES_KEY, JSON.stringify(favorites));
+    writePosStringList(FAVORITES_KEY, favorites);
   }, [favorites]);
 
   useEffect(() => {
@@ -113,9 +103,7 @@ export const PosV2MorePage = () => {
   };
 
   const handleSignOut = () => {
-    window.localStorage.removeItem(TOKEN_KEY);
-    window.localStorage.removeItem(BUSINESS_ID_KEY);
-    window.localStorage.removeItem(EMPLOYEE_ID_KEY);
+    clearPosSessionSnapshot();
     navigate(POS_V2_PATHS.login);
   };
 
@@ -131,15 +119,13 @@ export const PosV2MorePage = () => {
   };
 
   const runBetaAction = async (item: MoreModuleLink) => {
-    const token = (window.localStorage.getItem(TOKEN_KEY) ?? "").trim();
-    const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY) ?? "");
-    const employeeId = Number(window.localStorage.getItem(EMPLOYEE_ID_KEY) ?? "");
+    const context: MoreModuleExecutionContext = readPosSessionSnapshot();
 
     setBetaLoadingId(item.id);
     setBetaError("");
     setBetaResult(null);
     try {
-      const result = await modulePage.execute(item.id, item.title, { token, businessId, employeeId });
+      const result = await modulePage.execute(item.id, item.title, context);
       setBetaResult({ id: item.id, title: item.title, payload: JSON.stringify(result.payload, null, 2) });
     } catch (cause) {
       setBetaError(cause instanceof Error ? cause.message : "No fue posible ejecutar la acción beta.");
@@ -156,7 +142,7 @@ export const PosV2MorePage = () => {
     }
 
     if (item.id === "support") {
-      window.open(SUPPORT_WHATSAPP_URL, "_blank", "noopener,noreferrer");
+      window.open(POS_SUPPORT_WHATSAPP_URL, "_blank", "noopener,noreferrer");
       return;
     }
 
@@ -292,7 +278,21 @@ export const PosV2MorePage = () => {
           </section>
         ))}
 
-        {filteredSections.length === 0 ? <section className="pos-v2-more__empty"><p>No encontramos módulos con ese filtro.</p></section> : null}
+        {filteredSections.length === 0 ? (
+          <section className="pos-v2-more__empty">
+            <p>No encontramos módulos con ese filtro.</p>
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                setStatusFilter("all");
+                setViewMode("working");
+              }}
+            >
+              Limpiar filtros y volver a operativos
+            </button>
+          </section>
+        ) : null}
 
         <section className="pos-v2-more__actions">
           <article>

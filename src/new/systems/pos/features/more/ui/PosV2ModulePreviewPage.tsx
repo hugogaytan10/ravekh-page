@@ -7,6 +7,7 @@ import { MORE_MODULE_SECTIONS } from "../config/moreModules";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
+import { readPosSessionSnapshot } from "../../../shared/config/posSession";
 import "./PosV2ModulePreviewPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -40,6 +41,24 @@ const PREVIEW_MODULES: Record<string, PreviewData> = {
     description: "Preparado para validar cierres diarios sin depender del UI legacy.",
     eta: "Sprint cierre de caja v2",
     warning: "Verifica montos por método de pago y turno activo antes de confirmar el cierre.",
+  },
+  roles: {
+    title: "Roles y permisos",
+    description: "Beta operativa para revisar matriz de permisos y validar cobertura por rol.",
+    eta: "Beta interna habilitada",
+    warning: "Usa este módulo para auditoría; la edición granular se habilitará por etapas.",
+  },
+  printers: {
+    title: "Impresoras",
+    description: "Beta de diagnóstico para validar conectividad y salud de dispositivos.",
+    eta: "Beta de dispositivos habilitada",
+    warning: "Antes de producción valida pruebas de impresión por cada estación.",
+  },
+  branches: {
+    title: "Sucursales",
+    description: "Beta para monitoreo operativo multi-sucursal y checklist de configuración.",
+    eta: "Beta multi-sucursal habilitada",
+    warning: "La sincronización transaccional completa se activará en la siguiente iteración.",
   },
   business: {
     title: "Información del negocio",
@@ -117,9 +136,10 @@ export const PosV2ModulePreviewPage = () => {
     references: "",
   });
 
-  const token = useMemo(() => window.localStorage.getItem("pos-v2-token") ?? "", []);
-  const businessIdInput = useMemo(() => window.localStorage.getItem("pos-v2-business-id") ?? "", []);
-  const employeeIdInput = useMemo(() => window.localStorage.getItem("pos-v2-employee-id") ?? "", []);
+  const session = useMemo(() => readPosSessionSnapshot(), []);
+  const token = session.token;
+  const businessIdInput = String(session.businessId || "");
+  const employeeIdInput = String(session.employeeId || "");
 
   const data = useMemo<PreviewData>(() => {
     if (PREVIEW_MODULES[moduleId]) return PREVIEW_MODULES[moduleId];

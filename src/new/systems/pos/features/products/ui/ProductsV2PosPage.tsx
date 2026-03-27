@@ -5,13 +5,14 @@ import { ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
+import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import "./ProductsV2PosPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
 const DEFAULT_BUSINESS_ID = Number(import.meta.env.VITE_POS_BUSINESS_ID ?? 0);
 const DEFAULT_PRODUCTS_LIMIT = "EMPRENDEDOR";
-const TOKEN_KEY = "pos-v2-token";
-const BUSINESS_ID_KEY = "pos-v2-business-id";
+const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
+const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 
 type ProductItemVm = {
   id: number;

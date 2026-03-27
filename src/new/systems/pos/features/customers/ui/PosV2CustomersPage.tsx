@@ -3,10 +3,11 @@ import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { CustomerSalesPeriod, CustomerSex } from "../model/Customer";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
+import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import "./PosV2CustomersPage.css";
 
-const TOKEN_KEY = "pos-v2-token";
-const BUSINESS_ID_KEY = "pos-v2-business-id";
+const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
+const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 const API_BASE_URL = getPosApiBaseUrl();
 
 type CustomerVm = {

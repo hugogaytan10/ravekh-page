@@ -1,15 +1,10 @@
 import { ModernSystemsFactory } from "../../../../../index";
-
-type ModuleContext = {
-  token: string;
-  businessId: number;
-  employeeId?: number;
-};
+import { MoreModuleExecutionContext } from "../model/MoreModule";
 
 export type ModuleBetaAction = {
   requiresBusinessId?: boolean;
   requiresEmployeeId?: boolean;
-  run: (context: ModuleContext, factory: ModernSystemsFactory) => Promise<unknown>;
+  run: (context: MoreModuleExecutionContext, factory: ModernSystemsFactory) => Promise<unknown>;
 };
 
 export const MODULE_BETA_ACTIONS: Record<string, ModuleBetaAction> = {

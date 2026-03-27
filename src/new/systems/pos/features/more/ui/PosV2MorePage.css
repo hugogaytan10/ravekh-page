@@ -348,6 +348,10 @@
   border: 1px solid #e2e8f0;
 }
 
+
+.pos-v2-more__empty button {
+  margin-top: 0.7rem;
+}
 .pos-v2-more__catalog-copy {
   display: grid;
   gap: 0.5rem;

@@ -5,7 +5,7 @@ const trimTrailingSlash = (value: string): string => {
 };
 
 export const getPosApiBaseUrl = (): string => {
-  const envUrl = trimTrailingSlash(((import.meta.env as Record<string, string | undefined>).VITE_APP_URL as string | undefined) ?? "");
+  const envUrl = trimTrailingSlash(((import.meta.env as Record<string, string | undefined>).VITE_API_URL as string | undefined) ?? "");
 
   if (!envUrl) {
     throw new Error("Configura VITE_API_URL en el .env para usar POS v2.");

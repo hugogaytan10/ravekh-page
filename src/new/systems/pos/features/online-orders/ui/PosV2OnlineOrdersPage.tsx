@@ -2,11 +2,12 @@ import { useEffect, useMemo, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
+import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import type { OnlineOrderCardViewModel, OnlineOrderStatus, OnlineOrderStatusFilter } from "../pages/OnlineOrderTrackingPage";
 import "./PosV2OnlineOrdersPage.css";
 
-const TOKEN_KEY = "pos-v2-token";
-const BUSINESS_ID_KEY = "pos-v2-business-id";
+const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
+const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 const API_BASE_URL = getPosApiBaseUrl();
 const STATUS_COPY: Record<string, string> = {
   PEDIDO: "Pendiente",

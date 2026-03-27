@@ -2,12 +2,13 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
+import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import "./PosV2LoginPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
-const TOKEN_KEY = "pos-v2-token";
-const BUSINESS_ID_KEY = "pos-v2-business-id";
-const EMPLOYEE_ID_KEY = "pos-v2-employee-id";
+const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
+const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
+const EMPLOYEE_ID_KEY = POS_SESSION_STORAGE_KEYS.employeeId;
 
 type PanelMode = "signin" | "signup";
 

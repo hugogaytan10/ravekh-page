@@ -2,11 +2,12 @@ import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "re
 import { ModernSystemsFactory } from "../../../../../../index";
 import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../../shared/ui/PosV2Shell";
+import { POS_SESSION_STORAGE_KEYS } from "../../../../shared/config/posSession";
 import "./PosV2TableZonesPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
-const TOKEN_KEY = "pos-v2-token";
-const BUSINESS_ID_KEY = "pos-v2-business-id";
+const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
+const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 
 const sanitizeTableName = (value: string): string => value.replace(/\s+/g, " ").replace(/[<>]/g, "").trimStart();
 

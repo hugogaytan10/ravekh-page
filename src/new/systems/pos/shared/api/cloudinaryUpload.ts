@@ -1,4 +1,5 @@
-const CLOUDINARY_UPLOAD_URL = "https://api.cloudinary.com/v1_1/ravekh/image/upload";
+import { POS_CLOUDINARY_UPLOAD_URL } from "../config/posExternalLinks";
+
 const CLOUDINARY_UPLOAD_PRESET = "ravekh-fotos";
 const CLOUDINARY_FOLDER = "diana-fotos";
 
@@ -8,7 +9,7 @@ export const uploadImageToCloudinary = async (file: File): Promise<string> => {
   formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
   formData.append("folder", CLOUDINARY_FOLDER);
 
-  const response = await fetch(CLOUDINARY_UPLOAD_URL, {
+  const response = await fetch(POS_CLOUDINARY_UPLOAD_URL, {
     method: "POST",
     body: formData,
   });
