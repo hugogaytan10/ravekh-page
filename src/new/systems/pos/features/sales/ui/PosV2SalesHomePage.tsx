@@ -18,6 +18,7 @@ type SaleItemVm = {
   price: number;
   stock: number | null;
   category: string;
+  color: string | null;
   image?: string;
   variants: SaleVariantVm[];
 };
@@ -180,7 +181,6 @@ export const PosV2SalesHomePage = () => {
     variants: SaleVariantVm[];
     extras: ProductExtrasVm;
     selectedVariantKey: string | null;
-    selectedColorId: number | null;
     selectedSizeId: number | null;
   } | null>(null);
   const [extrasCache, setExtrasCache] = useState<Record<number, ProductExtrasVm>>({});
@@ -221,6 +221,7 @@ export const PosV2SalesHomePage = () => {
           price: item.price,
           stock: item.stock,
           category: item.categoryName?.trim() || "General",
+          color: item.color?.trim() || null,
           image: toAbsoluteImageUrl(item.image || item.images?.find(Boolean)),
           variants: item.variants.map((variant) => {
             const variantPrice = typeof variant.promotionPrice === "number" && variant.promotionPrice > 0
@@ -548,7 +549,8 @@ export const PosV2SalesHomePage = () => {
     const cartKey = toCartKey(product.id, variant?.id ?? null, colorOption?.id ?? null, sizeOption?.id ?? null);
     const basePrice = variant?.price ?? product.price;
     const variantLabel = variant ? toVariantLabel(variant) : null;
-    const extrasLabel = [colorOption?.description, sizeOption?.description].filter(Boolean).join(" · ");
+    const resolvedColorLabel = colorOption?.description ?? variant?.color ?? product.color ?? null;
+    const extrasLabel = [resolvedColorLabel, sizeOption?.description].filter(Boolean).join(" · ");
     const itemName = [product.name, variantLabel, extrasLabel].filter(Boolean).join(" · ");
 
     setCart((current) => {
@@ -565,7 +567,7 @@ export const PosV2SalesHomePage = () => {
           variantLabel,
           colorId: colorOption?.id ?? null,
           sizeId: sizeOption?.id ?? null,
-          colorLabel: colorOption?.description ?? null,
+          colorLabel: resolvedColorLabel,
           sizeLabel: sizeOption?.description ?? null,
         },
       };
@@ -578,12 +580,11 @@ export const PosV2SalesHomePage = () => {
   const addToCart = async (product: SaleItemVm) => {
     const variants = await loadProductVariants(product);
     const extras = await loadProductExtras(product.id);
-    const hasExtraColor = false;
     const hasExtraSize = (extras?.TALLA.length ?? 0) > 0;
     const hasBaseStock = product.stock === null || product.stock > 0;
     const hasVariants = variants.length > 0;
 
-    if (!hasVariants && !hasExtraColor && !hasExtraSize) {
+    if (!hasVariants && !hasExtraSize) {
       addToCartEntry(product, null);
       return;
     }
@@ -599,7 +600,7 @@ export const PosV2SalesHomePage = () => {
         {
           id: null,
           description: "Producto base",
-          color: null,
+          color: product.color ?? null,
           size: null,
           price: product.price,
           stock: product.stock,
@@ -608,7 +609,7 @@ export const PosV2SalesHomePage = () => {
       ]
       : availableVariants;
 
-    if (modalVariants.length === 1 && !hasExtraColor && !hasExtraSize) {
+    if (modalVariants.length === 1 && !hasExtraSize) {
       addToCartEntry(product, modalVariants[0].id === null ? null : modalVariants[0]);
       return;
     }
@@ -618,7 +619,6 @@ export const PosV2SalesHomePage = () => {
       variants: modalVariants,
       extras,
       selectedVariantKey: modalVariants[0] ? toCartKey(product.id, modalVariants[0].id) : null,
-      selectedColorId: null,
       selectedSizeId: null,
     });
     setVariantModalError(null);
@@ -674,9 +674,8 @@ export const PosV2SalesHomePage = () => {
 
     const selectedSize = variantSelection.extras?.TALLA.find((option) => option.id === variantSelection.selectedSizeId) ?? null;
 
-    const needsColor = false;
     const needsSize = (variantSelection.extras?.TALLA.length ?? 0) > 0;
-    if ((needsColor) || (needsSize && !selectedSize)) {
+    if (needsSize && !selectedSize) {
       setVariantModalError("Debes seleccionar los campos obligatorios antes de agregar.");
       return;
     }
@@ -872,11 +871,7 @@ export const PosV2SalesHomePage = () => {
             </div>
           </div>
 
-          <div className="pos-v2-sales-home__quick-summary" aria-label="Resumen rápido de ventas">
-            <span>{filteredProducts.length} productos visibles</span>
-            <span>{totals.items} artículos en carrito</span>
-            <span>{categoryOptions.find((item) => item.key === categoryKey)?.label ?? "Todas"} seleccionada</span>
-          </div>
+        
 
           <div className="pos-v2-sales-home__categories">
             {categoryOptions.map((item) => {
@@ -1139,7 +1134,7 @@ export const PosV2SalesHomePage = () => {
 
             <div className="pos-v2-sales-home__variant-summary">
               <span>{variantSelection.variants.length} opciones de variante</span>
-              <span>Color definido por producto/variante</span>
+              <span>El color se toma del producto/variante</span>
               <span>{(variantSelection.extras?.TALLA.length ?? 0) > 0 ? "Talla requerida" : "Sin talla obligatoria"}</span>
             </div>
 

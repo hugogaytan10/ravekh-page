@@ -25,6 +25,7 @@ export class ProductService {
           product.stock,
           product.categoryId,
           resolvedCategory,
+          product.color,
           product.image,
           product.images,
           product.forSale,

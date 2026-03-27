@@ -17,6 +17,7 @@ export class Product {
     public readonly stock: number | null,
     public readonly categoryId: number | null,
     public readonly categoryName: string,
+    public readonly color: string | null,
     public readonly image: string | null,
     public readonly images: string[],
     public readonly forSale: boolean,

@@ -21,6 +21,7 @@ type ProductResponse = {
   Category_Id?: number | null;
   Category_Name?: string | null;
   Name: string;
+  Color?: string | null;
   Price?: number | null;
   Stock?: number | null;
   Image?: string | null;
@@ -151,6 +152,7 @@ export class PosProductApi implements IProductRepository {
       stock,
       item.Category_Id ?? null,
       item.Category_Name?.trim() || "",
+      item.Color?.trim() || null,
       item.Image ?? null,
       Array.isArray(item.Images) ? item.Images.filter(Boolean) : [],
       item.ForSale ?? true,

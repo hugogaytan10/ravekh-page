@@ -147,14 +147,27 @@
   white-space: nowrap;
   font-weight: 600;
   font-size: 0.82rem;
+  position: relative;
 }
 
 .pos-v2-sales-home__categories button.is-active {
-  border-color: #6d01d1;
-  background: #f5edff;
-  color: #6d01d1;
-  box-shadow: 0 0 0 2px rgba(109, 1, 209, 0.15);
+  border: 2px solid #6d01d1;
+  background: linear-gradient(135deg, #6d01d1 0%, #7c3aed 100%);
+  color: #ffffff;
+  box-shadow: 0 10px 20px -16px rgba(109, 1, 209, 0.9);
   transform: translateY(-1px);
+  font-weight: 800;
+}
+
+.pos-v2-sales-home__categories button.is-active::after {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #ffffff;
+  position: absolute;
+  right: 10px;
+  top: calc(50% - 3px);
 }
 
 .pos-v2-sales-home__products.is-grid {
@@ -473,6 +486,7 @@
   padding: 0.5rem;
   font-size: 0.78rem;
   font-weight: 700;
+  min-height: 38px;
 }
 
 .pos-v2-sales-home__payment-methods button.is-active {
@@ -733,8 +747,17 @@
 
 @media (min-width: 768px) {
   .pos-v2-sales-home__toolbar {
-    grid-template-columns: 1fr auto;
+    grid-template-columns: auto minmax(240px, 1fr) auto;
     align-items: center;
+    column-gap: 0.75rem;
+  }
+
+  .pos-v2-sales-home__toolbar-actions {
+    min-width: fit-content;
+  }
+
+  .pos-v2-sales-home__view-switch {
+    justify-self: end;
   }
 
   .pos-v2-sales-home__product-card.is-list-item {
@@ -934,8 +957,13 @@
   }
 
   .pos-v2-sales-layout {
-    grid-template-columns: minmax(0, 1fr) 360px;
+    grid-template-columns: minmax(0, 1fr) 380px;
     align-items: start;
+  }
+
+  .pos-v2-sales-home__products.is-grid {
+    grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+    gap: 0.8rem;
   }
 
   .pos-v2-sales-home__cart-panel {
@@ -963,6 +991,22 @@
   .pos-v2-sales-home__legacy-tools,
   .pos-v2-sales-home__legacy-ad {
     display: none;
+  }
+}
+
+@media (min-width: 1440px) {
+  .pos-v2-sales-layout {
+    grid-template-columns: minmax(0, 1fr) 400px;
+    gap: 1.1rem;
+  }
+
+  .pos-v2-sales-home__catalog {
+    gap: 1rem;
+  }
+
+  .pos-v2-sales-home__products.is-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.95rem;
   }
 }
 
@@ -1024,6 +1068,11 @@
     border-color: #374151;
     color: #e5e7eb;
   }
+  .pos-v2-sales-home__payment-methods button.is-active {
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    border-color: #a78bfa;
+    color: #f8fafc;
+  }
 
   .pos-v2-sales-home__mobile-step-icon {
     background: #1f2937;
@@ -1067,6 +1116,16 @@
     background: #111827;
     border-color: #4b5563;
     color: #e5e7eb;
+  }
+
+  .pos-v2-sales-home__categories button.is-active {
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    border-color: #a78bfa;
+    color: #f8fafc;
+  }
+
+  .pos-v2-sales-home__categories button.is-active::after {
+    background: #f8fafc;
   }
 
   .pos-v2-sales-home__tables-skeleton span {
@@ -1132,6 +1191,22 @@
 :root[data-theme="dark"] .pos-v2-sales-home__tables-skeleton span {
   background: linear-gradient(90deg, #1f2937 20%, #334155 45%, #1f2937 70%);
   background-size: 200% 100%;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__categories button.is-active {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  border-color: #a78bfa;
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__payment-methods button.is-active {
+  background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+  border-color: #a78bfa;
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__categories button.is-active::after {
+  background: #f8fafc;
 }
 
 .pos-v2-sales-home__pagination {

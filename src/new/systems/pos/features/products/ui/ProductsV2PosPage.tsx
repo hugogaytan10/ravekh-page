@@ -59,6 +59,7 @@ type ToastState = { type: "success" | "error"; message: string } | null;
 type ArchiveDialogState = { id: number; name: string } | null;
 type ProductCategoryVm = { id: number; name: string; color: string };
 type SaveResultState = { type: "success" | "error"; message: string } | null;
+type CategoryFormErrors = { name?: string; color?: string };
 
 const toImageUrl = (image?: string | null): string | null => {
   if (!image) return null;
@@ -105,6 +106,7 @@ export const ProductsV2PosPage = () => {
   const [categoryColorInput, setCategoryColorInput] = useState("#4F46E5");
   const [categorySearch, setCategorySearch] = useState("");
   const [editingCategoryId, setEditingCategoryId] = useState<number | null>(null);
+  const [categoryFormErrors, setCategoryFormErrors] = useState<CategoryFormErrors>({});
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -132,7 +134,7 @@ export const ProductsV2PosPage = () => {
   const [forSale, setForSale] = useState(true);
   const [showInStore, setShowInStore] = useState(true);
   const [available, setAvailable] = useState(true);
-  const [productColor, setProductColor] = useState("#6D01D1");
+  const [productColor, setProductColor] = useState("");
   const [variants, setVariants] = useState<VariantFormVm[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [sizeDraft, setSizeDraft] = useState("");
@@ -159,7 +161,7 @@ export const ProductsV2PosPage = () => {
     setForSale(true);
     setShowInStore(true);
     setAvailable(true);
-    setProductColor("#6D01D1");
+    setProductColor("");
     setVariants([]);
     setSelectedCategoryId(null);
     setSizeDraft("");
@@ -188,6 +190,7 @@ export const ProductsV2PosPage = () => {
     setEditingCategoryId(null);
     setCategoryNameInput("");
     setCategoryColorInput("#4F46E5");
+    setCategoryFormErrors({});
   };
 
   useEffect(() => {
@@ -409,7 +412,7 @@ export const ProductsV2PosPage = () => {
         forSale,
         showInStore,
         available,
-        color: productColor,
+        color: productColor.trim() || null,
         volume: false,
         price: parsedPrice,
         promotionPrice: null,
@@ -508,7 +511,7 @@ export const ProductsV2PosPage = () => {
       setForSale(detail.forSale);
       setShowInStore(detail.showInStore);
       setAvailable(detail.available);
-      setProductColor(detail.color ?? "#6D01D1");
+      setProductColor(detail.color ?? "");
       setSelectedCategoryId(detail.categoryId ?? null);
       setStoredImages(Array.from(new Set([detail.image, ...detail.images].filter(Boolean) as string[])));
       setSelectedImageFiles([]);
@@ -590,19 +593,40 @@ export const ProductsV2PosPage = () => {
     setVariants((current) => current.map((variant) => (variant.key === key ? { ...variant, [field]: value } : variant)));
   };
 
+  const validateCategoryForm = (): boolean => {
+    const nextErrors: CategoryFormErrors = {};
+    const normalizedName = categoryNameInput.trim();
+    const colorPattern = /^#[\da-f]{6}$/i;
+
+    if (!normalizedName) {
+      nextErrors.name = "El nombre es obligatorio.";
+    } else if (normalizedName.length < 2) {
+      nextErrors.name = "Escribe al menos 2 caracteres.";
+    } else if (normalizedName.length > 50) {
+      nextErrors.name = "Máximo 50 caracteres.";
+    }
+
+    if (!colorPattern.test(categoryColorInput.trim())) {
+      nextErrors.color = "Selecciona un color hexadecimal válido (ej. #4F46E5).";
+    }
+
+    setCategoryFormErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
   const saveCategory = async () => {
     if (!token || !businessId) return;
-    if (!categoryNameInput.trim()) {
-      setToast({ type: "error", message: "El nombre de categoría es obligatorio." });
+    if (!validateCategoryForm()) {
+      setToast({ type: "error", message: "Revisa los campos de categoría para continuar." });
       return;
     }
 
     try {
       if (editingCategoryId) {
-        await service.updateCategory({ id: editingCategoryId, businessId, name: categoryNameInput.trim(), color: categoryColorInput }, token);
+        await service.updateCategory({ id: editingCategoryId, businessId, name: categoryNameInput.trim(), color: categoryColorInput.trim() }, token);
         setToast({ type: "success", message: "Categoría actualizada." });
       } else {
-        await service.createCategory({ businessId, name: categoryNameInput.trim(), color: categoryColorInput }, token);
+        await service.createCategory({ businessId, name: categoryNameInput.trim(), color: categoryColorInput.trim() }, token);
         setToast({ type: "success", message: "Categoría creada." });
       }
       resetCategoryForm();
@@ -616,6 +640,7 @@ export const ProductsV2PosPage = () => {
     setEditingCategoryId(category.id);
     setCategoryNameInput(category.name);
     setCategoryColorInput(category.color || "#4F46E5");
+    setCategoryFormErrors({});
     setShowCategoryManager(true);
   };
 
@@ -638,6 +663,21 @@ export const ProductsV2PosPage = () => {
     if (!normalized) return categories;
     return categories.filter((category) => category.name.toLowerCase().includes(normalized) || category.color.toLowerCase().includes(normalized));
   }, [categories, categorySearch]);
+
+  const availableColorOptions = useMemo(() => {
+    const fromExtras = colors.map((color) => color.trim()).filter(Boolean);
+    if (productColor.trim() && !fromExtras.some((entry) => entry.toLowerCase() === productColor.trim().toLowerCase())) {
+      return [productColor.trim(), ...fromExtras];
+    }
+    return fromExtras;
+  }, [colors, productColor]);
+
+  const isCategoryFormReady = useMemo(() => {
+    const normalizedName = categoryNameInput.trim();
+    const isValidName = normalizedName.length >= 2 && normalizedName.length <= 50;
+    const isValidColor = /^#[\da-f]{6}$/i.test(categoryColorInput.trim());
+    return isValidName && isValidColor;
+  }, [categoryNameInput, categoryColorInput]);
 
   const scrollCategoryChips = (direction: "left" | "right") => {
     if (!categoryCarouselRef.current) return;
@@ -863,8 +903,21 @@ export const ProductsV2PosPage = () => {
                   </label>
 
                   <label>
-                    Color del producto
-                    <input type="color" value={productColor} onChange={(event) => setProductColor(event.target.value)} aria-label="Color del producto" />
+                    Color base del producto
+                    <select
+                      value={productColor}
+                      onChange={(event) => setProductColor(event.target.value)}
+                      aria-label="Color base del producto"
+                      disabled={availableColorOptions.length === 0}
+                    >
+                      <option value="">
+                        {availableColorOptions.length === 0 ? "Agrega colores en extras para elegir" : "Sin color base"}
+                      </option>
+                      {availableColorOptions.map((colorOption) => (
+                        <option key={`product-color-${colorOption}`} value={colorOption}>{colorOption}</option>
+                      ))}
+                    </select>
+                    <small className="pos-v2-products__hint">El color base ahora se selecciona desde tus colores agregados en extras.</small>
                   </label>
                 </div>
 
@@ -1058,6 +1111,7 @@ export const ProductsV2PosPage = () => {
               <p className="pos-v2-products__hint">
                 Completa los campos para crear o editar categorías. El nombre es obligatorio y el color ayuda a reconocerlas rápidamente.
               </p>
+             
               {editingCategoryId ? <p className="pos-v2-products__inline-success">Editando categoría #{editingCategoryId}. Guarda cambios o cancela edición.</p> : null}
 
               <div className="pos-v2-products__field-grid pos-v2-products__category-form-grid">
@@ -1065,18 +1119,38 @@ export const ProductsV2PosPage = () => {
                   Nombre categoría <span aria-hidden="true">*</span>
                   <input
                     ref={categoryNameInputRef}
+                    className="pos-v2-products__category-name-input"
                     value={categoryNameInput}
-                    onChange={(event) => setCategoryNameInput(event.target.value)}
-                    placeholder="Ej. Bebidas frías"
+                    onChange={(event) => {
+                      setCategoryNameInput(event.target.value);
+                      setCategoryFormErrors((current) => ({ ...current, name: undefined }));
+                    }}
+                    placeholder="Ej. Bebidas frías · 2 a 50 caracteres"
+                    maxLength={50}
                     required
+                    aria-invalid={Boolean(categoryFormErrors.name)}
                   />
+                  <div className="pos-v2-products__field-meta">
+                    <small className="pos-v2-products__hint">Nombre visible en el catálogo y en filtros de ventas.</small>
+                    <small className="pos-v2-products__char-count">{categoryNameInput.trim().length}/50</small>
+                  </div>
+                  {categoryFormErrors.name ? <small className="pos-v2-products__field-error" role="alert">{categoryFormErrors.name}</small> : null}
                 </label>
                 <label>
-                  Color
+                  Color identificador
                   <div className="pos-v2-products__color-picker-wrap">
-                    <input type="color" value={categoryColorInput} onChange={(event) => setCategoryColorInput(event.target.value)} />
+                    <input
+                      type="color"
+                      value={categoryColorInput}
+                      onChange={(event) => {
+                        setCategoryColorInput(event.target.value);
+                        setCategoryFormErrors((current) => ({ ...current, color: undefined }));
+                      }}
+                      aria-invalid={Boolean(categoryFormErrors.color)}
+                    />
                     <small>{categoryColorInput.toUpperCase()}</small>
                   </div>
+                  {categoryFormErrors.color ? <small className="pos-v2-products__field-error" role="alert">{categoryFormErrors.color}</small> : null}
                 </label>
               </div>
               <div className="pos-v2-products__category-preview" aria-live="polite">
@@ -1085,7 +1159,9 @@ export const ProductsV2PosPage = () => {
               </div>
               <div className="pos-v2-products__form-actions">
                 <button type="button" className="pos-v2-products__secondary" onClick={resetCategoryForm}>{editingCategoryId ? "Cancelar edición" : "Limpiar"}</button>
-                <button type="button" className="pos-v2-products__primary" onClick={saveCategory}>{editingCategoryId ? "Guardar cambios" : "Crear categoría"}</button>
+                <button type="button" className="pos-v2-products__primary" onClick={saveCategory} disabled={!isCategoryFormReady}>
+                  {editingCategoryId ? "Guardar cambios" : "Crear categoría"}
+                </button>
               </div>
 
               <label className="pos-v2-products__category-search">
@@ -1098,10 +1174,14 @@ export const ProductsV2PosPage = () => {
                 {categories.length > 0 && visibleCategories.length === 0 ? <p className="pos-v2-products__variants-empty">No hay coincidencias para tu búsqueda.</p> : null}
                 {visibleCategories.map((category) => (
                   <article key={category.id} className={`pos-v2-products__category-item ${editingCategoryId === category.id ? "is-editing" : ""}`}>
-                    <span className="pos-v2-products__category-dot" style={{ backgroundColor: category.color }} aria-hidden="true" />
-                    <strong>{category.name}</strong>
-                    <small>{category.color}</small>
-                    <div className="pos-v2-products__card-actions">
+                    <div className="pos-v2-products__category-info">
+                      <span className="pos-v2-products__category-dot" style={{ backgroundColor: category.color }} aria-hidden="true" />
+                      <div>
+                        <strong>{category.name}</strong>
+                        <small>{category.color}</small>
+                      </div>
+                    </div>
+                    <div className="pos-v2-products__card-actions pos-v2-products__category-actions">
                       <button type="button" className="is-edit" onClick={() => editCategory(category)}>Editar</button>
                       <button type="button" onClick={() => deleteCategory(category.id)}>Eliminar</button>
                     </div>
