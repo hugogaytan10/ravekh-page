@@ -46,11 +46,11 @@ type CartItemVm = {
   sizeLabel: string | null;
 };
 
-type PaymentMethod = "Efectivo" | "Tarjeta" | "Transferencia";
+type PaymentMethod = "EFECTIVO" | "TARJETA DE DEBITO" | "TARJETA DE CREDITO" | "MONEDERO" | "LINK DE PAGO" | "OTROS";
 type MobileStep = "catalog" | "cart" | "checkout";
 type CompletedSale = {
   folio: string;
-  paymentMethod: PaymentMethod;
+  paymentMethodLabel: string;
   table: string;
   total: number;
   customerName?: string;
@@ -86,22 +86,40 @@ type VariantApiResponse = {
   PromotionPrice?: number | null;
   Stock?: number | null;
 };
+type TableApiResponse = {
+  Id?: number | null;
+  Name?: string | null;
+  IsAvailable?: boolean | number | null;
+};
 
 const PAYMENT_METHOD_OPTIONS: Array<{
   value: PaymentMethod;
   label: string;
   Icon: typeof FiDollarSign;
 }> = [
-    { value: "Efectivo", label: "Efectivo", Icon: FiDollarSign },
-    { value: "Tarjeta", label: "Tarjeta", Icon: FiCreditCard },
-    { value: "Transferencia", label: "Transferencia", Icon: FiRepeat },
-  ];
+  { value: "EFECTIVO", label: "Efectivo", Icon: FiDollarSign },
+  { value: "TARJETA DE DEBITO", label: "Tarjeta débito", Icon: FiCreditCard },
+  { value: "TARJETA DE CREDITO", label: "Tarjeta crédito", Icon: FiCreditCard },
+  { value: "MONEDERO", label: "Monedero", Icon: FiRepeat },
+  { value: "LINK DE PAGO", label: "Link de pago", Icon: FiRepeat },
+  { value: "OTROS", label: "Otros", Icon: FiRepeat },
+];
 
 const API_BASE_URL = getPosApiBaseUrl();
 const EMPLOYEE_ID_KEY = POS_SESSION_STORAGE_KEYS.employeeId;
-const DEFAULT_TABLE_OPTIONS = ["Para llevar"];
 const DEFAULT_SALES_LIMIT = "EMPRENDEDOR";
 const DEBUG_KEY = "pos-v2-debug";
+type TableVm = {
+  id: number;
+  name: string;
+};
+type SalesTaxVm = {
+  enabled: boolean;
+  description: string;
+  value: number;
+  isPercent: boolean;
+  canBeRemovedAtSale: boolean;
+};
 
 type TokenPayload = {
   Id?: number | string;
@@ -156,13 +174,13 @@ export const PosV2SalesHomePage = () => {
   const [productsError, setProductsError] = useState<string | null>(null);
   const [cart, setCart] = useState<Record<string, CartItemVm>>({});
   const [discountPercent, setDiscountPercent] = useState("0");
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("Efectivo");
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("EFECTIVO");
   const [ticket, setTicket] = useState<string | null>(null);
   const [mobileStep, setMobileStep] = useState<MobileStep>("catalog");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isCompletingSale, setIsCompletingSale] = useState(false);
-  const [tables, setTables] = useState<string[]>(DEFAULT_TABLE_OPTIONS);
-  const [selectedTable, setSelectedTable] = useState("Para llevar");
+  const [tables, setTables] = useState<TableVm[]>([]);
+  const [selectedTableId, setSelectedTableId] = useState<string>("");
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
   const [isMobileTablesOpen, setIsMobileTablesOpen] = useState(false);
   const [loadingTables, setLoadingTables] = useState(false);
@@ -170,6 +188,9 @@ export const PosV2SalesHomePage = () => {
   const [customers, setCustomers] = useState<CustomerVm[]>([]);
   const [customersError, setCustomersError] = useState<string | null>(null);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string>("");
+  const [salesTax, setSalesTax] = useState<SalesTaxVm | null>(null);
+  const [applyTax, setApplyTax] = useState(false);
+  const [taxError, setTaxError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");
   const [totalPages, setTotalPages] = useState(1);
@@ -281,6 +302,45 @@ export const PosV2SalesHomePage = () => {
     const { token, businessId } = getCurrentSession();
 
     if (!token || !businessId) {
+      setSalesTax(null);
+      setApplyTax(false);
+      return;
+    }
+
+    const factory = new ModernSystemsFactory(API_BASE_URL);
+    const salesTaxPage = factory.createPosSalesTaxPage();
+
+    salesTaxPage
+      .getSalesTaxSettings(businessId, token)
+      .then((settings) => {
+        if (!settings.enabled) {
+          setSalesTax(null);
+          setApplyTax(false);
+          setTaxError(null);
+          return;
+        }
+
+        setSalesTax({
+          enabled: settings.enabled,
+          description: settings.description?.trim() || "Impuesto",
+          value: settings.value,
+          isPercent: settings.isPercent,
+          canBeRemovedAtSale: settings.canBeRemovedAtSale,
+        });
+        setApplyTax(true);
+        setTaxError(null);
+      })
+      .catch((cause) => {
+        setSalesTax(null);
+        setApplyTax(false);
+        setTaxError(cause instanceof Error ? cause.message : "No fue posible cargar impuesto de venta.");
+      });
+  }, []);
+
+  useEffect(() => {
+    const { token, businessId } = getCurrentSession();
+
+    if (!token || !businessId) {
       setCustomers([]);
       return;
     }
@@ -302,44 +362,69 @@ export const PosV2SalesHomePage = () => {
   }, []);
 
   useEffect(() => {
-    const { token, businessId } = getCurrentSession();
+    const { token } = getCurrentSession();
 
-    if (!token || !businessId) {
-      setTables(DEFAULT_TABLE_OPTIONS);
+    if (!token) {
+      setTables([]);
       setTablesError("No encontramos sesión para cargar mesas.");
       return;
     }
 
-    const factory = new ModernSystemsFactory(API_BASE_URL);
-    const tableZonePage = factory.createPosTableZonePage();
     setLoadingTables(true);
 
-    tableZonePage
-      .getTableZoneCards(businessId, token)
-      .then((zones) => {
-        const activeZones = zones
-          .filter((zone) => zone.isActive)
-          .sort((a, b) => a.id - b.id)
-          .map((zone) => zone.name.trim())
-          .filter(Boolean);
-        const normalizedTables = Array.from(new Set([...activeZones, "Para llevar"]));
-        debugLog("Mesas cargadas desde capa moderna:", normalizedTables);
-        setTables(normalizedTables.length ? normalizedTables : DEFAULT_TABLE_OPTIONS);
+    fetch(new URL("tables", API_BASE_URL).toString(), {
+      headers: {
+        "Content-Type": "application/json",
+        token,
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`No se pudieron cargar mesas (${response.status}).`);
+        }
+
+        const payload = (await response.json().catch(() => null)) as TableApiResponse[] | null;
+        if (!Array.isArray(payload)) {
+          return [];
+        }
+
+        return payload
+          .map((table) => ({
+            id: Number(table.Id ?? 0),
+            name: String(table.Name ?? "").trim(),
+            isAvailable: table.IsAvailable === true || table.IsAvailable === 1,
+          }))
+          .filter((table) => table.id > 0 && table.name.length > 0)
+          .filter((table) => table.isAvailable)
+          .map(({ id, name }) => ({ id, name }))
+          .sort((a, b) => a.id - b.id);
+      })
+      .then((availableTables) => {
+        debugLog("Mesas cargadas desde endpoint /tables:", availableTables);
+        setTables(availableTables);
         setTablesError(null);
       })
       .catch((error) => {
         console.error("[POS-V2-SALES] Error al cargar mesas", error);
-        setTables(DEFAULT_TABLE_OPTIONS);
-        setTablesError(error instanceof Error ? error.message : "No se pudieron cargar las mesas.");
+        setTables([]);
+        setTablesError(error instanceof Error ? error.message : "No se pudieron cargar las mesas desde /tables.");
       })
       .finally(() => setLoadingTables(false));
   }, []);
 
   useEffect(() => {
-    if (!tables.includes(selectedTable)) {
-      setSelectedTable("Para llevar");
+    if (tables.length === 0) {
+      if (selectedTableId) {
+        setSelectedTableId("");
+      }
+      return;
     }
-  }, [tables, selectedTable]);
+
+    if (!tables.some((table) => String(table.id) === selectedTableId)) {
+      setSelectedTableId("");
+    }
+  }, [tables, selectedTableId]);
 
   useEffect(() => {
     const { token, businessId } = getCurrentSession();
@@ -400,17 +485,27 @@ export const PosV2SalesHomePage = () => {
   }, [variantSelection]);
 
   const cartItems = useMemo(() => Object.values(cart), [cart]);
-  const hasTableSelection = useMemo(() => tables.some((table) => table !== "Para llevar"), [tables]);
+  const hasTableSelection = tables.length > 0;
   const hasCustomers = customers.length > 0;
+  const selectedTableName = useMemo(
+    () => tables.find((table) => String(table.id) === selectedTableId)?.name ?? "Sin mesa",
+    [tables, selectedTableId],
+  );
 
   const totals = useMemo(() => {
     const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
     const discount = subtotal * (Number(discountPercent) / 100);
-    const total = Math.max(0, subtotal - discount);
+    const taxableBase = Math.max(0, subtotal - discount);
+    const taxAmount = salesTax && applyTax
+      ? salesTax.isPercent
+        ? taxableBase * (salesTax.value / 100)
+        : salesTax.value
+      : 0;
+    const total = Math.max(0, taxableBase + taxAmount);
     const items = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
-    return { subtotal, discount, total, items };
-  }, [cartItems, discountPercent]);
+    return { subtotal, discount, taxableBase, taxAmount, total, items };
+  }, [applyTax, cartItems, discountPercent, salesTax]);
 
   const mobileSteps = useMemo(
     () => [
@@ -755,14 +850,14 @@ export const PosV2SalesHomePage = () => {
       PaymentMethod: paymentMethod,
       Total: totals.total,
       Discount: discountValue,
-      Tax: false,
+      Tax: Boolean(salesTax && applyTax),
     };
 
     setIsCompletingSale(true);
     setValidationError(null);
     debugLog("Intentando finalizar venta.", {
-      endpoint: selectedTable === "Para llevar" ? "orders" : "commands",
-      selectedTable,
+      endpoint: selectedTableId ? "commands" : "orders",
+      selectedTable: selectedTableName,
       employeeId,
       items: lineItems,
       total: totals.total,
@@ -770,18 +865,18 @@ export const PosV2SalesHomePage = () => {
     });
 
     try {
-      const endpoint = selectedTable === "Para llevar" ? "orders" : "commands";
-      const payload = selectedTable === "Para llevar"
+      const endpoint = selectedTableId ? "commands" : "orders";
+      const payload = selectedTableId
         ? {
-          Order: payloadByTable,
-          OrderDetails: lineItems,
-        }
-        : {
           Command: {
             ...payloadByTable,
-            Table_Id: selectedTable,
+            Table_Id: Number(selectedTableId),
           },
           Commands_has_Products: lineItems,
+        }
+        : {
+          Order: payloadByTable,
+          OrderDetails: lineItems,
         };
 
       const response = await fetch(new URL(endpoint, API_BASE_URL).toString(), {
@@ -802,11 +897,12 @@ export const PosV2SalesHomePage = () => {
       debugLog("Venta registrada correctamente.", responseData);
 
       const folio = `RVK-${Date.now().toString().slice(-6)}`;
-      setTicket(`Venta ${folio} · ${paymentMethod} · ${selectedTable} · Total $${totals.total.toFixed(2)}`);
+      const paymentMethodLabel = PAYMENT_METHOD_OPTIONS.find((option) => option.value === paymentMethod)?.label ?? paymentMethod;
+      setTicket(`Venta ${folio} · ${paymentMethodLabel} · ${selectedTableName} · Total $${totals.total.toFixed(2)}`);
       setCompletedSale({
         folio,
-        paymentMethod,
-        table: selectedTable,
+        paymentMethodLabel,
+        table: selectedTableName,
         total: totals.total,
         customerName: customers.find((customer) => String(customer.id) === selectedCustomerId)?.name,
       });
@@ -975,7 +1071,7 @@ export const PosV2SalesHomePage = () => {
               </button>
             </div>
 
-            <h2>Mesa · {selectedTable}</h2>
+            <h2>Mesa · {selectedTableName}</h2>
 
             {cartItems.length === 0 ? <p className="pos-v2-sales-home__empty">No hay productos agregados.</p> : null}
 
@@ -1015,6 +1111,9 @@ export const PosV2SalesHomePage = () => {
             <div className="pos-v2-sales-home__totals">
               <p><span>Subtotal</span><strong>${totals.subtotal.toFixed(2)}</strong></p>
               <p><span>Descuento</span><strong>-${totals.discount.toFixed(2)}</strong></p>
+              {salesTax && applyTax ? (
+                <p><span>{salesTax.description}</span><strong>${totals.taxAmount.toFixed(2)}</strong></p>
+              ) : null}
               <p className="is-total"><span>Total</span><strong>${totals.total.toFixed(2)}</strong></p>
             </div>
 
@@ -1066,23 +1165,21 @@ export const PosV2SalesHomePage = () => {
             <label>
               Método de pago
               <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}>
-                <option value="Efectivo">Efectivo</option>
-                <option value="Tarjeta">Tarjeta</option>
-                <option value="Transferencia">Transferencia</option>
+                {PAYMENT_METHOD_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>{option.label}</option>
+                ))}
               </select>
             </label>
 
-            {hasTableSelection ? (
-              <label>
-                Mesa
-                <select value={selectedTable} onChange={(event) => setSelectedTable(event.target.value)} disabled={loadingTables}>
-                  <option value="" disabled>Selecciona mesa</option>
-                  {tables.map((table) => (
-                    <option key={table} value={table}>{table}</option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
+            <label>
+              Mesa
+              <select value={selectedTableId} onChange={(event) => setSelectedTableId(event.target.value)} disabled={loadingTables}>
+                <option value="">Sin mesa (orden directa)</option>
+                {tables.map((table) => (
+                  <option key={table.id} value={table.id}>{table.name}</option>
+                ))}
+              </select>
+            </label>
 
             {hasCustomers ? (
               <label>
@@ -1096,10 +1193,33 @@ export const PosV2SalesHomePage = () => {
               </label>
             ) : null}
             {!customersError && hasCustomers ? <small className="pos-v2-sales-home__customer-hint">Puedes vincular la venta a cliente para historial y recompensas.</small> : null}
+            {salesTax ? (
+              <section className="pos-v2-sales-home__tax-card" aria-label="Impuesto de venta">
+                <div>
+                  <strong>{salesTax.description}</strong>
+                  <small>{salesTax.isPercent ? `${salesTax.value}%` : `$${salesTax.value.toFixed(2)}`}</small>
+                </div>
+                {salesTax.canBeRemovedAtSale ? (
+                  <label className="pos-v2-sales-home__tax-toggle">
+                    <span>Aplicar impuesto</span>
+                    <span className="pos-v2-sales-home__toggle">
+                      <input type="checkbox" checked={applyTax} onChange={(event) => setApplyTax(event.target.checked)} />
+                      <span className="pos-v2-sales-home__toggle-slider" aria-hidden="true" />
+                    </span>
+                  </label>
+                ) : (
+                  <span className="pos-v2-sales-home__tax-lock">Impuesto obligatorio</span>
+                )}
+              </section>
+            ) : null}
+            {taxError ? <small className="pos-v2-sales-home__tax-error">{taxError}</small> : null}
 
             <div className="pos-v2-sales-home__totals">
               <p><span>Subtotal</span><strong>${totals.subtotal.toFixed(2)}</strong></p>
               <p><span>Descuento</span><strong>-${totals.discount.toFixed(2)}</strong></p>
+              {salesTax && applyTax ? (
+                <p><span>{salesTax.description}</span><strong>${totals.taxAmount.toFixed(2)}</strong></p>
+              ) : null}
               <p className="is-total"><span>Total</span><strong>${totals.total.toFixed(2)}</strong></p>
             </div>
 
@@ -1220,21 +1340,32 @@ export const PosV2SalesHomePage = () => {
             <div className="pos-v2-sales-home__tables-skeleton" aria-hidden="true">
               {Array.from({ length: 4 }).map((_, index) => <span key={`tables-skeleton-${index}`} />)}
             </div>
-          ) : tables.map((table) => {
-            const isActive = table === selectedTable;
-            const isOccupied = isActive && totals.items > 0;
-
-            return (
+          ) : (
+            <>
               <button
-                key={table}
                 type="button"
-                className={`${isActive ? "is-active" : ""} ${isOccupied ? "is-occupied" : ""}`.trim()}
-                onClick={() => setSelectedTable(table)}
+                className={!selectedTableId ? "is-active" : ""}
+                onClick={() => setSelectedTableId("")}
               >
-                {table}
+                Sin mesa
               </button>
-            );
-          })}
+              {tables.map((table) => {
+                const isActive = String(table.id) === selectedTableId;
+                const isOccupied = isActive && totals.items > 0;
+
+                return (
+                  <button
+                    key={table.id}
+                    type="button"
+                    className={`${isActive ? "is-active" : ""} ${isOccupied ? "is-occupied" : ""}`.trim()}
+                    onClick={() => setSelectedTableId(String(table.id))}
+                  >
+                    {table.name}
+                  </button>
+                );
+              })}
+            </>
+          )}
         </div>
       ) : null}
 
@@ -1259,22 +1390,35 @@ export const PosV2SalesHomePage = () => {
                   {Array.from({ length: 6 }).map((_, index) => <span key={`modal-table-skeleton-${index}`} />)}
                 </div>
               ) : tables.map((table) => {
-                const isActive = table === selectedTable;
+                const isActive = String(table.id) === selectedTableId;
                 return (
                   <button
-                    key={table}
+                    key={table.id}
                     type="button"
                     className={isActive ? "is-active" : ""}
                     onClick={() => {
-                      setSelectedTable(table);
+                      setSelectedTableId(String(table.id));
                       setIsMobileTablesOpen(false);
                       setMobileStep("catalog");
                     }}
                   >
-                    {table}
+                    {table.name}
                   </button>
                 );
               })}
+              {!loadingTables ? (
+                <button
+                  type="button"
+                  className={!selectedTableId ? "is-active" : ""}
+                  onClick={() => {
+                    setSelectedTableId("");
+                    setIsMobileTablesOpen(false);
+                    setMobileStep("catalog");
+                  }}
+                >
+                  Sin mesa (orden directa)
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -1288,7 +1432,7 @@ export const PosV2SalesHomePage = () => {
             <h3>✅ Venta finalizada</h3>
             <p>Folio: <strong>{completedSale.folio}</strong></p>
             <p>Mesa: <strong>{completedSale.table}</strong></p>
-            <p>Método: <strong>{completedSale.paymentMethod}</strong></p>
+            <p>Método: <strong>{completedSale.paymentMethodLabel}</strong></p>
             <p>Cliente: <strong>{completedSale.customerName ?? "General"}</strong></p>
             <p>Total: <strong>${completedSale.total.toFixed(2)}</strong></p>
 

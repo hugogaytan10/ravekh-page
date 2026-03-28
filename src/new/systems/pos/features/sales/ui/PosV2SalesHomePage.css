@@ -529,6 +529,94 @@
   color: #b91c1c;
 }
 
+.pos-v2-sales-home__tax-card {
+  border: 1px solid #ddd6fe;
+  border-radius: 12px;
+  background: #faf5ff;
+  padding: 0.65rem 0.72rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.65rem;
+}
+
+.pos-v2-sales-home__tax-card strong {
+  display: block;
+  font-size: 0.88rem;
+}
+
+.pos-v2-sales-home__tax-card small {
+  color: #6d28d9;
+}
+
+.pos-v2-sales-home__tax-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.38rem;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: #4c1d95;
+  width: 100%;
+}
+
+.pos-v2-sales-home__toggle {
+  position: relative;
+  width: 46px;
+  height: 26px;
+  display: inline-flex;
+}
+
+.pos-v2-sales-home__toggle input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.pos-v2-sales-home__toggle-slider {
+  position: absolute;
+  inset: 0;
+  border-radius: 999px;
+  background: #cbd5e1;
+  transition: .2s ease;
+}
+
+.pos-v2-sales-home__toggle-slider::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 20px;
+  height: 20px;
+  border-radius: 999px;
+  background: #fff;
+  transition: .2s ease;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
+}
+
+.pos-v2-sales-home__toggle input:checked + .pos-v2-sales-home__toggle-slider {
+  background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%);
+}
+
+.pos-v2-sales-home__toggle input:checked + .pos-v2-sales-home__toggle-slider::after {
+  transform: translateX(20px);
+}
+
+.pos-v2-sales-home__toggle input:disabled + .pos-v2-sales-home__toggle-slider {
+  opacity: 0.55;
+}
+
+.pos-v2-sales-home__tax-lock {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #4c1d95;
+}
+
+.pos-v2-sales-home__tax-error {
+  color: #b91c1c;
+  font-size: 0.79rem;
+}
+
 .pos-v2-sales-home__error {
   margin: 0;
   border-radius: 10px;
@@ -1251,6 +1339,52 @@
   background: #6f5cc6;
   border-color: #a78bfa;
   color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__tax-card {
+  background: rgba(30, 27, 75, 0.35);
+  border-color: rgba(139, 92, 246, 0.42);
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__tax-card small,
+:root[data-theme="dark"] .pos-v2-sales-home__tax-lock,
+:root[data-theme="dark"] .pos-v2-sales-home__tax-toggle {
+  color: #ddd6fe;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__toggle-slider {
+  background: #334155;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__tax-error {
+  color: #fecaca;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__sale-modal {
+  background: rgba(6, 3, 16, 0.78);
+  backdrop-filter: blur(7px);
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__sale-modal-card {
+  background: linear-gradient(165deg, rgba(27, 16, 54, 0.96) 0%, rgba(17, 24, 39, 0.96) 100%);
+  border-color: rgba(139, 92, 246, 0.45);
+  color: #f5f3ff;
+  box-shadow: 0 24px 48px rgba(3, 1, 12, 0.5);
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__sale-modal-card p {
+  color: #ddd6fe;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__sale-modal-actions button {
+  background: linear-gradient(135deg, #6d28d9 0%, #8b5cf6 100%);
+  color: #faf5ff;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__sale-modal-actions button.is-secondary {
+  background: rgba(30, 41, 59, 0.9);
+  color: #e9d5ff;
+  border: 1px solid rgba(139, 92, 246, 0.35);
 }
 
 :root[data-theme="dark"] .pos-v2-sales-home__categories button.is-active::after {

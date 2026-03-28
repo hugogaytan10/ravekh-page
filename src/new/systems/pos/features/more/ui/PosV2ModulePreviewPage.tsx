@@ -536,8 +536,11 @@ export const PosV2ModulePreviewPage = () => {
             {!taxLoading ? (
               <form className="pos-v2-module-preview__form" onSubmit={saveTax}>
                 <label className="pos-v2-module-preview__switch">
-                  <input type="checkbox" checked={taxForm.enabled} onChange={(event) => setTaxForm((current) => ({ ...current, enabled: event.target.checked }))} />
                   <span>Impuesto habilitado</span>
+                  <span className="pos-v2-module-preview__toggle">
+                    <input type="checkbox" checked={taxForm.enabled} onChange={(event) => setTaxForm((current) => ({ ...current, enabled: event.target.checked }))} />
+                    <span className="pos-v2-module-preview__toggle-slider" aria-hidden="true" />
+                  </span>
                 </label>
                 <div className="pos-v2-module-preview__inputs">
                   <label className="pos-v2-module-preview__floating-field">
@@ -550,12 +553,18 @@ export const PosV2ModulePreviewPage = () => {
                   </label>
                 </div>
                 <label className="pos-v2-module-preview__switch">
-                  <input type="checkbox" checked={taxForm.isPercent} onChange={(event) => setTaxForm((current) => ({ ...current, isPercent: event.target.checked }))} disabled={!taxForm.enabled} />
                   <span>Aplicar como porcentaje</span>
+                  <span className="pos-v2-module-preview__toggle">
+                    <input type="checkbox" checked={taxForm.isPercent} onChange={(event) => setTaxForm((current) => ({ ...current, isPercent: event.target.checked }))} disabled={!taxForm.enabled} />
+                    <span className="pos-v2-module-preview__toggle-slider" aria-hidden="true" />
+                  </span>
                 </label>
                 <label className="pos-v2-module-preview__switch">
-                  <input type="checkbox" checked={taxForm.canBeRemovedAtSale} onChange={(event) => setTaxForm((current) => ({ ...current, canBeRemovedAtSale: event.target.checked }))} disabled={!taxForm.enabled} />
                   <span>Permitir quitar en venta</span>
+                  <span className="pos-v2-module-preview__toggle">
+                    <input type="checkbox" checked={taxForm.canBeRemovedAtSale} onChange={(event) => setTaxForm((current) => ({ ...current, canBeRemovedAtSale: event.target.checked }))} disabled={!taxForm.enabled} />
+                    <span className="pos-v2-module-preview__toggle-slider" aria-hidden="true" />
+                  </span>
                 </label>
                 {taxError ? <p className="pos-v2-module-preview__error">{taxError}</p> : null}
                 {taxSuccess ? <p className="pos-v2-module-preview__ok">{taxSuccess}</p> : null}
