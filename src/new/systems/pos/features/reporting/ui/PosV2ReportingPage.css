@@ -135,12 +135,12 @@
 }
 
 .pos-v2-reporting__legend .is-cash { background: #8b5cf6; }
-.pos-v2-reporting__legend .is-card { background: #06b6d4; }
+.pos-v2-reporting__legend .is-card { background: #7c3aed; }
 .pos-v2-reporting__legend .is-trend { background: #7c3aed; }
 .pos-v2-reporting__legend .is-profit { background: #10b981; }
 .pos-v2-reporting__legend .is-ticket { background: #f59e0b; }
-.pos-v2-reporting__legend .is-products { background: #3b82f6; }
-.pos-v2-reporting__legend .is-categories { background: #0ea5e9; }
+.pos-v2-reporting__legend .is-products { background: #6d28d9; }
+.pos-v2-reporting__legend .is-categories { background: #8b5cf6; }
 
 .pos-v2-reporting__perf {
   border: 1px dashed #cbd5e1;
@@ -387,7 +387,7 @@
 }
 
 .pos-v2-reporting__progress span:last-child {
-  background: #06b6d4;
+  background: #7c3aed;
 }
 
 .pos-v2-reporting__card ul {
@@ -441,7 +441,7 @@
   display: block;
   min-height: 8px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%);
+  background: linear-gradient(90deg, #7c3aed 0%, #7c3aed 100%);
 }
 
 .pos-v2-reporting .is-empty {

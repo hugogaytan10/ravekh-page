@@ -19,6 +19,12 @@
   border: 1px solid #cbd5e1;
 }
 
+@media (min-width: 1024px) {
+  .pos-v2-more__back {
+    display: none;
+  }
+}
+
 .pos-v2-more__toolbar {
   margin-top: 0.75rem;
   display: grid;
@@ -387,9 +393,9 @@
 
 .pos-v2-more__info {
   margin: 0;
-  border: 1px solid #bfdbfe;
-  background: #eff6ff;
-  color: #1e3a8a;
+  border: 1px solid #ddd6fe;
+  background: #f5f3ff;
+  color: #5b21b6;
   border-radius: 12px;
   padding: 0.75rem;
 }
@@ -514,14 +520,14 @@
 }
 
 :root[data-theme="dark"] .pos-v2-more__chips button.is-active {
-  color: #0b1120;
+  color: #f5f3ff;
   border-color: transparent;
-  background: #38bdf8;
+  background: #6f5cc6;
 }
 
 :root[data-theme="dark"] .pos-v2-more button {
-  background: #38bdf8;
-  color: #0b1120;
+  background: #6f5cc6;
+  color: #f5f3ff;
 }
 
 :root[data-theme="dark"] .pos-v2-more__open {
@@ -559,7 +565,7 @@
 :root[data-theme="dark"] .pos-v2-more__info {
   border-color: rgba(59, 130, 246, 0.35);
   background: rgba(30, 58, 138, 0.35);
-  color: #bfdbfe;
+  color: #ddd6fe;
 }
 
 :root[data-theme="dark"] .pos-v2-more__result {
@@ -651,14 +657,14 @@
   }
 
   :root:not([data-theme="light"]) .pos-v2-more__chips button.is-active {
-    color: #0b1120;
+    color: #f5f3ff;
     border-color: transparent;
-    background: #38bdf8;
+    background: #6f5cc6;
   }
 
   :root:not([data-theme="light"]) .pos-v2-more button {
-    background: #38bdf8;
-    color: #0b1120;
+    background: #6f5cc6;
+    color: #f5f3ff;
   }
 
   :root:not([data-theme="light"]) .pos-v2-more__open {

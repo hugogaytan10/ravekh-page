@@ -2,6 +2,7 @@
   min-height: 100vh;
   background: #f3f4f6;
   color: #111827;
+  color-scheme: light;
   padding-bottom: 72px;
   overflow-x: hidden;
 }
@@ -176,6 +177,7 @@
 :root[data-theme="dark"] .pos-v2-shell {
   background: #030712;
   color: #f9fafb;
+  color-scheme: dark;
 }
 
 :root[data-theme="dark"] .pos-v2-shell__header {
@@ -201,6 +203,7 @@
   :root:not([data-theme="light"]) .pos-v2-shell {
     background: #030712;
     color: #f9fafb;
+    color-scheme: dark;
   }
 
   :root:not([data-theme="light"]) .pos-v2-shell__header {

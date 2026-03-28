@@ -336,9 +336,9 @@
 }
 
 :root[data-theme="dark"] .pos-v2-module-preview__actions button:last-child {
-  background: #38bdf8;
-  border-color: #38bdf8;
-  color: #0b1120;
+  background: #6f5cc6;
+  border-color: #c4b5fd;
+  color: #f5f3ff;
 }
 
 @media (max-width: 640px) {

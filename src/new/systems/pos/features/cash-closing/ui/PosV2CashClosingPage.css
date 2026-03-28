@@ -152,7 +152,7 @@
 }
 
 .is-positive {
-  color: #0369a1;
+  color: #6d28d9;
   font-weight: 700;
 }
 
@@ -189,9 +189,9 @@
 
 :root[data-theme="dark"] .pos-v2-cash-closing__header button,
 :root[data-theme="dark"] .pos-v2-cash-closing__form button {
-  background: #38bdf8;
-  border-color: #38bdf8;
-  color: #0b1120;
+  background: #6f5cc6;
+  border-color: #c4b5fd;
+  color: #f5f3ff;
 }
 
 :root[data-theme="dark"] .pos-v2-cash-closing__error {

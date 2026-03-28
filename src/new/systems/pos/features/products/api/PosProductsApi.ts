@@ -310,11 +310,7 @@ export class PosProductsApi implements IProductsRepository {
       method: "POST",
       path: POS_ENDPOINTS.categories(),
       token,
-      body: {
-        Name: category.name,
-        Color: category.color,
-        Business_Id: category.businessId,
-      },
+      body: this.toLegacyCategory(category),
     });
 
     return response ? this.toDomainCategory(response) : category;
@@ -329,12 +325,7 @@ export class PosProductsApi implements IProductsRepository {
       method: "PUT",
       path: POS_ENDPOINTS.categoryById(category.id),
       token,
-      body: {
-        Name: category.name,
-        Color: category.color,
-        Business_Id: category.businessId,
-        Parent_Id: category.parentId ?? null,
-      },
+      body: this.toLegacyCategory(category),
     });
 
     return response ? this.toDomainCategory(response) : category;

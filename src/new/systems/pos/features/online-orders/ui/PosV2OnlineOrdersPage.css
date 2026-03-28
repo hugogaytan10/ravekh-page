@@ -337,8 +337,8 @@
 }
 
 :root[data-theme="dark"] .pos-v2-online-orders__chips button.is-active {
-  background: #38bdf8;
-  color: #0b1120;
+  background: #6f5cc6;
+  color: #f5f3ff;
   border-color: transparent;
 }
 
@@ -397,8 +397,8 @@
   }
 
   .pos-v2-online-orders__chips button.is-active {
-    background: #38bdf8;
-    color: #0b1120;
+    background: #6f5cc6;
+    color: #f5f3ff;
     border-color: transparent;
   }
 

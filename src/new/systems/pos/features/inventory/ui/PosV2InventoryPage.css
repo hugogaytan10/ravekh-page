@@ -33,7 +33,7 @@
 :root[data-theme="dark"] .pos-v2-inventory__header p, :root[data-theme="dark"] .pos-v2-inventory__summary small, :root[data-theme="dark"] .pos-v2-inventory__list li small, :root[data-theme="dark"] .pos-v2-inventory__list li.is-empty, :root[data-theme="dark"] .pos-v2-inventory__filters label { color: #cbd5e1; }
 :root[data-theme="dark"] .pos-v2-inventory__summary article, :root[data-theme="dark"] .pos-v2-inventory__filters, :root[data-theme="dark"] .pos-v2-inventory__list li, :root[data-theme="dark"] .pos-v2-inventory__modal form { background: #111827; border-color: #374151; }
 :root[data-theme="dark"] .pos-v2-inventory__filters input, :root[data-theme="dark"] .pos-v2-inventory__modal input { background: #0f172a; border-color: #475569; color: #f8fafc; }
-:root[data-theme="dark"] .pos-v2-inventory__header button, :root[data-theme="dark"] .pos-v2-inventory__modal button { background: #38bdf8; border-color: #38bdf8; color: #0b1120; }
+:root[data-theme="dark"] .pos-v2-inventory__header button, :root[data-theme="dark"] .pos-v2-inventory__modal button { background: linear-gradient(135deg, #5b21b6 0%, #6d28d9 100%); border-color: #8b5cf6; color: #f5f3ff; }
 :root[data-theme="dark"] .pos-v2-inventory__modal .is-secondary, :root[data-theme="dark"] .pos-v2-inventory__list button { background: #0f172a; border-color: #475569; color: #e2e8f0; }
 :root[data-theme="dark"] .pos-v2-inventory__error { border-color: rgba(220, 38, 38, 0.35); background: rgba(127, 29, 29, 0.35); color: #fecaca; }
 :root[data-theme="dark"] .pos-v2-inventory__toast { border-color: rgba(22, 163, 74, 0.4); background: rgba(20, 83, 45, 0.35); color: #bbf7d0; }

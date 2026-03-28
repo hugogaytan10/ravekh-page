@@ -27,6 +27,8 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
       { id: "inventory", title: "Inventario", description: "Módulo de stock desacoplado para v2.", path: POS_V2_PATHS.inventory, status: "available", actionType: "route" },
       { id: "customers", title: "Clientes", description: "Catálogo de clientes y seguimiento.", path: POS_V2_PATHS.customers, status: "available", actionType: "route" },
       { id: "employees", title: "Empleados", description: "Administración de personal y permisos.", path: POS_V2_PATHS.employees, status: "available", actionType: "route" },
+      { id: "roles", title: "Roles", description: "Perfiles y permisos granulares por tipo de usuario.", path: previewPath("roles"), status: "beta", actionType: "beta-action" },
+      { id: "branches", title: "Sucursales", description: "Configuración multi-sucursal y operación distribuida.", path: previewPath("branches"), status: "beta", actionType: "beta-action" },
       { id: "cash-closing", title: "Corte de caja", description: "Cierres de caja al final de turno.", path: POS_V2_PATHS.cashClosing, status: "available", actionType: "route" },
       { id: "printers", title: "Impresoras", description: "Configura tickets y dispositivos de impresión.", path: previewPath("printers"), status: "beta", actionType: "beta-action" },
     ],

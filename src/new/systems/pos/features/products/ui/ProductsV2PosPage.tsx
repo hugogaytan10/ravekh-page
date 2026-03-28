@@ -717,7 +717,7 @@ export const ProductsV2PosPage = () => {
           </div>
 
           <div className="pos-v2-products__header-actions">
-            <button type="button" className="pos-v2-products__secondary" onClick={() => navigate(-1)}>← Regresar</button>
+            <button type="button" className="pos-v2-products__secondary pos-v2-products__back-main" onClick={() => navigate(-1)}>← Regresar</button>
             <button type="button" className="pos-v2-products__secondary" onClick={openCreateModal}>+ Nuevo</button>
             <button type="button" className="pos-v2-products__secondary" onClick={() => setShowCategoryManager(true)}>Categorías</button>
             <button type="button" className="pos-v2-products__secondary" onClick={() => excelInputRef.current?.click()} disabled={importing || !token || !businessId}>

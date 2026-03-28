@@ -217,7 +217,7 @@
   display: block;
   min-height: 10px;
   border-radius: 999px;
-  background: linear-gradient(90deg, #7c3aed 0%, #06b6d4 100%);
+  background: linear-gradient(90deg, #7c3aed 0%, #7c3aed 100%);
 }
 
 .pos-v2-finance__content {
@@ -454,13 +454,13 @@
 :root[data-theme="dark"] .pos-v2-finance__mode-toggle .is-active,
 :root[data-theme="dark"] .pos-v2-finance__period-toggle .is-active,
 :root[data-theme="dark"] .pos-v2-finance__chips .is-active {
-  background: #38bdf8;
-  color: #0b1120;
+  background: #6f5cc6;
+  color: #f5f3ff;
 }
 
 :root[data-theme="dark"] .pos-v2-finance button {
-  background: #38bdf8;
-  color: #0b1120;
+  background: #6f5cc6;
+  color: #f5f3ff;
 }
 
 :root[data-theme="dark"] .pos-v2-finance__error,
