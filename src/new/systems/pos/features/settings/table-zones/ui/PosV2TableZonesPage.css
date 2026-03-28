@@ -1,6 +1,7 @@
 .pos-v2-table-zones {
   display: grid;
   gap: 1rem;
+  width: 100%;
 }
 
 .pos-v2-table-zones__header {
@@ -18,6 +19,7 @@
 .pos-v2-table-zones__header p {
   margin: 0.3rem 0 0;
   color: #64748b;
+  max-width: 70ch;
 }
 
 .pos-v2-table-zones label {
@@ -27,14 +29,16 @@
   font-weight: 600;
 }
 
-.pos-v2-table-zones input {
+.pos-v2-table-zones input,
+.pos-v2-table-zones select {
   border: 1px solid #d1d5db;
   border-radius: 12px;
   min-height: 42px;
   padding: 0.55rem 0.7rem;
   background: #fff;
 }
-.pos-v2-table-zones input:focus-visible {
+.pos-v2-table-zones input:focus-visible,
+.pos-v2-table-zones select:focus-visible {
   outline: 2px solid #6d01d1;
   outline-offset: 2px;
 }
@@ -48,6 +52,7 @@
   background: linear-gradient(135deg, #6d01d1 0%, #5b21b6 100%);
   color: #fff;
   cursor: pointer;
+  transition: all 0.2s ease;
 }
 
 .pos-v2-table-zones button.is-secondary {
@@ -55,6 +60,30 @@
   color: #5b21b6;
 }
 
+.pos-v2-table-zones button.is-secondary-chip {
+  background: #fff;
+  color: #334155;
+  border: 1px solid #cbd5e1;
+  font-weight: 700;
+}
+
+.pos-v2-table-zones button.is-secondary-chip:hover {
+  border-color: #6d01d1;
+  color: #6d01d1;
+}
+
+
+.pos-v2-table-zones__actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.pos-v2-table-zones button.is-danger {
+  background: #fee2e2;
+  color: #991b1b;
+}
 .pos-v2-table-zones button:disabled {
   opacity: 0.65;
   cursor: not-allowed;
@@ -70,8 +99,22 @@
 }
 
 .pos-v2-table-zones__session {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pos-v2-table-zones__session article {
   display: grid;
-  gap: 0.65rem;
+  gap: 0.2rem;
+  min-width: 210px;
+}
+
+.pos-v2-table-zones__session h3,
+.pos-v2-table-zones__session p {
+  margin: 0;
 }
 
 .pos-v2-table-zones__error,
@@ -96,6 +139,7 @@
 .pos-v2-table-zones__controls {
   display: grid;
   gap: 0.75rem;
+  grid-template-columns: 1fr;
 }
 
 .pos-v2-table-zones__stats {
@@ -125,6 +169,12 @@
   padding: 0.75rem;
   display: grid;
   gap: 0.55rem;
+}
+
+.pos-v2-table-zones__quick-actions div {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
 }
 
 .pos-v2-table-zones__controls h3,
@@ -202,19 +252,67 @@
   animation: pos-v2-table-zones-skeleton 1.2s linear infinite;
 }
 
+.pos-v2-table-zones__modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.55);
+  display: grid;
+  place-items: center;
+  z-index: 80;
+  padding: 1rem;
+}
+
+.pos-v2-table-zones__modal-card {
+  width: min(560px, calc(100% - 1rem));
+  background: #fff;
+  border-radius: 16px;
+  border: 1px solid #e2e8f0;
+  padding: 1rem;
+  display: grid;
+  gap: 0.7rem;
+}
+
+.pos-v2-table-zones__modal-card h3 {
+  margin: 0;
+}
+
+.pos-v2-table-zones__modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+}
+
 @keyframes pos-v2-table-zones-skeleton {
   from { background-position: 200% 0; }
   to { background-position: -200% 0; }
 }
 
 @media (min-width: 768px) {
-  .pos-v2-table-zones__session {
-    grid-template-columns: minmax(0, 1fr) minmax(180px, 0.5fr) auto;
-    align-items: end;
+  .pos-v2-table-zones__header button {
+    min-width: 180px;
   }
 
   .pos-v2-table-zones__controls {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .pos-v2-table-zones__session {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .pos-v2-table-zones__session button {
+    width: 100%;
+  }
+
+  .pos-v2-table-zones__actions {
+    width: 100%;
+  }
+
+  .pos-v2-table-zones__actions button {
+    flex: 1 1 auto;
   }
 }
 
@@ -223,10 +321,18 @@
 :root[data-theme="dark"] .pos-v2-table-zones__list,
 :root[data-theme="dark"] .pos-v2-table-zones__stats article,
 :root[data-theme="dark"] .pos-v2-table-zones__list li,
-:root[data-theme="dark"] .pos-v2-table-zones input {
+:root[data-theme="dark"] .pos-v2-table-zones input,
+:root[data-theme="dark"] .pos-v2-table-zones select,
+:root[data-theme="dark"] .pos-v2-table-zones__modal-card {
   background: #111827;
   border-color: #374151;
   color: #f9fafb;
+}
+
+:root[data-theme="dark"] .pos-v2-table-zones button.is-secondary-chip {
+  background: #111827;
+  border-color: #4b5563;
+  color: #d1d5db;
 }
 
 :root[data-theme="dark"] .pos-v2-table-zones__header p,
@@ -237,4 +343,9 @@
 :root[data-theme="dark"] .pos-v2-table-zones__list li.is-editing {
   background: #312e81;
   border-color: #a78bfa;
+}
+
+:root[data-theme="dark"] .pos-v2-table-zones button.is-secondary-chip:hover {
+  border-color: #a78bfa;
+  color: #ddd6fe;
 }

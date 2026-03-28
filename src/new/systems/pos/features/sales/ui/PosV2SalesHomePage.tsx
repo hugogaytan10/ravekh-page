@@ -90,6 +90,16 @@ type TableApiResponse = {
   Id?: number | null;
   Name?: string | null;
   IsAvailable?: boolean | number | null;
+  Table_Zone_Id?: number | null;
+  TableZoneId?: number | null;
+  Zone_Id?: number | null;
+};
+
+type TableZoneApiResponse = {
+  Id?: number | null;
+  Name?: string | null;
+  Active?: boolean | number | string | null;
+  Tables?: TableApiResponse[] | null;
 };
 
 const PAYMENT_METHOD_OPTIONS: Array<{
@@ -109,9 +119,16 @@ const API_BASE_URL = getPosApiBaseUrl();
 const EMPLOYEE_ID_KEY = POS_SESSION_STORAGE_KEYS.employeeId;
 const DEFAULT_SALES_LIMIT = "EMPRENDEDOR";
 const DEBUG_KEY = "pos-v2-debug";
+type TableZoneVm = {
+  id: number;
+  name: string;
+  isActive: boolean;
+};
+
 type TableVm = {
   id: number;
   name: string;
+  zoneId: number | null;
 };
 type SalesTaxVm = {
   enabled: boolean;
@@ -180,6 +197,9 @@ export const PosV2SalesHomePage = () => {
   const [validationError, setValidationError] = useState<string | null>(null);
   const [isCompletingSale, setIsCompletingSale] = useState(false);
   const [tables, setTables] = useState<TableVm[]>([]);
+  const [tableZones, setTableZones] = useState<TableZoneVm[]>([]);
+  const [tablesByZone, setTablesByZone] = useState<Record<number, TableVm[]>>({});
+  const [selectedTableZoneId, setSelectedTableZoneId] = useState<string>("");
   const [selectedTableId, setSelectedTableId] = useState<string>("");
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
   const [isMobileTablesOpen, setIsMobileTablesOpen] = useState(false);
@@ -362,69 +382,156 @@ export const PosV2SalesHomePage = () => {
   }, []);
 
   useEffect(() => {
-    const { token } = getCurrentSession();
+    const { token, businessId } = getCurrentSession();
 
-    if (!token) {
+    if (!token || !businessId) {
       setTables([]);
-      setTablesError("No encontramos sesión para cargar mesas.");
+      setTableZones([]);
+      setTablesError("No encontramos sesión para cargar zonas y mesas.");
       return;
     }
 
+    const headers = {
+      "Content-Type": "application/json",
+      token,
+      Authorization: `Bearer ${token}`,
+    };
+
     setLoadingTables(true);
 
-    fetch(new URL("tables", API_BASE_URL).toString(), {
-      headers: {
-        "Content-Type": "application/json",
-        token,
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          throw new Error(`No se pudieron cargar mesas (${response.status}).`);
+    fetch(new URL(`table_zones/business/${businessId}`, API_BASE_URL).toString(), { headers })
+      .then(async (zonesResponse) => {
+        if (!zonesResponse.ok) {
+          throw new Error(`No se pudieron cargar zonas (${zonesResponse.status}).`);
         }
 
-        const payload = (await response.json().catch(() => null)) as TableApiResponse[] | null;
-        if (!Array.isArray(payload)) {
-          return [];
-        }
-
-        return payload
-          .map((table) => ({
-            id: Number(table.Id ?? 0),
-            name: String(table.Name ?? "").trim(),
-            isAvailable: table.IsAvailable === true || table.IsAvailable === 1,
+        const zonesPayload = (await zonesResponse.json().catch(() => null)) as TableZoneApiResponse[] | null;
+        const rawZones = Array.isArray(zonesPayload) ? zonesPayload : [];
+        const normalizedZones = rawZones
+          .map((zone) => ({
+            id: Number(zone.Id ?? 0),
+            name: String(zone.Name ?? "").trim(),
+            isActive: zone.Active === true || zone.Active === 1 || zone.Active === "1" || zone.Active === "true",
           }))
-          .filter((table) => table.id > 0 && table.name.length > 0)
-          .filter((table) => table.isAvailable)
-          .map(({ id, name }) => ({ id, name }))
+          .filter((zone) => zone.id > 0 && zone.name.length > 0)
           .sort((a, b) => a.id - b.id);
+
+        const preloadedTables: Record<number, TableVm[]> = {};
+        rawZones.forEach((zone) => {
+          const zoneId = Number(zone.Id ?? 0);
+          const rows = Array.isArray(zone.Tables) ? zone.Tables : [];
+          if (zoneId <= 0 || rows.length === 0) return;
+
+          preloadedTables[zoneId] = rows
+            .map((table) => ({
+              id: Number(table.Id ?? 0),
+              name: String(table.Name ?? "").trim(),
+              isAvailable: table.IsAvailable === true || table.IsAvailable === 1,
+              zoneId: Number(table.Table_Zone_Id ?? table.TableZoneId ?? table.Zone_Id ?? zoneId) || zoneId,
+            }))
+            .filter((table) => table.id > 0 && table.name.length > 0 && table.isAvailable)
+            .map(({ id, name, zoneId }) => ({ id, name, zoneId }))
+            .sort((a, b) => a.id - b.id);
+        });
+
+        return { normalizedZones, preloadedTables };
       })
-      .then((availableTables) => {
-        debugLog("Mesas cargadas desde endpoint /tables:", availableTables);
-        setTables(availableTables);
+      .then(({ normalizedZones, preloadedTables }) => {
+        debugLog("Zonas cargadas desde endpoint /table_zones/business/:businessId", normalizedZones);
+        setTableZones(normalizedZones);
+        setTablesByZone(preloadedTables);
         setTablesError(null);
       })
       .catch((error) => {
-        console.error("[POS-V2-SALES] Error al cargar mesas", error);
+        console.error("[POS-V2-SALES] Error al cargar zonas", error);
         setTables([]);
-        setTablesError(error instanceof Error ? error.message : "No se pudieron cargar las mesas desde /tables.");
+        setTableZones([]);
+        setTablesByZone({});
+        setTablesError(error instanceof Error ? error.message : "No se pudieron cargar zonas.");
       })
       .finally(() => setLoadingTables(false));
   }, []);
 
   useEffect(() => {
-    if (tables.length === 0) {
-      if (selectedTableId) {
-        setSelectedTableId("");
-      }
+    if (tableZones.length === 0) {
+      setSelectedTableZoneId("");
+      setSelectedTableId("");
       return;
     }
 
-    if (!tables.some((table) => String(table.id) === selectedTableId)) {
+    if (!tableZones.some((zone) => String(zone.id) === selectedTableZoneId)) {
+      setSelectedTableZoneId(String(tableZones[0]?.id ?? ""));
       setSelectedTableId("");
     }
-  }, [tables, selectedTableId]);
+  }, [tableZones, selectedTableZoneId]);
+
+  useEffect(() => {
+    const { token } = getCurrentSession();
+    if (!token || !selectedTableZoneId) {
+      setTables([]);
+      return;
+    }
+
+    const currentZoneId = Number(selectedTableZoneId);
+    if (Number.isFinite(currentZoneId) && currentZoneId > 0 && tablesByZone[currentZoneId]) {
+      setTables(tablesByZone[currentZoneId] ?? []);
+      return;
+    }
+
+    const headers = {
+      "Content-Type": "application/json",
+      token,
+      Authorization: `Bearer ${token}`,
+    };
+
+    setLoadingTables(true);
+    fetch(new URL(`tables/zone/${selectedTableZoneId}`, API_BASE_URL).toString(), { headers })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`No se pudieron cargar mesas (${response.status}).`);
+        }
+
+        const tablesPayload = (await response.json().catch(() => null)) as TableApiResponse[] | null;
+        return (Array.isArray(tablesPayload) ? tablesPayload : [])
+          .map((table) => ({
+            id: Number(table.Id ?? 0),
+            name: String(table.Name ?? "").trim(),
+            isAvailable: table.IsAvailable === true || table.IsAvailable === 1,
+            zoneId: Number(table.Table_Zone_Id ?? table.TableZoneId ?? table.Zone_Id ?? 0) || null,
+          }))
+          .filter((table) => table.id > 0 && table.name.length > 0 && table.isAvailable)
+          .map(({ id, name, zoneId }) => ({ id, name, zoneId }))
+          .sort((a, b) => a.id - b.id);
+      })
+      .then((zoneTables) => {
+        debugLog(`Mesas cargadas desde endpoint /tables/zone/${selectedTableZoneId}`, zoneTables);
+        setTables(zoneTables);
+        setTablesByZone((current) => ({
+          ...current,
+          [Number(selectedTableZoneId)]: zoneTables,
+        }));
+        setTablesError(null);
+      })
+      .catch((error) => {
+        console.error("[POS-V2-SALES] Error al cargar mesas por zona", error);
+        setTables([]);
+        setTablesError(error instanceof Error ? error.message : "No se pudieron cargar mesas.");
+      })
+      .finally(() => setLoadingTables(false));
+  }, [selectedTableZoneId, tablesByZone]);
+
+  const visibleTables = useMemo(() => tables, [tables]);
+
+  useEffect(() => {
+    if (visibleTables.length === 0) {
+      setSelectedTableId("");
+      return;
+    }
+
+    if (!visibleTables.some((table) => String(table.id) === selectedTableId)) {
+      setSelectedTableId("");
+    }
+  }, [visibleTables, selectedTableId]);
 
   useEffect(() => {
     const { token, businessId } = getCurrentSession();
@@ -485,11 +592,11 @@ export const PosV2SalesHomePage = () => {
   }, [variantSelection]);
 
   const cartItems = useMemo(() => Object.values(cart), [cart]);
-  const hasTableSelection = tables.length > 0;
+  const hasTableSelection = tableZones.length > 0 && visibleTables.length > 0;
   const hasCustomers = customers.length > 0;
   const selectedTableName = useMemo(
-    () => tables.find((table) => String(table.id) === selectedTableId)?.name ?? "Sin mesa",
-    [tables, selectedTableId],
+    () => visibleTables.find((table) => String(table.id) === selectedTableId)?.name ?? "Sin mesa",
+    [visibleTables, selectedTableId],
   );
 
   const totals = useMemo(() => {
@@ -1163,19 +1270,19 @@ export const PosV2SalesHomePage = () => {
             </div>
 
             <label>
-              Método de pago
-              <select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value as PaymentMethod)}>
-                {PAYMENT_METHOD_OPTIONS.map((option) => (
-                  <option key={option.value} value={option.value}>{option.label}</option>
+              Zona de mesas
+              <select value={selectedTableZoneId} onChange={(event) => setSelectedTableZoneId(event.target.value)} disabled={loadingTables}>
+                {tableZones.length === 0 ? <option value="">Sin zonas activas</option> : tableZones.map((zone) => (
+                  <option key={zone.id} value={zone.id}>{zone.name}</option>
                 ))}
               </select>
             </label>
 
             <label>
               Mesa
-              <select value={selectedTableId} onChange={(event) => setSelectedTableId(event.target.value)} disabled={loadingTables}>
+              <select value={selectedTableId} onChange={(event) => setSelectedTableId(event.target.value)} disabled={loadingTables || !selectedTableZoneId}>
                 <option value="">Sin mesa (orden directa)</option>
-                {tables.map((table) => (
+                {visibleTables.map((table) => (
                   <option key={table.id} value={table.id}>{table.name}</option>
                 ))}
               </select>
@@ -1349,7 +1456,7 @@ export const PosV2SalesHomePage = () => {
               >
                 Sin mesa
               </button>
-              {tables.map((table) => {
+              {visibleTables.map((table) => {
                 const isActive = String(table.id) === selectedTableId;
                 const isOccupied = isActive && totals.items > 0;
 
@@ -1389,7 +1496,7 @@ export const PosV2SalesHomePage = () => {
                 <div className="pos-v2-sales-home__tables-skeleton" aria-hidden="true">
                   {Array.from({ length: 6 }).map((_, index) => <span key={`modal-table-skeleton-${index}`} />)}
                 </div>
-              ) : tables.map((table) => {
+              ) : visibleTables.map((table) => {
                 const isActive = String(table.id) === selectedTableId;
                 return (
                   <button
