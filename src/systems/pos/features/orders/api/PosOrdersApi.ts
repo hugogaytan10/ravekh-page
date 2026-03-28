@@ -2,8 +2,9 @@ import { HttpClient } from "../../../../shared/api/HttpClient";
 import { failure, success, type Result } from "../../../../shared/model/Result";
 import type { IOrderRepository } from "../interface/IOrderRepository";
 import { OrderMapper, type LegacyOrderDto, type Order, type OrderStatus } from "../model/Order";
+import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
 
-const POS_API_BASE_URL = "https://apipos.ravekh.com/api/";
+const POS_API_BASE_URL = getPosApiBaseUrl();
 
 export class PosOrdersApi implements IOrderRepository {
   private readonly client: HttpClient;

@@ -1,7 +1,8 @@
 import type { IMembershipRepository } from "../interface/IMembershipRepository";
 import type { LoyaltyMember } from "../model/Membership";
+import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
 
-const POS_API_BASE_URL = "https://apipos.ravekh.com/api/";
+const POS_API_BASE_URL = getPosApiBaseUrl();
 
 type LegacyRecord = Record<string, unknown>;
 
