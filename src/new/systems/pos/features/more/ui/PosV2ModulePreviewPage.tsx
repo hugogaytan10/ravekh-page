@@ -20,11 +20,6 @@ type PreviewData = {
 };
 
 const PREVIEW_MODULES: Record<string, PreviewData> = {
-  "catalog-settings": {
-    title: "Configuración catálogo",
-    description: "Aquí vivirá la configuración del catálogo online y sincronización de inventario en una capa independiente del legacy.",
-    eta: "Sprint de catálogo v2",
-  },
   support: {
     title: "Ayuda",
     description: "Punto central para documentación y soporte in-app.",
@@ -42,23 +37,11 @@ const PREVIEW_MODULES: Record<string, PreviewData> = {
     eta: "Sprint cierre de caja v2",
     warning: "Verifica montos por método de pago y turno activo antes de confirmar el cierre.",
   },
-  roles: {
-    title: "Roles y permisos",
-    description: "Beta operativa para revisar matriz de permisos y validar cobertura por rol.",
-    eta: "Beta interna habilitada",
-    warning: "Usa este módulo para auditoría; la edición granular se habilitará por etapas.",
-  },
   printers: {
     title: "Impresoras",
     description: "Beta de diagnóstico para validar conectividad y salud de dispositivos.",
     eta: "Beta de dispositivos habilitada",
     warning: "Antes de producción valida pruebas de impresión por cada estación.",
-  },
-  branches: {
-    title: "Sucursales",
-    description: "Beta para monitoreo operativo multi-sucursal y checklist de configuración.",
-    eta: "Beta multi-sucursal habilitada",
-    warning: "La sincronización transaccional completa se activará en la siguiente iteración.",
   },
   business: {
     title: "Información del negocio",
@@ -71,11 +54,6 @@ const PREVIEW_MODULES: Record<string, PreviewData> = {
     description: "Configura qué métodos estarán disponibles para cobrar en POS v2.",
     eta: "Disponible en POS moderno",
   },
-  branding: {
-    title: "Color de app",
-    description: "Personaliza identidad visual y datos de marca para POS y catálogo.",
-    eta: "Disponible en POS moderno",
-  },
 };
 
 export const PosV2ModulePreviewPage = () => {
@@ -84,16 +62,10 @@ export const PosV2ModulePreviewPage = () => {
   const [loading, setLoading] = useState(false);
   const [betaResponse, setBetaResponse] = useState("");
   const [betaError, setBetaError] = useState("");
-  const [businessLoading, setBusinessLoading] = useState(false);
-  const [businessError, setBusinessError] = useState("");
-  const [businessInfo, setBusinessInfo] = useState<{ businessName: string; taxId: number | null; tablesEnabled: boolean } | null>(null);
   const [taxLoading, setTaxLoading] = useState(false);
   const [taxSaving, setTaxSaving] = useState(false);
   const [taxError, setTaxError] = useState("");
   const [taxSuccess, setTaxSuccess] = useState("");
-  const [catalogLoading, setCatalogLoading] = useState(false);
-  const [catalogError, setCatalogError] = useState("");
-  const [catalogProducts, setCatalogProducts] = useState<Array<{ id: number; title: string; description: string }>>([]);
   const [exportLoading, setExportLoading] = useState(false);
   const [exportError, setExportError] = useState("");
   const [exportRows, setExportRows] = useState<Array<{ label: string; quantity: number; total: number }>>([]);
@@ -125,7 +97,6 @@ export const PosV2ModulePreviewPage = () => {
   } | null>(null);
   const [brandingLoading, setBrandingLoading] = useState(false);
   const [brandingSaving, setBrandingSaving] = useState(false);
-  const [brandingError, setBrandingError] = useState("");
   const [brandingSuccess, setBrandingSuccess] = useState("");
   const [brandingForm, setBrandingForm] = useState({
     name: "",
@@ -180,20 +151,6 @@ export const PosV2ModulePreviewPage = () => {
     const businessId = Number(businessIdInput);
     if (!token.trim() || !Number.isFinite(businessId) || businessId <= 0) return;
 
-    const loadBusiness = async () => {
-      if (moduleId !== "business") return;
-      setBusinessLoading(true);
-      setBusinessError("");
-      try {
-        const settings = await factory.createPosBusinessSettingsPage().load(businessId, token);
-        setBusinessInfo(settings);
-      } catch (cause) {
-        setBusinessError(cause instanceof Error ? cause.message : "No fue posible cargar la información del negocio.");
-      } finally {
-        setBusinessLoading(false);
-      }
-    };
-
     const loadTax = async () => {
       if (moduleId !== "sales-tax") return;
       setTaxLoading(true);
@@ -211,20 +168,6 @@ export const PosV2ModulePreviewPage = () => {
         setTaxError(cause instanceof Error ? cause.message : "No fue posible cargar impuestos.");
       } finally {
         setTaxLoading(false);
-      }
-    };
-
-    const loadCatalog = async () => {
-      if (moduleId !== "catalog-settings") return;
-      setCatalogLoading(true);
-      setCatalogError("");
-      try {
-        const products = await factory.createCatalogPage().loadPublishedProducts(businessId, token);
-        setCatalogProducts(products);
-      } catch (cause) {
-        setCatalogError(cause instanceof Error ? cause.message : "No fue posible cargar productos publicados.");
-      } finally {
-        setCatalogLoading(false);
       }
     };
 
@@ -285,9 +228,8 @@ export const PosV2ModulePreviewPage = () => {
     };
 
     const loadBranding = async () => {
-      if (moduleId !== "branding") return;
+      if (moduleId !== "business") return;
       setBrandingLoading(true);
-      setBrandingError("");
       try {
         const profile = await factory.createPosBrandingPage().loadProfile(businessId, token);
         setBrandingForm({
@@ -298,16 +240,14 @@ export const PosV2ModulePreviewPage = () => {
           color: profile.color || "#6D01D1",
           references: profile.references,
         });
-      } catch (cause) {
-        setBrandingError(cause instanceof Error ? cause.message : "No fue posible cargar branding.");
+      } catch {
+        setBrandingSuccess("");
       } finally {
         setBrandingLoading(false);
       }
     };
 
-    loadBusiness();
     loadTax();
-    loadCatalog();
     loadExportPreview();
     loadCashClosing();
     loadPaymentMethods();
@@ -389,7 +329,6 @@ export const PosV2ModulePreviewPage = () => {
     event.preventDefault();
     const businessId = Number(businessIdInput);
     setBrandingSaving(true);
-    setBrandingError("");
     setBrandingSuccess("");
     try {
       const saved = await factory.createPosBrandingPage().saveProfile(businessId, brandingForm, token);
@@ -402,8 +341,8 @@ export const PosV2ModulePreviewPage = () => {
         references: saved.references,
       });
       setBrandingSuccess("Branding guardado correctamente.");
-    } catch (cause) {
-      setBrandingError(cause instanceof Error ? cause.message : "No fue posible guardar branding.");
+    } catch {
+      setBrandingSuccess("");
     } finally {
       setBrandingSaving(false);
     }
@@ -413,11 +352,11 @@ export const PosV2ModulePreviewPage = () => {
     <PosV2Shell title={data.title} subtitle="Vista previa de módulo POS v2">
       <section className="pos-v2-module-preview">
         <h2>{data.title}</h2>
-        <p>{data.description}</p>
-        <p className="pos-v2-module-preview__eta">Entrega estimada: {data.eta}</p>
-        {data.warning ? <p className="pos-v2-module-preview__warning">⚠️ {data.warning}</p> : null}
+        {moduleId !== "business" ? <p>{data.description}</p> : null}
+        {moduleId !== "business" ? <p className="pos-v2-module-preview__eta">Entrega estimada: {data.eta}</p> : null}
+        {moduleId !== "business" && data.warning ? <p className="pos-v2-module-preview__warning">⚠️ {data.warning}</p> : null}
 
-        {modulePage.supportsInlineExecution(moduleId) && !["payment-methods", "branding"].includes(moduleId) ? (
+        {modulePage.supportsInlineExecution(moduleId) && !["payment-methods", "business"].includes(moduleId) ? (
           <section className="pos-v2-module-preview__beta">
             <h3>Funciones beta disponibles</h3>
             <p>Ejecuta una lectura real del módulo para validar funcionalidad.</p>
@@ -431,16 +370,71 @@ export const PosV2ModulePreviewPage = () => {
 
         {moduleId === "business" ? (
           <section className="pos-v2-module-preview__beta">
-            <h3>Información del negocio</h3>
-            {businessLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
-            {businessError ? <p className="pos-v2-module-preview__error">{businessError}</p> : null}
-            {businessInfo ? (
-              <div className="pos-v2-module-preview__kv">
-                <p><strong>Nombre:</strong> {businessInfo.businessName}</p>
-                <p><strong>ID de impuesto:</strong> {businessInfo.taxId ?? "Sin asignar"}</p>
-                <p><strong>Mesas habilitadas:</strong> {businessInfo.tablesEnabled ? "Sí" : "No"}</p>
+            <h3>Datos del negocio</h3>
+            <form className="pos-v2-module-preview__form" onSubmit={saveBranding}>
+              {brandingLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /></div> : null}
+              <div className="pos-v2-module-preview__inputs">
+                <label className="pos-v2-module-preview__floating-field">
+                  <input
+                    value={brandingForm.name}
+                    onChange={(event) => setBrandingForm((current) => ({ ...current, name: event.target.value }))}
+                    placeholder=" "
+                    autoComplete="organization"
+                  />
+                  <span>Nombre comercial</span>
+                </label>
+                <label className="pos-v2-module-preview__floating-field">
+                  <input
+                    value={brandingForm.phoneNumber}
+                    onChange={(event) => setBrandingForm((current) => ({ ...current, phoneNumber: event.target.value }))}
+                    placeholder=" "
+                    type="tel"
+                    autoComplete="tel"
+                  />
+                  <span>Teléfono</span>
+                </label>
               </div>
-            ) : null}
+              <div className="pos-v2-module-preview__inputs">
+                <label className="pos-v2-module-preview__floating-field">
+                  <input
+                    value={brandingForm.address}
+                    onChange={(event) => setBrandingForm((current) => ({ ...current, address: event.target.value }))}
+                    placeholder=" "
+                    autoComplete="street-address"
+                  />
+                  <span>Dirección</span>
+                </label>
+                <label className="pos-v2-module-preview__floating-field">
+                  <input
+                    value={brandingForm.logo}
+                    onChange={(event) => setBrandingForm((current) => ({ ...current, logo: event.target.value }))}
+                    placeholder=" "
+                    type="url"
+                    autoComplete="url"
+                  />
+                  <span>URL del logo</span>
+                </label>
+              </div>
+              <div className="pos-v2-module-preview__inputs">
+                <label className="pos-v2-module-preview__floating-field">
+                  <input
+                    value={brandingForm.references}
+                    onChange={(event) => setBrandingForm((current) => ({ ...current, references: event.target.value }))}
+                    placeholder=" "
+                  />
+                  <span>Referencias</span>
+                </label>
+                <label className="pos-v2-module-preview__color-field">
+                  <span>Color principal de la app</span>
+                  <div>
+                    <input type="color" value={brandingForm.color} onChange={(event) => setBrandingForm((current) => ({ ...current, color: event.target.value }))} aria-label="Color principal" />
+                    <strong>{brandingForm.color.toUpperCase()}</strong>
+                  </div>
+                </label>
+              </div>
+              {brandingSuccess ? <p className="pos-v2-module-preview__ok">{brandingSuccess}</p> : null}
+              <button type="submit" disabled={brandingSaving}>{brandingSaving ? "Guardando..." : "Guardar información del negocio"}</button>
+            </form>
           </section>
         ) : null}
 
@@ -455,8 +449,14 @@ export const PosV2ModulePreviewPage = () => {
                   <span>Impuesto habilitado</span>
                 </label>
                 <div className="pos-v2-module-preview__inputs">
-                  <input value={taxForm.description} onChange={(event) => setTaxForm((current) => ({ ...current, description: event.target.value }))} placeholder="Descripción" disabled={!taxForm.enabled} />
-                  <input type="number" min="0" step="0.01" value={taxForm.value} onChange={(event) => setTaxForm((current) => ({ ...current, value: event.target.value }))} placeholder="Valor" disabled={!taxForm.enabled} />
+                  <label className="pos-v2-module-preview__floating-field">
+                    <input value={taxForm.description} onChange={(event) => setTaxForm((current) => ({ ...current, description: event.target.value }))} placeholder=" " disabled={!taxForm.enabled} />
+                    <span>Descripción</span>
+                  </label>
+                  <label className="pos-v2-module-preview__floating-field">
+                    <input type="number" min="0" step="0.01" value={taxForm.value} onChange={(event) => setTaxForm((current) => ({ ...current, value: event.target.value }))} placeholder=" " disabled={!taxForm.enabled} />
+                    <span>Valor</span>
+                  </label>
                 </div>
                 <label className="pos-v2-module-preview__switch">
                   <input type="checkbox" checked={taxForm.isPercent} onChange={(event) => setTaxForm((current) => ({ ...current, isPercent: event.target.checked }))} disabled={!taxForm.enabled} />
@@ -470,27 +470,6 @@ export const PosV2ModulePreviewPage = () => {
                 {taxSuccess ? <p className="pos-v2-module-preview__ok">{taxSuccess}</p> : null}
                 <button type="submit" disabled={taxSaving}>{taxSaving ? "Guardando..." : "Guardar cambios"}</button>
               </form>
-            ) : null}
-          </section>
-        ) : null}
-
-        {moduleId === "catalog-settings" ? (
-          <section className="pos-v2-module-preview__beta">
-            <h3>Configuración catálogo</h3>
-            <p>Listado moderno de productos publicados para validar sincronización.</p>
-            {catalogLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
-            {catalogError ? <p className="pos-v2-module-preview__error">{catalogError}</p> : null}
-            {!catalogLoading && !catalogError ? (
-              <div className="pos-v2-module-preview__table">
-                <p><strong>Productos publicados:</strong> {catalogProducts.length}</p>
-                {catalogProducts.length === 0 ? <p>Aún no hay productos publicados.</p> : null}
-                {catalogProducts.slice(0, 8).map((item) => (
-                  <article key={item.id} className="pos-v2-module-preview__row">
-                    <strong>{item.title}</strong>
-                    <small>{item.description || "Sin descripción"}</small>
-                  </article>
-                ))}
-              </div>
             ) : null}
           </section>
         ) : null}
@@ -578,32 +557,6 @@ export const PosV2ModulePreviewPage = () => {
                   ))}
                 </div>
               </div>
-            ) : null}
-          </section>
-        ) : null}
-
-        {moduleId === "branding" ? (
-          <section className="pos-v2-module-preview__beta">
-            <h3>Branding de la app</h3>
-            {brandingLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
-            {!brandingLoading ? (
-              <form className="pos-v2-module-preview__form" onSubmit={saveBranding}>
-                <div className="pos-v2-module-preview__inputs">
-                  <input value={brandingForm.name} onChange={(event) => setBrandingForm((current) => ({ ...current, name: event.target.value }))} placeholder="Nombre comercial" />
-                  <input value={brandingForm.phoneNumber} onChange={(event) => setBrandingForm((current) => ({ ...current, phoneNumber: event.target.value }))} placeholder="Teléfono" />
-                </div>
-                <div className="pos-v2-module-preview__inputs">
-                  <input value={brandingForm.address} onChange={(event) => setBrandingForm((current) => ({ ...current, address: event.target.value }))} placeholder="Dirección" />
-                  <input value={brandingForm.logo} onChange={(event) => setBrandingForm((current) => ({ ...current, logo: event.target.value }))} placeholder="URL de logo" />
-                </div>
-                <div className="pos-v2-module-preview__inputs">
-                  <input value={brandingForm.references} onChange={(event) => setBrandingForm((current) => ({ ...current, references: event.target.value }))} placeholder="Referencias" />
-                  <input type="color" value={brandingForm.color} onChange={(event) => setBrandingForm((current) => ({ ...current, color: event.target.value }))} aria-label="Color principal" />
-                </div>
-                {brandingError ? <p className="pos-v2-module-preview__error">{brandingError}</p> : null}
-                {brandingSuccess ? <p className="pos-v2-module-preview__ok">{brandingSuccess}</p> : null}
-                <button type="submit" disabled={brandingSaving}>{brandingSaving ? "Guardando..." : "Guardar branding"}</button>
-              </form>
             ) : null}
           </section>
         ) : null}

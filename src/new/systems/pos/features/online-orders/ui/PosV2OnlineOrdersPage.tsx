@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
-import { buildPosPublicCatalogUrl } from "../../../shared/config/posExternalLinks";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import type { OnlineOrderCardViewModel, OnlineOrderStatus, OnlineOrderStatusFilter } from "../pages/OnlineOrderTrackingPage";
@@ -36,19 +35,12 @@ export const PosV2OnlineOrdersPage = () => {
     name: "Ravekh POS",
     logo: "",
   });
-  const [businessInfo, setBusinessInfo] = useState<{ name: string; taxId: number | null; tablesEnabled: boolean }>({
-    name: "Negocio",
-    taxId: null,
-    tablesEnabled: false,
-  });
-  const catalogLink = buildPosPublicCatalogUrl(businessId);
 
-  const { page, brandingPage, businessPage } = useMemo(() => {
+  const { page, brandingPage } = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
     return {
       page: factory.createPosOnlineOrderPage(),
       brandingPage: factory.createPosBrandingPage(),
-      businessPage: factory.createPosBusinessSettingsPage(),
     };
   }, []);
 
@@ -104,28 +96,6 @@ export const PosV2OnlineOrdersPage = () => {
     loadBranding();
   }, [brandingPage, businessId, token]);
 
-  useEffect(() => {
-    const loadBusinessInfo = async () => {
-      if (!token || !Number.isFinite(businessId) || businessId <= 0) return;
-      try {
-        const business = await businessPage.load(businessId, token);
-        setBusinessInfo({
-          name: business.businessName || "Negocio",
-          taxId: business.taxId ?? null,
-          tablesEnabled: business.tablesEnabled,
-        });
-      } catch {
-        setBusinessInfo({
-          name: "Negocio",
-          taxId: null,
-          tablesEnabled: false,
-        });
-      }
-    };
-
-    loadBusinessInfo();
-  }, [businessId, businessPage, token]);
-
   const filteredOrders = useMemo(() => {
     const normalized = search.trim().toLowerCase();
     if (!normalized) return orders;
@@ -171,7 +141,8 @@ export const PosV2OnlineOrdersPage = () => {
   const formatCurrency = (value: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(value);
   const getStatusLabel = (status: string) => STATUS_COPY[status.toUpperCase()] ?? status;
 
-  const summarizeItems = (items: OnlineOrderCardViewModel["items"]) => {
+  const summarizeItems = (items: OnlineOrderCardViewModel["items"] | null | undefined) => {
+    if (!Array.isArray(items) || items.length === 0) return [];
     const grouped = new Map<string, { name: string; quantity: number; price: number; image: string }>();
 
     for (const item of items) {
@@ -218,16 +189,6 @@ export const PosV2OnlineOrdersPage = () => {
           <article><span>Completados</span><strong>{stats.completed}</strong></article>
           <article><span>Cancelados</span><strong>{stats.cancelled}</strong></article>
           <article><span>Monto total</span><strong>{formatCurrency(stats.totalAmount)}</strong></article>
-        </section>
-
-        <section className="pos-v2-online-orders__business" aria-label="Información de tienda en línea">
-          <article>
-            <h3>Información de tienda</h3>
-            <p><strong>Negocio:</strong> {businessInfo.name}</p>
-            <p><strong>RFC/Tax ID:</strong> {businessInfo.taxId ?? "No configurado"}</p>
-            <p><strong>Mesas habilitadas:</strong> {businessInfo.tablesEnabled ? "Sí" : "No"}</p>
-            <button type="button" onClick={() => window.open(catalogLink, "_blank", "noopener,noreferrer")}>Abrir catálogo público</button>
-          </article>
         </section>
 
         <section className="pos-v2-online-orders__controls" aria-label="Filtros">
@@ -305,7 +266,7 @@ export const PosV2OnlineOrdersPage = () => {
                   <p><strong>Total:</strong> {formatCurrency(selectedOrder.total)}</p>
                   <section className="pos-v2-online-orders__items">
                     <h4>Items del pedido</h4>
-                    {selectedOrder.items.length > 0 ? (
+                    {summarizeItems(selectedOrder.items).length > 0 ? (
                       <ul>
                         {summarizeItems(selectedOrder.items).map((item, index) => (
                           <li key={`${selectedOrder.id}-${item.name}-${index}`}>
