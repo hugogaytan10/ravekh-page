@@ -1,0 +1,15 @@
+.pos-v2-loyalty { display: grid; gap: 0.9rem; }
+.pos-v2-loyalty__card { background: #fff; border: 1px solid #e5e7eb; border-radius: 14px; padding: 0.9rem; display: grid; gap: 0.65rem; }
+.pos-v2-loyalty__card h2, .pos-v2-loyalty__card p { margin: 0; }
+.pos-v2-loyalty__form { display: grid; gap: 0.5rem; }
+.pos-v2-loyalty__form input { min-height: 40px; border: 1px solid #cbd5e1; border-radius: 10px; padding: 0.45rem 0.65rem; }
+.pos-v2-loyalty__form button { min-height: 38px; border: 1px solid #cbd5e1; border-radius: 10px; background: #0f172a; color: #fff; font-weight: 700; }
+.pos-v2-loyalty__detail { display: grid; gap: 0.35rem; }
+.pos-v2-loyalty__error, .pos-v2-loyalty__toast { margin: 0; border-radius: 10px; padding: 0.65rem 0.75rem; }
+.pos-v2-loyalty__error { border: 1px solid #fecaca; background: #fef2f2; color: #991b1b; }
+.pos-v2-loyalty__toast { border: 1px solid #bbf7d0; background: #f0fdf4; color: #166534; }
+:root[data-theme="dark"] .pos-v2-loyalty__card { background: #111827; border-color: #374151; }
+:root[data-theme="dark"] .pos-v2-loyalty__form input { background: #0f172a; border-color: #475569; color: #f8fafc; }
+:root[data-theme="dark"] .pos-v2-loyalty__form button { background: #38bdf8; border-color: #38bdf8; color: #0b1120; }
+:root[data-theme="dark"] .pos-v2-loyalty__error { border-color: rgba(220, 38, 38, 0.35); background: rgba(127, 29, 29, 0.35); color: #fecaca; }
+:root[data-theme="dark"] .pos-v2-loyalty__toast { border-color: rgba(22, 163, 74, 0.35); background: rgba(20, 83, 45, 0.35); color: #bbf7d0; }

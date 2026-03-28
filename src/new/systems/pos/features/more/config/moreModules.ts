@@ -38,11 +38,10 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
     title: "Servicios",
     subtitle: "Herramientas de soporte y operación extendida.",
     items: [
-      { id: "health", title: "Salud de API", description: "Verifica conectividad y disponibilidad backend.", path: POS_V2_PATHS.health, status: "available", actionType: "route" },
       { id: "online-store", title: "Tienda en línea", description: "Gestión de pedidos del canal online.", path: POS_V2_PATHS.onlineStore, status: "available", actionType: "route" },
       { id: "coupons", title: "Cupones", description: "Administración de campañas y promociones para clientes.", path: previewPath("coupons"), status: "beta", actionType: "beta-action" },
       { id: "visits", title: "Visitas", description: "Seguimiento de visitas y recompensas por recurrencia.", path: previewPath("visits"), status: "beta", actionType: "beta-action" },
-      { id: "loyalty", title: "Cupones y visitas", description: "Herramientas de fidelización y recompensas.", path: previewPath("loyalty"), status: "beta", actionType: "beta-action" },
+      { id: "loyalty", title: "Cupones y visitas", description: "Herramientas de fidelización y recompensas.", path: POS_V2_PATHS.loyalty, status: "available", actionType: "route" },
       { id: "support", title: "Ayuda", description: "Centro de ayuda y soporte para el negocio.", path: previewPath("support"), status: "available", actionType: "route" },
       { id: "branches", title: "Sucursales", description: "Administra múltiples sucursales y su operación.", path: previewPath("branches"), status: "beta", actionType: "beta-action" },
       { id: "switch-user", title: "Cambiar negocio/usuario", description: "Cerrar sesión actual y conectar otra cuenta o vendedor.", path: previewPath("switch-user"), status: "available", actionType: "beta-action" },

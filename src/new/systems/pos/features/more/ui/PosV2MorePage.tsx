@@ -42,6 +42,7 @@ export const PosV2MorePage = () => {
   const favoriteItems = allItems
     .filter((item) => favorites.includes(item.id))
     .sort((a, b) => a.title.localeCompare(b.title, "es-MX"));
+  const pendingItems = allItems.filter((item) => item.status !== "available");
   const normalizedQuery = query.trim().toLowerCase();
   const { businessId } = readPosSessionSnapshot();
   const catalogLink = buildPosPublicCatalogUrl(businessId);
@@ -135,6 +136,11 @@ export const PosV2MorePage = () => {
   };
 
   const openModule = async (item: MoreModuleLink) => {
+    if (item.id === "cash-closing") {
+      navigate(POS_V2_PATHS.cashClosing);
+      return;
+    }
+
     if (item.id === "delete-account" || item.id === "switch-user") {
       setActionMessage("⚠️ Antes de cerrar sesión verifica cortes pendientes y respaldo de datos.");
       setShowSignOutConfirm(true);
@@ -239,6 +245,22 @@ export const PosV2MorePage = () => {
           <div className="pos-v2-more__catalog-copy">
             <input type="text" value={catalogLink} readOnly aria-label="Enlace de catálogo público" />
             <button type="button" onClick={copyCatalogLink}>{copiedCatalogLink ? "Copiado" : "Copiar enlace"}</button>
+          </div>
+        </section>
+
+        <section className="pos-v2-more__pending" aria-label="Módulos pendientes por migrar">
+          <div className="pos-v2-more__section-head">
+            <h3>Módulos faltantes por completar</h3>
+            <p>Estos módulos siguen en beta/preview mientras cerramos paridad funcional con legacy.</p>
+          </div>
+          <div className="pos-v2-more__warning-grid">
+            {pendingItems.slice(0, 8).map((item) => (
+              <article key={`pending-${item.id}`}>
+                <h4>{item.title}</h4>
+                <p>{item.description}</p>
+                <button type="button" onClick={() => openModule(item)}>{item.status === "beta" ? "Abrir beta" : "Abrir preview"}</button>
+              </article>
+            ))}
           </div>
         </section>
 

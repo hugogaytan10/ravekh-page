@@ -13,6 +13,7 @@ import { PosV2EmployeesPage } from "../features/employees/ui/PosV2EmployeesPage"
 import { PosV2OnlineOrdersPage } from "../features/online-orders/ui/PosV2OnlineOrdersPage";
 import { PosV2CashClosingPage } from "../features/cash-closing/ui/PosV2CashClosingPage";
 import { PosV2InventoryPage } from "../features/inventory/ui/PosV2InventoryPage";
+import { PosV2LoyaltyPage } from "../features/loyalty/ui/PosV2LoyaltyPage";
 import { PosV2RequireAuth } from "./PosV2RequireAuth";
 import { POS_V2_PATHS } from "./PosV2Paths";
 
@@ -30,6 +31,7 @@ export const POS_V2_APP_ROUTES = (
     <Route path={POS_V2_PATHS.tableZones} element={withAuth(<PosV2TableZonesPage />)} />
     <Route path={POS_V2_PATHS.cashClosing} element={withAuth(<PosV2CashClosingPage />)} />
     <Route path={POS_V2_PATHS.inventory} element={withAuth(<PosV2InventoryPage />)} />
+    <Route path={POS_V2_PATHS.loyalty} element={withAuth(<PosV2LoyaltyPage />)} />
     <Route path={POS_V2_PATHS.customers} element={withAuth(<PosV2CustomersPage />)} />
     <Route path={POS_V2_PATHS.employees} element={withAuth(<PosV2EmployeesPage />)} />
     <Route path={POS_V2_PATHS.onlineStore} element={withAuth(<PosV2OnlineOrdersPage />)} />

@@ -24,6 +24,17 @@
   text-transform: uppercase;
 }
 
+.pos-v2-shell__back {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.22rem 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
 .pos-v2-shell__title {
   margin: 0.15rem 0 0;
   font-size: 0.98rem;
@@ -176,6 +187,11 @@
   background: rgba(76, 29, 149, 0.5);
 }
 
+:root[data-theme="dark"] .pos-v2-shell__back {
+  border-color: rgba(196, 181, 253, 0.5);
+  background: rgba(76, 29, 149, 0.55);
+}
+
 :root[data-theme="dark"] .pos-v2-shell__bottom-nav {
   background: #111827;
   border-color: #374151;
@@ -194,6 +210,11 @@
   :root:not([data-theme="light"]) .pos-v2-shell__theme-toggle {
     border-color: rgba(196, 181, 253, 0.5);
     background: rgba(76, 29, 149, 0.5);
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-shell__back {
+    border-color: rgba(196, 181, 253, 0.5);
+    background: rgba(76, 29, 149, 0.55);
   }
 
   :root:not([data-theme="light"]) .pos-v2-shell__bottom-nav {

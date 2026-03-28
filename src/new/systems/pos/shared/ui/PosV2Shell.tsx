@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useState } from "react";
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import "./PosV2Shell.css";
 import { SalesIcon } from "../../../../../assets/POS/SalesIcon";
 import { ProductIcon } from "../../../../../assets/POS/Products";
@@ -26,6 +26,7 @@ const NAV_ITEMS = [
 ];
 
 export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
+  const navigate = useNavigate();
   const [theme, setTheme] = useState<UiTheme>(() => {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
     if (stored === "light" || stored === "dark") {
@@ -48,6 +49,7 @@ export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
     <div className="pos-v2-shell">
       <header className="pos-v2-shell__header">
         <div>
+          <button type="button" className="pos-v2-shell__back" onClick={() => navigate(-1)}>← Regresar</button>
           <p className="pos-v2-shell__brand">Ravekh POS</p>
           <h1 className="pos-v2-shell__title">{title}</h1>
           {subtitle ? <p className="pos-v2-shell__subtitle">{subtitle}</p> : null}

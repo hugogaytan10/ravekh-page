@@ -32,6 +32,7 @@ import { PosV2TableZonesPage } from "../../new/systems/pos/features/settings/tab
 import { PosV2OnlineOrdersPage } from "../../new/systems/pos/features/online-orders/ui/PosV2OnlineOrdersPage";
 import { PosV2CashClosingPage } from "../../new/systems/pos/features/cash-closing/ui/PosV2CashClosingPage";
 import { PosV2InventoryPage } from "../../new/systems/pos/features/inventory/ui/PosV2InventoryPage";
+import { PosV2LoyaltyPage } from "../../new/systems/pos/features/loyalty/ui/PosV2LoyaltyPage";
 import { PosV2RequireAuth } from "../../new/systems/pos/routing/PosV2RequireAuth";
 
 export const NEW_PRIMARY_ROUTES = [
@@ -48,6 +49,7 @@ export const NEW_PRIMARY_ROUTES = [
   { path: "/v2/settings/table-zones", element: <PosV2RequireAuth><PosV2TableZonesPage /></PosV2RequireAuth> },
   { path: "/v2/cash-closing", element: <PosV2RequireAuth><PosV2CashClosingPage /></PosV2RequireAuth> },
   { path: "/v2/inventory", element: <PosV2RequireAuth><PosV2InventoryPage /></PosV2RequireAuth> },
+  { path: "/v2/loyalty", element: <PosV2RequireAuth><PosV2LoyaltyPage /></PosV2RequireAuth> },
   { path: "/v2/online-store", element: <PosV2RequireAuth><PosV2OnlineOrdersPage /></PosV2RequireAuth> },
   { path: "/v2/health", element: <PosV2RequireAuth><PosHealthV2Screen /></PosV2RequireAuth> },
   // Compatibilidad temporal de rutas /v2/pos/*
@@ -62,6 +64,7 @@ export const NEW_PRIMARY_ROUTES = [
   { path: "/v2/pos/employees", element: <Navigate to="/v2/employees" replace /> },
   { path: "/v2/pos/cash-closing", element: <Navigate to="/v2/cash-closing" replace /> },
   { path: "/v2/pos/inventory", element: <Navigate to="/v2/inventory" replace /> },
+  { path: "/v2/pos/loyalty", element: <Navigate to="/v2/loyalty" replace /> },
   { path: "/v2/pos/health", element: <Navigate to="/v2/health" replace /> },
   { path: "/v2/pos/online-store", element: <Navigate to="/v2/online-store" replace /> },
   { path: "/", element: <LandingPageRavekhPage /> },

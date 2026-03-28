@@ -65,6 +65,24 @@
   gap: 0.55rem;
 }
 
+.pos-v2-online-orders__business article {
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.pos-v2-online-orders__business h3,
+.pos-v2-online-orders__business p {
+  margin: 0;
+}
+
+.pos-v2-online-orders__business p {
+  color: #475569;
+}
+
 .pos-v2-online-orders__chips {
   display: inline-flex;
   gap: 0.45rem;
@@ -301,6 +319,7 @@
 :root[data-theme="dark"] .pos-v2-online-orders__controls input,
 :root[data-theme="dark"] .pos-v2-online-orders li,
 :root[data-theme="dark"] .pos-v2-online-orders__stats article,
+:root[data-theme="dark"] .pos-v2-online-orders__business article,
 :root[data-theme="dark"] .pos-v2-online-orders__modal article,
 :root[data-theme="dark"] .pos-v2-online-orders__thumb,
 :root[data-theme="dark"] .pos-v2-online-orders__items li {
@@ -311,6 +330,7 @@
 
 :root[data-theme="dark"] .pos-v2-online-orders header p,
 :root[data-theme="dark"] .pos-v2-online-orders__stats span,
+:root[data-theme="dark"] .pos-v2-online-orders__business p,
 :root[data-theme="dark"] .pos-v2-online-orders li.is-empty,
 :root[data-theme="dark"] .pos-v2-online-orders li small {
   color: #9ca3af;

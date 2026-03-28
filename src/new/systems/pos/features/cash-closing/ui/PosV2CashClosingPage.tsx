@@ -202,7 +202,7 @@ export const PosV2CashClosingPage = () => {
         {!session.hasSession ? <p className="pos-v2-cash-closing__error">No hay sesión activa. Inicia sesión para gestionar cierres.</p> : null}
         {error ? <p className="pos-v2-cash-closing__error">{error}</p> : null}
         {toast ? <p className="pos-v2-cash-closing__toast">{toast}</p> : null}
-        {!canCloseCash ? <p className="pos-v2-cash-closing__warning">🔒 Solo cuentas dueñas/administradoras pueden ejecutar el cierre.</p> : null}
+        {!canCloseCash ? <p className="pos-v2-cash-closing__warning">��� Solo cuentas dueñas/administradoras pueden ejecutar el cierre.</p> : null}
 
         <section className="pos-v2-cash-closing__card">
           <h3>Registrar corte</h3>

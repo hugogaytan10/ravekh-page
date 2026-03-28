@@ -9,6 +9,7 @@ export const POS_V2_PATHS = {
   tableZones: "/v2/settings/table-zones",
   cashClosing: "/v2/cash-closing",
   inventory: "/v2/inventory",
+  loyalty: "/v2/loyalty",
   customers: "/v2/customers",
   employees: "/v2/employees",
   onlineStore: "/v2/online-store",
@@ -24,4 +25,5 @@ export const POS_V2_PATHS = {
   posHealthAlias: "/v2/pos/health",
   posInventoryAlias: "/v2/pos/inventory",
   posCashClosingAlias: "/v2/pos/cash-closing",
+  posLoyaltyAlias: "/v2/pos/loyalty",
 } as const;
