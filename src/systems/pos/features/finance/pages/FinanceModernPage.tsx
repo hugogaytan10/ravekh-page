@@ -3,8 +3,9 @@ import { HttpClient } from "../../../../shared/api/HttpClient";
 import type { FinanceOverview } from "../models/FinanceRecord";
 import { FinanceApi } from "../api/FinanceApi";
 import { FinanceService } from "../services/FinanceService";
+import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
 
-const POS_API_URL = "https://apipos.ravekh.com/api/";
+const POS_API_URL = getPosApiBaseUrl();
 
 interface FinanceModernPageProps {
   token: string;
@@ -17,7 +18,7 @@ export const FinanceModernPage = ({ token, businessId, month }: FinanceModernPag
   const [error, setError] = useState<string | null>(null);
 
   const financeService = useMemo(() => {
-    const httpClient = new HttpClient(POS_API_URL);
+    const httpClient = new HttpClient({ baseUrl: POS_API_URL });
     const financeApi = new FinanceApi(httpClient);
     return new FinanceService(financeApi);
   }, []);

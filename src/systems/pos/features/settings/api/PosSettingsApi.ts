@@ -1,7 +1,8 @@
 import type { IPosSettingsRepository } from "../interface/IPosSettingsRepository";
 import type { PosBusinessSettings, PosSettingsBootstrap, UpdatePosBusinessSettingsInput } from "../model/PosSettings";
+import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
 
-const POS_API_BASE_URL = "https://apipos.ravekh.com/api/";
+const POS_API_BASE_URL = getPosApiBaseUrl();
 
 type LegacyRecord = Record<string, unknown>;
 

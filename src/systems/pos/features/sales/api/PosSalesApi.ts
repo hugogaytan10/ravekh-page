@@ -1,5 +1,6 @@
 import { HttpClient } from "../../../../shared/api/HttpClient";
 import { failure, success, type Result } from "../../../../shared/model/Result";
+import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
 import type { IProductRepository } from "../interfaces/IProductRepository";
 import {
   mapLegacyProductDto,
@@ -7,7 +8,7 @@ import {
   type Product,
 } from "../model/Product";
 
-const POS_API_BASE_URL = "https://apipos.ravekh.com/api/";
+const POS_API_BASE_URL = getPosApiBaseUrl();
 
 export class PosSalesApi implements IProductRepository {
   private readonly client: HttpClient;

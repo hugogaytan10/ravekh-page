@@ -3,8 +3,9 @@ import { HttpClient } from "../../../../shared/api/HttpClient";
 import { ProductApi } from "../api/ProductApi";
 import type { Product } from "../models/Product";
 import { ProductService } from "../services/ProductService";
+import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
 
-const POS_API_URL = "https://apipos.ravekh.com/api/";
+const POS_API_URL = getPosApiBaseUrl();
 
 interface ProductsModernPageProps {
   token: string;
@@ -16,7 +17,7 @@ export const ProductsModernPage = ({ token, businessId }: ProductsModernPageProp
   const [error, setError] = useState<string | null>(null);
 
   const productService = useMemo(() => {
-    const httpClient = new HttpClient(POS_API_URL);
+    const httpClient = new HttpClient({ baseUrl: POS_API_URL });
     const productApi = new ProductApi(httpClient);
     return new ProductService(productApi);
   }, []);

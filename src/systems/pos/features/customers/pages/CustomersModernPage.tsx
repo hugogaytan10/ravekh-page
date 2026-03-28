@@ -3,8 +3,9 @@ import { HttpClient } from "../../../../shared/api/HttpClient";
 import { CustomerApi } from "../api/CustomerApi";
 import type { Customer } from "../models/Customer";
 import { CustomerService } from "../services/CustomerService";
+import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
 
-const POS_API_URL = "https://apipos.ravekh.com/api/";
+const POS_API_URL = getPosApiBaseUrl();
 
 interface CustomersModernPageProps {
   token: string;
@@ -17,7 +18,7 @@ export const CustomersModernPage = ({ token, businessId }: CustomersModernPagePr
   const [error, setError] = useState<string | null>(null);
 
   const customerService = useMemo(() => {
-    const httpClient = new HttpClient(POS_API_URL);
+    const httpClient = new HttpClient({ baseUrl: POS_API_URL });
     const customerApi = new CustomerApi(httpClient);
     return new CustomerService(customerApi);
   }, []);

@@ -1,5 +1,6 @@
 import { HttpClient } from "../../../../shared/api/HttpClient";
 import { failure, success, type Result } from "../../../../shared/model/Result";
+import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
 import type { ICatalogProductRepository } from "../interfaces/ICatalogProductRepository";
 import {
   mapLegacyCatalogProduct,
@@ -7,7 +8,7 @@ import {
   type LegacyCatalogProductDto,
 } from "../model/CatalogProduct";
 
-const POS_API_BASE_URL = "https://apipos.ravekh.com/api/";
+const POS_API_BASE_URL = getPosApiBaseUrl();
 
 export class CatalogProductApi implements ICatalogProductRepository {
   private readonly client: HttpClient;

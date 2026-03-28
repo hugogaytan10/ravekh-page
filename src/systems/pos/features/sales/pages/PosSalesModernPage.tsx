@@ -3,8 +3,9 @@ import { HttpClient } from "../../../../shared/api/HttpClient";
 import { PosSalesApi } from "../api/PosSalesApi";
 import { PosSalesService } from "../services/PosSalesService";
 import type { SalesCategory, SalesProduct } from "../models/SalesModels";
+import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
 
-const POS_API_URL = "https://apipos.ravekh.com/api/";
+const POS_API_URL = getPosApiBaseUrl();
 
 interface PosSalesModernPageProps {
   token: string;
@@ -19,7 +20,7 @@ export const PosSalesModernPage = ({ token, businessId }: PosSalesModernPageProp
   const [isLoading, setIsLoading] = useState(false);
 
   const salesService = useMemo(() => {
-    const httpClient = new HttpClient(POS_API_URL);
+    const httpClient = new HttpClient({ baseUrl: POS_API_URL });
     const api = new PosSalesApi(httpClient);
     return new PosSalesService(api);
   }, []);
