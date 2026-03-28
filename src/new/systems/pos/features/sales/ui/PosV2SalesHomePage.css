@@ -370,7 +370,7 @@
 .pos-v2-sales-home__qty-controls button.is-danger {
   background: #fef2f2;
   border-color: #fecaca;
-  min-width: 34px;
+  min-width: 38px;
   padding: 0;
 }
 
@@ -1545,6 +1545,44 @@
   overflow: auto;
 }
 
+.pos-v2-sales-home__variant-option {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.pos-v2-sales-home__variant-option input[type="radio"] {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.pos-v2-sales-home__variant-row-qty {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.pos-v2-sales-home__variant-row-qty button {
+  min-width: 40px;
+  min-height: 30px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #f8fafc;
+  color: #334155;
+  font-weight: 700;
+}
+
+.pos-v2-sales-home__variant-row-qty input {
+  width: 56px;
+  min-height: 30px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  text-align: center;
+  font-weight: 700;
+}
+
 .pos-v2-sales-home__variant-options button {
   text-align: left;
   border: 1px solid #e2e8f0;
@@ -1587,6 +1625,12 @@
   background: #f5f3ff;
 }
 
+.pos-v2-sales-home__variant-selected {
+  margin: 0;
+  color: #475569;
+  font-size: 0.85rem;
+}
+
 .pos-v2-sales-home__variant-modal-card footer {
   display: flex;
   justify-content: flex-end;
@@ -1625,6 +1669,13 @@
   border-color: #374151;
 }
 
+:root[data-theme="dark"] .pos-v2-sales-home__variant-row-qty button,
+:root[data-theme="dark"] .pos-v2-sales-home__variant-row-qty input {
+  background: #0f172a;
+  border-color: #4b5563;
+  color: #e5e7eb;
+}
+
 :root[data-theme="dark"] .pos-v2-sales-home__variant-modal-card footer button {
   background: #6f5cc6;
   border-color: #a78bfa;
@@ -1644,6 +1695,10 @@
 
 :root[data-theme="dark"] .pos-v2-sales-home__variant-options button strong {
   color: #e5e7eb;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__variant-selected {
+  color: #cbd5e1;
 }
 
 :root[data-theme="dark"] .pos-v2-sales-home__variant-summary span {

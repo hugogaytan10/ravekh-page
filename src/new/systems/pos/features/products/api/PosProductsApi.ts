@@ -171,7 +171,7 @@ export class PosProductsApi implements IProductsRepository {
         path: POS_ENDPOINTS.productExtras(productId),
         token,
       }).catch(() => null),
-      this.httpClient.request<LegacyVariantResponse[] | null>({
+      this.httpClient.request<LegacyVariantResponse[] | { data?: LegacyVariantResponse[]; Data?: LegacyVariantResponse[] } | null>({
         method: "GET",
         path: POS_ENDPOINTS.variantsByProduct(productId),
         token,
@@ -185,7 +185,7 @@ export class PosProductsApi implements IProductsRepository {
     const normalized = "data" in product || "Data" in product ? product.data ?? product.Data ?? null : product;
     if (!normalized) return null;
 
-    return this.toDomain(normalized, this.toDomainExtras(extrasResponse), this.toDomainVariants(variantsResponse));
+    return this.toDomain(normalized, this.toDomainExtras(extrasResponse), this.toDomainVariants(this.normalizeVariantsPayload(variantsResponse)));
   }
 
   async create(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct> {
@@ -396,6 +396,12 @@ export class PosProductsApi implements IProductsRepository {
       return [];
     }
     return payload.map((variant) => this.toDomainVariant(variant));
+  }
+
+  private normalizeVariantsPayload(payload: LegacyVariantResponse[] | { data?: LegacyVariantResponse[]; Data?: LegacyVariantResponse[]; variants?: LegacyVariantResponse[]; Variants?: LegacyVariantResponse[] } | null): LegacyVariantResponse[] | null {
+    if (!payload) return null;
+    if (Array.isArray(payload)) return payload;
+    return payload.data ?? payload.Data ?? payload.variants ?? payload.Variants ?? null;
   }
 
   private toLegacy(payload: SaveManagedProductDto): ProductResponse {

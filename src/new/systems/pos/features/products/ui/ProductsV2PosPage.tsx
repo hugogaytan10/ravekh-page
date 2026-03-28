@@ -295,9 +295,9 @@ export const ProductsV2PosPage = () => {
 
   const mappedVariants = (): ProductVariant[] => {
     return variants
-      .filter((variant) => variant.description.trim())
-      .map((variant) => ({
-        description: variant.description.trim(),
+      .filter((variant) => [variant.description, variant.color, variant.barcode].some((field) => field.trim().length > 0))
+      .map((variant, index) => ({
+        description: variant.description.trim() || variant.color.trim() || `Variante ${index + 1}`,
         barcode: variant.barcode.trim() || null,
         color: variant.color.trim() || null,
         size: null,
@@ -387,12 +387,6 @@ export const ProductsV2PosPage = () => {
 
     if (parsedStock !== null && (Number.isNaN(parsedStock) || parsedStock < 0)) {
       setError("El stock debe ser un número válido mayor o igual a 0.");
-      return;
-    }
-
-      const hasVariantWithoutColor = variants.some((variant) => variant.description.trim() && !variant.color.trim());
-      if (hasVariantWithoutColor) {
-      setError("Cada variante debe seleccionar un color.");
       return;
     }
 

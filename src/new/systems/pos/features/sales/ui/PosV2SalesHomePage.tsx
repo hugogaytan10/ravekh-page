@@ -173,10 +173,8 @@ const toCartKey = (
 ): string => `${productId}:${variantId ?? "base"}:${colorId ?? "none"}:${sizeId ?? "none"}`;
 
 const toVariantLabel = (variant: SaleVariantVm): string => {
-  const parts = [variant.description, variant.color, variant.size]
-    .map((segment) => (segment ?? "").trim())
-    .filter(Boolean);
-  return parts.length > 0 ? parts.join(" · ") : "Variante";
+  const label = variant.description.trim();
+  return label.length > 0 ? label : "Variante";
 };
 
 export const PosV2SalesHomePage = () => {
@@ -223,6 +221,7 @@ export const PosV2SalesHomePage = () => {
     extras: ProductExtrasVm;
     selectedVariantKey: string | null;
     selectedSizeId: number | null;
+    quantities: Record<string, number>;
   } | null>(null);
   const [extrasCache, setExtrasCache] = useState<Record<number, ProductExtrasVm>>({});
   const [variantsCache, setVariantsCache] = useState<Record<number, SaleVariantVm[]>>({});
@@ -745,6 +744,7 @@ export const PosV2SalesHomePage = () => {
   const addToCartEntry = (
     product: SaleItemVm,
     variant: SaleVariantVm | null,
+    quantity = 1,
     colorOption?: ProductExtraOptionVm | null,
     sizeOption?: ProductExtraOptionVm | null,
   ) => {
@@ -752,8 +752,8 @@ export const PosV2SalesHomePage = () => {
     const basePrice = variant?.price ?? product.price;
     const variantLabel = variant ? toVariantLabel(variant) : null;
     const resolvedColorLabel = colorOption?.description ?? variant?.color ?? product.color ?? null;
-    const extrasLabel = [resolvedColorLabel, sizeOption?.description].filter(Boolean).join(" · ");
-    const itemName = [product.name, variantLabel, extrasLabel].filter(Boolean).join(" · ");
+    const normalizedQuantity = Math.max(1, Math.floor(quantity));
+    const itemName = product.name;
 
     setCart((current) => {
       const existing = current[cartKey];
@@ -764,7 +764,7 @@ export const PosV2SalesHomePage = () => {
           productId: product.id,
           name: itemName,
           price: basePrice,
-          quantity: (existing?.quantity ?? 0) + 1,
+          quantity: (existing?.quantity ?? 0) + normalizedQuantity,
           variantId: variant?.id ?? null,
           variantLabel,
           colorId: colorOption?.id ?? null,
@@ -822,6 +822,10 @@ export const PosV2SalesHomePage = () => {
       extras,
       selectedVariantKey: modalVariants[0] ? toCartKey(product.id, modalVariants[0].id) : null,
       selectedSizeId: null,
+      quantities: modalVariants.reduce<Record<string, number>>((accumulator, variant) => {
+        accumulator[toCartKey(product.id, variant.id)] = 1;
+        return accumulator;
+      }, {}),
     });
     setVariantModalError(null);
   };
@@ -882,7 +886,9 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
-    addToCartEntry(variantSelection.product, variant, null, selectedSize);
+    const selectedKey = variantSelection.selectedVariantKey ?? "";
+    const quantity = Math.max(1, Math.floor(variantSelection.quantities[selectedKey] ?? 1));
+    addToCartEntry(variantSelection.product, variant, quantity, null, selectedSize);
     setVariantSelection(null);
     setValidationError(null);
     setVariantModalError(null);
@@ -1189,15 +1195,21 @@ export const PosV2SalesHomePage = () => {
                     <div>
                       <p>{item.name}</p>
                       <small>
-                        ${item.price.toFixed(2)}
-                        {item.variantLabel ? ` · ${item.variantLabel}` : ""}
-                        {item.colorLabel ? ` · Color ${item.colorLabel}` : ""}
-                        {item.sizeLabel ? ` · Talla ${item.sizeLabel}` : ""}
+                        {[
+                          item.variantLabel,
+                          item.colorLabel ? `Color ${item.colorLabel}` : null,
+                          item.sizeLabel ? `Talla ${item.sizeLabel}` : null,
+                        ].filter(Boolean).join(" · ") || "Sin variante"}
                       </small>
                     </div>
                     <div className="pos-v2-sales-home__qty-controls">
-                      <button type="button" className="is-danger flex items-center justify-center" onClick={() => setQuantity(item.cartKey, 0)} aria-label={`Eliminar ${item.name} del carrito`}>
-                        <Trash width={14} height={14} fill="#b91c1c" />
+                      <button
+                        type="button"
+                        className="is-danger flex items-center justify-center"
+                        onClick={() => updateQuantity(item.cartKey, -1)}
+                        aria-label={item.quantity > 1 ? `Quitar una pieza de ${item.name}` : `Eliminar ${item.name} del carrito`}
+                      >
+                        {item.quantity > 1 ? "-1" : <Trash width={14} height={14} fill="#b91c1c" />}
                       </button>
                       <input
                         type="number"
@@ -1208,7 +1220,6 @@ export const PosV2SalesHomePage = () => {
                         aria-label={`Cantidad de ${item.name}`}
                       />
                       <button type="button" onClick={() => updateQuantity(item.cartKey, 1)}>+1</button>
-                      <button type="button" onClick={() => updateQuantity(item.cartKey, 10)}>+10</button>
                     </div>
                   </li>
                 ))}
@@ -1389,34 +1400,116 @@ export const PosV2SalesHomePage = () => {
             ) : null}
 
             <p className="pos-v2-sales-home__variant-section-label">Variantes disponibles</p>
-            <div className="pos-v2-sales-home__variant-options" role="listbox" aria-label="Variantes disponibles">
+            <div className="pos-v2-sales-home__variant-options" role="radiogroup" aria-label="Variantes disponibles">
               {variantSelection.variants.length > 0 ? variantSelection.variants
                 .map((variant) => {
                   const optionKey = toCartKey(variantSelection.product.id, variant.id);
                   const isActive = optionKey === variantSelection.selectedVariantKey;
+                  const quantity = Math.max(1, Math.floor(variantSelection.quantities[optionKey] ?? 1));
                   const chips = [variant.color, variant.size].filter(Boolean).join(" · ");
                   const stockLabel = variant.stock == null ? "Stock abierto" : `Stock ${variant.stock}`;
 
                   return (
-                    <button
+                    <label
                       key={optionKey}
-                      type="button"
-                      className={isActive ? "is-active" : ""}
-                      role="option"
-                      aria-selected={isActive}
-                      onClick={() => {
-                        setVariantSelection((current) => (current ? { ...current, selectedVariantKey: optionKey } : null));
-                        setVariantModalError(null);
-                      }}
+                      className={`pos-v2-sales-home__variant-option ${isActive ? "is-active" : ""}`}
                     >
-                      <strong>{variant.description || "Variante"}</strong>
-                      <small>{chips || "Sin atributos adicionales"}</small>
-                      <small>{stockLabel}</small>
-                      <span>${variant.price.toFixed(2)}</span>
-                    </button>
+                      <input
+                        type="radio"
+                        name="variant-selection"
+                        checked={isActive}
+                        onChange={() => {
+                          if (isActive) return;
+                          setVariantSelection((current) => (current ? { ...current, selectedVariantKey: optionKey } : null));
+                          setVariantModalError(null);
+                        }}
+                        aria-label={`Seleccionar variante ${variant.description || "Variante"}`}
+                      />
+                      <button
+                        type="button"
+                        className={isActive ? "is-active" : ""}
+                        onClick={() => {
+                          if (isActive) return;
+                          setVariantSelection((current) => (current ? { ...current, selectedVariantKey: optionKey } : null));
+                          setVariantModalError(null);
+                        }}
+                      >
+                        <strong>{variant.description || "Variante"}</strong>
+                        <small>{chips || "Sin atributos adicionales"}</small>
+                        <small>{stockLabel}</small>
+                        <span>${variant.price.toFixed(2)}</span>
+                      </button>
+                      <div className="pos-v2-sales-home__variant-row-qty" aria-label={`Cantidad para ${variant.description || "variante"}`}>
+                        <button
+                          type="button"
+                          className="is-secondary"
+                          onClick={() => {
+                            setVariantSelection((current) => {
+                              if (!current) return null;
+                              const currentQty = Math.max(1, Math.floor(current.quantities[optionKey] ?? 1));
+                              return {
+                                ...current,
+                                selectedVariantKey: optionKey,
+                                quantities: {
+                                  ...current.quantities,
+                                  [optionKey]: Math.max(1, currentQty - 1),
+                                },
+                              };
+                            });
+                          }}
+                        >
+                          -1
+                        </button>
+                        <input
+                          type="number"
+                          min="1"
+                          value={quantity}
+                          onChange={(event) => {
+                            const value = Number(event.target.value);
+                            setVariantSelection((current) => {
+                              if (!current) return null;
+                              return {
+                                ...current,
+                                selectedVariantKey: optionKey,
+                                quantities: {
+                                  ...current.quantities,
+                                  [optionKey]: Number.isFinite(value) && value > 0 ? Math.floor(value) : 1,
+                                },
+                              };
+                            });
+                          }}
+                        />
+                        <button
+                          type="button"
+                          className="is-secondary"
+                          onClick={() => {
+                            setVariantSelection((current) => {
+                              if (!current) return null;
+                              const currentQty = Math.max(1, Math.floor(current.quantities[optionKey] ?? 1));
+                              return {
+                                ...current,
+                                selectedVariantKey: optionKey,
+                                quantities: {
+                                  ...current.quantities,
+                                  [optionKey]: currentQty + 1,
+                                },
+                              };
+                            });
+                          }}
+                        >
+                          +1
+                        </button>
+                      </div>
+                    </label>
                   );
                 }) : <p className="pos-v2-sales-home__empty">Sin variantes: se agregará el producto base.</p>}
             </div>
+
+            <p className="pos-v2-sales-home__variant-selected">
+              Variante elegida: <strong>
+                {variantSelection.variants.find((item) => toCartKey(variantSelection.product.id, item.id) === variantSelection.selectedVariantKey)?.description ?? "Sin seleccionar"}
+              </strong>
+            </p>
 
             <footer>
               <button type="button" className="is-secondary" onClick={() => setVariantSelection(null)}>Cancelar</button>

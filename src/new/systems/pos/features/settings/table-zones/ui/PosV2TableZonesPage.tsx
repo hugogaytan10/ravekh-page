@@ -22,6 +22,10 @@ type TableVm = {
   chairs: number | null;
 };
 
+type DeleteTarget =
+  | { kind: "zone"; id: number; name: string }
+  | { kind: "table"; id: number; name: string };
+
 type ZoneApiResponse = {
   Id?: number;
   Name?: string;
@@ -85,6 +89,7 @@ export const PosV2TableZonesPage = () => {
   const [isZoneModalOpen, setIsZoneModalOpen] = useState(false);
   const [isQuickModalOpen, setIsQuickModalOpen] = useState(false);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
 
   const businessId = Number(businessIdInput);
   const cleanToken = token.trim();
@@ -185,6 +190,29 @@ export const PosV2TableZonesPage = () => {
     void loadTablesByZone(Number(selectedZoneId));
   }, [selectedZoneId, loadTablesByZone]);
 
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") {
+        return;
+      }
+      setIsZoneModalOpen(false);
+      setIsQuickModalOpen(false);
+      setIsTableModalOpen(false);
+      setDeleteTarget(null);
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  useEffect(() => {
+    if (!successMessage) {
+      return;
+    }
+    const timeout = window.setTimeout(() => setSuccessMessage(null), 3200);
+    return () => window.clearTimeout(timeout);
+  }, [successMessage]);
+
   const filteredZones = useMemo(() => {
     const term = searchZone.trim().toLowerCase();
     if (!term) {
@@ -206,18 +234,10 @@ export const PosV2TableZonesPage = () => {
     [zones, selectedZoneId],
   );
 
-  const handleSaveSession = () => {
-    if (!hasSession) {
-      setError("Necesitas token y business id válidos.");
-      return;
-    }
-
-    window.localStorage.setItem(TOKEN_KEY, cleanToken);
-    window.localStorage.setItem(BUSINESS_ID_KEY, String(businessId));
-    setSuccessMessage("Sesión conectada para gestión de zonas y mesas.");
-    setError(null);
-    loadZones();
-  };
+  const selectedZone = useMemo(
+    () => zones.find((zone) => String(zone.id) === selectedZoneId) ?? null,
+    [zones, selectedZoneId],
+  );
 
   const handleToggleTableOrders = async () => {
     if (!hasSession) {
@@ -457,6 +477,18 @@ export const PosV2TableZonesPage = () => {
 
   const isLoading = loadingZones || loadingTables;
 
+  const handleConfirmDelete = async () => {
+    if (!deleteTarget) {
+      return;
+    }
+    if (deleteTarget.kind === "zone") {
+      await handleDeleteZone(deleteTarget.id);
+    } else {
+      await handleDeleteTable(deleteTarget.id);
+    }
+    setDeleteTarget(null);
+  };
+
   return (
     <PosV2Shell title="Mesas" subtitle="Configuración v2 de mesas desacoplada del legacy">
       <section className="pos-v2-table-zones">
@@ -473,77 +505,94 @@ export const PosV2TableZonesPage = () => {
         {error ? <p className="pos-v2-table-zones__error" role="alert" aria-live="assertive">{error}</p> : null}
         {successMessage ? <p className="pos-v2-table-zones__success" role="status" aria-live="polite">{successMessage}</p> : null}
 
-        <section className="pos-v2-table-zones__session" aria-label="Estado de sesión">
-          <article>
-            <h3>Sesión actual</h3>
-            <p>{hasSession ? `Negocio #${businessId} conectado` : "Sin sesión activa"}</p>
-          </article>
-          <button type="button" className="is-secondary-chip" onClick={handleSaveSession} disabled={saving || !hasSession}>
-            Sincronizar
-          </button>
-        </section>
-
-        <section className="pos-v2-table-zones__controls">
-          <article>
-            <h3>Pedidos con mesa</h3>
-            <p>{isTableOrderEnabled ? "Activo" : "Inactivo"}</p>
-            <button type="button" onClick={handleToggleTableOrders} disabled={saving || !hasSession}>
-              {isTableOrderEnabled ? "Desactivar" : "Activar"}
+        <section className="pos-v2-table-zones__toolbar">
+          <article className="pos-v2-table-zones__status">
+            <span className={`is-pill ${isTableOrderEnabled ? "is-active" : "is-inactive"}`}>
+              Pedidos con mesa: {isTableOrderEnabled ? "Activo" : "Inactivo"}
+            </span>
+            <span className="is-pill">Negocio #{hasSession ? businessId : "sin sesión"}</span>
+            <button type="button" className="is-secondary-chip" onClick={handleToggleTableOrders} disabled={saving || !hasSession}>
+              {isTableOrderEnabled ? "Desactivar pedidos con mesa" : "Activar pedidos con mesa"}
             </button>
           </article>
-
-          <article>
-            <h3>Resumen</h3>
-            <p>Zonas: <strong>{zones.length}</strong></p>
-            <p>Mesas en zona seleccionada: <strong>{tables.length}</strong></p>
-            <p>Zona activa: <strong>{selectedZoneName}</strong></p>
-          </article>
-
           <article className="pos-v2-table-zones__quick-actions">
-            <h3>Acciones rápidas</h3>
-            <div>
-              <button type="button" className="is-secondary-chip" aria-label="Crear nueva zona" onClick={() => { setZoneEditId(null); setZoneName(""); setIsZoneModalOpen(true); }}>
-                + Nueva zona
-              </button>
-              <button type="button" className="is-secondary-chip" aria-label="Crear zona con mesas automáticamente" onClick={() => setIsQuickModalOpen(true)}>
-                + Zona con mesas
-              </button>
-              <button type="button" className="is-secondary-chip" aria-label="Crear nueva mesa en la zona seleccionada" onClick={() => { setTableEditId(null); setTableName(""); setTableChairs("4"); setIsTableModalOpen(true); }} disabled={!selectedZoneId}>
-                + Nueva mesa
-              </button>
-            </div>
+            <button type="button" className="is-secondary-chip" aria-label="Crear nueva zona" onClick={() => { setZoneEditId(null); setZoneName(""); setIsZoneModalOpen(true); }}>
+              + Nueva zona
+            </button>
+            <button type="button" className="is-secondary-chip" aria-label="Crear zona con mesas automáticamente" onClick={() => setIsQuickModalOpen(true)}>
+              + Zona con mesas
+            </button>
+            <button type="button" className="is-secondary-chip" aria-label="Crear nueva mesa en la zona seleccionada" onClick={() => { setTableEditId(null); setTableName(""); setTableChairs("4"); setIsTableModalOpen(true); }} disabled={!selectedZoneId}>
+              + Nueva mesa
+            </button>
           </article>
         </section>
 
-        <section className="pos-v2-table-zones__list">
+        <section className="pos-v2-table-zones__stats">
+          <article>
+            <span>Zonas</span>
+            <strong>{zones.length}</strong>
+          </article>
+          <article>
+            <span>Mesas en zona</span>
+            <strong>{tables.length}</strong>
+          </article>
+          <article>
+            <span>Zona activa</span>
+            <strong>{selectedZoneName}</strong>
+          </article>
+        </section>
+
+        <section className="pos-v2-table-zones__board">
+          <section className="pos-v2-table-zones__list">
           <header>
-            <h3>Listado de zonas</h3>
-            <input value={searchZone} onChange={(event) => setSearchZone(event.target.value)} placeholder="Buscar zona" aria-label="Buscar zona" />
+            <div>
+              <h3>Listado de zonas</h3>
+              <p className="pos-v2-table-zones__list-helper">Selecciona una zona para administrar sus mesas.</p>
+            </div>
+            <div className="pos-v2-table-zones__search">
+              <input value={searchZone} onChange={(event) => setSearchZone(event.target.value)} placeholder="Buscar zona" aria-label="Buscar zona" />
+              {searchZone ? <button type="button" className="is-secondary-chip" onClick={() => setSearchZone("")}>Limpiar</button> : null}
+            </div>
           </header>
           <ul>
             {loadingZones ? (
               <li className="is-skeleton" aria-hidden="true"><span /><span /><span /></li>
             ) : null}
             {!loadingZones && filteredZones.length === 0 ? <li className="is-empty">Sin zonas registradas.</li> : filteredZones.map((zone) => (
-              <li key={zone.id} className={zoneEditId === zone.id ? "is-editing" : ""}>
+              <li key={zone.id} className={selectedZoneId === String(zone.id) ? "is-editing" : ""}>
                 <div>
                   <strong>{zone.name}</strong>
                   <span>{zone.isActive ? "Activa" : "Inactiva"} · ID {zone.id}</span>
                 </div>
                 <div className="pos-v2-table-zones__actions">
-                  <button type="button" className="is-secondary-chip" onClick={() => setSelectedZoneId(String(zone.id))}>Ver mesas</button>
+                  <button type="button" className="is-secondary-chip" onClick={() => setSelectedZoneId(String(zone.id))}>{selectedZoneId === String(zone.id) ? "Seleccionada" : "Ver mesas"}</button>
                   <button type="button" className="is-secondary-chip" onClick={() => { setZoneEditId(zone.id); setZoneName(zone.name); setIsZoneModalOpen(true); }}>Editar</button>
-                  <button type="button" className="is-danger" onClick={() => handleDeleteZone(zone.id)} disabled={saving}>Eliminar</button>
+                  <button type="button" className="is-danger" onClick={() => setDeleteTarget({ kind: "zone", id: zone.id, name: zone.name })} disabled={saving}>Eliminar</button>
                 </div>
               </li>
             ))}
           </ul>
-        </section>
+          </section>
 
-        <section className="pos-v2-table-zones__list">
+          <section className="pos-v2-table-zones__list">
           <header>
-            <h3>Listado de mesas por zona</h3>
-            <input value={searchTable} onChange={(event) => setSearchTable(event.target.value)} placeholder="Buscar mesa" aria-label="Buscar mesa" />
+            <div>
+              <h3>Listado de mesas por zona</h3>
+              <p className="pos-v2-table-zones__list-helper">Zona actual: <strong>{selectedZoneName}</strong></p>
+            </div>
+            <div className="pos-v2-table-zones__search is-stack-on-mobile">
+              <select
+                value={selectedZoneId}
+                onChange={(event) => setSelectedZoneId(event.target.value)}
+                aria-label="Seleccionar zona para ver mesas"
+              >
+                <option value="">Selecciona zona</option>
+                {zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.name}</option>)}
+              </select>
+              <input value={searchTable} onChange={(event) => setSearchTable(event.target.value)} placeholder="Buscar mesa" aria-label="Buscar mesa" />
+              {searchTable ? <button type="button" className="is-secondary-chip" onClick={() => setSearchTable("")}>Limpiar</button> : null}
+            </div>
           </header>
 
           <ul>
@@ -568,17 +617,19 @@ export const PosV2TableZonesPage = () => {
                   >
                     Editar
                   </button>
-                  <button type="button" className="is-danger" onClick={() => handleDeleteTable(table.id)} disabled={saving}>Eliminar</button>
+                  <button type="button" className="is-danger" onClick={() => setDeleteTarget({ kind: "table", id: table.id, name: table.name })} disabled={saving}>Eliminar</button>
                 </div>
               </li>
             ))}
           </ul>
+          </section>
         </section>
 
         {isZoneModalOpen ? (
           <section className="pos-v2-table-zones__modal" role="dialog" aria-modal="true" aria-label="Editar o crear zona" onClick={() => setIsZoneModalOpen(false)}>
             <form className="pos-v2-table-zones__modal-card" onClick={(event) => event.stopPropagation()} onSubmit={handleSubmitZone}>
               <h3>{zoneEditId ? `Editar zona #${zoneEditId}` : "Crear zona"}</h3>
+              <p className="pos-v2-table-zones__modal-helper">Las zonas te ayudan a organizar las mesas por área del local.</p>
               <label>
                 Nombre de zona
                 <input value={zoneName} onChange={(event) => setZoneName(sanitizeName(event.target.value))} placeholder="Ej. Terraza" maxLength={50} />
@@ -595,6 +646,7 @@ export const PosV2TableZonesPage = () => {
           <section className="pos-v2-table-zones__modal" role="dialog" aria-modal="true" aria-label="Crear zona con mesas" onClick={() => setIsQuickModalOpen(false)}>
             <form className="pos-v2-table-zones__modal-card" onClick={(event) => event.stopPropagation()} onSubmit={handleCreateZoneWithTables}>
               <h3>Alta rápida de zona</h3>
+              <p className="pos-v2-table-zones__modal-helper">Crea una zona y varias mesas disponibles en un solo paso.</p>
               <label>
                 Nombre de zona
                 <input value={quickZoneName} onChange={(event) => setQuickZoneName(sanitizeName(event.target.value))} placeholder="Ej. Salón principal" maxLength={50} />
@@ -615,6 +667,7 @@ export const PosV2TableZonesPage = () => {
           <section className="pos-v2-table-zones__modal" role="dialog" aria-modal="true" aria-label="Editar o crear mesa" onClick={() => setIsTableModalOpen(false)}>
             <form className="pos-v2-table-zones__modal-card" onClick={(event) => event.stopPropagation()} onSubmit={handleSubmitTable}>
               <h3>{tableEditId ? `Editar mesa #${tableEditId}` : "Crear mesa"}</h3>
+              <p className="pos-v2-table-zones__modal-helper">Zona seleccionada: <strong>{selectedZone?.name ?? "Sin zona"}</strong></p>
               <label>
                 Zona de mesa
                 <select value={selectedZoneId} onChange={(event) => setSelectedZoneId(event.target.value)}>
@@ -635,6 +688,23 @@ export const PosV2TableZonesPage = () => {
                 <button type="submit" disabled={saving || !hasSession}>{saving ? "Guardando..." : "Guardar mesa"}</button>
               </div>
             </form>
+          </section>
+        ) : null}
+
+        {deleteTarget ? (
+          <section className="pos-v2-table-zones__modal" role="dialog" aria-modal="true" aria-label="Confirmar eliminación" onClick={() => setDeleteTarget(null)}>
+            <article className="pos-v2-table-zones__modal-card" onClick={(event) => event.stopPropagation()}>
+              <h3>Confirmar eliminación</h3>
+              <p className="pos-v2-table-zones__modal-helper">
+                ¿Seguro que deseas eliminar {deleteTarget.kind === "zone" ? "la zona" : "la mesa"} <strong>{deleteTarget.name}</strong>? Esta acción no se puede deshacer.
+              </p>
+              <div className="pos-v2-table-zones__modal-actions">
+                <button type="button" className="is-secondary-chip" onClick={() => setDeleteTarget(null)}>Cancelar</button>
+                <button type="button" className="is-danger" onClick={handleConfirmDelete} disabled={saving}>
+                  {saving ? "Eliminando..." : "Sí, eliminar"}
+                </button>
+              </div>
+            </article>
           </section>
         ) : null}
       </section>
