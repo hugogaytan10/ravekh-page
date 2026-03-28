@@ -22,8 +22,6 @@ type EmployeeVm = {
 const ROLE_OPTIONS: Array<{ value: EmployeeRole; label: string; description: string }> = [
   { value: "manager", label: "Gerente", description: "Gestiona ventas, inventario y clientes con acceso financiero." },
   { value: "staff", label: "Ayudante", description: "Opera ventas y tareas base sin permisos administrativos avanzados." },
-  { value: "cashier", label: "Cajero", description: "Enfocado en cobro y operación de caja." },
-  { value: "admin", label: "Administrador", description: "Control total de módulos y configuración." },
 ];
 
 const getRoleLabel = (role: EmployeeRole): string => ROLE_OPTIONS.find((option) => option.value === role)?.label ?? "Sin rol";

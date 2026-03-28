@@ -3,12 +3,18 @@ import { IEmployeeRepository } from "../interface/IEmployeeRepository";
 import { Employee, EmployeeRole, UpsertEmployeeDto } from "../model/Employee";
 
 type EmployeeResponse = {
-  Id: number;
-  Business_Id: number;
-  Name: string;
-  Email: string;
-  Role: string | null;
-  IsActive: number | boolean | null;
+  Id?: number;
+  id?: number;
+  Business_Id?: number;
+  businessId?: number;
+  Name?: string;
+  name?: string;
+  Email?: string;
+  email?: string;
+  Role?: string | null;
+  role?: string | null;
+  IsActive?: number | boolean | null;
+  isActive?: number | boolean | null;
 };
 
 export class PosEmployeeApi implements IEmployeeRepository {
@@ -35,25 +41,25 @@ export class PosEmployeeApi implements IEmployeeRepository {
   }
 
   async create(payload: UpsertEmployeeDto, token: string): Promise<Employee> {
-    const response = await this.httpClient.request<EmployeeResponse>({
+    const response = await this.httpClient.request<EmployeeResponse | null>({
       method: "POST",
       path: "employee",
       token,
       body: this.toApiPayload(payload),
     });
 
-    return this.toDomain(response);
+    return this.toDomain(response, payload);
   }
 
   async update(employeeId: number, payload: UpsertEmployeeDto, token: string): Promise<Employee> {
-    const response = await this.httpClient.request<EmployeeResponse>({
+    const response = await this.httpClient.request<EmployeeResponse | null>({
       method: "PUT",
       path: `employee/${employeeId}`,
       token,
       body: this.toApiPayload(payload),
     });
 
-    return this.toDomain(response);
+    return this.toDomain(response, payload, employeeId);
   }
 
   async delete(employeeId: number, token: string): Promise<void> {
@@ -70,20 +76,26 @@ export class PosEmployeeApi implements IEmployeeRepository {
       Name: payload.name,
       Email: payload.email,
       Role: this.toApiRole(payload.role),
-      IsActive: payload.isActive ?? true,
       Password: payload.password?.trim() ? payload.password.trim() : undefined,
       Pin: payload.pin?.trim() ? payload.pin.trim() : undefined,
     };
   }
 
-  private toDomain(response: EmployeeResponse): Employee {
+  private toDomain(response: EmployeeResponse | null, fallback?: UpsertEmployeeDto, employeeIdFallback = 0): Employee {
+    const id = Number(response?.Id ?? response?.id ?? employeeIdFallback);
+    const businessId = Number(response?.Business_Id ?? response?.businessId ?? fallback?.businessId ?? 0);
+    const name = (response?.Name ?? response?.name ?? fallback?.name ?? "").trim();
+    const email = (response?.Email ?? response?.email ?? fallback?.email ?? "").trim();
+    const role = this.toRole(response?.Role ?? response?.role ?? fallback?.role ?? "staff");
+    const isActive = response?.IsActive ?? response?.isActive ?? fallback?.isActive ?? true;
+
     return new Employee(
-      response.Id,
-      response.Business_Id,
-      response.Name,
-      response.Email,
-      this.toRole(response.Role),
-      response.IsActive === true || response.IsActive === 1,
+      Number.isFinite(id) ? id : 0,
+      Number.isFinite(businessId) ? businessId : 0,
+      name,
+      email,
+      role,
+      isActive === true || isActive === 1,
     );
   }
 
@@ -95,11 +107,11 @@ export class PosEmployeeApi implements IEmployeeRepository {
     }
 
     if (normalized === "admin" || normalized === "administrador") {
-      return "admin";
+      return "manager";
     }
 
     if (normalized === "cashier" || normalized === "cajero") {
-      return "cashier";
+      return "staff";
     }
 
     return "staff";
@@ -109,13 +121,13 @@ export class PosEmployeeApi implements IEmployeeRepository {
     switch (role) {
       case "manager":
         return "GERENTE";
-      case "staff":
-        return "AYUDANTE";
-      case "cashier":
-        return "CAJERO";
       case "admin":
+        return "GERENTE";
+      case "staff":
+      case "cashier":
+        return "AYUDANTE";
       default:
-        return "ADMIN";
+        return "AYUDANTE";
     }
   }
 }

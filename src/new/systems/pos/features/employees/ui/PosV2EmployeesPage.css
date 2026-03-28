@@ -200,27 +200,28 @@
 }
 
 :root[data-theme="dark"] .pos-v2-employees {
-  --card-bg: #111827;
-  --card-border: #374151;
-  --text-muted: #9ca3af;
-  --input-bg: #0f172a;
+  --card-bg: rgba(25, 15, 46, 0.88);
+  --card-border: rgba(124, 58, 237, 0.36);
+  --text-muted: #c4b5fd;
+  --input-bg: rgba(15, 23, 42, 0.92);
 }
 
 :root[data-theme="dark"] .pos-v2-employees button {
-  background: #1f2937;
-  border-color: #4b5563;
-  color: #f9fafb;
+  background: rgba(30, 41, 59, 0.84);
+  border-color: rgba(124, 58, 237, 0.36);
+  color: #f5f3ff;
 }
 
 :root[data-theme="dark"] .pos-v2-employees button.is-danger {
-  background: #3f1d2e;
-  border-color: #9f1239;
+  background: rgba(127, 29, 29, 0.35);
+  border-color: rgba(244, 114, 182, 0.45);
   color: #fecdd3;
 }
 
 :root[data-theme="dark"] .pos-v2-employees button.is-primary {
-  background: linear-gradient(135deg, #5b21b6 0%, #6d28d9 100%);
-  border-color: #8b5cf6;
+  background: linear-gradient(135deg, #6d28d9 0%, #9333ea 55%, #a855f7 100%);
+  border-color: #c4b5fd;
+  box-shadow: 0 10px 28px rgba(91, 33, 182, 0.35);
 }
 
 :root[data-theme="dark"] .pos-v2-employees__help {
@@ -228,7 +229,12 @@
 }
 
 :root[data-theme="dark"] .pos-v2-employees__error {
-  background: #3f1d1d;
-  border-color: #7f1d1d;
+  background: rgba(127, 29, 29, 0.35);
+  border-color: rgba(244, 114, 182, 0.42);
   color: #fecaca;
+}
+
+:root[data-theme="dark"] .pos-v2-employees__modal {
+  background: rgba(5, 2, 12, .72);
+  backdrop-filter: blur(8px);
 }
