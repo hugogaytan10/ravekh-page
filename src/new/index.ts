@@ -19,6 +19,7 @@ import { PosTableZoneApi } from "./systems/pos/features/settings/table-zones/api
 import { PosSalesTaxApi } from "./systems/pos/features/settings/tax/api/PosSalesTaxApi";
 import { PosPaymentMethodApi } from "./systems/pos/features/settings/payment-methods/api/PosPaymentMethodApi";
 import { PosBrandingApi } from "./systems/pos/features/settings/branding/api/PosBrandingApi";
+import { PosStripeConnectApi } from "./systems/pos/features/settings/stripe-connect/api/PosStripeConnectApi";
 import { PosHealthApi } from "./systems/pos/features/health/api/PosHealthApi";
 import {
   AuthOnboardingPage,
@@ -57,6 +58,8 @@ import {
   PaymentMethodService,
   BrandingCustomizationPage,
   BrandingService,
+  StripeConnectManagementPage,
+  StripeConnectService,
   HealthPage,
   HealthService,
 } from "./systems/pos";
@@ -212,6 +215,15 @@ export class ModernSystemsFactory {
 
   createPosBrandingPage(): BrandingCustomizationPage {
     return new BrandingCustomizationPage(this.createPosBrandingService());
+  }
+
+
+  createPosStripeConnectService(): StripeConnectService {
+    return new StripeConnectService(new PosStripeConnectApi(this.httpClient));
+  }
+
+  createPosStripeConnectPage(): StripeConnectManagementPage {
+    return new StripeConnectManagementPage(this.createPosStripeConnectService());
   }
 
   createPosHealthService(): HealthService {

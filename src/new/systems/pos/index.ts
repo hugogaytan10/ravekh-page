@@ -35,6 +35,8 @@ export * from "./features/settings/payment-methods/pages/PaymentMethodManagement
 export * from "./features/settings/payment-methods/services/PaymentMethodService";
 export * from "./features/settings/branding/pages/BrandingCustomizationPage";
 export * from "./features/settings/branding/services/BrandingService";
+export * from "./features/settings/stripe-connect/pages/StripeConnectManagementPage";
+export * from "./features/settings/stripe-connect/services/StripeConnectService";
 
 export * from "./features/health/pages/HealthPage";
 export * from "./features/health/services/HealthService";

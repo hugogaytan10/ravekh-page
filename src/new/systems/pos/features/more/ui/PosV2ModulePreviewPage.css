@@ -199,6 +199,22 @@
   min-height: 40px;
 }
 
+.pos-v2-module-preview__actions-inline {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pos-v2-module-preview__actions-inline button {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #0f172a;
+  border-radius: 10px;
+  padding: 0.5rem 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .pos-v2-module-preview__switch {
   display: inline-flex;
   align-items: center;
@@ -276,6 +292,12 @@
 }
 
 :root[data-theme="dark"] .pos-v2-module-preview__color-field strong {
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-module-preview__actions-inline button {
+  background: #0f172a;
+  border-color: #475569;
   color: #f8fafc;
 }
 :root[data-theme="dark"] .pos-v2-module-preview__inputs select,

@@ -33,6 +33,10 @@ export const MODULE_BETA_ACTIONS: Record<string, ModuleBetaAction> = {
     requiresBusinessId: true,
     run: ({ businessId, token }, factory) => factory.createPosPaymentMethodPage().getViewModel(businessId, token),
   },
+  "stripe-connect": {
+    requiresBusinessId: true,
+    run: ({ token }, factory) => factory.createPosStripeConnectPage().getConfig(token),
+  },
   exports: {
     requiresBusinessId: true,
     run: ({ businessId, token }, factory) => factory.createPosExportReportPage().load(businessId, "products", "month", token),

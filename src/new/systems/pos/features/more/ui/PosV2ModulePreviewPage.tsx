@@ -54,6 +54,11 @@ const PREVIEW_MODULES: Record<string, PreviewData> = {
     description: "Configura qué métodos estarán disponibles para cobrar en POS v2.",
     eta: "Disponible en POS moderno",
   },
+  "stripe-connect": {
+    title: "Stripe Connect",
+    description: "Conecta y administra tu cuenta de Stripe para recibir cobros.",
+    eta: "Disponible en POS moderno",
+  },
 };
 
 export const PosV2ModulePreviewPage = () => {
@@ -95,6 +100,12 @@ export const PosV2ModulePreviewPage = () => {
     globallyEnabled: boolean;
     options: Array<{ type: "cash" | "card" | "online"; label: string; enabled: boolean; locked: boolean }>;
   } | null>(null);
+  const [stripeLoading, setStripeLoading] = useState(false);
+  const [stripeSaving, setStripeSaving] = useState(false);
+  const [stripeError, setStripeError] = useState("");
+  const [stripeSuccess, setStripeSuccess] = useState("");
+  const [stripeConfig, setStripeConfig] = useState<{ enabled?: boolean; publishableKey?: string; accountId?: string | null } | null>(null);
+  const [stripeAccountId, setStripeAccountId] = useState<string>("");
   const [brandingLoading, setBrandingLoading] = useState(false);
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [brandingSuccess, setBrandingSuccess] = useState("");
@@ -247,11 +258,33 @@ export const PosV2ModulePreviewPage = () => {
       }
     };
 
+    const loadStripeConnect = async () => {
+      if (moduleId !== "stripe-connect") return;
+      setStripeLoading(true);
+      setStripeError("");
+      setStripeSuccess("");
+      try {
+        const config = await factory.createPosStripeConnectPage().getConfig(token);
+        const configAccountId = typeof config.accountId === "string" ? config.accountId : "";
+        setStripeConfig({
+          enabled: typeof config.enabled === "boolean" ? config.enabled : undefined,
+          publishableKey: typeof config.publishableKey === "string" ? config.publishableKey : undefined,
+          accountId: configAccountId || null,
+        });
+        setStripeAccountId(configAccountId);
+      } catch (cause) {
+        setStripeError(cause instanceof Error ? cause.message : "No fue posible cargar configuración de Stripe.");
+      } finally {
+        setStripeLoading(false);
+      }
+    };
+
     loadTax();
     loadExportPreview();
     loadCashClosing();
     loadPaymentMethods();
     loadBranding();
+    loadStripeConnect();
   }, [factory, moduleId, businessIdInput, token, employeeIdInput, exportScope, exportPeriod]);
 
   const saveTax = async (event: FormEvent<HTMLFormElement>) => {
@@ -348,6 +381,64 @@ export const PosV2ModulePreviewPage = () => {
     }
   };
 
+  const createStripeAccount = async () => {
+    const businessId = Number(businessIdInput);
+    setStripeSaving(true);
+    setStripeError("");
+    setStripeSuccess("");
+    try {
+      const account = await factory.createPosStripeConnectPage().ensureConnectedAccount(businessId, token);
+      setStripeAccountId(account.connectedAccountId);
+      setStripeConfig((current) => ({
+        enabled: current?.enabled,
+        publishableKey: current?.publishableKey,
+        accountId: account.connectedAccountId,
+      }));
+      setStripeSuccess("Cuenta de Stripe Connect creada correctamente.");
+    } catch (cause) {
+      setStripeError(cause instanceof Error ? cause.message : "No fue posible crear la cuenta conectada.");
+    } finally {
+      setStripeSaving(false);
+    }
+  };
+
+  const createStripeLink = async (type: "account_onboarding" | "account_update") => {
+    const businessId = Number(businessIdInput);
+    const connectedAccountId = stripeAccountId.trim() || (stripeConfig?.accountId ?? "").trim();
+    if (!connectedAccountId) {
+      setStripeError("Primero crea o captura un connectedAccountId.");
+      return;
+    }
+
+    const fallbackPath = POS_V2_PATHS.morePreview("stripe-connect");
+    const defaultUrl = typeof window !== "undefined" ? `${window.location.origin}${fallbackPath}` : fallbackPath;
+
+    setStripeSaving(true);
+    setStripeError("");
+    setStripeSuccess("");
+    try {
+      const link = await factory.createPosStripeConnectPage().buildOnboardingLink(
+        {
+          connectedAccountId,
+          businessId,
+          type,
+          refreshUrl: defaultUrl,
+          returnUrl: defaultUrl,
+        },
+        token,
+      );
+      setStripeAccountId(connectedAccountId);
+      if (typeof window !== "undefined" && link.url) {
+        window.open(link.url, "_blank", "noopener,noreferrer");
+      }
+      setStripeSuccess(type === "account_update" ? "Link de actualización generado." : "Link de onboarding generado.");
+    } catch (cause) {
+      setStripeError(cause instanceof Error ? cause.message : "No fue posible generar el link de Stripe.");
+    } finally {
+      setStripeSaving(false);
+    }
+  };
+
   return (
     <PosV2Shell title={data.title} subtitle="Vista previa de módulo POS v2">
       <section className="pos-v2-module-preview">
@@ -356,7 +447,7 @@ export const PosV2ModulePreviewPage = () => {
         {moduleId !== "business" ? <p className="pos-v2-module-preview__eta">Entrega estimada: {data.eta}</p> : null}
         {moduleId !== "business" && data.warning ? <p className="pos-v2-module-preview__warning">⚠️ {data.warning}</p> : null}
 
-        {modulePage.supportsInlineExecution(moduleId) && !["payment-methods", "business"].includes(moduleId) ? (
+        {modulePage.supportsInlineExecution(moduleId) && !["payment-methods", "business", "stripe-connect"].includes(moduleId) ? (
           <section className="pos-v2-module-preview__beta">
             <h3>Funciones beta disponibles</h3>
             <p>Ejecuta una lectura real del módulo para validar funcionalidad.</p>
@@ -555,6 +646,42 @@ export const PosV2ModulePreviewPage = () => {
                       </label>
                     </article>
                   ))}
+                </div>
+              </div>
+            ) : null}
+          </section>
+        ) : null}
+
+        {moduleId === "stripe-connect" ? (
+          <section className="pos-v2-module-preview__beta">
+            <h3>Stripe Connect</h3>
+            {stripeLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
+            {stripeError ? <p className="pos-v2-module-preview__error">{stripeError}</p> : null}
+            {stripeSuccess ? <p className="pos-v2-module-preview__ok">{stripeSuccess}</p> : null}
+            {!stripeLoading ? (
+              <div className="pos-v2-module-preview__form">
+                <div className="pos-v2-module-preview__kv">
+                  <p><strong>Habilitado:</strong> {stripeConfig?.enabled ? "Sí" : "No"}</p>
+                  <p><strong>Publishable key:</strong> {stripeConfig?.publishableKey ? "Configurada" : "No configurada"}</p>
+                </div>
+                <label className="pos-v2-module-preview__floating-field">
+                  <input
+                    value={stripeAccountId}
+                    onChange={(event) => setStripeAccountId(event.target.value)}
+                    placeholder=" "
+                  />
+                  <span>Connected Account ID</span>
+                </label>
+                <div className="pos-v2-module-preview__actions-inline">
+                  <button type="button" onClick={createStripeAccount} disabled={stripeSaving}>
+                    {stripeSaving ? "Procesando..." : "Crear cuenta conectada"}
+                  </button>
+                  <button type="button" onClick={() => createStripeLink("account_onboarding")} disabled={stripeSaving}>
+                    Generar onboarding
+                  </button>
+                  <button type="button" onClick={() => createStripeLink("account_update")} disabled={stripeSaving}>
+                    Actualizar cuenta
+                  </button>
                 </div>
               </div>
             ) : null}
