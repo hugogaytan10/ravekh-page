@@ -30,14 +30,15 @@ export class RewardsManagementPage {
 
   async createCoupon(
     businessId: number,
-    payload: { qr: string; description: string; maxRedemptions: number },
+    payload: { qr: string; description: string; maxRedemptions: number; valid?: string },
     token: string,
-  ): Promise<{ id: number; qr: string; description: string; maxRedemptions: number }> {
+  ): Promise<{ id: number; qr: string; description: string; maxRedemptions: number; valid: string }> {
     const coupon = await this.service.createCoupon({
       businessId,
       qr: payload.qr,
       description: payload.description,
       maxRedemptions: payload.maxRedemptions,
+      valid: payload.valid,
     }, token);
 
     return {
@@ -45,6 +46,7 @@ export class RewardsManagementPage {
       qr: coupon.qr,
       description: coupon.description,
       maxRedemptions: coupon.maxRedemptions,
+      valid: coupon.valid,
     };
   }
 

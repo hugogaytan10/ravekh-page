@@ -100,6 +100,13 @@ export const PosV2ModulePreviewPage = () => {
     globallyEnabled: boolean;
     options: Array<{ type: "cash" | "card" | "online"; label: string; enabled: boolean; locked: boolean }>;
   } | null>(null);
+  const [businessStatus, setBusinessStatus] = useState<{
+    name: string;
+    plan: string;
+    phone: string;
+    address: string;
+    chargesEnabled: boolean;
+  } | null>(null);
   const [stripeLoading, setStripeLoading] = useState(false);
   const [stripeSaving, setStripeSaving] = useState(false);
   const [stripeError, setStripeError] = useState("");
@@ -280,12 +287,36 @@ export const PosV2ModulePreviewPage = () => {
       }
     };
 
+    const loadBusinessStatus = async () => {
+      if (!["payment-methods", "business", "stripe-connect"].includes(moduleId)) return;
+      try {
+        const response = await fetch(new URL(`business/${businessId}`, API_BASE_URL).toString(), {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) return;
+        const payload = await response.json() as Record<string, unknown>;
+        setBusinessStatus({
+          name: String(payload.Name ?? payload.name ?? `Negocio #${businessId}`),
+          plan: String(payload.Plan ?? payload.plan ?? "No definido"),
+          phone: String(payload.PhoneNumber ?? payload.phoneNumber ?? "No disponible"),
+          address: String(payload.Address ?? payload.address ?? "No disponible"),
+          chargesEnabled: Number(payload.ChargesEnabled ?? payload.chargesEnabled ?? 0) === 1,
+        });
+      } catch {
+        setBusinessStatus(null);
+      }
+    };
+
     loadTax();
     loadExportPreview();
     loadCashClosing();
     loadPaymentMethods();
     loadBranding();
     loadStripeConnect();
+    loadBusinessStatus();
   }, [factory, moduleId, businessIdInput, token, employeeIdInput, exportScope, exportPeriod]);
 
   const saveTax = async (event: FormEvent<HTMLFormElement>) => {
@@ -354,6 +385,28 @@ export const PosV2ModulePreviewPage = () => {
       });
     } catch (cause) {
       setPaymentError(cause instanceof Error ? cause.message : "No fue posible actualizar método.");
+    } finally {
+      setPaymentSaving(false);
+    }
+  };
+
+  const toggleCardChargesEnabled = async (enabled: boolean) => {
+    const businessId = Number(businessIdInput);
+    setPaymentSaving(true);
+    setPaymentError("");
+    try {
+      const response = await fetch(new URL(`business/${businessId}`, API_BASE_URL).toString(), {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ ChargesEnabled: enabled ? 1 : 0 }),
+      });
+      if (!response.ok) throw new Error("No fue posible actualizar estado de tarjeta.");
+      setBusinessStatus((current) => (current ? { ...current, chargesEnabled: enabled } : current));
+    } catch (cause) {
+      setPaymentError(cause instanceof Error ? cause.message : "No fue posible actualizar método tarjeta.");
     } finally {
       setPaymentSaving(false);
     }
@@ -489,6 +542,15 @@ export const PosV2ModulePreviewPage = () => {
         {moduleId === "business" ? (
           <section className="pos-v2-module-preview__beta">
             <h3>Datos del negocio</h3>
+            {businessStatus ? (
+              <article className="pos-v2-module-preview__business-card">
+                <p><strong>{businessStatus.name}</strong></p>
+                <p>Plan: {businessStatus.plan}</p>
+                <p>Teléfono: {businessStatus.phone}</p>
+                <p>Dirección: {businessStatus.address}</p>
+                <p>Tarjeta: <span className={businessStatus.chargesEnabled ? "is-on" : "is-off"}>{businessStatus.chargesEnabled ? "Activa (ChargesEnabled=1)" : "Inactiva (ChargesEnabled=0)"}</span></p>
+              </article>
+            ) : null}
             <form className="pos-v2-module-preview__form" onSubmit={saveBranding}>
               {brandingLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /></div> : null}
               <div className="pos-v2-module-preview__inputs">
@@ -654,6 +716,9 @@ export const PosV2ModulePreviewPage = () => {
         {moduleId === "payment-methods" ? (
           <section className="pos-v2-module-preview__beta">
             <h3>Métodos de pago</h3>
+            <p className="pos-v2-module-preview__hint">
+              Se administra solo <strong>Efectivo</strong> y <strong>Tarjeta</strong>. Tarjeta usa el campo <strong>ChargesEnabled</strong> del negocio.
+            </p>
             {paymentLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
             {paymentError ? <p className="pos-v2-module-preview__error">{paymentError}</p> : null}
             {!paymentLoading && paymentSettings ? (
@@ -668,9 +733,9 @@ export const PosV2ModulePreviewPage = () => {
                   <span>Habilitar cobros en POS</span>
                 </label>
                 <div className="pos-v2-module-preview__table">
-                  {paymentSettings.options.map((option) => (
+                  {paymentSettings.options.filter((option) => option.type === "cash").map((option) => (
                     <article key={option.type} className="pos-v2-module-preview__row is-inline">
-                      <strong>{option.label}</strong>
+                      <strong>Efectivo</strong>
                       <label className="pos-v2-module-preview__switch">
                         <input
                           type="checkbox"
@@ -682,7 +747,22 @@ export const PosV2ModulePreviewPage = () => {
                       </label>
                     </article>
                   ))}
+                  <article className="pos-v2-module-preview__row is-inline">
+                    <strong>Tarjeta (Stripe)</strong>
+                    <label className="pos-v2-module-preview__switch">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(businessStatus?.chargesEnabled)}
+                        disabled={paymentSaving || !paymentSettings.globallyEnabled}
+                        onChange={(event) => toggleCardChargesEnabled(event.target.checked)}
+                      />
+                      <span>{businessStatus?.chargesEnabled ? "Activo · ya puede usar Stripe Connect" : "Inactivo · actívalo para usar Stripe Connect"}</span>
+                    </label>
+                  </article>
                 </div>
+                <button type="button" onClick={() => navigate(POS_V2_PATHS.morePreview("stripe-connect"))} disabled={!businessStatus?.chargesEnabled}>
+                  {businessStatus?.chargesEnabled ? "Ir a Stripe Connect" : "Activa tarjeta para continuar con Stripe"}
+                </button>
               </div>
             ) : null}
           </section>
@@ -699,6 +779,7 @@ export const PosV2ModulePreviewPage = () => {
                 <div className="pos-v2-module-preview__kv">
                   <p><strong>Habilitado:</strong> {stripeConfig?.enabled ? "Sí" : "No"}</p>
                   <p><strong>Publishable key:</strong> {stripeConfig?.publishableKey ? "Configurada" : "No configurada"}</p>
+                  <p><strong>Tarjeta (ChargesEnabled):</strong> {businessStatus?.chargesEnabled ? "Activa" : "Inactiva"}</p>
                 </div>
                 <label className="pos-v2-module-preview__floating-field">
                   <input
@@ -712,10 +793,10 @@ export const PosV2ModulePreviewPage = () => {
                   <button type="button" onClick={createStripeAccount} disabled={stripeSaving}>
                     {stripeSaving ? "Procesando..." : "Crear cuenta conectada"}
                   </button>
-                  <button type="button" onClick={() => createStripeLink("account_onboarding")} disabled={stripeSaving}>
+                  <button type="button" onClick={() => createStripeLink("account_onboarding")} disabled={stripeSaving || !businessStatus?.chargesEnabled}>
                     Generar onboarding
                   </button>
-                  <button type="button" onClick={() => createStripeLink("account_update")} disabled={stripeSaving}>
+                  <button type="button" onClick={() => createStripeLink("account_update")} disabled={stripeSaving || !businessStatus?.chargesEnabled}>
                     Actualizar cuenta
                   </button>
                 </div>

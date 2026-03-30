@@ -69,6 +69,7 @@ export class LoyaltyApi implements IRewardRepository {
         QR: payload.qr,
         Description: payload.description,
         LimitUsers: payload.maxRedemptions,
+        ...(payload.valid ? { Valid: payload.valid } : {}),
       },
     });
 

@@ -19,6 +19,7 @@ export interface CreateRewardCouponDto {
   qr: string;
   description: string;
   maxRedemptions: number;
+  valid?: string;
 }
 
 export class RewardVisit {

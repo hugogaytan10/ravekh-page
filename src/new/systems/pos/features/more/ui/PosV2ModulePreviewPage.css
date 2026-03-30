@@ -194,6 +194,23 @@
   display: grid;
   gap: 0.6rem;
 }
+.pos-v2-module-preview__hint {
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  padding: 0.6rem 0.7rem;
+  font-size: 0.82rem;
+  background: #fff;
+}
+.pos-v2-module-preview__business-card {
+  border: 1px solid #dbe4f0;
+  border-radius: 12px;
+  background: #fff;
+  padding: 0.7rem 0.8rem;
+  display: grid;
+  gap: 0.3rem;
+}
+.pos-v2-module-preview__business-card .is-on { color: #15803d; font-weight: 700; }
+.pos-v2-module-preview__business-card .is-off { color: #b91c1c; font-weight: 700; }
 
 .pos-v2-module-preview__form button {
   min-height: 40px;
@@ -418,6 +435,17 @@
 :root[data-theme="dark"] .pos-v2-module-preview__ok {
   color: #86efac !important;
 }
+:root[data-theme="dark"] .pos-v2-module-preview__hint {
+  border-color: #334155;
+  background: #0f172a;
+  color: #cbd5e1;
+}
+:root[data-theme="dark"] .pos-v2-module-preview__business-card {
+  border-color: #334155;
+  background: #0f172a;
+}
+:root[data-theme="dark"] .pos-v2-module-preview__business-card .is-on { color: #4ade80; }
+:root[data-theme="dark"] .pos-v2-module-preview__business-card .is-off { color: #fca5a5; }
 
 :root[data-theme="dark"] .pos-v2-module-preview__skeleton span {
   background: linear-gradient(90deg, #1f2937 25%, #334155 50%, #1f2937 75%);
