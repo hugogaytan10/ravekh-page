@@ -28,7 +28,7 @@ export const PosV2OnlineOrdersPage = () => {
   const [selectedOrder, setSelectedOrder] = useState<OnlineOrderCardViewModel | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [printingOrder, setPrintingOrder] = useState<OnlineOrderCardViewModel | null>(null);
-  const [toast, setToast] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [toast, setToast] = useState<{ type: "success" | "error" | "info"; message: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [orders, setOrders] = useState<OnlineOrderCardViewModel[]>([]);
   const [businessBranding, setBusinessBranding] = useState<{ name: string; logo: string }>({
@@ -55,6 +55,9 @@ export const PosV2OnlineOrdersPage = () => {
     try {
       const rows = await page.loadOrders(businessId, filter, token);
       setOrders(rows);
+      if (rows.length === 0 && !search.trim()) {
+        setToast({ type: "info", message: "Aún no tienes pedidos en línea." });
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No fue posible cargar pedidos en línea.");
       setOrders([]);
@@ -244,7 +247,7 @@ export const PosV2OnlineOrdersPage = () => {
                 </div>
               </li>
             ))}
-            {filteredOrders.length === 0 ? <li className="is-empty">No hay pedidos para el filtro actual.</li> : null}
+            {filteredOrders.length === 0 ? <li className="is-empty">Aún no tienes pedidos en línea.</li> : null}
           </ul>
         ) : null}
 

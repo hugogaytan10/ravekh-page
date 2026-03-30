@@ -21,13 +21,16 @@ export class PosEmployeeApi implements IEmployeeRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
   async listByBusiness(businessId: number, token: string): Promise<Employee[]> {
-    const response = await this.httpClient.request<EmployeeResponse[]>({
+    const response = await this.httpClient.request<
+      EmployeeResponse[] | { data?: EmployeeResponse[]; Data?: EmployeeResponse[]; employees?: EmployeeResponse[] } | null
+    >({
       method: "GET",
       path: `employee/business/${businessId}`,
       token,
     });
 
-    return response.map((item) => this.toDomain(item));
+    const rows = Array.isArray(response) ? response : response?.data ?? response?.Data ?? response?.employees ?? [];
+    return rows.map((item) => this.toDomain(item));
   }
 
   async getById(employeeId: number, token: string): Promise<Employee> {

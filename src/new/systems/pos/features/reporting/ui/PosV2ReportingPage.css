@@ -774,69 +774,6 @@
   background-size: 200% 100%;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .pos-v2-reporting {
-    --report-bg: #111827;
-    --report-soft-bg: #0f172a;
-    --report-border: #374151;
-    --report-muted: #cbd5e1;
-    --report-text: #f8fafc;
-    --report-overlay: rgba(2, 6, 23, 0.72);
-    --report-input-bg: #0f172a;
-    --report-progress-bg: #1f2937;
-    --report-point-bg: #0b1222;
-    --report-point-border: #334155;
-  }
-
-  :root:not([data-theme="light"]) .pos-v2-reporting label {
-    color: var(--report-muted);
-  }
-
-  :root:not([data-theme="light"]) .pos-v2-reporting__perf {
-    border-color: #475569;
-    background: rgba(15, 23, 42, 0.8);
-  }
-
-  :root:not([data-theme="light"]) .pos-v2-reporting__perf p {
-    color: #f8fafc;
-  }
-
-  :root:not([data-theme="light"]) .pos-v2-reporting__perf p span {
-    color: #cbd5e1;
-  }
-
-  :root:not([data-theme="light"]) .pos-v2-reporting__perf-winner {
-    border-top-color: #334155;
-  }
-
-  :root:not([data-theme="light"]) .pos-v2-reporting__back {
-    background: #1e293b !important;
-    color: #f8fafc !important;
-    border-color: #475569 !important;
-  }
-
-  :root:not([data-theme="light"]) .pos-v2-reporting__card li {
-    background: var(--report-point-bg);
-    border-color: var(--report-point-border);
-  }
-
-  :root:not([data-theme="light"]) .pos-v2-reporting__payment-tabs button {
-    background: #1f2937;
-    border-color: #4b5563;
-    color: #f3f4f6;
-  }
-
-  :root:not([data-theme="light"]) .pos-v2-reporting__stats article.is-skeleton span,
-  :root:not([data-theme="light"]) .pos-v2-reporting__stats article.is-skeleton strong,
-  :root:not([data-theme="light"]) .pos-v2-reporting__chart-skeleton,
-  :root:not([data-theme="light"]) .pos-v2-reporting__table-skeleton span,
-  :root:not([data-theme="light"]) .pos-v2-reporting__card-skeleton-title,
-  :root:not([data-theme="light"]) .pos-v2-reporting__card-skeleton-line {
-    background: linear-gradient(90deg, #1f2937 25%, #334155 50%, #1f2937 75%);
-    background-size: 200% 100%;
-  }
-}
-
 @keyframes pos-v2-skeleton {
   0% { background-position: 200% 0; }
   100% { background-position: -200% 0; }

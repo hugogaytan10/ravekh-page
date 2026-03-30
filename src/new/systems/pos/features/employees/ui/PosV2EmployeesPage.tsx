@@ -36,6 +36,7 @@ export const PosV2EmployeesPage = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const [openForm, setOpenForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<EmployeeVm | null>(null);
@@ -81,6 +82,9 @@ export const PosV2EmployeesPage = () => {
         role: employee.role,
         canAccessFinancialData: employee.canAccessFinancialData,
       })));
+      if (withoutCurrent.length === 0 && !search.trim()) {
+        setToast("Aún no tienes empleados.");
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No fue posible cargar empleados.");
       setEmployees([]);
@@ -88,6 +92,12 @@ export const PosV2EmployeesPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!toast) return;
+    const timeout = window.setTimeout(() => setToast(null), 2300);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
 
   useEffect(() => {
     loadEmployees();
@@ -184,6 +194,7 @@ export const PosV2EmployeesPage = () => {
         <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nombre, correo o rol" aria-label="Buscar empleados" />
 
         {error ? <p className="pos-v2-employees__error">{error}</p> : null}
+        {toast ? <p className="pos-v2-employees__toast" role="status">{toast}</p> : null}
         {loading ? <p>Cargando empleados...</p> : null}
 
         {!loading ? (
@@ -202,7 +213,7 @@ export const PosV2EmployeesPage = () => {
                 </div>
               </li>
             ))}
-            {employees.length === 0 ? <li className="is-empty">Sin empleados para mostrar.</li> : null}
+            {employees.length === 0 ? <li className="is-empty">Aún no tienes empleados.</li> : null}
           </ul>
         ) : null}
 

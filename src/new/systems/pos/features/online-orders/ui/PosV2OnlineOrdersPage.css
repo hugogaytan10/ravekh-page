@@ -195,6 +195,12 @@
   color: #991b1b;
 }
 
+.pos-v2-online-orders__toast.is-info {
+  border: 1px solid #bfdbfe;
+  background: #eff6ff;
+  color: #1d4ed8;
+}
+
 .pos-v2-online-orders__modal {
   position: fixed;
   inset: 0;
@@ -372,65 +378,15 @@
   color: #fecaca;
 }
 
+:root[data-theme="dark"] .pos-v2-online-orders__toast.is-info {
+  background: rgba(30, 58, 138, 0.35);
+  border-color: rgba(96, 165, 250, 0.45);
+  color: #bfdbfe;
+}
+
 :root[data-theme="dark"] .pos-v2-online-orders__skeletons span {
   background: linear-gradient(90deg, #1f2937 20%, #334155 40%, #1f2937 60%);
   background-size: 200% 100%;
-}
-
-@media (prefers-color-scheme: dark) {
-  .pos-v2-online-orders button,
-  .pos-v2-online-orders__controls input,
-  .pos-v2-online-orders li,
-  .pos-v2-online-orders__stats article,
-  .pos-v2-online-orders__modal article,
-  .pos-v2-online-orders__thumb,
-  .pos-v2-online-orders__items li {
-    background: #111827;
-    border-color: #374151;
-    color: #f9fafb;
-  }
-
-  .pos-v2-online-orders header p,
-  .pos-v2-online-orders__stats span,
-  .pos-v2-online-orders li.is-empty {
-    color: #9ca3af;
-  }
-
-  .pos-v2-online-orders__chips button.is-active {
-    background: #6f5cc6;
-    color: #f5f3ff;
-    border-color: transparent;
-  }
-
-  .pos-v2-online-orders__actions .is-light {
-    background: #1f2937;
-  }
-
-  .pos-v2-online-orders__items {
-    border-color: #374151;
-  }
-
-  .pos-v2-online-orders__items li small {
-    color: #9ca3af;
-  }
-
-  .pos-v2-online-orders__error {
-    background: rgba(127, 29, 29, 0.35);
-    border-color: rgba(220, 38, 38, 0.35);
-    color: #fecaca;
-  }
-
-  .pos-v2-online-orders__toast.is-success {
-    background: rgba(5, 150, 105, 0.25);
-    border-color: rgba(16, 185, 129, 0.35);
-    color: #a7f3d0;
-  }
-
-  .pos-v2-online-orders__toast.is-error {
-    background: rgba(127, 29, 29, 0.35);
-    border-color: rgba(220, 38, 38, 0.35);
-    color: #fecaca;
-  }
 }
 
 @media print {

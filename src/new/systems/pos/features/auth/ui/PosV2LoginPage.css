@@ -302,34 +302,6 @@
   margin-top: 0;
 }
 
-@media (prefers-color-scheme: dark) {
-  .pos-v2-auth-page {
-    background: #0b1120;
-  }
-
-  .pos-v2-auth-container,
-  .pos-v2-form {
-    background-color: #111827;
-    color: #f8fafc;
-  }
-
-  .pos-v2-input {
-    background-color: #0f172a;
-    border: 1px solid #334155;
-    color: #e2e8f0;
-  }
-
-  .pos-v2-label,
-  .pos-v2-forgot-link {
-    color: #cbd5e1;
-  }
-
-  .pos-v2-mobile-switch {
-    color: #67e8f9;
-  }
-}
-
-
 .pos-v2-color-input {
   height: 42px;
   padding: 6px;
@@ -351,8 +323,3 @@
   color: #cbd5e1;
 }
 
-@media (prefers-color-scheme: dark) {
-  .pos-v2-file-name {
-    color: #cbd5e1;
-  }
-}

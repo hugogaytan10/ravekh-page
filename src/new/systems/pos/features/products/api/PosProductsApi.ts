@@ -125,7 +125,7 @@ export class PosProductsApi implements IProductsRepository {
 
     const rows = Array.isArray(products)
       ? products
-      : products.data ?? products.Data ?? products.Products ?? [];
+      : products?.data ?? products?.Data ?? products?.Products ?? [];
 
     return rows.map((product) => this.toDomain(product));
   }
@@ -143,9 +143,9 @@ export class PosProductsApi implements IProductsRepository {
 
     const rows = Array.isArray(payload)
       ? payload
-      : payload.products ?? payload.data ?? [];
+      : payload?.products ?? payload?.data ?? [];
 
-    const paginationPayload = Array.isArray(payload) ? undefined : payload.pagination;
+    const paginationPayload = Array.isArray(payload) ? undefined : payload?.pagination;
     const categoryIds = Array.isArray(paginationPayload?.categoryIds)
       ? paginationPayload.categoryIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
       : [];
@@ -292,7 +292,7 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   async listCategoriesByBusiness(businessId: number, token: string): Promise<ProductCategory[]> {
-    const payload = await this.httpClient.request<CategoryResponse[] | { data?: CategoryResponse[]; Data?: CategoryResponse[] }>({
+    const payload = await this.httpClient.request<CategoryResponse[] | { data?: CategoryResponse[]; Data?: CategoryResponse[] } | null>({
       method: "GET",
       path: POS_ENDPOINTS.categoriesByBusiness(businessId),
       token,
@@ -300,7 +300,7 @@ export class PosProductsApi implements IProductsRepository {
 
     const rows = Array.isArray(payload)
       ? payload
-      : payload.data ?? payload.Data ?? [];
+      : payload?.data ?? payload?.Data ?? [];
 
     return rows.map((category) => this.toDomainCategory(category));
   }

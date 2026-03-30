@@ -55,7 +55,7 @@ type VariantFormVm = {
 };
 
 type ViewMode = "grid" | "list";
-type ToastState = { type: "success" | "error"; message: string } | null;
+type ToastState = { type: "success" | "error" | "info"; message: string } | null;
 type ArchiveDialogState = { id: number; name: string } | null;
 type ProductCategoryVm = { id: number; name: string; color: string };
 type SaveResultState = { type: "success" | "error"; message: string } | null;
@@ -221,7 +221,7 @@ export const ProductsV2PosPage = () => {
 
     try {
       const response = await service.listProductsPaginated(businessId, token, targetPage, productsLimit);
-      const list = response.products;
+      const list = Array.isArray(response.products) ? response.products : [];
       setProducts(
         list.map((product) => ({
           id: product.id,
@@ -252,13 +252,26 @@ export const ProductsV2PosPage = () => {
       setTotalItems(response.pagination.total);
 
       const categoryRows = await service.listCategories(businessId, token);
+      const safeCategories = Array.isArray(categoryRows) ? categoryRows : [];
       setCategories(
-        categoryRows
+        safeCategories
           .filter((category) => typeof category.id === "number" && category.id > 0)
           .map((category) => ({ id: category.id as number, name: category.name, color: category.color })),
       );
+      if (list.length === 0) {
+        setToast({ type: "info", message: "Aún no tienes productos." });
+      }
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : "No se pudo cargar productos v2.");
+      const rawMessage = cause instanceof Error ? cause.message : "";
+      const isEmptyPayloadCrash = /cannot read properties of null/i.test(rawMessage) || /reading ['"]data['"]/i.test(rawMessage);
+      if (isEmptyPayloadCrash) {
+        setError(null);
+        setProducts([]);
+        setCategories([]);
+        setToast({ type: "info", message: "Aún no tienes productos." });
+      } else {
+        setError(rawMessage || "No se pudo cargar productos v2.");
+      }
     } finally {
       setLoading(false);
     }

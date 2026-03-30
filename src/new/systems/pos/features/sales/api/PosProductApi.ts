@@ -125,8 +125,8 @@ export class PosProductApi implements IProductRepository {
   }
 
   private toPaginatedResult(payload: SalesProductsPayload, page: number, fallbackPageSize: number): SalesProductsPaginatedResult {
-    const rows = Array.isArray(payload) ? payload : payload.products ?? payload.data ?? [];
-    const paginationPayload = Array.isArray(payload) ? undefined : payload.pagination;
+    const rows = Array.isArray(payload) ? payload : payload?.products ?? payload?.data ?? [];
+    const paginationPayload = Array.isArray(payload) ? undefined : payload?.pagination;
     const categoryIds = Array.isArray(paginationPayload?.categoryIds)
       ? paginationPayload.categoryIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
       : [];

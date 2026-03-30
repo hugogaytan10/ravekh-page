@@ -44,6 +44,7 @@ export const PosV2CustomersPage = () => {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState<string | null>(null);
   const [openForm, setOpenForm] = useState(false);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [deleteCandidate, setDeleteCandidate] = useState<CustomerVm | null>(null);
@@ -88,6 +89,9 @@ export const PosV2CustomersPage = () => {
     try {
       const rows = await page.getCustomerCards(businessId, token, search);
       setCustomers(rows);
+      if (rows.length === 0 && !search.trim()) {
+        setToast("Aún no tienes clientes.");
+      }
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No fue posible cargar clientes.");
       setCustomers([]);
@@ -95,6 +99,12 @@ export const PosV2CustomersPage = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!toast) return;
+    const timeout = window.setTimeout(() => setToast(null), 2300);
+    return () => window.clearTimeout(timeout);
+  }, [toast]);
 
   const loadSales = async (customer: CustomerVm, period: CustomerSalesPeriod) => {
     if (!token) return;
@@ -201,6 +211,7 @@ export const PosV2CustomersPage = () => {
         <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nombre o contacto" aria-label="Buscar clientes" />
 
         {error ? <p className="pos-v2-customers__error">{error}</p> : null}
+        {toast ? <p className="pos-v2-customers__toast" role="status">{toast}</p> : null}
         {loading ? <p>Cargando clientes...</p> : null}
 
         {!loading ? (
@@ -219,7 +230,7 @@ export const PosV2CustomersPage = () => {
                 </div>
               </li>
             ))}
-            {customers.length === 0 ? <li className="is-empty">Sin clientes para mostrar.</li> : null}
+            {customers.length === 0 ? <li className="is-empty">Aún no tienes clientes.</li> : null}
           </ul>
         ) : null}
 

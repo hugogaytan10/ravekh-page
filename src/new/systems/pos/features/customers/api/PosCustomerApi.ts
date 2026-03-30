@@ -33,13 +33,16 @@ export class PosCustomerApi implements ICustomerRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
   async listByBusiness(businessId: number, token: string): Promise<Customer[]> {
-    const response = await this.httpClient.request<CustomerResponse[]>({
+    const response = await this.httpClient.request<
+      CustomerResponse[] | { data?: CustomerResponse[]; Data?: CustomerResponse[]; customers?: CustomerResponse[] } | null
+    >({
       method: "GET",
       path: `customers/business/${businessId}`,
       token,
     });
 
-    return response.map((item) => this.toDomain(item));
+    const rows = Array.isArray(response) ? response : response?.data ?? response?.Data ?? response?.customers ?? [];
+    return rows.map((item) => this.toDomain(item));
   }
 
   async getById(customerId: number, token: string): Promise<Customer> {
@@ -83,13 +86,16 @@ export class PosCustomerApi implements ICustomerRepository {
   }
 
   async listSalesByPeriod(customerId: number, period: CustomerSalesPeriod, token: string): Promise<CustomerSale[]> {
-    const response = await this.httpClient.request<CustomerSaleResponse[]>({
+    const response = await this.httpClient.request<
+      CustomerSaleResponse[] | { data?: CustomerSaleResponse[]; Data?: CustomerSaleResponse[]; sales?: CustomerSaleResponse[] } | null
+    >({
       method: "GET",
       path: `customers/order/${customerId}/${period}`,
       token,
     });
 
-    return response.map((row) => this.toSale(row));
+    const rows = Array.isArray(response) ? response : response?.data ?? response?.Data ?? response?.sales ?? [];
+    return rows.map((row) => this.toSale(row));
   }
 
   private toApiPayload(payload: UpsertCustomerDto): Record<string, unknown> {

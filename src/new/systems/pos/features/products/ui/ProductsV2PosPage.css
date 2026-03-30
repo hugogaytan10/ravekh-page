@@ -156,6 +156,7 @@
 .pos-v2-products__toast { margin: 0; border-radius: 10px; padding: .55rem .7rem; font-weight: 600; }
 .pos-v2-products__toast.is-success { border: 1px solid #bbf7d0; color: #166534; background: #f0fdf4; }
 .pos-v2-products__toast.is-error { border: 1px solid #fecaca; color: #991b1b; background: #fef2f2; }
+.pos-v2-products__toast.is-info { border: 1px solid #bfdbfe; color: #1d4ed8; background: #eff6ff; }
 
 .pos-v2-products__skeleton-card { border: 1px solid #e5e7eb; border-radius: 12px; padding: .65rem; display: grid; gap: .45rem; }
 .pos-v2-products__skeleton-media, .pos-v2-products__skeleton-line { background: linear-gradient(90deg, #f3f4f6 20%, #e5e7eb 38%, #f3f4f6 56%); background-size: 200% 100%; animation: pos-v2-skeleton 1.3s ease-in-out infinite; border-radius: 8px; }
@@ -265,7 +266,7 @@
 }
 .pos-v2-products__chips button { border: 1px solid #d1d5db; border-radius: 9999px; background: #fff; color: #374151; font-weight: 600; padding: .42rem .72rem; min-height: 38px; }
 .pos-v2-products__chips button { scroll-snap-align: start; white-space: nowrap; }
-.pos-v2-products__chips button.is-active { border-color: #6d01d1; background: #ede9fe; color: #4c1d95; }
+.pos-v2-products__chips button.is-active { border-color: #6d01d1; background: #f5edff; color: #6d01d1; }
 .pos-v2-products__category-list { display: grid; gap: .55rem; max-height: 45vh; overflow: auto; padding-right: .2rem; }
 .pos-v2-products__category-item { display: grid; grid-template-columns: 1fr auto; gap: .6rem; align-items: center; border: 1px solid #e5e7eb; border-radius: 10px; padding: .7rem; }
 .pos-v2-products__category-item.is-editing { border-color: #6d01d1; box-shadow: 0 0 0 2px rgba(109, 1, 209, 0.15); background: #faf5ff; }
@@ -530,96 +531,6 @@
   background: #3f1d1d;
   border-color: #7f1d1d;
   color: #fecaca;
-}
-
-@media (prefers-color-scheme: dark) {
-  .pos-v2-products {
-    --product-bg: #111827;
-    --product-soft-bg: #0f172a;
-    --product-border: #374151;
-    --product-muted: #cbd5e1;
-    --product-text: #f9fafb;
-    --product-overlay: rgba(2, 6, 23, 0.72);
-  }
-
-  .pos-v2-products__access label,
-  .pos-v2-products__switch,
-  .pos-v2-products__form label {
-    color: var(--product-muted);
-  }
-
-  .pos-v2-products__access input,
-  .pos-v2-products__form input,
-  .pos-v2-products__form select,
-  .pos-v2-products__form textarea,
-  .pos-v2-products__controls input,
-  .pos-v2-products__variants input,
-  .pos-v2-products__variants select,
-  .pos-v2-products__chips button,
-  .pos-v2-products__view-toggle,
-  .pos-v2-products__card-actions button,
-  .pos-v2-products__toggle-card,
-  .pos-v2-products__variants,
-  .pos-v2-products__variant-item,
-  .pos-v2-products__category-item {
-    background: var(--product-soft-bg);
-    color: var(--product-text);
-    border-color: var(--product-border);
-  }
-
-  .pos-v2-products__card-headline .is-muted {
-    background: #1f2937;
-    color: #d1d5db;
-  }
-  .pos-v2-products__view-toggle button.is-active,
-  .pos-v2-products__chips button.is-active {
-    background: #6f5cc6;
-    border-color: #c4b5fd;
-    color: #f5f3ff;
-  }
-  .pos-v2-products__field-error {
-    color: #fca5a5;
-  }
-  .pos-v2-products__char-count {
-    background: rgba(148, 163, 184, 0.2);
-    color: #cbd5e1;
-  }
-  .pos-v2-products__category-name-input {
-    background: linear-gradient(180deg, #111827 0%, #0f172a 100%);
-    border-color: #475569;
-    color: #f8fafc;
-  }
-  .pos-v2-products__category-name-input::placeholder {
-    color: #94a3b8;
-  }
-  .pos-v2-products__category-item.is-editing {
-    background: #312e81;
-    border-color: #a78bfa;
-  }
-  .pos-v2-products__remove-photo {
-    background: #3f1d1d;
-    border-color: #7f1d1d;
-    color: #fecaca;
-  }
-  .pos-v2-products__tag-input-row button {
-    background: #1f2937;
-    color: #e5e7eb;
-    border-color: #374151;
-  }
-  .pos-v2-products__tag-chip {
-    background: #312e81;
-    color: #ddd6fe;
-  }
-  .pos-v2-products__save-result.is-success {
-    background: #052e16;
-    border-color: #166534;
-    color: #bbf7d0;
-  }
-  .pos-v2-products__save-result.is-error {
-    background: #3f1d1d;
-    border-color: #7f1d1d;
-    color: #fecaca;
-  }
 }
 
 .pos-v2-products__tag-editor { display: grid; gap: .45rem; }

@@ -31,13 +31,16 @@ export class PosOnlineOrderApi implements IOnlineOrderRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
   async listByBusiness(businessId: number, token: string): Promise<OnlineOrder[]> {
-    const response = await this.httpClient.request<OrderCatalogResponse[]>({
+    const response = await this.httpClient.request<
+      OrderCatalogResponse[] | { data?: OrderCatalogResponse[]; Data?: OrderCatalogResponse[]; orders?: OrderCatalogResponse[] } | null
+    >({
       method: "GET",
       path: `ordersCatalog/${businessId}`,
       token,
     });
 
-    return response.map((order) => this.toDomain(order));
+    const rows = Array.isArray(response) ? response : response?.data ?? response?.Data ?? response?.orders ?? [];
+    return rows.map((order) => this.toDomain(order));
   }
 
   async getById(orderId: number, token: string): Promise<OnlineOrder> {
