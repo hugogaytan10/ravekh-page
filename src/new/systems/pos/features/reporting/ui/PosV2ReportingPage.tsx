@@ -712,7 +712,7 @@ export const PosV2ReportingPage = () => {
           <article className="pos-v2-reporting__card is-full">
             <header>
               <h3>Módulos en ruta (v2)</h3>
-              <span>UX lista para integrar endpoints existentes del legacy</span>
+              <span>UX lista para integrar endpoints existentes del sistema anterior</span>
             </header>
             <div className="pos-v2-reporting__module-grid">
               {PENDING_MODULES.map((module) => (

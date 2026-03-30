@@ -18,3 +18,19 @@ export interface CreateRewardCouponDto {
   description: string;
   maxRedemptions: number;
 }
+
+export class RewardVisit {
+  constructor(
+    public readonly id: number,
+    public readonly businessId: number,
+    public readonly customerReference: string,
+    public readonly visits: number,
+    public readonly createdAt: string,
+  ) {}
+}
+
+export interface RegisterRewardVisitDto {
+  businessId: number;
+  customerReference: string;
+  visits: number;
+}

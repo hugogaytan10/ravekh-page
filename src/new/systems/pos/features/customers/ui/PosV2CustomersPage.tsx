@@ -201,7 +201,7 @@ export const PosV2CustomersPage = () => {
   const salesTotal = salesRows.reduce((sum, row) => sum + row.total, 0);
 
   return (
-    <PosV2Shell title="Clientes" subtitle="Gestión moderna de clientes desacoplada del legacy">
+    <PosV2Shell title="Clientes" subtitle="Gestión moderna de clientes desacoplada del código anterior">
       <section className="pos-v2-customers">
         <header>
           <h2>Clientes</h2>

@@ -1,11 +1,7 @@
 import { ReactNode, useEffect, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
+import { FiBarChart2, FiBox, FiDollarSign, FiMoreHorizontal, FiShoppingCart } from "react-icons/fi";
 import "./PosV2Shell.css";
-import { SalesIcon } from "../../../../../assets/POS/SalesIcon";
-import { ProductIcon } from "../../../../../assets/POS/Products";
-import { FinanceIcon } from "../../../../../assets/POS/Finances";
-import { ReportIcon } from "../../../../../assets/POS/Reports";
-import { MoreIcon } from "../../../../../assets/POS/MoreIcon";
 
 type PosV2ShellProps = {
   title: string;
@@ -18,11 +14,11 @@ type UiTheme = "light" | "dark";
 const THEME_STORAGE_KEY = "pos-v2-ui-theme";
 
 const NAV_ITEMS = [
-  { to: "/v2/MainSales", label: "Ventas", Icon: SalesIcon },
-  { to: "/v2/main-products/items", label: "Productos", Icon: ProductIcon },
-  { to: "/v2/MainFinances", label: "Finanzas", Icon: FinanceIcon },
-  { to: "/v2/dashboard", label: "Reportes", Icon: ReportIcon },
-  { to: "/v2/more", label: "Más", Icon: MoreIcon },
+  { to: "/v2/MainSales", label: "Ventas", Icon: FiShoppingCart },
+  { to: "/v2/main-products/items", label: "Productos", Icon: FiBox },
+  { to: "/v2/MainFinances", label: "Finanzas", Icon: FiDollarSign },
+  { to: "/v2/dashboard", label: "Reportes", Icon: FiBarChart2 },
+  { to: "/v2/more", label: "Más", Icon: FiMoreHorizontal },
 ];
 
 export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
@@ -83,7 +79,7 @@ export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
           >
             {({ isActive }) => (
               <>
-                <Icon width={26} height={26} strokeColor={isActive ? "#6D01D1" : "#C4C4C4"} strokeWidth={2} />
+                <Icon size={21} aria-hidden="true" />
                 <span>{label}</span>
               </>
             )}

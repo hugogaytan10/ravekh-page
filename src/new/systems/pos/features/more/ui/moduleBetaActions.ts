@@ -65,20 +65,17 @@ export const MODULE_BETA_ACTIONS: Record<string, ModuleBetaAction> = {
     requiresBusinessId: true,
     run: ({ businessId, token }, factory) => factory.createCatalogPage().loadPublishedProducts(businessId, token),
   },
-  roles: {
-    requiresBusinessId: true,
-    run: async ({ businessId }) => ({
-      businessId,
-      status: "pending-integration",
-      message: "Roles y permisos preparados en v2, falta endpoint de permisos granulares.",
-    }),
-  },
   printers: {
     requiresBusinessId: true,
     run: async ({ businessId }) => ({
       businessId,
-      status: "pending-integration",
-      message: "Vista de impresoras habilitada en beta; esperando integración de dispositivos.",
+      status: "beta",
+      message: "Impresoras beta: preparado para flujo Wi‑Fi con validación de datos antes de imprimir ticket/PDF.",
+      strategy: {
+        transport: "wifi-first",
+        fallback: ["pdf", "browser-print"],
+        validations: ["id de pedido/folio", "items > 0", "total > 0"],
+      },
     }),
   },
   support: {
@@ -87,14 +84,6 @@ export const MODULE_BETA_ACTIONS: Record<string, ModuleBetaAction> = {
       businessId,
       status: "pending-integration",
       message: "Centro de ayuda v2 activo con datos de demostración.",
-    }),
-  },
-  branches: {
-    requiresBusinessId: true,
-    run: async ({ businessId }) => ({
-      businessId,
-      status: "pending-integration",
-      message: "Gestión multi-sucursal lista para endpoint de sucursales reales.",
     }),
   },
   "delete-account": {

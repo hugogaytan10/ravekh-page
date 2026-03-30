@@ -2,15 +2,10 @@ import { useMemo } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { getStoredPosRoutingMode, PosRoutingMode, savePosRoutingMode } from "./PosRoutingMode";
 
-const LEGACY_ENTRY = "/MainSales";
 const MODERN_ENTRY = "/v2/login-punto-venta";
 
 const parseMode = (raw: string | null): PosRoutingMode | null => {
-  if (raw === "legacy" || raw === "modern") {
-    return raw;
-  }
-
-  return null;
+  return raw === "modern" ? "modern" : null;
 };
 
 export const PosModeEntryPage = () => {
@@ -22,7 +17,7 @@ export const PosModeEntryPage = () => {
 
     savePosRoutingMode(mode);
 
-    return mode === "legacy" ? LEGACY_ENTRY : MODERN_ENTRY;
+    return MODERN_ENTRY;
   }, [location.search]);
 
   return <Navigate to={redirectPath} replace />;

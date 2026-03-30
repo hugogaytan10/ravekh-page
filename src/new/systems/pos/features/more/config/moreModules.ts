@@ -16,7 +16,7 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
   },
   {
     title: "Configuración",
-    subtitle: "Paridad estructural con Ajustes legacy, implementado con servicios modernos.",
+    subtitle: "Paridad estructural con Ajustes previos, implementado con servicios modernos.",
     items: [
       { id: "tables", title: "Mesas y zonas", description: "Gestión de mesas para consumo en salón.", path: POS_V2_PATHS.tableZones, status: "available", actionType: "route" },
       { id: "business", title: "Información del negocio", description: "Datos fiscales/comerciales del negocio.", path: previewPath("business"), status: "available", actionType: "route" },
@@ -27,10 +27,8 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
       { id: "inventory", title: "Inventario", description: "Módulo de stock desacoplado para v2.", path: POS_V2_PATHS.inventory, status: "available", actionType: "route" },
       { id: "customers", title: "Clientes", description: "Catálogo de clientes y seguimiento.", path: POS_V2_PATHS.customers, status: "available", actionType: "route" },
       { id: "employees", title: "Empleados", description: "Administración de personal y permisos.", path: POS_V2_PATHS.employees, status: "available", actionType: "route" },
-      { id: "roles", title: "Roles", description: "Perfiles y permisos granulares por tipo de usuario.", path: previewPath("roles"), status: "beta", actionType: "beta-action" },
-      { id: "branches", title: "Sucursales", description: "Configuración multi-sucursal y operación distribuida.", path: previewPath("branches"), status: "beta", actionType: "beta-action" },
       { id: "cash-closing", title: "Corte de caja", description: "Cierres de caja al final de turno.", path: POS_V2_PATHS.cashClosing, status: "available", actionType: "route" },
-      { id: "printers", title: "Impresoras", description: "Configura tickets y dispositivos de impresión.", path: previewPath("printers"), status: "beta", actionType: "beta-action" },
+      { id: "printers", title: "Impresoras", description: "Configura impresión por Wi‑Fi y pruebas de ticket/PDF.", path: POS_V2_PATHS.printers, status: "available", actionType: "route" },
     ],
   },
   {
@@ -38,8 +36,8 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
     subtitle: "Herramientas de soporte y operación extendida.",
     items: [
       { id: "online-store", title: "Tienda en línea", description: "Gestión de pedidos del canal online.", path: POS_V2_PATHS.onlineStore, status: "available", actionType: "route" },
-      { id: "coupons", title: "Cupones", description: "Administración de campañas y promociones para clientes.", path: previewPath("coupons"), status: "beta", actionType: "beta-action" },
-      { id: "visits", title: "Visitas", description: "Seguimiento de visitas y recompensas por recurrencia.", path: previewPath("visits"), status: "beta", actionType: "beta-action" },
+      { id: "coupons", title: "Cupones", description: "Administración de campañas y promociones para clientes.", path: POS_V2_PATHS.coupons, status: "available", actionType: "route" },
+      { id: "visits", title: "Visitas", description: "Seguimiento de visitas y recompensas por recurrencia.", path: POS_V2_PATHS.visits, status: "available", actionType: "route" },
       { id: "loyalty", title: "Cupones y visitas", description: "Herramientas de fidelización y recompensas.", path: POS_V2_PATHS.loyalty, status: "available", actionType: "route" },
       { id: "support", title: "Ayuda", description: "Centro de ayuda y soporte para el negocio.", path: previewPath("support"), status: "available", actionType: "route" },
       { id: "switch-user", title: "Cambiar negocio/usuario", description: "Cerrar sesión actual y conectar otra cuenta o vendedor.", path: previewPath("switch-user"), status: "available", actionType: "beta-action" },

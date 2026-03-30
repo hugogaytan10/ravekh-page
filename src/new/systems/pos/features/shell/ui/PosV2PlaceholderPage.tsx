@@ -7,7 +7,7 @@ type PosV2PlaceholderPageProps = {
 
 export const PosV2PlaceholderPage = ({ title, description }: PosV2PlaceholderPageProps) => {
   return (
-    <PosV2Shell title={title} subtitle="Layout POS legacy replicado en estructura moderna">
+    <PosV2Shell title={title} subtitle="Layout POS previo replicado en estructura moderna">
       <section
         style={{
           background: "#fff",

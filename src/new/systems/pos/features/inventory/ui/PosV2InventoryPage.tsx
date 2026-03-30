@@ -114,7 +114,7 @@ export const PosV2InventoryPage = () => {
   };
 
   return (
-    <PosV2Shell title="Inventario" subtitle="Control de stock desacoplado del legacy para operación y pruebas v2.">
+    <PosV2Shell title="Inventario" subtitle="Control de stock desacoplado del código anterior para operación y pruebas v2.">
       <section className="pos-v2-inventory">
         <header className="pos-v2-inventory__header">
           <div>

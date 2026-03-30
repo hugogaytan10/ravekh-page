@@ -33,7 +33,7 @@ const PREVIEW_MODULES: Record<string, PreviewData> = {
   },
   "cash-closing": {
     title: "Corte de caja",
-    description: "Preparado para validar cierres diarios sin depender del UI legacy.",
+    description: "Preparado para validar cierres diarios sin depender de interfaces anteriores.",
     eta: "Sprint cierre de caja v2",
     warning: "Verifica montos por método de pago y turno activo antes de confirmar el cierre.",
   },

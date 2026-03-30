@@ -8,6 +8,7 @@ import { PosV2ReportingPage } from "../features/reporting/ui/PosV2ReportingPage"
 import { PosV2MorePage } from "../features/more/ui/PosV2MorePage";
 import { PosV2ModulePreviewPage } from "../features/more/ui/PosV2ModulePreviewPage";
 import { PosV2TableZonesPage } from "../features/settings/table-zones/ui/PosV2TableZonesPage";
+import { PosV2PrintersPage } from "../features/settings/printers/ui/PosV2PrintersPage";
 import { PosV2CustomersPage } from "../features/customers/ui/PosV2CustomersPage";
 import { PosV2EmployeesPage } from "../features/employees/ui/PosV2EmployeesPage";
 import { PosV2OnlineOrdersPage } from "../features/online-orders/ui/PosV2OnlineOrdersPage";
@@ -29,12 +30,15 @@ export const POS_V2_APP_ROUTES = (
     <Route path={POS_V2_PATHS.more} element={withAuth(<PosV2MorePage />)} />
     <Route path={POS_V2_PATHS.morePreview()} element={withAuth(<PosV2ModulePreviewPage />)} />
     <Route path={POS_V2_PATHS.tableZones} element={withAuth(<PosV2TableZonesPage />)} />
+    <Route path={POS_V2_PATHS.printers} element={withAuth(<PosV2PrintersPage />)} />
     <Route path={POS_V2_PATHS.cashClosing} element={withAuth(<PosV2CashClosingPage />)} />
     <Route path={POS_V2_PATHS.inventory} element={withAuth(<PosV2InventoryPage />)} />
     <Route path={POS_V2_PATHS.loyalty} element={withAuth(<PosV2LoyaltyPage />)} />
     <Route path={POS_V2_PATHS.customers} element={withAuth(<PosV2CustomersPage />)} />
     <Route path={POS_V2_PATHS.employees} element={withAuth(<PosV2EmployeesPage />)} />
     <Route path={POS_V2_PATHS.onlineStore} element={withAuth(<PosV2OnlineOrdersPage />)} />
+    <Route path={POS_V2_PATHS.coupons} element={withAuth(<PosV2LoyaltyPage />)} />
+    <Route path={POS_V2_PATHS.visits} element={withAuth(<PosV2LoyaltyPage />)} />
     <Route path={POS_V2_PATHS.health} element={withAuth(<PosHealthV2Screen />)} />
   </>
 );

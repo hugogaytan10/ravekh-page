@@ -2,12 +2,10 @@ import { useEffect, useMemo, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
-import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
+import { readPosSessionSnapshot } from "../../../shared/config/posSession";
 import type { OnlineOrderCardViewModel, OnlineOrderStatus, OnlineOrderStatusFilter } from "../pages/OnlineOrderTrackingPage";
 import "./PosV2OnlineOrdersPage.css";
 
-const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
-const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 const API_BASE_URL = getPosApiBaseUrl();
 const STATUS_COPY: Record<string, string> = {
   PEDIDO: "Pendiente",
@@ -19,8 +17,7 @@ const STATUS_COPY: Record<string, string> = {
 };
 
 export const PosV2OnlineOrdersPage = () => {
-  const [token] = useState(() => window.localStorage.getItem(TOKEN_KEY) ?? "");
-  const [businessId] = useState(() => Number(window.localStorage.getItem(BUSINESS_ID_KEY) ?? ""));
+  const [{ token, businessId }] = useState(() => readPosSessionSnapshot());
   const [filter, setFilter] = useState<OnlineOrderStatusFilter>("pending");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -166,7 +163,22 @@ export const PosV2OnlineOrdersPage = () => {
     return Array.from(grouped.values());
   };
 
+  const hasPrintableOrderData = (order: OnlineOrderCardViewModel): boolean => {
+    const hasValidId = Number.isFinite(order.id) && order.id > 0;
+    const hasItems = summarizeItems(order.items).length > 0;
+    const hasTotal = Number.isFinite(order.total) && order.total > 0;
+    return hasValidId && hasItems && hasTotal;
+  };
+
   const saveOrderPdf = (order: OnlineOrderCardViewModel) => {
+    if (!hasPrintableOrderData(order)) {
+      setToast({
+        type: "error",
+        message: "Este pedido no tiene datos suficientes para imprimir (ID, total e items).",
+      });
+      return;
+    }
+
     setPrintingOrder(order);
     window.setTimeout(() => {
       window.print();

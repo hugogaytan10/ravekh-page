@@ -1,10 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
-import MoreIcon from "../../../../../../assets/POS/MoreIcon";
-import { Basket } from "../../../../../../assets/POS/Basket";
-import MoneyIcon from "../../../../../../assets/POS/MoneyIcon";
-import { Trash } from "../../../../../../assets/POS/Trash";
-import { FiCreditCard, FiDollarSign, FiRepeat } from "react-icons/fi";
+import { FiCreditCard, FiDollarSign, FiGrid, FiRepeat, FiShoppingBag, FiTrash2 } from "react-icons/fi";
 import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
 import "./PosV2SalesHomePage.css";
@@ -48,12 +44,20 @@ type CartItemVm = {
 
 type PaymentMethod = "EFECTIVO" | "TARJETA DE DEBITO" | "TARJETA DE CREDITO" | "MONEDERO" | "LINK DE PAGO" | "OTROS";
 type MobileStep = "catalog" | "cart" | "checkout";
+type CompletedSaleLine = {
+  name: string;
+  quantity: number;
+  unitPrice: number;
+  lineTotal: number;
+};
 type CompletedSale = {
   folio: string;
   paymentMethodLabel: string;
   table: string;
   total: number;
   customerName?: string;
+  createdAt: string;
+  items: CompletedSaleLine[];
 };
 
 type CustomerVm = {
@@ -200,6 +204,7 @@ export const PosV2SalesHomePage = () => {
   const [selectedTableZoneId, setSelectedTableZoneId] = useState<string>("");
   const [selectedTableId, setSelectedTableId] = useState<string>("");
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
+  const [printingSale, setPrintingSale] = useState<CompletedSale | null>(null);
   const [isMobileTablesOpen, setIsMobileTablesOpen] = useState(false);
   const [loadingTables, setLoadingTables] = useState(false);
   const [tablesError, setTablesError] = useState<string | null>(null);
@@ -235,6 +240,12 @@ export const PosV2SalesHomePage = () => {
   };
 
   const getCurrentSession = () => readPosSessionSnapshot();
+
+  useEffect(() => {
+    const clearPrinting = () => setPrintingSale(null);
+    window.addEventListener("afterprint", clearPrinting);
+    return () => window.removeEventListener("afterprint", clearPrinting);
+  }, []);
 
   useEffect(() => {
     const { token, businessId } = getCurrentSession();
@@ -619,7 +630,7 @@ export const PosV2SalesHomePage = () => {
         key: "catalog" as const,
         label: "Catálogo",
         Icon: ({ active }: { active: boolean }) => (
-          <MoreIcon width={16} height={16} strokeColor={active ? "#ffffff" : "#6D01D1"} strokeWidth={2.2} />
+          <FiGrid size={16} color={active ? "#ffffff" : "#6D01D1"} />
         ),
       },
       {
@@ -627,14 +638,14 @@ export const PosV2SalesHomePage = () => {
         label: "Cantidad",
         helper: totals.items ? `${totals.items} prod.` : undefined,
         Icon: ({ active }: { active: boolean }) => (
-          <Basket width={18} height={18} fill={active ? "#ffffff" : "#6D01D1"} />
+          <FiShoppingBag size={16} color={active ? "#ffffff" : "#6D01D1"} />
         ),
       },
       {
         key: "checkout" as const,
         label: "Cobro",
         Icon: ({ active }: { active: boolean }) => (
-          <MoneyIcon width={16} height={16} color={active ? "#ffffff" : "#6D01D1"} />
+          <FiDollarSign size={16} color={active ? "#ffffff" : "#6D01D1"} />
         ),
       },
     ],
@@ -1011,6 +1022,13 @@ export const PosV2SalesHomePage = () => {
 
       const folio = `RVK-${Date.now().toString().slice(-6)}`;
       const paymentMethodLabel = PAYMENT_METHOD_OPTIONS.find((option) => option.value === paymentMethod)?.label ?? paymentMethod;
+      const printableItems: CompletedSaleLine[] = cartItems.map((item) => ({
+        name: item.name,
+        quantity: item.quantity,
+        unitPrice: item.price,
+        lineTotal: item.price * item.quantity,
+      }));
+
       setTicket(`Venta ${folio} · ${paymentMethodLabel} · ${selectedTableName} · Total $${totals.total.toFixed(2)}`);
       setCompletedSale({
         folio,
@@ -1018,6 +1036,8 @@ export const PosV2SalesHomePage = () => {
         table: selectedTableName,
         total: totals.total,
         customerName: customers.find((customer) => String(customer.id) === selectedCustomerId)?.name,
+        createdAt: new Date().toISOString(),
+        items: printableItems,
       });
       setCart({});
       setDiscountPercent("0");
@@ -1027,6 +1047,23 @@ export const PosV2SalesHomePage = () => {
     } finally {
       setIsCompletingSale(false);
     }
+  };
+
+  const hasPrintableSaleData = (sale: CompletedSale): boolean => {
+    const hasFolio = sale.folio.trim().length > 0;
+    const hasTotal = Number.isFinite(sale.total) && sale.total > 0;
+    const hasItems = Array.isArray(sale.items) && sale.items.length > 0;
+    return hasFolio && hasTotal && hasItems;
+  };
+
+  const handlePrintSaleTicket = (sale: CompletedSale) => {
+    if (!hasPrintableSaleData(sale)) {
+      setValidationError("La venta no tiene datos suficientes para imprimir ticket (folio, items y total).");
+      return;
+    }
+
+    setPrintingSale(sale);
+    window.setTimeout(() => window.print(), 180);
   };
 
   return (
@@ -1209,7 +1246,7 @@ export const PosV2SalesHomePage = () => {
                         onClick={() => updateQuantity(item.cartKey, -1)}
                         aria-label={item.quantity > 1 ? `Quitar una pieza de ${item.name}` : `Eliminar ${item.name} del carrito`}
                       >
-                        {item.quantity > 1 ? "-1" : <Trash width={14} height={14} fill="#b91c1c" />}
+                        {item.quantity > 1 ? "-1" : <FiTrash2 size={14} color="#b91c1c" />}
                       </button>
                       <input
                         type="number"
@@ -1569,7 +1606,7 @@ export const PosV2SalesHomePage = () => {
         </div>
       ) : null}
 
-      <div className="pos-v2-sales-home__mobile-legacy-dock">
+      <div className="pos-v2-sales-home__mobile-summary-dock">
         {hasTableSelection ? <button type="button" onClick={() => setIsMobileTablesOpen(true)}>Mesas</button> : null}
         <button type="button" className="is-summary" onClick={() => setMobileStep("cart")}>
           {totals.items.toFixed(2)}x Items = ${totals.total.toFixed(2)}
@@ -1637,11 +1674,32 @@ export const PosV2SalesHomePage = () => {
             <p>Total: <strong>${completedSale.total.toFixed(2)}</strong></p>
 
             <div className="pos-v2-sales-home__sale-modal-actions">
-              <button type="button" onClick={() => window.print()}>Imprimir ticket</button>
+              <button type="button" onClick={() => handlePrintSaleTicket(completedSale)}>Imprimir ticket</button>
               <button type="button" className="is-secondary" onClick={() => setCompletedSale(null)}>Cerrar</button>
             </div>
           </div>
         </div>
+      ) : null}
+
+      {printingSale ? (
+        <section className="pos-v2-sales-home__printable-ticket" aria-label={`Ticket ${printingSale.folio}`}>
+          <h1>Ticket de venta</h1>
+          <p><strong>Folio:</strong> {printingSale.folio}</p>
+          <p><strong>Fecha:</strong> {new Date(printingSale.createdAt).toLocaleString("es-MX")}</p>
+          <p><strong>Mesa:</strong> {printingSale.table}</p>
+          <p><strong>Método:</strong> {printingSale.paymentMethodLabel}</p>
+          <p><strong>Cliente:</strong> {printingSale.customerName ?? "General"}</p>
+          <h2>Detalle</h2>
+          <ul>
+            {printingSale.items.map((item, index) => (
+              <li key={`${printingSale.folio}-${item.name}-${index}`}>
+                <span>{item.name} x{item.quantity}</span>
+                <strong>${item.lineTotal.toFixed(2)}</strong>
+              </li>
+            ))}
+          </ul>
+          <p><strong>Total:</strong> ${printingSale.total.toFixed(2)}</p>
+        </section>
       ) : null}
     </PosV2Shell>
   );

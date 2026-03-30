@@ -490,7 +490,7 @@ export const PosV2TableZonesPage = () => {
   };
 
   return (
-    <PosV2Shell title="Mesas" subtitle="Configuración v2 de mesas desacoplada del legacy">
+    <PosV2Shell title="Mesas" subtitle="Configuración v2 de mesas desacoplada del código anterior">
       <section className="pos-v2-table-zones">
         <header className="pos-v2-table-zones__header">
           <div>

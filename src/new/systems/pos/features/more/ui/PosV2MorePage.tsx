@@ -162,7 +162,7 @@ export const PosV2MorePage = () => {
   };
 
   return (
-    <PosV2Shell title="Más" subtitle="Centro operativo POS v2 desacoplado del legacy y preparado para pruebas end-to-end">
+    <PosV2Shell title="Más" subtitle="Centro operativo POS v2 desacoplado del código anterior y preparado para pruebas end-to-end">
       <section className="pos-v2-more">
         <header className="pos-v2-more__header">
           <h2>Centro de operaciones</h2>
@@ -251,7 +251,7 @@ export const PosV2MorePage = () => {
         <section className="pos-v2-more__pending" aria-label="Módulos pendientes por migrar">
           <div className="pos-v2-more__section-head">
             <h3>Módulos faltantes por completar</h3>
-            <p>Estos módulos siguen en beta/preview mientras cerramos paridad funcional con legacy.</p>
+            <p>Estos módulos siguen en beta/preview mientras cerramos paridad funcional con sistemas previos.</p>
           </div>
           <div className="pos-v2-more__warning-grid">
             {pendingItems.slice(0, 8).map((item) => (

@@ -32,4 +32,36 @@ export class RewardsManagementPage {
       maxRedemptions: coupon.maxRedemptions,
     };
   }
+
+  async getVisitHistory(
+    businessId: number,
+    token: string,
+  ): Promise<Array<{ id: number; customerReference: string; visits: number; createdAt: string }>> {
+    const visits = await this.service.listVisits(businessId, token);
+    return visits.map((visit) => ({
+      id: visit.id,
+      customerReference: visit.customerReference,
+      visits: visit.visits,
+      createdAt: visit.createdAt,
+    }));
+  }
+
+  async registerVisit(
+    businessId: number,
+    payload: { customerReference: string; visits: number },
+    token: string,
+  ): Promise<{ id: number; customerReference: string; visits: number; createdAt: string }> {
+    const visit = await this.service.registerVisit({
+      businessId,
+      customerReference: payload.customerReference,
+      visits: payload.visits,
+    }, token);
+
+    return {
+      id: visit.id,
+      customerReference: visit.customerReference,
+      visits: visit.visits,
+      createdAt: visit.createdAt,
+    };
+  }
 }

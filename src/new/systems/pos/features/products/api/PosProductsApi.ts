@@ -543,14 +543,14 @@ export class PosProductsApi implements IProductsRepository {
 
     await Promise.all(
       variants.map((variant) => {
-        const legacy = this.withoutVariantId(this.toLegacyVariant({ ...variant, productId }));
+        const variantPayload = this.withoutVariantId(this.toLegacyVariant({ ...variant, productId }));
 
         if (typeof variant.id === "number") {
           return this.httpClient.request<void>({
             method: "PUT",
             path: POS_ENDPOINTS.variantById(variant.id),
             token,
-            body: legacy,
+            body: variantPayload,
           });
         }
 
@@ -558,7 +558,7 @@ export class PosProductsApi implements IProductsRepository {
           method: "POST",
           path: POS_ENDPOINTS.variants(),
           token,
-          body: legacy,
+          body: variantPayload,
         });
       }),
     );
@@ -629,7 +629,7 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   private withoutVariantId(variant: LegacyVariantResponse): Omit<LegacyVariantResponse, "Id" | "id"> {
-    const { Id: _legacyId, id: _camelId, ...rest } = variant;
+    const { Id: _variantId, id: _variantIdCamel, ...rest } = variant;
     return rest;
   }
 

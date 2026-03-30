@@ -13,11 +13,11 @@
   gap: 0.4rem;
 }
 
-.pos-v2-sales-home__legacy-tools {
+.pos-v2-sales-home__quick-tools {
   display: none;
 }
 
-.pos-v2-sales-home__mobile-legacy-dock {
+.pos-v2-sales-home__mobile-summary-dock {
   display: none;
 }
 
@@ -75,7 +75,7 @@
   gap: 0.9rem;
 }
 
-.pos-v2-sales-home__legacy-ad {
+.pos-v2-sales-home__promo-strip {
   display: none;
 }
 
@@ -928,7 +928,7 @@
     display: none;
   }
 
-  .pos-v2-sales-home__legacy-tools {
+  .pos-v2-sales-home__quick-tools {
     background: #060606;
     border-radius: 12px;
     padding: 0.35rem 0.45rem;
@@ -937,7 +937,7 @@
     justify-content: space-between;
   }
 
-  .pos-v2-sales-home__legacy-tools button {
+  .pos-v2-sales-home__quick-tools button {
     border: none;
     background: #fff;
     color: #111827;
@@ -950,17 +950,17 @@
     font-weight: 700;
   }
 
-  .pos-v2-sales-home__legacy-tools .is-search {
+  .pos-v2-sales-home__quick-tools .is-search {
     width: 44px;
     height: 44px;
   }
 
-  .pos-v2-sales-home__legacy-tools-right {
+  .pos-v2-sales-home__quick-tools-right {
     display: flex;
     gap: 0.5rem;
   }
 
-  .pos-v2-sales-home__legacy-ad {
+  .pos-v2-sales-home__promo-strip {
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -970,7 +970,7 @@
     padding: 0.45rem 0.6rem;
   }
 
-  .pos-v2-sales-home__legacy-ad button {
+  .pos-v2-sales-home__promo-strip button {
     border: none;
     background: transparent;
     color: #374151;
@@ -978,7 +978,7 @@
     line-height: 1;
   }
 
-  .pos-v2-sales-home__mobile-legacy-dock {
+  .pos-v2-sales-home__mobile-summary-dock {
     position: fixed;
     left: 0;
     right: 0;
@@ -993,14 +993,14 @@
     gap: 0.5rem;
   }
 
-  .pos-v2-sales-home__mobile-legacy-dock button {
+  .pos-v2-sales-home__mobile-summary-dock button {
     border: none;
     background: transparent;
     color: #111827;
     font-weight: 700;
   }
 
-  .pos-v2-sales-home__mobile-legacy-dock .is-summary {
+  .pos-v2-sales-home__mobile-summary-dock .is-summary {
     background: #000;
     color: #fff;
     border-radius: 9999px;
@@ -1083,9 +1083,9 @@
   }
 
   .pos-v2-sales-home__tables-modal,
-  .pos-v2-sales-home__mobile-legacy-dock,
-  .pos-v2-sales-home__legacy-tools,
-  .pos-v2-sales-home__legacy-ad {
+  .pos-v2-sales-home__mobile-summary-dock,
+  .pos-v2-sales-home__quick-tools,
+  .pos-v2-sales-home__promo-strip {
     display: none;
   }
 }
@@ -1169,7 +1169,11 @@
 
 :root[data-theme="dark"] .pos-v2-sales-home__product-category,
 :root[data-theme="dark"] .pos-v2-sales-home__cart-list small,
-:root[data-theme="dark"] .pos-v2-sales-home__empty {
+:root[data-theme="dark"] .pos-v2-sales-home__empty,
+:root[data-theme="dark"] .pos-v2-sales-home__checkout label,
+:root[data-theme="dark"] .pos-v2-sales-home__customer-hint,
+:root[data-theme="dark"] .pos-v2-sales-home__pagination span,
+:root[data-theme="dark"] .pos-v2-sales-home__pagination-goto {
   color: #9ca3af;
 }
 
@@ -1229,6 +1233,14 @@
   background: #6f5cc6;
   border-color: #a78bfa;
   color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__pagination button,
+:root[data-theme="dark"] .pos-v2-sales-home__pagination-goto button,
+:root[data-theme="dark"] .pos-v2-sales-home__pagination-goto input {
+  background: #0f172a;
+  border-color: #475569;
+  color: #e2e8f0;
 }
 
 :root[data-theme="dark"] .pos-v2-sales-home__tax-card {
@@ -1674,6 +1686,62 @@
   background: #fff;
   color: #111827;
   border-color: #d1d5db;
+}
+
+.pos-v2-sales-home__printable-ticket {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden !important;
+  }
+
+  .pos-v2-sales-home__printable-ticket,
+  .pos-v2-sales-home__printable-ticket * {
+    visibility: visible !important;
+  }
+
+  .pos-v2-sales-home__printable-ticket {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    background: #fff;
+    color: #111827;
+    padding: 16px;
+    font-family: Inter, Arial, sans-serif;
+  }
+
+  .pos-v2-sales-home__printable-ticket h1 {
+    font-size: 20px;
+    margin: 0 0 8px;
+  }
+
+  .pos-v2-sales-home__printable-ticket h2 {
+    font-size: 16px;
+    margin: 12px 0 6px;
+  }
+
+  .pos-v2-sales-home__printable-ticket p {
+    margin: 4px 0;
+  }
+
+  .pos-v2-sales-home__printable-ticket ul {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    display: grid;
+    gap: 6px;
+  }
+
+  .pos-v2-sales-home__printable-ticket li {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    border-bottom: 1px dashed #d1d5db;
+    padding-bottom: 4px;
+  }
 }
 
 @media (max-width: 640px) {

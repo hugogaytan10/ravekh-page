@@ -194,7 +194,7 @@ export const PosV2CashClosingPage = () => {
         <header className="pos-v2-cash-closing__header">
           <div>
             <h2>Cierre de turno</h2>
-            <p>Calcula el total del día por empleado y confirma el corte contra el endpoint legacy desacoplado.</p>
+            <p>Calcula el total del día por empleado y confirma el corte contra el endpoint histórico desacoplado.</p>
           </div>
           <button type="button" onClick={refreshData} disabled={loading || saving}>Actualizar</button>
         </header>

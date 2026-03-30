@@ -305,7 +305,7 @@ export const PosV2FinancePage = () => {
 
   if (!hasSession) {
     return (
-      <PosV2Shell title="Finanzas" subtitle="Control de ingresos y egresos moderno y desacoplado del legacy">
+      <PosV2Shell title="Finanzas" subtitle="Control de ingresos y egresos moderno y desacoplado del código anterior">
         <section className="pos-v2-finance pos-v2-finance--empty">
           <h2>Sesión requerida</h2>
           <p>Para ver tus finanzas, primero inicia sesión en POS v2.</p>
