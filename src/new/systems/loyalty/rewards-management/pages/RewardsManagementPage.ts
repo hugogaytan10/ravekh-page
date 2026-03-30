@@ -13,6 +13,21 @@ export class RewardsManagementPage {
     };
   }
 
+  async listCoupons(
+    businessId: number,
+    token: string,
+  ): Promise<Array<{ id: number; qr: string; description: string; maxRedemptions: number; totalUsers: number; valid: string }>> {
+    const coupons = await this.service.listCoupons(businessId, token);
+    return coupons.map((coupon) => ({
+      id: coupon.id,
+      qr: coupon.qr,
+      description: coupon.description,
+      maxRedemptions: coupon.maxRedemptions,
+      totalUsers: coupon.totalUsers,
+      valid: coupon.valid,
+    }));
+  }
+
   async createCoupon(
     businessId: number,
     payload: { qr: string; description: string; maxRedemptions: number },
@@ -36,32 +51,15 @@ export class RewardsManagementPage {
   async getVisitHistory(
     businessId: number,
     token: string,
-  ): Promise<Array<{ id: number; customerReference: string; visits: number; createdAt: string }>> {
+  ): Promise<Array<{ id: number; userId: number; userName: string; date: string; visitCount: number; totalVisits: number }>> {
     const visits = await this.service.listVisits(businessId, token);
     return visits.map((visit) => ({
       id: visit.id,
-      customerReference: visit.customerReference,
-      visits: visit.visits,
-      createdAt: visit.createdAt,
+      userId: visit.userId,
+      userName: visit.userName,
+      date: visit.date,
+      visitCount: visit.visitCount,
+      totalVisits: visit.totalVisits,
     }));
-  }
-
-  async registerVisit(
-    businessId: number,
-    payload: { customerReference: string; visits: number },
-    token: string,
-  ): Promise<{ id: number; customerReference: string; visits: number; createdAt: string }> {
-    const visit = await this.service.registerVisit({
-      businessId,
-      customerReference: payload.customerReference,
-      visits: payload.visits,
-    }, token);
-
-    return {
-      id: visit.id,
-      customerReference: visit.customerReference,
-      visits: visit.visits,
-      createdAt: visit.createdAt,
-    };
   }
 }

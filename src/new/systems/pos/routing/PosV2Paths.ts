@@ -13,6 +13,7 @@ export const POS_V2_PATHS = {
   loyalty: "/v2/loyalty",
   coupons: "/v2/coupons",
   visits: "/v2/visits",
+  catalog: "/v2/catalog",
   customers: "/v2/customers",
   employees: "/v2/employees",
   onlineStore: "/v2/online-store",
@@ -32,4 +33,5 @@ export const POS_V2_PATHS = {
   posLoyaltyAlias: "/v2/pos/loyalty",
   posCouponsAlias: "/v2/pos/coupons",
   posVisitsAlias: "/v2/pos/visits",
+  posCatalogAlias: "/v2/pos/catalog",
 } as const;

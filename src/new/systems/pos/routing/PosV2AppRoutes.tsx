@@ -15,6 +15,7 @@ import { PosV2OnlineOrdersPage } from "../features/online-orders/ui/PosV2OnlineO
 import { PosV2CashClosingPage } from "../features/cash-closing/ui/PosV2CashClosingPage";
 import { PosV2InventoryPage } from "../features/inventory/ui/PosV2InventoryPage";
 import { PosV2LoyaltyPage } from "../features/loyalty/ui/PosV2LoyaltyPage";
+import { PosV2CatalogPage } from "../features/catalog/ui/PosV2CatalogPage";
 import { PosV2RequireAuth } from "./PosV2RequireAuth";
 import { POS_V2_PATHS } from "./PosV2Paths";
 
@@ -39,6 +40,7 @@ export const POS_V2_APP_ROUTES = (
     <Route path={POS_V2_PATHS.onlineStore} element={withAuth(<PosV2OnlineOrdersPage />)} />
     <Route path={POS_V2_PATHS.coupons} element={withAuth(<PosV2LoyaltyPage />)} />
     <Route path={POS_V2_PATHS.visits} element={withAuth(<PosV2LoyaltyPage />)} />
+    <Route path={POS_V2_PATHS.catalog} element={withAuth(<PosV2CatalogPage />)} />
     <Route path={POS_V2_PATHS.health} element={withAuth(<PosHealthV2Screen />)} />
   </>
 );

@@ -6,7 +6,6 @@ import { MoreModuleExecutionContext, MoreModuleLink, MoreModuleStatus } from "..
 import { MoreModuleService } from "../services/MoreModuleService";
 import { MoreModulePage } from "../pages/MoreModulePage";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
-import { buildPosPublicCatalogUrl, POS_SUPPORT_WHATSAPP_URL } from "../../../shared/config/posExternalLinks";
 import { clearPosSessionSnapshot, POS_SESSION_STORAGE_KEYS, readPosSessionSnapshot, readPosStringList, writePosStringList } from "../../../shared/config/posSession";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import "./PosV2MorePage.css";
@@ -24,7 +23,6 @@ export const PosV2MorePage = () => {
   const [betaError, setBetaError] = useState<string>("");
   const [favorites, setFavorites] = useState<string[]>(() => readPosStringList(FAVORITES_KEY));
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
-  const [copiedCatalogLink, setCopiedCatalogLink] = useState(false);
   const [actionMessage, setActionMessage] = useState<string>("");
 
   const modulePage = useMemo(() => new MoreModulePage(new MoreModuleService(API_BASE_URL)), []);
@@ -44,8 +42,6 @@ export const PosV2MorePage = () => {
     .sort((a, b) => a.title.localeCompare(b.title, "es-MX"));
   const pendingItems = allItems.filter((item) => item.status !== "available");
   const normalizedQuery = query.trim().toLowerCase();
-  const { businessId } = readPosSessionSnapshot();
-  const catalogLink = buildPosPublicCatalogUrl(businessId);
 
   const filteredSections = useMemo(() => {
     const shouldIncludeItem = (item: MoreModuleLink): boolean => {
@@ -71,12 +67,6 @@ export const PosV2MorePage = () => {
   useEffect(() => {
     writePosStringList(FAVORITES_KEY, favorites);
   }, [favorites]);
-
-  useEffect(() => {
-    if (!copiedCatalogLink) return;
-    const timeout = window.setTimeout(() => setCopiedCatalogLink(false), 1800);
-    return () => window.clearTimeout(timeout);
-  }, [copiedCatalogLink]);
 
   useEffect(() => {
     if (!actionMessage) return;
@@ -108,17 +98,6 @@ export const PosV2MorePage = () => {
     navigate(POS_V2_PATHS.login);
   };
 
-  const copyCatalogLink = async () => {
-    try {
-      await navigator.clipboard.writeText(catalogLink);
-      setCopiedCatalogLink(true);
-      setActionMessage("Enlace de catálogo copiado.");
-    } catch {
-      setCopiedCatalogLink(false);
-      setActionMessage("No se pudo copiar automáticamente. Puedes copiar el enlace manualmente.");
-    }
-  };
-
   const runBetaAction = async (item: MoreModuleLink) => {
     const context: MoreModuleExecutionContext = readPosSessionSnapshot();
 
@@ -138,17 +117,6 @@ export const PosV2MorePage = () => {
   const openModule = async (item: MoreModuleLink) => {
     if (item.id === "cash-closing") {
       navigate(POS_V2_PATHS.cashClosing);
-      return;
-    }
-
-    if (item.id === "delete-account" || item.id === "switch-user") {
-      setActionMessage("⚠️ Antes de cerrar sesión verifica cortes pendientes y respaldo de datos.");
-      setShowSignOutConfirm(true);
-      return;
-    }
-
-    if (item.id === "support") {
-      window.open(POS_SUPPORT_WHATSAPP_URL, "_blank", "noopener,noreferrer");
       return;
     }
 
@@ -236,15 +204,10 @@ export const PosV2MorePage = () => {
           </div>
           <div className="pos-v2-more__quick-tools-grid">
             {allItems
-              .filter((item) => ["online-store", "customers", "employees", "exports", "cash-closing"].includes(item.id))
+              .filter((item) => ["coupons", "visits", "customers", "employees", "exports", "cash-closing"].includes(item.id))
               .map((item) => (
                 <button key={item.id} type="button" onClick={() => openModule(item)}>{item.title}</button>
               ))}
-            <button type="button" onClick={() => window.open(catalogLink, "_blank", "noopener,noreferrer")}>Abrir catálogo público</button>
-          </div>
-          <div className="pos-v2-more__catalog-copy">
-            <input type="text" value={catalogLink} readOnly aria-label="Enlace de catálogo público" />
-            <button type="button" onClick={copyCatalogLink}>{copiedCatalogLink ? "Copiado" : "Copiar enlace"}</button>
           </div>
         </section>
 

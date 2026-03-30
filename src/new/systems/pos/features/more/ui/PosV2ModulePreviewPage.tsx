@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { MoreModulePage } from "../pages/MoreModulePage";
@@ -109,6 +109,7 @@ export const PosV2ModulePreviewPage = () => {
   const [brandingLoading, setBrandingLoading] = useState(false);
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [brandingSuccess, setBrandingSuccess] = useState("");
+  const [brandingError, setBrandingError] = useState("");
   const [brandingForm, setBrandingForm] = useState({
     name: "",
     address: "",
@@ -363,6 +364,7 @@ export const PosV2ModulePreviewPage = () => {
     const businessId = Number(businessIdInput);
     setBrandingSaving(true);
     setBrandingSuccess("");
+    setBrandingError("");
     try {
       const saved = await factory.createPosBrandingPage().saveProfile(businessId, brandingForm, token);
       setBrandingForm({
@@ -374,11 +376,36 @@ export const PosV2ModulePreviewPage = () => {
         references: saved.references,
       });
       setBrandingSuccess("Branding guardado correctamente.");
-    } catch {
+    } catch (cause) {
       setBrandingSuccess("");
+      setBrandingError(cause instanceof Error ? cause.message : "No fue posible guardar la información del negocio.");
     } finally {
       setBrandingSaving(false);
     }
+  };
+
+  const onBrandingImageSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      setBrandingError("Selecciona un archivo de imagen válido.");
+      return;
+    }
+
+    const encoded = await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
+      reader.onerror = () => reject(new Error("No fue posible procesar la imagen."));
+      reader.readAsDataURL(file);
+    }).catch(() => "");
+
+    if (!encoded) {
+      setBrandingError("No fue posible cargar la imagen.");
+      return;
+    }
+
+    setBrandingError("");
+    setBrandingForm((current) => ({ ...current, logo: encoded }));
   };
 
   const createStripeAccount = async () => {
@@ -495,16 +522,15 @@ export const PosV2ModulePreviewPage = () => {
                   />
                   <span>Dirección</span>
                 </label>
-                <label className="pos-v2-module-preview__floating-field">
-                  <input
-                    value={brandingForm.logo}
-                    onChange={(event) => setBrandingForm((current) => ({ ...current, logo: event.target.value }))}
-                    placeholder=" "
-                    type="url"
-                    autoComplete="url"
-                  />
-                  <span>URL del logo</span>
+                <label className="pos-v2-module-preview__color-field">
+                  <span>Logo del negocio</span>
+                  <div className="pos-v2-module-preview__logo-upload">
+                    <input type="file" accept="image/*" onChange={onBrandingImageSelected} />
+                  </div>
                 </label>
+              </div>
+              <div className="pos-v2-module-preview__logo-preview">
+                {brandingForm.logo ? <img src={brandingForm.logo} alt="Logo del negocio" /> : <p>Sin imagen de negocio. Sube un archivo para visualizarlo aquí.</p>}
               </div>
               <div className="pos-v2-module-preview__inputs">
                 <label className="pos-v2-module-preview__floating-field">
@@ -524,6 +550,7 @@ export const PosV2ModulePreviewPage = () => {
                 </label>
               </div>
               {brandingSuccess ? <p className="pos-v2-module-preview__ok">{brandingSuccess}</p> : null}
+              {brandingError ? <p className="pos-v2-module-preview__error">{brandingError}</p> : null}
               <button type="submit" disabled={brandingSaving}>{brandingSaving ? "Guardando..." : "Guardar información del negocio"}</button>
             </form>
           </section>

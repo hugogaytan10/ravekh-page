@@ -29,10 +29,12 @@ import { PosV2ModulePreviewPage } from "../../new/systems/pos/features/more/ui/P
 import { PosV2CustomersPage } from "../../new/systems/pos/features/customers/ui/PosV2CustomersPage";
 import { PosV2EmployeesPage } from "../../new/systems/pos/features/employees/ui/PosV2EmployeesPage";
 import { PosV2TableZonesPage } from "../../new/systems/pos/features/settings/table-zones/ui/PosV2TableZonesPage";
+import { PosV2PrintersPage } from "../../new/systems/pos/features/settings/printers/ui/PosV2PrintersPage";
 import { PosV2OnlineOrdersPage } from "../../new/systems/pos/features/online-orders/ui/PosV2OnlineOrdersPage";
 import { PosV2CashClosingPage } from "../../new/systems/pos/features/cash-closing/ui/PosV2CashClosingPage";
 import { PosV2InventoryPage } from "../../new/systems/pos/features/inventory/ui/PosV2InventoryPage";
 import { PosV2LoyaltyPage } from "../../new/systems/pos/features/loyalty/ui/PosV2LoyaltyPage";
+import { PosV2CatalogPage } from "../../new/systems/pos/features/catalog/ui/PosV2CatalogPage";
 import { PosV2RequireAuth } from "../../new/systems/pos/routing/PosV2RequireAuth";
 
 export const NEW_PRIMARY_ROUTES = [
@@ -47,9 +49,13 @@ export const NEW_PRIMARY_ROUTES = [
   { path: "/v2/customers", element: <PosV2RequireAuth><PosV2CustomersPage /></PosV2RequireAuth> },
   { path: "/v2/employees", element: <PosV2RequireAuth><PosV2EmployeesPage /></PosV2RequireAuth> },
   { path: "/v2/settings/table-zones", element: <PosV2RequireAuth><PosV2TableZonesPage /></PosV2RequireAuth> },
+  { path: "/v2/settings/printers", element: <PosV2RequireAuth><PosV2PrintersPage /></PosV2RequireAuth> },
   { path: "/v2/cash-closing", element: <PosV2RequireAuth><PosV2CashClosingPage /></PosV2RequireAuth> },
   { path: "/v2/inventory", element: <PosV2RequireAuth><PosV2InventoryPage /></PosV2RequireAuth> },
   { path: "/v2/loyalty", element: <PosV2RequireAuth><PosV2LoyaltyPage /></PosV2RequireAuth> },
+  { path: "/v2/coupons", element: <PosV2RequireAuth><PosV2LoyaltyPage /></PosV2RequireAuth> },
+  { path: "/v2/visits", element: <PosV2RequireAuth><PosV2LoyaltyPage /></PosV2RequireAuth> },
+  { path: "/v2/catalog", element: <PosV2RequireAuth><PosV2CatalogPage /></PosV2RequireAuth> },
   { path: "/v2/online-store", element: <PosV2RequireAuth><PosV2OnlineOrdersPage /></PosV2RequireAuth> },
   { path: "/v2/health", element: <PosV2RequireAuth><PosHealthV2Screen /></PosV2RequireAuth> },
   // Compatibilidad temporal de rutas /v2/pos/*
@@ -65,6 +71,10 @@ export const NEW_PRIMARY_ROUTES = [
   { path: "/v2/pos/cash-closing", element: <Navigate to="/v2/cash-closing" replace /> },
   { path: "/v2/pos/inventory", element: <Navigate to="/v2/inventory" replace /> },
   { path: "/v2/pos/loyalty", element: <Navigate to="/v2/loyalty" replace /> },
+  { path: "/v2/pos/printers", element: <Navigate to="/v2/settings/printers" replace /> },
+  { path: "/v2/pos/coupons", element: <Navigate to="/v2/coupons" replace /> },
+  { path: "/v2/pos/visits", element: <Navigate to="/v2/visits" replace /> },
+  { path: "/v2/pos/catalog", element: <Navigate to="/v2/catalog" replace /> },
   { path: "/v2/pos/health", element: <Navigate to="/v2/health" replace /> },
   { path: "/v2/pos/online-store", element: <Navigate to="/v2/online-store" replace /> },
   { path: "/", element: <LandingPageRavekhPage /> },

@@ -1,5 +1,5 @@
 import { IRewardRepository } from "../interface/IRewardRepository";
-import { CreateRewardCouponDto, RegisterRewardVisitDto, RewardCoupon, RewardVisit } from "../model/RewardCoupon";
+import { CreateRewardCouponDto, RewardCoupon, RewardVisit } from "../model/RewardCoupon";
 
 export class RewardService {
   constructor(private readonly repository: IRewardRepository) {}
@@ -8,15 +8,15 @@ export class RewardService {
     return this.repository.getCouponByQr(businessId, qrCode, token);
   }
 
+  async listCoupons(businessId: number, token: string): Promise<RewardCoupon[]> {
+    return this.repository.listCoupons(businessId, token);
+  }
+
   async createCoupon(payload: CreateRewardCouponDto, token: string): Promise<RewardCoupon> {
     return this.repository.createCoupon(payload, token);
   }
 
   async listVisits(businessId: number, token: string): Promise<RewardVisit[]> {
     return this.repository.listVisits(businessId, token);
-  }
-
-  async registerVisit(payload: RegisterRewardVisitDto, token: string): Promise<RewardVisit> {
-    return this.repository.registerVisit(payload, token);
   }
 }

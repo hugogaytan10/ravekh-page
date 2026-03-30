@@ -5,6 +5,8 @@ export class RewardCoupon {
     public readonly qr: string,
     public readonly description: string,
     public readonly maxRedemptions: number,
+    public readonly totalUsers: number = 0,
+    public readonly valid: string = "",
   ) {}
 
   canBeRedeemed(currentRedemptions: number): boolean {
@@ -23,9 +25,11 @@ export class RewardVisit {
   constructor(
     public readonly id: number,
     public readonly businessId: number,
-    public readonly customerReference: string,
-    public readonly visits: number,
-    public readonly createdAt: string,
+    public readonly userId: number,
+    public readonly userName: string,
+    public readonly date: string,
+    public readonly visitCount: number,
+    public readonly totalVisits: number,
   ) {}
 }
 

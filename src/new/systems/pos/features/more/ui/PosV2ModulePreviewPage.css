@@ -199,6 +199,35 @@
   min-height: 40px;
 }
 
+.pos-v2-module-preview__logo-upload {
+  width: 100%;
+}
+
+.pos-v2-module-preview__logo-upload input[type="file"] {
+  width: 100%;
+}
+
+.pos-v2-module-preview__logo-preview {
+  border: 1px dashed #cbd5e1;
+  border-radius: 10px;
+  min-height: 120px;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #fff;
+}
+
+.pos-v2-module-preview__logo-preview img {
+  width: 100%;
+  max-height: 220px;
+  object-fit: contain;
+}
+
+.pos-v2-module-preview__logo-preview p {
+  padding: 0.65rem;
+  font-size: 0.82rem;
+}
+
 .pos-v2-module-preview__actions-inline {
   display: flex;
   flex-wrap: wrap;
@@ -360,6 +389,11 @@
   background: #0f172a;
   border-color: #475569;
   color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-module-preview__logo-preview {
+  background: #0b1220;
+  border-color: #475569;
 }
 :root[data-theme="dark"] .pos-v2-module-preview__inputs select,
 :root[data-theme="dark"] .pos-v2-module-preview__row {

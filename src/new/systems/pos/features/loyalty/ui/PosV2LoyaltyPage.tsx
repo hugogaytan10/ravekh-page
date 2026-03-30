@@ -8,6 +8,13 @@ import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import "./PosV2LoyaltyPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
+const isCouponActive = (coupon: { maxRedemptions: number; totalUsers: number; valid: string }) => {
+  const availableByLimit = Number(coupon.totalUsers) < Number(coupon.maxRedemptions);
+  if (!coupon.valid) return availableByLimit;
+  const expiration = new Date(coupon.valid);
+  if (Number.isNaN(expiration.getTime())) return availableByLimit;
+  return availableByLimit && expiration.getTime() >= Date.now();
+};
 
 export const PosV2LoyaltyPage = () => {
   const navigate = useNavigate();
@@ -23,11 +30,10 @@ export const PosV2LoyaltyPage = () => {
   const [createQr, setCreateQr] = useState("");
   const [description, setDescription] = useState("");
   const [limitUsers, setLimitUsers] = useState("10");
-  const [visitCustomer, setVisitCustomer] = useState("");
-  const [visitCount, setVisitCount] = useState("1");
-  const [visitLog, setVisitLog] = useState<Array<{ customerReference: string; visits: number; createdAt: string }>>([]);
+  const [visitLog, setVisitLog] = useState<Array<{ userId: number; userName: string; date: string; visitCount: number; totalVisits: number }>>([]);
+  const [couponList, setCouponList] = useState<Array<{ id: number; qr: string; description: string; maxRedemptions: number; totalUsers: number; valid: string }>>([]);
   const [loadingVisits, setLoadingVisits] = useState(false);
-  const [savingVisit, setSavingVisit] = useState(false);
+  const [loadingCoupons, setLoadingCoupons] = useState(false);
   const [loadingLookup, setLoadingLookup] = useState(false);
   const [savingCoupon, setSavingCoupon] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,10 +121,7 @@ export const PosV2LoyaltyPage = () => {
   };
 
   useEffect(() => {
-    if (!session.hasSession || (loyaltyView !== "all" && loyaltyView !== "visits")) {
-      return;
-    }
-
+    if (!session.hasSession || (loyaltyView !== "all" && loyaltyView !== "visits")) return;
     setLoadingVisits(true);
     page.getVisitHistory(session.businessId, session.token)
       .then((history) => setVisitLog(history))
@@ -126,35 +129,19 @@ export const PosV2LoyaltyPage = () => {
       .finally(() => setLoadingVisits(false));
   }, [loyaltyView, page, session.businessId, session.hasSession, session.token]);
 
-  const handleRegisterVisit = async (event: FormEvent) => {
-    event.preventDefault();
-    const customer = visitCustomer.trim();
-    const count = Number(visitCount);
+  const groupedCoupons = useMemo(() => ({
+    actives: couponList.filter((entry) => isCouponActive(entry)),
+    inactives: couponList.filter((entry) => !isCouponActive(entry)),
+  }), [couponList]);
 
-    if (!customer || !Number.isFinite(count) || count <= 0) {
-      setError("Completa cliente y número de visitas válido.");
-      return;
-    }
-
-    if (!session.hasSession) {
-      setError("No hay sesión activa para registrar visitas.");
-      return;
-    }
-
-    setSavingVisit(true);
-    setError(null);
-    try {
-      const created = await page.registerVisit(session.businessId, { customerReference: customer, visits: count }, session.token);
-      setToast("Visita registrada en el historial operativo.");
-      setVisitLog((current) => [created, ...current].slice(0, 20));
-      setVisitCustomer("");
-      setVisitCount("1");
-    } catch {
-      setError("No fue posible registrar la visita.");
-    } finally {
-      setSavingVisit(false);
-    }
-  };
+  useEffect(() => {
+    if (!session.hasSession || (loyaltyView !== "all" && loyaltyView !== "coupons")) return;
+    setLoadingCoupons(true);
+    page.listCoupons(session.businessId, session.token)
+      .then((coupons) => setCouponList(coupons))
+      .catch(() => setCouponList([]))
+      .finally(() => setLoadingCoupons(false));
+  }, [loyaltyView, page, session.businessId, session.hasSession, session.token]);
 
   return (
     <PosV2Shell title="Fidelidad" subtitle={subtitle}>
@@ -199,20 +186,35 @@ export const PosV2LoyaltyPage = () => {
           )}
         </article> : null}
 
+        {(loyaltyView === "all" || loyaltyView === "coupons") ? <article className="pos-v2-loyalty__card">
+          <h2>Cupones del negocio</h2>
+          <div className="pos-v2-loyalty__detail">
+            <p><strong>Resumen:</strong> {loadingCoupons ? "cargando..." : `${couponList.length} cupón(es)`}</p>
+            <p><strong>Activos:</strong> {groupedCoupons.actives.length} · <strong>Inactivos:</strong> {groupedCoupons.inactives.length}</p>
+            {groupedCoupons.actives.slice(0, 6).map((entry) => (
+              <p key={`${entry.id}-${entry.qr}`}>
+                🟢 {entry.description || "Cupón"} · QR: {entry.qr || "sin QR"} · {entry.totalUsers}/{entry.maxRedemptions} canjes
+              </p>
+            ))}
+            {groupedCoupons.inactives.slice(0, 4).map((entry) => (
+              <p key={`inactive-${entry.id}-${entry.qr}`}>
+                ⚪ {entry.description || "Cupón"} · {entry.totalUsers}/{entry.maxRedemptions} canjes
+              </p>
+            ))}
+            {!loadingCoupons && couponList.length === 0 ? <p>No hay cupones registrados.</p> : null}
+          </div>
+        </article> : null}
+
         {(loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
-          <h2>Registrar visitas</h2>
-          <form onSubmit={handleRegisterVisit} className="pos-v2-loyalty__form">
-            <input value={visitCustomer} onChange={(event) => setVisitCustomer(event.target.value)} placeholder="Cliente / referencia" />
-            <input value={visitCount} inputMode="numeric" onChange={(event) => setVisitCount(event.target.value.replace(/[^\d]/g, ""))} placeholder="Nº visitas" />
-            <button type="submit" disabled={savingVisit}>{savingVisit ? "Guardando..." : "Registrar visita"}</button>
-          </form>
+          <h2>Historial de visitas</h2>
           <div className="pos-v2-loyalty__detail">
             <p><strong>Historial:</strong> {loadingVisits ? "cargando..." : `${visitLog.length} registro(s)`}</p>
             {visitLog.slice(0, 5).map((visit, index) => (
-              <p key={`${visit.customerReference}-${visit.createdAt}-${index}`}>
-                {visit.customerReference} · +{visit.visits} visita(s) · {new Date(visit.createdAt).toLocaleString("es-MX")}
+              <p key={`${visit.userId}-${visit.date}-${index}`}>
+                {visit.userName || `Usuario ${visit.userId || "-"}`} · +{visit.visitCount} visita(s) · Total: {visit.totalVisits} · {new Date(visit.date).toLocaleString("es-MX")}
               </p>
             ))}
+            {!loadingVisits && visitLog.length === 0 ? <p>No hay visitas registradas.</p> : null}
           </div>
         </article> : null}
       </section>
