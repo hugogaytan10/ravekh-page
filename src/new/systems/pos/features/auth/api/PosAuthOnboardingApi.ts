@@ -82,7 +82,7 @@ export class PosAuthOnboardingApi implements IAuthOnboardingRepository {
       response.Business?.Id ?? 0,
       response.Employee?.Name ?? payload.employee.name,
       response.Employee?.Email ?? payload.employee.email,
-      response.Token ?? "",
+      response.Employee?.Token ?? "",
     );
   }
 }

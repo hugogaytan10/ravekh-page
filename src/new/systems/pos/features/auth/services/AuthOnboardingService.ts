@@ -22,7 +22,6 @@ export class AuthOnboardingService {
       ...payload,
       createTables: payload.createTables ?? true,
     });
-
     if (!session.isValid()) {
       throw new Error("Invalid sign-up session returned by backend.");
     }

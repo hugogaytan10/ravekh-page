@@ -275,3 +275,84 @@
 :root[data-theme="dark"] .pos-v2-mobile-switch {
   color: #67e8f9;
 }
+
+
+.pos-v2-field {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+}
+
+.pos-v2-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 0.5rem;
+}
+
+.pos-v2-sign-up-container .pos-v2-form {
+  justify-content: flex-start;
+  overflow-y: auto;
+  padding-top: 1.5rem;
+  padding-bottom: 1.5rem;
+}
+
+.pos-v2-sign-up-container .pos-v2-form h1 {
+  margin-top: 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pos-v2-auth-page {
+    background: #0b1120;
+  }
+
+  .pos-v2-auth-container,
+  .pos-v2-form {
+    background-color: #111827;
+    color: #f8fafc;
+  }
+
+  .pos-v2-input {
+    background-color: #0f172a;
+    border: 1px solid #334155;
+    color: #e2e8f0;
+  }
+
+  .pos-v2-label,
+  .pos-v2-forgot-link {
+    color: #cbd5e1;
+  }
+
+  .pos-v2-mobile-switch {
+    color: #67e8f9;
+  }
+}
+
+
+.pos-v2-color-input {
+  height: 42px;
+  padding: 6px;
+  cursor: pointer;
+}
+
+.pos-v2-file-input {
+  padding: 9px 12px;
+}
+
+.pos-v2-file-name {
+  font-size: 0.75rem;
+  color: #4b5563;
+  margin-top: 0.15rem;
+}
+
+:root[data-theme="dark"] .pos-v2-label,
+:root[data-theme="dark"] .pos-v2-file-name {
+  color: #cbd5e1;
+}
+
+@media (prefers-color-scheme: dark) {
+  .pos-v2-file-name {
+    color: #cbd5e1;
+  }
+}

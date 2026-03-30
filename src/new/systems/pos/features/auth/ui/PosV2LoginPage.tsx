@@ -1,6 +1,7 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
+import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import "./PosV2LoginPage.css";
@@ -11,15 +12,57 @@ const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 const EMPLOYEE_ID_KEY = POS_SESSION_STORAGE_KEYS.employeeId;
 
 type PanelMode = "signin" | "signup";
+type SignUpStep = "account" | "business";
+
+type FieldProps = {
+  id: string;
+  label: string;
+  type: "text" | "email" | "password" | "tel";
+  placeholder: string;
+  value: string;
+  required?: boolean;
+  autoComplete?: string;
+  onChange: (value: string) => void;
+};
+
+const FormField = ({ id, label, type, placeholder, value, required = true, autoComplete, onChange }: FieldProps) => (
+  <div className="pos-v2-field">
+    <label htmlFor={id} className="pos-v2-label">
+      {label}
+    </label>
+    <input
+      id={id}
+      className="pos-v2-input"
+      type={type}
+      placeholder={placeholder}
+      value={value}
+      autoComplete={autoComplete}
+      onChange={(event) => onChange(event.target.value)}
+      required={required}
+    />
+  </div>
+);
 
 export const PosV2LoginPage = () => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<PanelMode>("signin");
+  const [signUpStep, setSignUpStep] = useState<SignUpStep>("account");
+
   const [signInEmail, setSignInEmail] = useState("");
   const [signInPassword, setSignInPassword] = useState("");
-  const [signUpName, setSignUpName] = useState("");
+
+  const [signUpOwnerName, setSignUpOwnerName] = useState("");
   const [signUpEmail, setSignUpEmail] = useState("");
   const [signUpPassword, setSignUpPassword] = useState("");
+
+  const [signUpBusinessName, setSignUpBusinessName] = useState("");
+  const [signUpPhoneNumber, setSignUpPhoneNumber] = useState("");
+  const [signUpAddress, setSignUpAddress] = useState("");
+  const [signUpReferences, setSignUpReferences] = useState("");
+  const [signUpDescription, setSignUpDescription] = useState("");
+  const [signUpColor, setSignUpColor] = useState("#6D01D1");
+  const [signUpLogoFile, setSignUpLogoFile] = useState<File | null>(null);
+
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -28,12 +71,24 @@ export const PosV2LoginPage = () => {
     return factory.createPosAuthOnboardingPage();
   }, []);
 
+  const persistSession = (session: { token: string; businessId: number; employeeId: number }) => {
+    window.localStorage.setItem(TOKEN_KEY, session.token);
+    window.localStorage.setItem(BUSINESS_ID_KEY, String(session.businessId));
+    window.localStorage.setItem(EMPLOYEE_ID_KEY, String(session.employeeId));
+  };
+
   useEffect(() => {
     const existingToken = window.localStorage.getItem(TOKEN_KEY);
     if (existingToken) {
       navigate("/v2/MainSales", { replace: true });
     }
   }, [navigate]);
+
+  const goToSignIn = () => {
+    setMode("signin");
+    setSignUpStep("account");
+    setError(null);
+  };
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -42,9 +97,7 @@ export const PosV2LoginPage = () => {
 
     try {
       const session = await authPage.signIn({ email: signInEmail, password: signInPassword });
-      window.localStorage.setItem(TOKEN_KEY, session.token);
-      window.localStorage.setItem(BUSINESS_ID_KEY, String(session.businessId));
-      window.localStorage.setItem(EMPLOYEE_ID_KEY, String(session.employeeId));
+      persistSession(session);
       navigate("/v2/MainSales", { replace: true });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo iniciar sesión en POS v2.");
@@ -53,35 +106,58 @@ export const PosV2LoginPage = () => {
     }
   };
 
+  const handleAccountStep = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!signUpOwnerName.trim() || !signUpEmail.trim() || !signUpPassword.trim()) {
+      setError("Completa nombre, correo y contraseña para continuar.");
+      return;
+    }
+
+    setError(null);
+    setSignUpStep("business");
+  };
+
+  const handleLogoSelection = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0] ?? null;
+    setSignUpLogoFile(file);
+    setError(null);
+  };
+
   const handleSignUp = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+
+    if (!signUpLogoFile) {
+      setError("El logo del negocio es obligatorio para finalizar el registro.");
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
     try {
-      const normalizedName = signUpName.trim();
+      const logoUrl = await uploadImageToCloudinary(signUpLogoFile);
+
       const session = await authPage.signUp({
         business: {
-          name: `${normalizedName} Store`,
-          address: "Por definir",
-          phoneNumber: "0000000000",
-          logo: "",
-          color: "#6D01D1",
-          references: "Registro desde POS v2",
+          name: signUpBusinessName.trim(),
+          address: signUpAddress.trim(),
+          phoneNumber: signUpPhoneNumber.trim(),
+          logo: logoUrl,
+          color: signUpColor,
+          references: `${signUpReferences.trim()}${signUpDescription.trim() ? ` | ${signUpDescription.trim()}` : ""}`,
         },
         employee: {
-          name: normalizedName,
-          email: signUpEmail,
+          name: signUpOwnerName.trim(),
+          email: signUpEmail.trim(),
           password: signUpPassword,
         },
         deviceToken: "web-v2",
       });
 
-      window.localStorage.setItem(TOKEN_KEY, session.token);
-      window.localStorage.setItem(BUSINESS_ID_KEY, String(session.businessId));
-      window.localStorage.setItem(EMPLOYEE_ID_KEY, String(session.employeeId));
+      persistSession(session);
       navigate("/v2/MainSales", { replace: true });
     } catch (cause) {
+      console.log("Error durante el registro en POS v2:", cause);
       setError(cause instanceof Error ? cause.message : "No se pudo crear la cuenta en POS v2.");
     } finally {
       setSubmitting(false);
@@ -92,68 +168,81 @@ export const PosV2LoginPage = () => {
     <div className="pos-v2-auth-page">
       <div className={`pos-v2-auth-container ${mode === "signup" ? "right-panel-active" : ""}`}>
         <div className="pos-v2-form-container pos-v2-sign-up-container">
-          <form className="pos-v2-form" onSubmit={handleSignUp}>
-            <h1>Crear Cuenta</h1>
-            <span>Usa tu correo para registrarte</span>
-            <input
-              className="pos-v2-input"
-              type="text"
-              placeholder="Nombre"
-              value={signUpName}
-              onChange={(event) => setSignUpName(event.target.value)}
-              required
-            />
-            <input
-              className="pos-v2-input"
-              type="email"
-              placeholder="Correo"
-              value={signUpEmail}
-              onChange={(event) => setSignUpEmail(event.target.value)}
-              required
-            />
-            <input
-              className="pos-v2-input"
-              type="password"
-              placeholder="Contraseña"
-              value={signUpPassword}
-              onChange={(event) => setSignUpPassword(event.target.value)}
-              required
-            />
-            {error && mode === "signup" ? <span className="pos-v2-error">{error}</span> : null}
-            <button type="submit" className="pos-v2-btn" disabled={submitting}>
-              {submitting ? "Procesando..." : "Registrarme"}
-            </button>
-            <button type="button" className="pos-v2-mobile-switch" onClick={() => setMode("signin")}>
-              Tengo Cuenta
-            </button>
-          </form>
+          {signUpStep === "account" ? (
+            <form className="pos-v2-form" onSubmit={handleAccountStep}>
+              <h1>Crear Cuenta</h1>
+              <span>Paso 1 de 2 · Datos del responsable</span>
+              <FormField id="signup-owner" label="Nombre del responsable" type="text" placeholder="Tu nombre" value={signUpOwnerName} autoComplete="name" onChange={setSignUpOwnerName} />
+              <FormField id="signup-email" label="Correo" type="email" placeholder="correo@negocio.com" value={signUpEmail} autoComplete="email" onChange={setSignUpEmail} />
+              <FormField id="signup-password" label="Contraseña" type="password" placeholder="********" value={signUpPassword} autoComplete="new-password" onChange={setSignUpPassword} />
+              {error && mode === "signup" ? <span className="pos-v2-error">{error}</span> : null}
+              <button type="submit" className="pos-v2-btn">
+                Continuar
+              </button>
+              <button type="button" className="pos-v2-mobile-switch" onClick={goToSignIn}>
+                Tengo Cuenta
+              </button>
+            </form>
+          ) : (
+            <form className="pos-v2-form" onSubmit={handleSignUp}>
+              <h1>Personaliza tu negocio</h1>
+              <span>Paso 2 de 2 · Datos del negocio</span>
+              <FormField id="signup-business" label="Nombre del negocio" type="text" placeholder="Ej: Cafetería Central" value={signUpBusinessName} autoComplete="organization" onChange={setSignUpBusinessName} />
+              <FormField id="signup-phone" label="Teléfono del negocio" type="tel" placeholder="10 dígitos" value={signUpPhoneNumber} autoComplete="tel" onChange={setSignUpPhoneNumber} />
+              <FormField id="signup-address" label="Dirección" type="text" placeholder="Calle y número" value={signUpAddress} autoComplete="street-address" onChange={setSignUpAddress} />
+              <FormField id="signup-references" label="Referencias" type="text" placeholder="Entre calles, colonia, etc." value={signUpReferences} onChange={setSignUpReferences} />
+              <FormField id="signup-description" label="Descripción del negocio" type="text" placeholder="Ej: Café de especialidad" value={signUpDescription} onChange={setSignUpDescription} required={false} />
+              <div className="pos-v2-field">
+                <label htmlFor="signup-color" className="pos-v2-label">
+                  Color principal
+                </label>
+                <input id="signup-color" className="pos-v2-input pos-v2-color-input" type="color" value={signUpColor} onChange={(event) => setSignUpColor(event.target.value)} />
+              </div>
+              <div className="pos-v2-field">
+                <label htmlFor="signup-logo" className="pos-v2-label">
+                  Logo del negocio
+                </label>
+                <input id="signup-logo" className="pos-v2-input pos-v2-file-input" type="file" accept="image/*" onChange={handleLogoSelection} required />
+                {signUpLogoFile ? <span className="pos-v2-file-name">Archivo: {signUpLogoFile.name}</span> : null}
+              </div>
+              {error && mode === "signup" ? <span className="pos-v2-error">{error}</span> : null}
+              <button type="submit" className="pos-v2-btn" disabled={submitting}>
+                {submitting ? "Registrando negocio..." : "Finalizar Registro"}
+              </button>
+              <button type="button" className="pos-v2-mobile-switch" onClick={() => setSignUpStep("account")}>
+                Volver al paso anterior
+              </button>
+            </form>
+          )}
         </div>
 
         <div className={`pos-v2-form-container pos-v2-sign-in-container ${mode === "signup" ? "pos-v2-hidden-mobile" : ""}`}>
           <form className="pos-v2-form" onSubmit={handleSignIn}>
             <h1>Iniciar Sesión</h1>
             <span>Usa tu cuenta</span>
-            <input
-              className="pos-v2-input"
+            <FormField
+              id="signin-email"
+              label="Correo"
               type="email"
-              placeholder="Correo"
+              placeholder="correo@negocio.com"
               value={signInEmail}
-              onChange={(event) => {
-                setSignInEmail(event.target.value);
+              autoComplete="email"
+              onChange={(value) => {
+                setSignInEmail(value);
                 setError(null);
               }}
-              required
             />
-            <input
-              className="pos-v2-input"
+            <FormField
+              id="signin-password"
+              label="Contraseña"
               type="password"
-              placeholder="Contraseña"
+              placeholder="********"
               value={signInPassword}
-              onChange={(event) => {
-                setSignInPassword(event.target.value);
+              autoComplete="current-password"
+              onChange={(value) => {
+                setSignInPassword(value);
                 setError(null);
               }}
-              required
             />
             {error && mode === "signin" ? <span className="pos-v2-error">{error}</span> : null}
             <a href="#" className="pos-v2-forgot-link">
@@ -162,7 +251,15 @@ export const PosV2LoginPage = () => {
             <button type="submit" className="pos-v2-btn" disabled={submitting}>
               {submitting ? "Entrando..." : "Iniciar Sesión"}
             </button>
-            <button type="button" className="pos-v2-mobile-switch" onClick={() => setMode("signup")}>
+            <button
+              type="button"
+              className="pos-v2-mobile-switch"
+              onClick={() => {
+                setMode("signup");
+                setSignUpStep("account");
+                setError(null);
+              }}
+            >
               Crear Cuenta
             </button>
           </form>
@@ -173,14 +270,21 @@ export const PosV2LoginPage = () => {
             <div className="pos-v2-overlay-panel pos-v2-overlay-left">
               <h2>Hola de Nuevo!</h2>
               <p>Para seguir conectado inicia sesión con tus datos.</p>
-              <button type="button" className="pos-v2-btn pos-v2-btn-ghost" onClick={() => setMode("signin")}>
+              <button type="button" className="pos-v2-btn pos-v2-btn-ghost" onClick={goToSignIn}>
                 Inicio de Sesión
               </button>
             </div>
             <div className="pos-v2-overlay-panel pos-v2-overlay-right">
               <h2>Hola, Bienvenido</h2>
-              <p>Ingresa tus datos y comienza a usar POS v2.</p>
-              <button type="button" className="pos-v2-btn pos-v2-btn-ghost" onClick={() => setMode("signup")}>
+              <p>Primero crea tu cuenta y luego completa la información del negocio.</p>
+              <button
+                type="button"
+                className="pos-v2-btn pos-v2-btn-ghost"
+                onClick={() => {
+                  setMode("signup");
+                  setSignUpStep("account");
+                }}
+              >
                 Crear Cuenta
               </button>
             </div>
