@@ -1,6 +1,6 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { IRewardRepository } from "../interface/IRewardRepository";
-import { CreateRewardCouponDto, RewardCoupon, RewardVisit } from "../model/RewardCoupon";
+import { CreateRewardCouponDto, DynamicVisitQrToken, GenerateVisitQrDto, RewardCoupon, RewardVisit, VisitQrToken } from "../model/RewardCoupon";
 
 type CouponResponse = {
   Id: number;
@@ -27,6 +27,20 @@ type VisitResponse = {
   Date?: string;
   VisitCount?: number;
   TotalVisits?: number;
+};
+
+type VisitQrTokenResponse = {
+  token?: string;
+  qr?: string;
+  url?: string;
+  qrUrl?: string;
+};
+
+type DynamicVisitQrResponse = {
+  token?: string;
+  qrUrl?: string;
+  refreshAfterSeconds?: number;
+  data?: DynamicVisitQrResponse;
 };
 
 export class LoyaltyApi implements IRewardRepository {
@@ -91,6 +105,54 @@ export class LoyaltyApi implements IRewardRepository {
               : [];
 
     return rows.map((row) => this.toVisitDomain(row, businessId)).filter((row) => row !== null) as RewardVisit[];
+  }
+
+  async generateVisitQrs(payload: GenerateVisitQrDto, token: string): Promise<VisitQrToken[]> {
+    const response = await this.httpClient.request<{ tokens?: VisitQrTokenResponse[]; data?: { tokens?: VisitQrTokenResponse[] } }>({
+      method: "POST",
+      path: "visits/qr/generate",
+      token,
+      body: {
+        businessId: payload.businessId,
+        quantity: payload.quantity,
+        ttlMinutes: payload.ttlMinutes,
+        domain: payload.domain,
+      },
+    });
+
+    const tokens = Array.isArray(response?.tokens)
+      ? response.tokens
+      : Array.isArray(response?.data?.tokens)
+        ? response.data.tokens
+        : [];
+
+    return tokens
+      .map((item) => ({
+        token: String(item.token ?? "").trim(),
+        qrUrl: String(item.qrUrl ?? item.qr ?? item.url ?? "").trim(),
+      }))
+      .filter((item) => item.token.length > 0 || item.qrUrl.length > 0);
+  }
+
+  async generateDynamicVisitQr(businessId: number, domain: string, token: string): Promise<DynamicVisitQrToken> {
+    const response = await this.httpClient.request<DynamicVisitQrResponse>({
+      method: "POST",
+      path: "visits/qr/dynamic/next",
+      token,
+      body: { businessId, domain },
+    });
+
+    const normalized = response?.qrUrl ? response : response?.data;
+    const qrUrl = String(normalized?.qrUrl ?? "").trim();
+    if (!qrUrl) {
+      throw new Error("No se recibió un QR dinámico válido.");
+    }
+
+    return {
+      token: String(normalized?.token ?? "").trim(),
+      qrUrl,
+      refreshAfterSeconds: Number(normalized?.refreshAfterSeconds ?? 60),
+    };
   }
 
   private toDomain(response: CouponEnvelope | CouponResponse): RewardCoupon {

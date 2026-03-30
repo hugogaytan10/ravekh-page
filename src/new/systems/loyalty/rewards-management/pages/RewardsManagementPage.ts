@@ -64,4 +64,25 @@ export class RewardsManagementPage {
       totalVisits: visit.totalVisits,
     }));
   }
+
+  async generateVisitQrs(
+    businessId: number,
+    payload: { quantity: number; ttlMinutes: number; domain: string },
+    token: string,
+  ): Promise<Array<{ token: string; qrUrl: string }>> {
+    return this.service.generateVisitQrs({
+      businessId,
+      quantity: payload.quantity,
+      ttlMinutes: payload.ttlMinutes,
+      domain: payload.domain,
+    }, token);
+  }
+
+  async generateDynamicVisitQr(
+    businessId: number,
+    domain: string,
+    token: string,
+  ): Promise<{ token: string; qrUrl: string; refreshAfterSeconds: number }> {
+    return this.service.generateDynamicVisitQr(businessId, domain, token);
+  }
 }

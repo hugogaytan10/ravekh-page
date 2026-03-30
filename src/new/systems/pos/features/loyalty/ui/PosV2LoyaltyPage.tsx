@@ -26,7 +26,7 @@ export const PosV2LoyaltyPage = () => {
       hasSession: snapshot.token.length > 0 && Number.isFinite(snapshot.businessId) && snapshot.businessId > 0,
     };
   });
-  const [lookupQr, setLookupQr] = useState("");
+  const [lookupDescription, setLookupDescription] = useState("");
   const [description, setDescription] = useState("");
   const [limitUsers, setLimitUsers] = useState("10");
   const [validDateTime, setValidDateTime] = useState("");
@@ -43,6 +43,14 @@ export const PosV2LoyaltyPage = () => {
   const [businessInfo, setBusinessInfo] = useState<{ name: string; phone: string; address: string; plan: string; chargesEnabled: boolean } | null>(null);
   const [couponDescriptionQuery, setCouponDescriptionQuery] = useState("");
   const [visitQuery, setVisitQuery] = useState("");
+  const [isVisitFilterOpen, setIsVisitFilterOpen] = useState(false);
+  const [visitQrMode, setVisitQrMode] = useState<"online" | "offline">("online");
+  const [visitQrQuantity, setVisitQrQuantity] = useState("1");
+  const [visitQrTtl, setVisitQrTtl] = useState("60");
+  const [visitQrLoading, setVisitQrLoading] = useState(false);
+  const [visitQrTokens, setVisitQrTokens] = useState<Array<{ token: string; qrUrl: string }>>([]);
+  const [dynamicQrLoading, setDynamicQrLoading] = useState(false);
+  const [dynamicQr, setDynamicQr] = useState<{ token: string; qrUrl: string; refreshAfterSeconds: number } | null>(null);
 
   const page = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
@@ -68,7 +76,7 @@ export const PosV2LoyaltyPage = () => {
       return;
     }
 
-    const descriptionQuery = lookupQr.trim().toLowerCase();
+    const descriptionQuery = lookupDescription.trim().toLowerCase();
     if (!descriptionQuery) {
       setError("Ingresa una descripción para buscar cupón.");
       return;
@@ -205,6 +213,11 @@ export const PosV2LoyaltyPage = () => {
       .slice(0, 8);
   }, [topClientsSort, visitLog]);
 
+  const maxTopVisits = useMemo(
+    () => topClients.reduce((max, item) => Math.max(max, Number(item.totalVisits || 0)), 0),
+    [topClients],
+  );
+
   const filteredVisits = useMemo(() => {
     const term = visitQuery.trim().toLowerCase();
     if (!term) return visitLog;
@@ -212,6 +225,15 @@ export const PosV2LoyaltyPage = () => {
       `${visit.userName} ${visit.userId}`.toLowerCase().includes(term),
     );
   }, [visitLog, visitQuery]);
+
+  const visitsByCustomer = useMemo(() => {
+    return [...topClients].slice(0, 10);
+  }, [topClients]);
+
+  const defaultDomain = useMemo(() => {
+    if (typeof window !== "undefined") return window.location.origin;
+    return "https://ravekh.com";
+  }, []);
 
   useEffect(() => {
     if (!session.hasSession || (loyaltyView !== "all" && loyaltyView !== "coupons")) return;
@@ -221,6 +243,55 @@ export const PosV2LoyaltyPage = () => {
       .catch(() => setCouponList([]))
       .finally(() => setLoadingCoupons(false));
   }, [loyaltyView, page, session.businessId, session.hasSession, session.token]);
+
+  const handleGenerateVisitQrs = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!session.hasSession) {
+      setError("No hay sesión activa para generar QR de visitas.");
+      return;
+    }
+
+    const quantity = Number(visitQrQuantity);
+    const ttlMinutes = Number(visitQrTtl);
+    if (!Number.isFinite(quantity) || quantity <= 0 || !Number.isFinite(ttlMinutes) || ttlMinutes <= 0) {
+      setError("Cantidad y vigencia deben ser mayores a 0.");
+      return;
+    }
+
+    setVisitQrLoading(true);
+    setError(null);
+    try {
+      const domain = visitQrMode === "online" ? defaultDomain : "offline";
+      const tokens = await page.generateVisitQrs(session.businessId, { quantity, ttlMinutes, domain }, session.token);
+      setVisitQrTokens(tokens);
+      setToast(`Se generaron ${tokens.length} QR de visitas (${visitQrMode}).`);
+    } catch {
+      setVisitQrTokens([]);
+      setError("No se pudieron generar los QR de visitas.");
+    } finally {
+      setVisitQrLoading(false);
+    }
+  };
+
+  const handleGenerateDynamicQr = async () => {
+    if (!session.hasSession) {
+      setError("No hay sesión activa para generar QR dinámico.");
+      return;
+    }
+
+    setDynamicQrLoading(true);
+    setError(null);
+    try {
+      const nextQr = await page.generateDynamicVisitQr(session.businessId, defaultDomain, session.token);
+      setDynamicQr(nextQr);
+      setToast("QR dinámico actualizado correctamente.");
+    } catch {
+      setDynamicQr(null);
+      setError("No se pudo generar el QR dinámico.");
+    } finally {
+      setDynamicQrLoading(false);
+    }
+  };
 
   return (
     <PosV2Shell title="Fidelidad" subtitle={subtitle}>
@@ -235,21 +306,6 @@ export const PosV2LoyaltyPage = () => {
         {error ? <p className="pos-v2-loyalty__error">{error}</p> : null}
         {toast ? <p className="pos-v2-loyalty__toast">{toast}</p> : null}
 
-        {(loyaltyView === "all" || loyaltyView === "coupons") ? <article className="pos-v2-loyalty__card">
-          <h2>Información del negocio</h2>
-          <div className="pos-v2-loyalty__business">
-            <p><strong>{businessInfo?.name || `Negocio #${session.businessId}`}</strong></p>
-            <p>Plan: {businessInfo?.plan || "No definido"}</p>
-            <p>Teléfono: {businessInfo?.phone || "No disponible"}</p>
-            <p>Dirección: {businessInfo?.address || "No disponible"}</p>
-            <p>
-              Cobro con tarjeta:{" "}
-              <span className={businessInfo?.chargesEnabled ? "is-on" : "is-off"}>
-                {businessInfo?.chargesEnabled ? "Habilitado (ChargesEnabled = 1)" : "Deshabilitado (ChargesEnabled = 0)"}
-              </span>
-            </p>
-          </div>
-        </article> : null}
 
         {(loyaltyView === "all" || loyaltyView === "coupons") ? <article className="pos-v2-loyalty__card">
           <h2>Resumen de cupones</h2>
@@ -265,7 +321,12 @@ export const PosV2LoyaltyPage = () => {
           <form onSubmit={handleLookup} className="pos-v2-loyalty__form">
             <label>
               Descripción del cupón <span>*</span>
-              <input value={lookupQr} onChange={(event) => setLookupQr(event.target.value)} placeholder="Ej. 2x1 en bebidas" required />
+              <input
+                value={lookupDescription}
+                onChange={(event) => setLookupDescription(event.target.value)}
+                placeholder="Ej. 2x1 en bebidas"
+                required
+              />
             </label>
             <button type="submit" disabled={loadingLookup}>{loadingLookup ? "Buscando..." : "Buscar primera coincidencia"}</button>
           </form>
@@ -296,7 +357,6 @@ export const PosV2LoyaltyPage = () => {
           {!coupon ? <p>No hay cupón seleccionado.</p> : (
             <div className="pos-v2-loyalty__detail">
               <p><strong>ID:</strong> {coupon.id}</p>
-              {coupon.qr ? <p><strong>QR:</strong> {coupon.qr}</p> : null}
               <p><strong>Descripción:</strong> {coupon.description}</p>
               <p><strong>Límite:</strong> {coupon.maxRedemptions} canjes</p>
               {coupon.valid ? <p><strong>Vigencia:</strong> {new Date(coupon.valid).toLocaleString("es-MX")}</p> : null}
@@ -317,7 +377,7 @@ export const PosV2LoyaltyPage = () => {
             <p><strong>Activos:</strong> {groupedCoupons.actives.length} · <strong>Inactivos:</strong> {groupedCoupons.inactives.length}</p>
             {filteredCoupons.filter((entry) => isCouponActive(entry)).slice(0, 6).map((entry) => (
               <p key={`${entry.id}-${entry.qr}`}>
-                🟢 {entry.description || "Cupón"} · QR: {entry.qr || "sin QR"} · {entry.totalUsers}/{entry.maxRedemptions} canjes
+                🟢 {entry.description || "Cupón"} · {entry.totalUsers}/{entry.maxRedemptions} canjes
               </p>
             ))}
             {filteredCoupons.filter((entry) => !isCouponActive(entry)).slice(0, 4).map((entry) => (
@@ -339,29 +399,89 @@ export const PosV2LoyaltyPage = () => {
         </article> : null}
 
         {(loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
-          <h2>Acciones rápidas de visitas (legacy)</h2>
+          <h2>Generación de QR de visitas</h2>
+          <form className="pos-v2-loyalty__form" onSubmit={handleGenerateVisitQrs}>
+            <label>
+              Modo
+              <select value={visitQrMode} onChange={(event) => setVisitQrMode(event.target.value as "online" | "offline")}>
+                <option value="online">Online</option>
+                <option value="offline">Offline</option>
+              </select>
+            </label>
+            <label>
+              Cantidad de QR
+              <input value={visitQrQuantity} onChange={(event) => setVisitQrQuantity(event.target.value.replace(/[^\d]/g, ""))} />
+            </label>
+            <label>
+              Vigencia en minutos
+              <input value={visitQrTtl} onChange={(event) => setVisitQrTtl(event.target.value.replace(/[^\d]/g, ""))} />
+            </label>
+            <button type="submit" disabled={visitQrLoading}>{visitQrLoading ? "Generando..." : "Generar QR de visitas"}</button>
+          </form>
+          <div className="pos-v2-loyalty__detail">
+            {visitQrTokens.slice(0, 5).map((item, index) => (
+              <p key={`${item.token}-${index}`}>
+                Token: {item.token || "-"} · URL: {item.qrUrl || "Sin URL"}
+              </p>
+            ))}
+            {!visitQrLoading && visitQrTokens.length === 0 ? <p>Aún no hay QR generados en esta sesión.</p> : null}
+          </div>
+        </article> : null}
+
+        {(loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
+          <h2>QR dinámico</h2>
           <div className="pos-v2-loyalty__quick-actions">
-            <button type="button" onClick={() => navigate("/cuponespv/visitas/top-clientes")}>Top clientes</button>
-            <button type="button" onClick={() => navigate("/cuponespv/visitas/totales")}>Visitas totales</button>
-            <button type="button" onClick={() => navigate("/cuponespv/visitas/generar/online")}>Generar QR online</button>
-            <button type="button" onClick={() => navigate("/cuponespv/visitas/generar/offline")}>Generar QR offline</button>
-            <button type="button" onClick={() => navigate("/cuponespv/visitas/qr-dinamico")}>QR dinámico</button>
+            <button type="button" onClick={handleGenerateDynamicQr} disabled={dynamicQrLoading}>
+              {dynamicQrLoading ? "Actualizando..." : "Generar siguiente QR dinámico"}
+            </button>
+          </div>
+          <div className="pos-v2-loyalty__detail">
+            {!dynamicQr ? <p>No hay QR dinámico generado aún.</p> : (
+              <>
+                <p><strong>Token:</strong> {dynamicQr.token || "-"}</p>
+                <p><strong>URL:</strong> {dynamicQr.qrUrl}</p>
+                <p><strong>Renueva en:</strong> {dynamicQr.refreshAfterSeconds}s</p>
+              </>
+            )}
           </div>
         </article> : null}
 
         {(loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
           <h2>Top clientes fieles</h2>
-          <nav className="pos-v2-loyalty__tabs" aria-label="Orden clientes">
-            <button type="button" className={topClientsSort === "mostFrequent" ? "is-active" : ""} onClick={() => setTopClientsSort("mostFrequent")}>Más frecuentes</button>
-            <button type="button" className={topClientsSort === "leastFrequent" ? "is-active" : ""} onClick={() => setTopClientsSort("leastFrequent")}>Menos frecuentes</button>
-          </nav>
+          <div className="pos-v2-loyalty__header-actions">
+            <p className="pos-v2-loyalty__caption">Aquí podrás ver el top de tus clientes fieles.</p>
+            <button type="button" className="pos-v2-loyalty__ghost-btn" onClick={() => setIsVisitFilterOpen(true)}>
+              Filtrar orden
+            </button>
+          </div>
           <div className="pos-v2-loyalty__detail">
             {topClients.map((visit) => (
-              <p key={`top-${visit.userId}`}>
-                {visit.userName} · <strong>{visit.totalVisits}</strong> visita(s) · última: {visit.lastVisit ? new Date(visit.lastVisit).toLocaleDateString("es-MX") : "N/A"}
-              </p>
+              <article key={`top-${visit.userId}`} className="pos-v2-loyalty__row-card">
+                <div className="pos-v2-loyalty__row-head">
+                  <p>{visit.userName}</p>
+                  <strong>{visit.totalVisits} visita(s)</strong>
+                </div>
+                <div className="pos-v2-loyalty__progress" aria-hidden="true">
+                  <span
+                    style={{ width: `${maxTopVisits > 0 ? Math.round((visit.totalVisits / maxTopVisits) * 100) : 0}%` }}
+                  />
+                </div>
+                <small>Última visita: {visit.lastVisit ? new Date(visit.lastVisit).toLocaleDateString("es-MX") : "N/A"}</small>
+              </article>
             ))}
             {!loadingVisits && topClients.length === 0 ? <p>Aún no hay datos para top de clientes.</p> : null}
+          </div>
+        </article> : null}
+
+        {(loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
+          <h2>Visitas totales por cliente</h2>
+          <div className="pos-v2-loyalty__detail">
+            {visitsByCustomer.map((item) => (
+              <p key={`total-${item.userId}`}>
+                {item.userName} · <strong>{item.totalVisits}</strong> visita(s)
+              </p>
+            ))}
+            {!loadingVisits && visitsByCustomer.length === 0 ? <p>No hay visitas registradas todavía.</p> : null}
           </div>
         </article> : null}
 
@@ -383,6 +503,37 @@ export const PosV2LoyaltyPage = () => {
             {!loadingVisits && filteredVisits.length === 0 ? <p>No hay visitas registradas para ese filtro.</p> : null}
           </div>
         </article> : null}
+        {isVisitFilterOpen ? (
+          <section className="pos-v2-loyalty__modal" role="dialog" aria-modal="true" aria-label="Filtros de visitas">
+            <div className="pos-v2-loyalty__modal-card">
+              <div className="pos-v2-loyalty__modal-head">
+                <h3>Ordenar top clientes</h3>
+                <button type="button" onClick={() => setIsVisitFilterOpen(false)} aria-label="Cerrar filtros">×</button>
+              </div>
+              <p>Selecciona cómo quieres ordenar el listado.</p>
+              <button
+                type="button"
+                className={topClientsSort === "mostFrequent" ? "is-active" : ""}
+                onClick={() => {
+                  setTopClientsSort("mostFrequent");
+                  setIsVisitFilterOpen(false);
+                }}
+              >
+                Más frecuentes
+              </button>
+              <button
+                type="button"
+                className={topClientsSort === "leastFrequent" ? "is-active" : ""}
+                onClick={() => {
+                  setTopClientsSort("leastFrequent");
+                  setIsVisitFilterOpen(false);
+                }}
+              >
+                Menos frecuentes
+              </button>
+            </div>
+          </section>
+        ) : null}
       </section>
     </PosV2Shell>
   );

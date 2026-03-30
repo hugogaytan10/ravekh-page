@@ -93,13 +93,8 @@ export const PosV2ModulePreviewPage = () => {
     isPercent: true,
     canBeRemovedAtSale: false,
   });
-  const [paymentLoading, setPaymentLoading] = useState(false);
   const [paymentSaving, setPaymentSaving] = useState(false);
   const [paymentError, setPaymentError] = useState("");
-  const [paymentSettings, setPaymentSettings] = useState<{
-    globallyEnabled: boolean;
-    options: Array<{ type: "cash" | "card" | "online"; label: string; enabled: boolean; locked: boolean }>;
-  } | null>(null);
   const [businessStatus, setBusinessStatus] = useState<{
     name: string;
     plan: string;
@@ -224,28 +219,6 @@ export const PosV2ModulePreviewPage = () => {
       }
     };
 
-    const loadPaymentMethods = async () => {
-      if (moduleId !== "payment-methods") return;
-      setPaymentLoading(true);
-      setPaymentError("");
-      try {
-        const vm = await factory.createPosPaymentMethodPage().getViewModel(businessId, token);
-        setPaymentSettings({
-          globallyEnabled: vm.globallyEnabled,
-          options: vm.options.map((option) => ({
-            type: option.type,
-            label: option.label,
-            enabled: option.enabled,
-            locked: option.locked,
-          })),
-        });
-      } catch (cause) {
-        setPaymentError(cause instanceof Error ? cause.message : "No fue posible cargar métodos de pago.");
-      } finally {
-        setPaymentLoading(false);
-      }
-    };
-
     const loadBranding = async () => {
       if (moduleId !== "business") return;
       setBrandingLoading(true);
@@ -313,7 +286,6 @@ export const PosV2ModulePreviewPage = () => {
     loadTax();
     loadExportPreview();
     loadCashClosing();
-    loadPaymentMethods();
     loadBranding();
     loadStripeConnect();
     loadBusinessStatus();
@@ -346,54 +318,8 @@ export const PosV2ModulePreviewPage = () => {
     }
   };
 
-  const togglePaymentGlobal = async (enabled: boolean) => {
-    const businessId = Number(businessIdInput);
-    setPaymentSaving(true);
-    setPaymentError("");
-    try {
-      const vm = await factory.createPosPaymentMethodPage().toggleGlobal(businessId, enabled, token);
-      setPaymentSettings({
-        globallyEnabled: vm.globallyEnabled,
-        options: vm.options.map((option) => ({
-          type: option.type,
-          label: option.label,
-          enabled: option.enabled,
-          locked: option.locked,
-        })),
-      });
-    } catch (cause) {
-      setPaymentError(cause instanceof Error ? cause.message : "No fue posible actualizar configuración global.");
-    } finally {
-      setPaymentSaving(false);
-    }
-  };
-
-  const togglePaymentMethod = async (type: "cash" | "card" | "online", enabled: boolean) => {
-    const businessId = Number(businessIdInput);
-    setPaymentSaving(true);
-    setPaymentError("");
-    try {
-      const vm = await factory.createPosPaymentMethodPage().toggleMethod(businessId, type, enabled, token);
-      setPaymentSettings({
-        globallyEnabled: vm.globallyEnabled,
-        options: vm.options.map((option) => ({
-          type: option.type,
-          label: option.label,
-          enabled: option.enabled,
-          locked: option.locked,
-        })),
-      });
-    } catch (cause) {
-      setPaymentError(cause instanceof Error ? cause.message : "No fue posible actualizar método.");
-    } finally {
-      setPaymentSaving(false);
-    }
-  };
-
   const toggleCardChargesEnabled = async (enabled: boolean) => {
     const businessId = Number(businessIdInput);
-    setPaymentSaving(true);
-    setPaymentError("");
     try {
       const response = await fetch(new URL(`business/${businessId}`, API_BASE_URL).toString(), {
         method: "PUT",
@@ -407,6 +333,21 @@ export const PosV2ModulePreviewPage = () => {
       setBusinessStatus((current) => (current ? { ...current, chargesEnabled: enabled } : current));
     } catch (cause) {
       setPaymentError(cause instanceof Error ? cause.message : "No fue posible actualizar método tarjeta.");
+    }
+  };
+
+  const selectPaymentMethod = async (method: "cash" | "card") => {
+    const businessId = Number(businessIdInput);
+    setPaymentSaving(true);
+    setPaymentError("");
+    try {
+      if (method === "cash") {
+        await toggleCardChargesEnabled(false);
+      } else {
+        await toggleCardChargesEnabled(true);
+      }
+    } catch (cause) {
+      setPaymentError(cause instanceof Error ? cause.message : "No fue posible actualizar selección de método.");
     } finally {
       setPaymentSaving(false);
     }
@@ -524,7 +465,6 @@ export const PosV2ModulePreviewPage = () => {
       <section className="pos-v2-module-preview">
         <h2>{data.title}</h2>
         {moduleId !== "business" ? <p>{data.description}</p> : null}
-        {moduleId !== "business" ? <p className="pos-v2-module-preview__eta">Entrega estimada: {data.eta}</p> : null}
         {moduleId !== "business" && data.warning ? <p className="pos-v2-module-preview__warning">⚠️ {data.warning}</p> : null}
 
         {modulePage.supportsInlineExecution(moduleId) && !["payment-methods", "business", "stripe-connect"].includes(moduleId) ? (
@@ -541,16 +481,7 @@ export const PosV2ModulePreviewPage = () => {
 
         {moduleId === "business" ? (
           <section className="pos-v2-module-preview__beta">
-            <h3>Datos del negocio</h3>
-            {businessStatus ? (
-              <article className="pos-v2-module-preview__business-card">
-                <p><strong>{businessStatus.name}</strong></p>
-                <p>Plan: {businessStatus.plan}</p>
-                <p>Teléfono: {businessStatus.phone}</p>
-                <p>Dirección: {businessStatus.address}</p>
-                <p>Tarjeta: <span className={businessStatus.chargesEnabled ? "is-on" : "is-off"}>{businessStatus.chargesEnabled ? "Activa (ChargesEnabled=1)" : "Inactiva (ChargesEnabled=0)"}</span></p>
-              </article>
-            ) : null}
+
             <form className="pos-v2-module-preview__form" onSubmit={saveBranding}>
               {brandingLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /></div> : null}
               <div className="pos-v2-module-preview__inputs">
@@ -593,23 +524,6 @@ export const PosV2ModulePreviewPage = () => {
               </div>
               <div className="pos-v2-module-preview__logo-preview">
                 {brandingForm.logo ? <img src={brandingForm.logo} alt="Logo del negocio" /> : <p>Sin imagen de negocio. Sube un archivo para visualizarlo aquí.</p>}
-              </div>
-              <div className="pos-v2-module-preview__inputs">
-                <label className="pos-v2-module-preview__floating-field">
-                  <input
-                    value={brandingForm.references}
-                    onChange={(event) => setBrandingForm((current) => ({ ...current, references: event.target.value }))}
-                    placeholder=" "
-                  />
-                  <span>Referencias</span>
-                </label>
-                <label className="pos-v2-module-preview__color-field">
-                  <span>Color principal de la app</span>
-                  <div>
-                    <input type="color" value={brandingForm.color} onChange={(event) => setBrandingForm((current) => ({ ...current, color: event.target.value }))} aria-label="Color principal" />
-                    <strong>{brandingForm.color.toUpperCase()}</strong>
-                  </div>
-                </label>
               </div>
               {brandingSuccess ? <p className="pos-v2-module-preview__ok">{brandingSuccess}</p> : null}
               {brandingError ? <p className="pos-v2-module-preview__error">{brandingError}</p> : null}
@@ -716,49 +630,33 @@ export const PosV2ModulePreviewPage = () => {
         {moduleId === "payment-methods" ? (
           <section className="pos-v2-module-preview__beta">
             <h3>Métodos de pago</h3>
-            <p className="pos-v2-module-preview__hint">
-              Se administra solo <strong>Efectivo</strong> y <strong>Tarjeta</strong>. Tarjeta usa el campo <strong>ChargesEnabled</strong> del negocio.
-            </p>
-            {paymentLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
+          
             {paymentError ? <p className="pos-v2-module-preview__error">{paymentError}</p> : null}
-            {!paymentLoading && paymentSettings ? (
+            {businessStatus ? (
               <div className="pos-v2-module-preview__form">
-                <label className="pos-v2-module-preview__switch">
-                  <input
-                    type="checkbox"
-                    checked={paymentSettings.globallyEnabled}
-                    onChange={(event) => togglePaymentGlobal(event.target.checked)}
-                    disabled={paymentSaving}
-                  />
-                  <span>Habilitar cobros en POS</span>
-                </label>
                 <div className="pos-v2-module-preview__table">
-                  {paymentSettings.options.filter((option) => option.type === "cash").map((option) => (
-                    <article key={option.type} className="pos-v2-module-preview__row is-inline">
-                      <strong>Efectivo</strong>
-                      <label className="pos-v2-module-preview__switch">
-                        <input
-                          type="checkbox"
-                          checked={option.enabled}
-                          disabled={paymentSaving || option.locked}
-                          onChange={(event) => togglePaymentMethod(option.type, event.target.checked)}
-                        />
-                        <span>{option.locked ? "Bloqueado por configuración global" : option.enabled ? "Activo" : "Inactivo"}</span>
-                      </label>
-                    </article>
-                  ))}
                   <article className="pos-v2-module-preview__row is-inline">
-                    <strong>Tarjeta (Stripe)</strong>
-                    <label className="pos-v2-module-preview__switch">
-                      <input
-                        type="checkbox"
-                        checked={Boolean(businessStatus?.chargesEnabled)}
-                        disabled={paymentSaving || !paymentSettings.globallyEnabled}
-                        onChange={(event) => toggleCardChargesEnabled(event.target.checked)}
-                      />
-                      <span>{businessStatus?.chargesEnabled ? "Activo · ya puede usar Stripe Connect" : "Inactivo · actívalo para usar Stripe Connect"}</span>
-                    </label>
+                    <strong>Método principal</strong>
+                    <div className="pos-v2-module-preview__radio-group" role="radiogroup" aria-label="Seleccionar método principal">
+                      <button
+                        type="button"
+                        className={businessStatus?.chargesEnabled ? "" : "is-selected"}
+                        disabled={paymentSaving}
+                        onClick={() => selectPaymentMethod("cash")}
+                      >
+                        Efectivo
+                      </button>
+                      <button
+                        type="button"
+                        className={businessStatus?.chargesEnabled ? "is-selected" : ""}
+                        disabled={paymentSaving}
+                        onClick={() => selectPaymentMethod("card")}
+                      >
+                        Tarjeta
+                      </button>
+                    </div>
                   </article>
+                 
                 </div>
                 <button type="button" onClick={() => navigate(POS_V2_PATHS.morePreview("stripe-connect"))} disabled={!businessStatus?.chargesEnabled}>
                   {businessStatus?.chargesEnabled ? "Ir a Stripe Connect" : "Activa tarjeta para continuar con Stripe"}

@@ -34,6 +34,24 @@ export class RewardVisit {
   ) {}
 }
 
+export interface GenerateVisitQrDto {
+  businessId: number;
+  quantity: number;
+  ttlMinutes: number;
+  domain: string;
+}
+
+export interface VisitQrToken {
+  token: string;
+  qrUrl: string;
+}
+
+export interface DynamicVisitQrToken {
+  token: string;
+  qrUrl: string;
+  refreshAfterSeconds: number;
+}
+
 export interface RegisterRewardVisitDto {
   businessId: number;
   customerReference: string;

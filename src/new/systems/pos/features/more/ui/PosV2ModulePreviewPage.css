@@ -194,6 +194,20 @@
   display: grid;
   gap: 0.6rem;
 }
+.pos-v2-module-preview__form button {
+  min-height: 40px;
+  border: 1px solid #d1d9e7;
+  border-radius: 10px;
+  background: #fff;
+  color: #0f172a;
+  font-weight: 700;
+  padding: 0.55rem 0.8rem;
+}
+.pos-v2-module-preview__form > button[type="submit"] {
+  background: linear-gradient(135deg, #6d01d1 0%, #7c3aed 100%);
+  border-color: #6d01d1;
+  color: #fff;
+}
 .pos-v2-module-preview__hint {
   border: 1px dashed #cbd5e1;
   border-radius: 10px;
@@ -259,6 +273,19 @@
   padding: 0.5rem 0.85rem;
   font-weight: 600;
   cursor: pointer;
+}
+.pos-v2-module-preview__radio-group {
+  display: inline-flex;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+.pos-v2-module-preview__radio-group button {
+  min-width: 120px;
+}
+.pos-v2-module-preview__radio-group button.is-selected {
+  border-color: #6d01d1;
+  background: #f5f3ff;
+  color: #4c1d95;
 }
 
 .pos-v2-module-preview__switch {
@@ -406,6 +433,21 @@
   background: #0f172a;
   border-color: #475569;
   color: #f8fafc;
+}
+:root[data-theme="dark"] .pos-v2-module-preview__form button {
+  background: #0f172a;
+  border-color: #475569;
+  color: #f8fafc;
+}
+:root[data-theme="dark"] .pos-v2-module-preview__form > button[type="submit"] {
+  background: linear-gradient(135deg, #5b21b6 0%, #6d28d9 100%);
+  border-color: #8b5cf6;
+  color: #f5f3ff;
+}
+:root[data-theme="dark"] .pos-v2-module-preview__radio-group button.is-selected {
+  border-color: #8b5cf6;
+  background: rgba(91, 33, 182, 0.3);
+  color: #ddd6fe;
 }
 
 :root[data-theme="dark"] .pos-v2-module-preview__logo-preview {
