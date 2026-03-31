@@ -189,6 +189,22 @@ export const MainSettings: React.FC = () => {
                 </span>
               </button>
             )}
+
+
+            <button
+              className="flex flex-col items-center"
+              onClick={() => {
+                context.setShowNavBarBottom(false);
+                navigate("/facturation");
+              }}
+            >
+              <div className="bg-gray-200 rounded-full w-16 h-16 flex items-center justify-center ">
+                <CashRegister width={30} height={30} fill={iconColor} />
+              </div>
+              <span className="mt-2 text-sm font-medium text-gray-700">
+                Facturación
+              </span>
+            </button>
           </div>
         </section>
 

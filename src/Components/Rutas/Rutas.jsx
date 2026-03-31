@@ -104,6 +104,7 @@ import { PaymentMethods } from "../CatalogoWeb/PuntoVenta/Settings/Settings/Paym
 import { SalesTaxSettings } from "../CatalogoWeb/PuntoVenta/Settings/Settings/SalesTaxSettings";
 import { SelectMoney } from "../CatalogoWeb/PuntoVenta/Settings/Settings/SelectMoney";
 import { SettingsP } from "../CatalogoWeb/PuntoVenta/Settings/Settings/SettingsP";
+import { MainFacturation } from "../CatalogoWeb/PuntoVenta/Settings/Facturation/MainFacturation";
 // Importaciones para el punto de venta - Settings - StoreOnline
 import { MainStoreOnline } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/MainStoreOnline";
 import { OrdersScreen } from "../CatalogoWeb/PuntoVenta/Settings/StoreOnline/Orders";
@@ -1087,6 +1088,7 @@ export const Rutas = () => {
           <Route path="/more" element={<MainSettings />} />
           <Route path="/catalog-config" element={<CatalogSettings />} />
           <Route path="/box-cutting" element={<BoxCutting />} />
+          <Route path="/facturation" element={<MainFacturation />} />
           <Route path="/cutting-by-employee/:employeeId" element={<CuttingByEmployee />} />
           <Route path="/pricing" element={<AnimatedSlider />} />
           <Route path="/close-session" element={<CloseSession />} />
