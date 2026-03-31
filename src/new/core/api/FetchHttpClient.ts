@@ -31,7 +31,13 @@ export class FetchHttpClient implements HttpClient {
     const responseData = (await response.json().catch(() => null)) as TResponse | { message?: string } | null;
 
     if (!response.ok) {
-      throw new Error((responseData as { message?: string } | null)?.message ?? `Request failed: ${response.status}`);
+      const error = new Error((responseData as { message?: string } | null)?.message ?? `Request failed: ${response.status}`) as Error & {
+        status?: number;
+        payload?: unknown;
+      };
+      error.status = response.status;
+      error.payload = responseData;
+      throw error;
     }
 
     return responseData as TResponse;

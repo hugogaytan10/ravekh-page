@@ -52,6 +52,17 @@ export interface DynamicVisitQrToken {
   refreshAfterSeconds: number;
 }
 
+export interface RedeemVisitQrDto {
+  token: string;
+  userId: number;
+  regenerateDynamicQr?: boolean;
+}
+
+export interface RedeemVisitResult {
+  visitCreated: boolean;
+  couponGenerated: boolean;
+}
+
 export interface RegisterRewardVisitDto {
   businessId: number;
   customerReference: string;

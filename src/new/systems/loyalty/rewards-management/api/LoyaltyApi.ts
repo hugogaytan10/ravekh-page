@@ -1,6 +1,15 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { IRewardRepository } from "../interface/IRewardRepository";
-import { CreateRewardCouponDto, DynamicVisitQrToken, GenerateVisitQrDto, RewardCoupon, RewardVisit, VisitQrToken } from "../model/RewardCoupon";
+import {
+  CreateRewardCouponDto,
+  DynamicVisitQrToken,
+  GenerateVisitQrDto,
+  RedeemVisitQrDto,
+  RedeemVisitResult,
+  RewardCoupon,
+  RewardVisit,
+  VisitQrToken,
+} from "../model/RewardCoupon";
 
 type CouponResponse = {
   Id: number;
@@ -17,6 +26,7 @@ type CouponEnvelope = {
   newCoupon?: CouponResponse;
   createdCoupon?: CouponResponse;
   data?: CouponResponse;
+  affectedRows?: number;
 };
 
 type VisitResponse = {
@@ -41,6 +51,12 @@ type DynamicVisitQrResponse = {
   qrUrl?: string;
   refreshAfterSeconds?: number;
   data?: DynamicVisitQrResponse;
+};
+
+type RedeemVisitResponse = {
+  visitCreated?: boolean;
+  couponGenerated?: boolean;
+  success?: boolean;
 };
 
 export class LoyaltyApi implements IRewardRepository {
@@ -74,7 +90,7 @@ export class LoyaltyApi implements IRewardRepository {
   }
 
   async createCoupon(payload: CreateRewardCouponDto, token: string): Promise<RewardCoupon> {
-    const response = await this.httpClient.request<CouponEnvelope | CouponResponse>({
+    const response = await this.httpClient.request<CouponEnvelope | CouponResponse | number>({
       method: "POST",
       path: "coupons",
       token,
@@ -87,7 +103,54 @@ export class LoyaltyApi implements IRewardRepository {
       },
     });
 
+    if (typeof response === "number" && Number.isFinite(response) && response > 0) {
+      return new RewardCoupon(response, payload.businessId, payload.qr, payload.description, payload.maxRedemptions, 0, payload.valid ?? "");
+    }
+
     return this.toDomain(response);
+  }
+
+  async updateCoupon(couponId: number, payload: CreateRewardCouponDto, token: string): Promise<RewardCoupon> {
+    const response = await this.httpClient.request<CouponEnvelope | CouponResponse | number>({
+      method: "PUT",
+      path: `coupons/${couponId}`,
+      token,
+      body: {
+        Business_Id: payload.businessId,
+        QR: payload.qr,
+        Description: payload.description,
+        LimitUsers: payload.maxRedemptions,
+        ...(payload.valid ? { Valid: payload.valid } : {}),
+      },
+    });
+
+    if (typeof response === "number" && Number.isFinite(response) && response > 0) {
+      return new RewardCoupon(response, payload.businessId, payload.qr, payload.description, payload.maxRedemptions, 0, payload.valid ?? "");
+    }
+
+    const looksLikeUpdateResult = typeof response === "object" && response !== null
+      && Number.isFinite((response as { affectedRows?: number }).affectedRows)
+      && !((response as CouponResponse).QR);
+
+    if (looksLikeUpdateResult) {
+      const refreshed = await this.httpClient.request<CouponEnvelope | CouponResponse>({
+        method: "GET",
+        path: `coupons/${couponId}`,
+        token,
+      });
+
+      return this.toDomain(refreshed);
+    }
+
+    return this.toDomain(response);
+  }
+
+  async deleteCoupon(couponId: number, token: string): Promise<void> {
+    await this.httpClient.request<{ message?: string } | null>({
+      method: "DELETE",
+      path: `coupons/${couponId}`,
+      token,
+    });
   }
 
   async listVisits(businessId: number, token: string): Promise<RewardVisit[]> {
@@ -105,6 +168,16 @@ export class LoyaltyApi implements IRewardRepository {
               : [];
 
     return rows.map((row) => this.toVisitDomain(row, businessId)).filter((row) => row !== null) as RewardVisit[];
+  }
+
+  async getVisitHistory(businessId: number, token: string): Promise<RewardVisit[]> {
+    const visits = await this.listVisits(businessId, token);
+    return [...visits].sort((a, b) => {
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+      if (Number.isNaN(dateA) || Number.isNaN(dateB)) return b.id - a.id;
+      return dateB - dateA;
+    });
   }
 
   async generateVisitQrs(payload: GenerateVisitQrDto, token: string): Promise<VisitQrToken[]> {
@@ -155,6 +228,37 @@ export class LoyaltyApi implements IRewardRepository {
     };
   }
 
+  async redeemVisitQr(payload: RedeemVisitQrDto, token: string): Promise<RedeemVisitResult> {
+    try {
+      const response = await this.httpClient.request<RedeemVisitResponse>({
+        method: "POST",
+        path: "visits/qr/redeem",
+        token,
+        body: {
+          token: payload.token,
+          userId: payload.userId,
+          regenerateDynamicQr: payload.regenerateDynamicQr ?? true,
+        },
+      });
+
+      return {
+        visitCreated: Boolean(response?.visitCreated ?? response?.success ?? true),
+        couponGenerated: Boolean(response?.couponGenerated),
+      };
+    } catch (error) {
+      const payload = (error as { payload?: RedeemVisitResponse }).payload;
+      const hasSuccessSignal = Boolean(payload?.visitCreated || payload?.couponGenerated || payload?.success);
+      if (!hasSuccessSignal) {
+        throw error;
+      }
+
+      return {
+        visitCreated: Boolean(payload?.visitCreated ?? payload?.success ?? true),
+        couponGenerated: Boolean(payload?.couponGenerated),
+      };
+    }
+  }
+
   private toDomain(response: CouponEnvelope | CouponResponse): RewardCoupon {
     const normalized =
       (response as CouponEnvelope).coupon ??
@@ -163,15 +267,13 @@ export class LoyaltyApi implements IRewardRepository {
       (response as CouponEnvelope).data ??
       (response as CouponResponse);
 
-    return new RewardCoupon(
-      normalized.Id,
-      normalized.Business_Id,
-      normalized.QR,
-      normalized.Description,
-      normalized.LimitUsers,
-      Number(normalized.TotalUsers ?? 0),
-      String(normalized.Valid ?? ""),
-    );
+    const id = Number((normalized as { Id?: number; id?: number }).Id ?? (normalized as { id?: number }).id ?? 0);
+    const businessId = Number(normalized.Business_Id ?? 0);
+    const qr = String(normalized.QR ?? "");
+    const description = String(normalized.Description ?? "");
+    const limitUsers = Number(normalized.LimitUsers ?? 0);
+
+    return new RewardCoupon(id, businessId, qr, description, limitUsers, Number(normalized.TotalUsers ?? 0), String(normalized.Valid ?? ""));
   }
 
   private toVisitDomain(response: VisitResponse, fallbackBusinessId: number): RewardVisit | null {

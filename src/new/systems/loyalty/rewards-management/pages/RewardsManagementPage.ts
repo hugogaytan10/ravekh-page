@@ -50,11 +50,38 @@ export class RewardsManagementPage {
     };
   }
 
+  async updateCoupon(
+    couponId: number,
+    businessId: number,
+    payload: { qr: string; description: string; maxRedemptions: number; valid?: string },
+    token: string,
+  ): Promise<{ id: number; qr: string; description: string; maxRedemptions: number; valid: string }> {
+    const coupon = await this.service.updateCoupon(couponId, {
+      businessId,
+      qr: payload.qr,
+      description: payload.description,
+      maxRedemptions: payload.maxRedemptions,
+      valid: payload.valid,
+    }, token);
+
+    return {
+      id: coupon.id,
+      qr: coupon.qr,
+      description: coupon.description,
+      maxRedemptions: coupon.maxRedemptions,
+      valid: coupon.valid,
+    };
+  }
+
+  async deleteCoupon(couponId: number, token: string): Promise<void> {
+    await this.service.deleteCoupon(couponId, token);
+  }
+
   async getVisitHistory(
     businessId: number,
     token: string,
   ): Promise<Array<{ id: number; userId: number; userName: string; date: string; visitCount: number; totalVisits: number }>> {
-    const visits = await this.service.listVisits(businessId, token);
+    const visits = await this.service.getVisitHistory(businessId, token);
     return visits.map((visit) => ({
       id: visit.id,
       userId: visit.userId,
@@ -84,5 +111,12 @@ export class RewardsManagementPage {
     token: string,
   ): Promise<{ token: string; qrUrl: string; refreshAfterSeconds: number }> {
     return this.service.generateDynamicVisitQr(businessId, domain, token);
+  }
+
+  async redeemVisitQr(
+    payload: { token: string; userId: number; regenerateDynamicQr?: boolean },
+    token: string,
+  ): Promise<{ visitCreated: boolean; couponGenerated: boolean }> {
+    return this.service.redeemVisitQr(payload, token);
   }
 }
