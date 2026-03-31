@@ -7,6 +7,7 @@ type ProductGridProps = {
   onAdd: (product: StorefrontProduct) => void;
   onRemove: (product: StorefrontProduct) => void;
   onDecrement: (product: StorefrontProduct) => void;
+  onQuickView: (product: StorefrontProduct) => void;
   existingQuantities: Record<number, number>;
   formatPrice: (value: number) => string;
   phone: string | null;
@@ -19,6 +20,8 @@ const CartIcon = () => (
     <path d="M3 4h2l2.2 10.3a2 2 0 0 0 2 1.7h7.8a2 2 0 0 0 2-1.6L21 7H7.2" />
   </svg>
 );
+
+const EyeIcon = () => <span aria-hidden="true">👁</span>;
 
 const TrashIcon = () => (
   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
@@ -33,6 +36,7 @@ const ProductCard = memo(({
   onAdd,
   onRemove,
   onDecrement,
+  onQuickView,
   existingQuantities,
   formatPrice,
   phone,
@@ -41,6 +45,7 @@ const ProductCard = memo(({
   onAdd: (product: StorefrontProduct) => void;
   onRemove: (product: StorefrontProduct) => void;
   onDecrement: (product: StorefrontProduct) => void;
+  onQuickView: (product: StorefrontProduct) => void;
   existingQuantities: Record<number, number>;
   formatPrice: (value: number) => string;
   phone: string | null;
@@ -65,9 +70,15 @@ const ProductCard = memo(({
   return (
     <article className="catalog-v2-grid__card group">
       <div className="catalog-v2-grid__media">
-        <NavLink to={`/catalogo/producto/${product.id}/${phone ?? ""}`} className="catalog-v2-grid__link">
+        <NavLink to={`/v2/catalogo/producto/${product.id}/${phone ?? ""}`} className="catalog-v2-grid__link">
           {product.image ? <img src={product.image} alt={product.name} loading="lazy" decoding="async" /> : <div className="catalog-v2-grid__placeholder">Sin imagen</div>}
         </NavLink>
+
+        {product.variantsCount && product.variantsCount > 0 ? (
+          <button type="button" className="catalog-v2-grid__quick-view" onClick={() => onQuickView(product)} aria-label={`Opciones de ${product.name}`}>
+            <EyeIcon />
+          </button>
+        ) : null}
 
         <div className={`catalog-v2-grid__overlay ${overlayActive ? "is-static" : ""}`}>
           <div>
@@ -117,7 +128,7 @@ const ProductCard = memo(({
 
 ProductCard.displayName = "ProductCard";
 
-export const StorefrontProductGrid = ({ products, onAdd, onRemove, onDecrement, existingQuantities, formatPrice, phone }: ProductGridProps) => {
+export const StorefrontProductGrid = ({ products, onAdd, onRemove, onDecrement, onQuickView, existingQuantities, formatPrice, phone }: ProductGridProps) => {
   return (
     <div className="catalog-v2-grid">
       {products.map((product) => (
@@ -127,6 +138,7 @@ export const StorefrontProductGrid = ({ products, onAdd, onRemove, onDecrement, 
           onAdd={onAdd}
           onRemove={onRemove}
           onDecrement={onDecrement}
+          onQuickView={onQuickView}
           existingQuantities={existingQuantities}
           formatPrice={formatPrice}
           phone={phone}

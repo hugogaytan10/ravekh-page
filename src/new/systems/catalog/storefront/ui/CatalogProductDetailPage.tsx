@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
 import { CatalogStorefrontApi } from "../api/CatalogStorefrontApi";
+import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExperiencePage";
+import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
 import "./CatalogProductDetailPage.css";
 
@@ -14,13 +16,17 @@ export const CatalogProductDetailPage = () => {
   const [product, setProduct] = useState<StorefrontProduct | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const api = useMemo(() => new CatalogStorefrontApi(getPosApiBaseUrl()), []);
+  const pageLogic = useMemo(() => {
+    const repository = new CatalogStorefrontApi(getPosApiBaseUrl());
+    const service = new CatalogStorefrontService(repository);
+    return new CatalogStorefrontExperiencePage(service);
+  }, []);
 
   useEffect(() => {
     const run = async () => {
       setLoading(true);
       try {
-        const response = await api.getProductById(productId);
+        const response = await pageLogic.loadProductDetail(productId);
         setProduct(response);
       } finally {
         setLoading(false);
@@ -28,7 +34,7 @@ export const CatalogProductDetailPage = () => {
     };
 
     if (productId) void run();
-  }, [api, productId]);
+  }, [pageLogic, productId]);
 
   const addToCart = () => {
     if (!product) return;
@@ -41,7 +47,8 @@ export const CatalogProductDetailPage = () => {
       : [...current, { productId: product.id, name: product.name, price: product.price, quantity: 1, image: product.image }];
 
     window.localStorage.setItem(key, JSON.stringify(updated));
-    navigate(`/catalogo/${product.businessId}`);
+
+    navigate(`/v2/catalogo/${product.businessId}`);
   };
 
   if (loading) return <main className="catalog-v2-detail"><p>Cargando producto...</p></main>;
@@ -49,7 +56,7 @@ export const CatalogProductDetailPage = () => {
 
   return (
     <main className="catalog-v2-detail">
-      <button type="button" className="catalog-v2-detail__back" onClick={() => navigate(`/catalogo/${product.businessId}`)}>← Volver al catálogo</button>
+      <button type="button" className="catalog-v2-detail__back" onClick={() => navigate(`/v2/catalogo/${product.businessId}`)}>← Volver al catálogo</button>
 
       <section className="catalog-v2-detail__card">
         {product.image ? <img src={product.image} alt={product.name} /> : <div className="catalog-v2-detail__placeholder">Sin imagen</div>}

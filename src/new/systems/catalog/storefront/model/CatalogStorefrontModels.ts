@@ -6,6 +6,7 @@ export type StorefrontProduct = {
   image: string;
   price: number;
   promotionPrice?: number | null;
+  variantsCount?: number;
 };
 
 export type StorefrontBusiness = {
