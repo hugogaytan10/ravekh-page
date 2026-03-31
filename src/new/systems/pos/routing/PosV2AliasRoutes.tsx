@@ -18,6 +18,7 @@ const POS_ALIASES: Array<{ from: string; to: string }> = [
   { from: POS_V2_PATHS.posCouponsAlias, to: POS_V2_PATHS.coupons },
   { from: POS_V2_PATHS.posVisitsAlias, to: POS_V2_PATHS.visits },
   { from: POS_V2_PATHS.posCatalogAlias, to: POS_V2_PATHS.catalog },
+  { from: POS_V2_PATHS.posOnlineStoreAlias, to: POS_V2_PATHS.onlineStore },
 ];
 
 export const POS_V2_ALIAS_ROUTES = (

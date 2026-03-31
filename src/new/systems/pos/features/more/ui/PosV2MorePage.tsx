@@ -204,7 +204,7 @@ export const PosV2MorePage = () => {
           </div>
           <div className="pos-v2-more__quick-tools-grid">
             {allItems
-              .filter((item) => ["coupons", "visits", "customers", "employees", "exports", "cash-closing"].includes(item.id))
+              .filter((item) => ["coupons", "visits", "customers", "employees", "exports", "cash-closing", "online-store"].includes(item.id))
               .map((item) => (
                 <button key={item.id} type="button" onClick={() => openModule(item)}>{item.title}</button>
               ))}

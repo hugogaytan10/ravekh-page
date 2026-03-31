@@ -34,4 +34,5 @@ export const POS_V2_PATHS = {
   posCouponsAlias: "/v2/pos/coupons",
   posVisitsAlias: "/v2/pos/visits",
   posCatalogAlias: "/v2/pos/catalog",
+  posOnlineStoreAlias: "/v2/pos/online-store",
 } as const;

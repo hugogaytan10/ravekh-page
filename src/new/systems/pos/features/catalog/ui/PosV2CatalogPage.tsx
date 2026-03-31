@@ -1,5 +1,8 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { ModernSystemsFactory } from "../../../../../index";
+import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
+import { CatalogApi } from "../../../../catalog/product-publishing/api/CatalogApi";
+import { CatalogPublishingPage } from "../../../../catalog/product-publishing/pages/CatalogPublishingPage";
+import { CatalogService } from "../../../../catalog/product-publishing/services/CatalogService";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
@@ -31,8 +34,10 @@ export const PosV2CatalogPage = () => {
   const [toast, setToast] = useState("");
 
   const page = useMemo(() => {
-    const factory = new ModernSystemsFactory(API_BASE_URL);
-    return factory.createCatalogPage();
+    const httpClient = new FetchHttpClient(API_BASE_URL);
+    const catalogApi = new CatalogApi(httpClient);
+    const catalogService = new CatalogService(catalogApi);
+    return new CatalogPublishingPage(catalogService);
   }, []);
 
   const reload = async () => {
