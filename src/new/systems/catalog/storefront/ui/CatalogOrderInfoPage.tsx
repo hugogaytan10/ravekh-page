@@ -1,11 +1,37 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
 import { CatalogStorefrontApi } from "../api/CatalogStorefrontApi";
 import { getStripe } from "./stripeClient";
 import "./CatalogOrderInfoPage.css";
 
-type PaymentMethod = "efectivo" | "transferencia" | "tarjeta";
+type PaymentMethod = "efectivo" | "transferencia" | "tarjeta" | "enlace";
+type OpenSection = "contact" | "delivery" | "address" | "payment" | null;
+
+type ShippingOptions = {
+  ContactInformation: boolean;
+  ShippingMetod: boolean;
+  Street: boolean;
+  ZipCode: boolean;
+  City: boolean;
+  State: boolean;
+  References: boolean;
+  PaymentMetod: boolean;
+};
+
+const defaultShippingOptions: ShippingOptions = {
+  ContactInformation: true,
+  ShippingMetod: true,
+  Street: true,
+  ZipCode: true,
+  City: true,
+  State: true,
+  References: true,
+  PaymentMetod: true,
+};
+
+const hasAnyAddressFieldEnabled = (options: ShippingOptions) =>
+  options.Street || options.ZipCode || options.City || options.State || options.References;
 
 export const CatalogOrderInfoPage = () => {
   const navigate = useNavigate();
@@ -17,46 +43,163 @@ export const CatalogOrderInfoPage = () => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [deliveryMethod, setDeliveryMethod] = useState("domicilio");
-  const [address, setAddress] = useState("");
+  const [street, setStreet] = useState("");
+  const [zipCode, setZipCode] = useState("");
+  const [city, setCity] = useState("");
+  const [state, setState] = useState("");
   const [references, setReferences] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("efectivo");
-  const [error, setError] = useState<string | null>(null);
+  const [generalError, setGeneralError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [cardEnabled, setCardEnabled] = useState(false);
+  const [shippingOptions, setShippingOptions] = useState<ShippingOptions>(defaultShippingOptions);
+  const [openSection, setOpenSection] = useState<OpenSection>("contact");
 
+  const [errors, setErrors] = useState<{
+    name?: string;
+    email?: string;
+    phone?: string;
+    deliveryMethod?: string;
+    paymentMethod?: string;
+    street?: string;
+    zipCode?: string;
+    city?: string;
+    state?: string;
+  }>({});
+
+  const fieldRefs = {
+    name: useRef<HTMLLabelElement>(null),
+    email: useRef<HTMLLabelElement>(null),
+    phone: useRef<HTMLLabelElement>(null),
+    deliveryMethod: useRef<HTMLLabelElement>(null),
+    street: useRef<HTMLLabelElement>(null),
+    zipCode: useRef<HTMLLabelElement>(null),
+    city: useRef<HTMLLabelElement>(null),
+    state: useRef<HTMLLabelElement>(null),
+    paymentMethod: useRef<HTMLLabelElement>(null),
+  };
 
   useEffect(() => {
     const run = async () => {
       if (!businessId) return;
-      const businessConfig = await api.getBusinessCheckoutConfig(String(businessId));
+
+      const [businessConfig, shippingResponse] = await Promise.all([
+        api.getBusinessCheckoutConfig(String(businessId)),
+        fetch(`${getPosApiBaseUrl().replace(/\/$/, "")}/shippingoptions/business/${businessId}`).then((response) =>
+          response.ok ? response.json() : null,
+        ),
+      ]);
+
       setCardEnabled(Boolean(businessConfig?.stripeAccountId && businessConfig?.chargesEnabled));
       if (!businessConfig?.stripeAccountId || !businessConfig?.chargesEnabled) {
         setPaymentMethod("efectivo");
       }
+
+      const row = Array.isArray(shippingResponse) ? shippingResponse[0] : shippingResponse;
+      if (!row) return;
+
+      setShippingOptions({
+        ContactInformation: Number(row.ContactInformation) === 1,
+        ShippingMetod: Number(row.ShippingMetod) === 1,
+        Street: Number(row.Street) === 1,
+        ZipCode: Number(row.ZipCode) === 1,
+        City: Number(row.City) === 1,
+        State: Number(row.State) === 1,
+        References: Number(row.References) === 1,
+        PaymentMetod: Number(row.PaymentMetod) === 1,
+      });
     };
 
     void run();
   }, [api, businessId]);
-  const handleSubmit = async () => {
-    if (!name.trim() || !phone.trim()) {
-      setError("Completa nombre y teléfono para continuar.");
-      return;
+
+  useEffect(() => {
+    if (openSection) return;
+    if (shippingOptions.ContactInformation) return setOpenSection("contact");
+    if (shippingOptions.ShippingMetod) return setOpenSection("delivery");
+    if (hasAnyAddressFieldEnabled(shippingOptions)) return setOpenSection("address");
+    if (shippingOptions.PaymentMetod) return setOpenSection("payment");
+  }, [openSection, shippingOptions]);
+
+  useEffect(() => {
+    const order = ["name", "email", "phone", "deliveryMethod", "street", "zipCode", "city", "state", "paymentMethod"] as const;
+    const firstKey = order.find((key) => Boolean(errors[key]));
+    if (!firstKey) return;
+    requestAnimationFrame(() => {
+      fieldRefs[firstKey]?.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+    });
+  }, [errors]);
+
+  const buildAddress = () => {
+    if (deliveryMethod !== "domicilio") return "Recoger en tienda";
+
+    const parts: string[] = [];
+    if (shippingOptions.Street && street.trim()) parts.push(`Calle: ${street}`);
+    if (shippingOptions.ZipCode && zipCode.trim()) parts.push(`Código Postal: ${zipCode}`);
+    if (shippingOptions.City && city.trim()) parts.push(`Municipio: ${city}`);
+    if (shippingOptions.State && state.trim()) parts.push(`Estado: ${state}`);
+    if (shippingOptions.References && references.trim()) parts.push(`Referencia: ${references}`);
+
+    return parts.length ? parts.join(", ") : "Entrega a domicilio";
+  };
+
+  const validate = () => {
+    const nextErrors: typeof errors = {};
+
+    if (shippingOptions.ContactInformation) {
+      if (!name.trim()) nextErrors.name = "El nombre es obligatorio.";
+      if (!phone.trim()) {
+        nextErrors.phone = "El teléfono es obligatorio.";
+      } else if (!/^\d{7,15}$/.test(phone)) {
+        nextErrors.phone = "El teléfono debe contener entre 7 y 15 dígitos.";
+      }
     }
 
-    if (deliveryMethod !== "recoger" && !address.trim()) {
-      setError("Completa la dirección de entrega.");
-      return;
+    if (email && !/^\S+@\S+\.\S+$/.test(email)) {
+      nextErrors.email = "El email no es válido.";
     }
+
+    if (shippingOptions.ShippingMetod && !deliveryMethod) {
+      nextErrors.deliveryMethod = "Selecciona un método de entrega.";
+    }
+
+    if (shippingOptions.PaymentMetod && !paymentMethod) {
+      nextErrors.paymentMethod = "Selecciona un método de pago.";
+    }
+
+    if (deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled(shippingOptions)) {
+      if (shippingOptions.Street && !street.trim()) nextErrors.street = "La calle es obligatoria.";
+      if (shippingOptions.ZipCode && !zipCode.trim()) nextErrors.zipCode = "El código postal es obligatorio.";
+      if (shippingOptions.City && !city.trim()) nextErrors.city = "El municipio es obligatorio.";
+      if (shippingOptions.State && !state.trim()) nextErrors.state = "El estado es obligatorio.";
+    }
+
+    setErrors(nextErrors);
+    if (nextErrors.name || nextErrors.email || nextErrors.phone) {
+      setOpenSection("contact");
+    } else if (nextErrors.deliveryMethod) {
+      setOpenSection("delivery");
+    } else if (nextErrors.street || nextErrors.zipCode || nextErrors.city || nextErrors.state) {
+      setOpenSection("address");
+    } else if (nextErrors.paymentMethod) {
+      setOpenSection("payment");
+    }
+
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validate()) return;
 
     const raw = window.localStorage.getItem(`catalog-v2-cart:${businessId}`);
     const cart = raw ? (JSON.parse(raw) as Array<{ name: string; price: number; quantity: number }>) : [];
     if (!cart.length) {
-      setError("Tu carrito está vacío.");
+      setGeneralError("Tu carrito está vacío.");
       return;
     }
 
     setSubmitting(true);
-    setError(null);
+    setGeneralError(null);
 
     try {
       if (paymentMethod === "tarjeta") {
@@ -86,6 +229,7 @@ export const CatalogOrderInfoPage = () => {
           metadata: {
             deliveryMethod,
             paymentMethod,
+            address: buildAddress(),
           },
         });
 
@@ -108,23 +252,25 @@ export const CatalogOrderInfoPage = () => {
         `Hola ${storeName}, quiero hacer mi pedido:`,
         ...lines,
         "",
-        `Cliente: ${name}`,
-        `Teléfono: ${phone}`,
+        `Cliente: ${name || "No proporcionado"}`,
+        `Teléfono: ${phone || "No proporcionado"}`,
         email ? `Email: ${email}` : "",
-        `Entrega: ${deliveryMethod}`,
-        address ? `Dirección: ${address}` : "",
-        references ? `Referencias: ${references}` : "",
-        `Pago: ${paymentMethod}`,
+        shippingOptions.ShippingMetod ? `Entrega: ${deliveryMethod}` : "",
+        deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled(shippingOptions) ? `Dirección: ${buildAddress()}` : "",
+        shippingOptions.PaymentMetod ? `Pago: ${paymentMethod}` : "",
       ]
         .filter(Boolean)
         .join("\n");
 
-      if (storePhone) {
-        window.open(`https://wa.me/${storePhone}?text=${encodeURIComponent(message)}`, "_blank");
+      if (!storePhone) {
+        throw new Error("No encontramos el teléfono de la tienda para enviar el pedido por WhatsApp.");
       }
+
+      window.open(`https://wa.me/${storePhone}?text=${encodeURIComponent(message)}`, "_blank");
+      window.localStorage.removeItem(`catalog-v2-cart:${businessId}`);
       navigate(`/v2/catalogo/${businessId}`);
     } catch (e: any) {
-      setError(e?.message || "No se pudo preparar el pedido.");
+      setGeneralError(e?.message || "No se pudo preparar el pedido.");
     } finally {
       setSubmitting(false);
     }
@@ -139,50 +285,118 @@ export const CatalogOrderInfoPage = () => {
 
       <section className="catalog-v2-order-info__content">
         <h2>Información del pedido</h2>
-        {error ? <p className="catalog-v2-order-info__error">{error}</p> : null}
-        <article className="card open">
-          <h3>Información de contacto</h3>
-          <div className="grid">
-            <label>Nombre completo<input value={name} onChange={(e) => setName(e.target.value)} placeholder="Introduce tu nombre" /></label>
-            <label>Email (opcional)<input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Introduce tu email" /></label>
-            <label className="full">Teléfono móvil<input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Introduce tu teléfono" /></label>
-          </div>
-        </article>
+        {generalError ? <p className="catalog-v2-order-info__error">{generalError}</p> : null}
 
-        <article className="card open">
-          <h3>Método de entrega</h3>
-          <div className="grid">
-            <label className="full">
-              <select value={deliveryMethod} onChange={(e) => setDeliveryMethod(e.target.value)}>
-                <option value="domicilio">Domicilio</option>
-                <option value="recoger">Recoger en tienda</option>
-              </select>
-            </label>
-          </div>
-        </article>
-
-        {deliveryMethod !== "recoger" ? (
+        {shippingOptions.ContactInformation ? (
           <article className="card open">
-            <h3>Dirección de entrega</h3>
-            <div className="grid">
-              <label className="full">Dirección<input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Calle, colonia, código postal" /></label>
-              <label className="full">Referencias<input value={references} onChange={(e) => setReferences(e.target.value)} placeholder="Referencias del domicilio" /></label>
+            <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "contact" ? null : "contact"))}>
+              <h3>Información de contacto</h3>
+              <span>{openSection === "contact" ? "▾" : "▸"}</span>
+            </button>
+            <div className={`section-content ${openSection === "contact" ? "open" : ""}`}>
+              <div className="grid">
+                <label ref={fieldRefs.name}>Nombre completo
+                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Introduce tu nombre" />
+                  {errors.name ? <small>{errors.name}</small> : null}
+                </label>
+                <label ref={fieldRefs.email}>Email (opcional)
+                  <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Introduce tu email" />
+                  {errors.email ? <small>{errors.email}</small> : null}
+                </label>
+                <label className="full" ref={fieldRefs.phone}>Teléfono móvil
+                  <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Introduce tu teléfono" />
+                  {errors.phone ? <small>{errors.phone}</small> : null}
+                </label>
+              </div>
             </div>
           </article>
         ) : null}
 
-        <article className="card open">
-          <h3>Método de pago</h3>
-          <div className="grid">
-            <label className="full">
-              <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}>
-                <option value="efectivo">Efectivo</option>
-                <option value="transferencia">Transferencia</option>
-                {cardEnabled ? <option value="tarjeta">Tarjeta (Stripe)</option> : null}
-              </select>
-            </label>
-          </div>
-        </article>
+        {shippingOptions.ShippingMetod ? (
+          <article className="card open">
+            <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "delivery" ? null : "delivery"))}>
+              <h3>Método de entrega</h3>
+              <span>{openSection === "delivery" ? "▾" : "▸"}</span>
+            </button>
+            <div className={`section-content ${openSection === "delivery" ? "open" : ""}`}>
+              <div className="grid">
+                <label className="full" ref={fieldRefs.deliveryMethod}>
+                  <select value={deliveryMethod} onChange={(e) => setDeliveryMethod(e.target.value)}>
+                    <option value="domicilio">Entrega a domicilio</option>
+                    <option value="recoger">Recoger en tienda</option>
+                  </select>
+                  {errors.deliveryMethod ? <small>{errors.deliveryMethod}</small> : null}
+                </label>
+              </div>
+            </div>
+          </article>
+        ) : null}
+
+        {deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled(shippingOptions) ? (
+          <article className="card open">
+            <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "address" ? null : "address"))}>
+              <h3>Dirección de entrega</h3>
+              <span>{openSection === "address" ? "▾" : "▸"}</span>
+            </button>
+            <div className={`section-content ${openSection === "address" ? "open" : ""}`}>
+              <div className="grid">
+                {shippingOptions.Street ? (
+                  <label ref={fieldRefs.street}>Calle
+                    <input value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Introduce tu calle" />
+                    {errors.street ? <small>{errors.street}</small> : null}
+                  </label>
+                ) : null}
+                {shippingOptions.ZipCode ? (
+                  <label ref={fieldRefs.zipCode}>Código Postal
+                    <input value={zipCode} onChange={(e) => setZipCode(e.target.value)} placeholder="Código Postal" />
+                    {errors.zipCode ? <small>{errors.zipCode}</small> : null}
+                  </label>
+                ) : null}
+                {shippingOptions.City ? (
+                  <label ref={fieldRefs.city}>Municipio
+                    <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Municipio" />
+                    {errors.city ? <small>{errors.city}</small> : null}
+                  </label>
+                ) : null}
+                {shippingOptions.State ? (
+                  <label ref={fieldRefs.state}>Estado
+                    <input value={state} onChange={(e) => setState(e.target.value)} placeholder="Estado" />
+                    {errors.state ? <small>{errors.state}</small> : null}
+                  </label>
+                ) : null}
+                {shippingOptions.References ? (
+                  <label className="full">Referencia (opcional)
+                    <input value={references} onChange={(e) => setReferences(e.target.value)} placeholder="Introduce una referencia" />
+                  </label>
+                ) : null}
+              </div>
+            </div>
+          </article>
+        ) : null}
+
+        {shippingOptions.PaymentMetod ? (
+          <article className="card open">
+            <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "payment" ? null : "payment"))}>
+              <h3>Método de pago</h3>
+              <span>{openSection === "payment" ? "▾" : "▸"}</span>
+            </button>
+            <div className={`section-content ${openSection === "payment" ? "open" : ""}`}>
+              <div className="grid">
+                <label className="full" ref={fieldRefs.paymentMethod}>
+                  <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}>
+                    <option value="transferencia">Transferencia bancaria</option>
+                    <option value="efectivo">Dinero en efectivo</option>
+                    <option value="tarjeta" disabled={!cardEnabled}>
+                      {cardEnabled ? "Tarjeta de crédito o débito" : "Tarjeta de crédito o débito (no disponible)"}
+                    </option>
+                    <option value="enlace">Enlace de pago</option>
+                  </select>
+                  {errors.paymentMethod ? <small>{errors.paymentMethod}</small> : null}
+                </label>
+              </div>
+            </div>
+          </article>
+        ) : null}
 
         <button type="button" className="submit" onClick={handleSubmit} disabled={submitting}>
           {submitting ? "Procesando..." : "Preparar pedido"}

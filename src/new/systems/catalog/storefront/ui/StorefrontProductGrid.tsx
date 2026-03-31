@@ -1,5 +1,6 @@
 import { memo, useMemo, useState } from "react";
 import { NavLink } from "react-router-dom";
+import { FiEye, FiShoppingCart, FiTrash2 } from "react-icons/fi";
 import { StorefrontProduct } from "../model/CatalogStorefrontModels";
 
 type ProductGridProps = {
@@ -12,24 +13,6 @@ type ProductGridProps = {
   formatPrice: (value: number) => string;
   phone: string | null;
 };
-
-const CartIcon = () => (
-  <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-    <circle cx="9" cy="20" r="1.6" />
-    <circle cx="18" cy="20" r="1.6" />
-    <path d="M3 4h2l2.2 10.3a2 2 0 0 0 2 1.7h7.8a2 2 0 0 0 2-1.6L21 7H7.2" />
-  </svg>
-);
-
-const EyeIcon = () => <span aria-hidden="true">👁</span>;
-
-const TrashIcon = () => (
-  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-    <path d="M4 7h16" />
-    <path d="M9 7V5a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-    <path d="M7 7l1 12a1 1 0 0 0 1 .9h6a1 1 0 0 0 1-.9L17 7" />
-  </svg>
-);
 
 const ProductCard = memo(({
   product,
@@ -76,7 +59,7 @@ const ProductCard = memo(({
 
         {product.variantsCount && product.variantsCount > 0 ? (
           <button type="button" className="catalog-v2-grid__quick-view" onClick={() => onQuickView(product)} aria-label={`Opciones de ${product.name}`}>
-            <EyeIcon />
+            <FiEye />
           </button>
         ) : null}
 
@@ -92,7 +75,7 @@ const ProductCard = memo(({
               <span>{formattedBase}</span>
             )}
           </div>
-          <button type="button" onClick={handleAdd} aria-label={`Agregar ${product.name}`}><CartIcon /></button>
+          <button type="button" onClick={handleAdd} aria-label={`Agregar ${product.name}`}><FiShoppingCart /></button>
         </div>
       </div>
 
@@ -107,7 +90,7 @@ const ProductCard = memo(({
           ) : (
             <p>{formattedBase}</p>
           )}
-          <button type="button" onClick={handleAdd} aria-label={`Agregar ${product.name}`}><CartIcon /></button>
+          <button type="button" onClick={handleAdd} aria-label={`Agregar ${product.name}`}><FiShoppingCart /></button>
         </div>
       </div>
 
@@ -116,7 +99,7 @@ const ProductCard = memo(({
           {qty > 1 ? (
             <button type="button" onClick={() => onDecrement(product)} aria-label={`Quitar una unidad de ${product.name}`}>−</button>
           ) : (
-            <button type="button" onClick={() => onRemove(product)} aria-label={`Eliminar ${product.name}`}><TrashIcon /></button>
+            <button type="button" onClick={() => onRemove(product)} aria-label={`Eliminar ${product.name}`}><FiTrash2 /></button>
           )}
           <span>{qty || 1}</span>
           <button type="button" onClick={handleAdd} aria-label={`Agregar otra unidad de ${product.name}`}>+</button>

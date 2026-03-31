@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { FiSearch, FiShoppingCart, FiSliders, FiX } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
-import { CatalogStorefrontApi, StorefrontCategory } from "../api/CatalogStorefrontApi";
+import { CatalogStorefrontApi, StorefrontCategory, StorefrontVariant } from "../api/CatalogStorefrontApi";
 import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExperiencePage";
 import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontBusiness, StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
@@ -12,11 +13,6 @@ import "./CatalogStorefrontPage.css";
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
 
-const formatWhatsappText = (storeName: string, items: StorefrontCartItem[], total: number) => {
-  const lines = items.map((item) => `• ${item.name} x${item.quantity} — ${money(item.price * item.quantity)}`);
-  return [`Hola, quiero pedir en *${storeName}*:`, ...lines, ``, `*Total:* ${money(total)}`].join("\n");
-};
-
 const SkeletonGrid = () => (
   <div className="catalog-v2-grid" aria-hidden="true">
     {Array.from({ length: 8 }).map((_, index) => (
@@ -26,6 +22,7 @@ const SkeletonGrid = () => (
 );
 
 export const CatalogStorefrontPage = () => {
+  const navigate = useNavigate();
   const { businessId = "" } = useParams<{ businessId: string }>();
   const [store, setStore] = useState<StorefrontBusiness | null>(null);
   const [categories, setCategories] = useState<StorefrontCategory[]>([]);
@@ -33,19 +30,21 @@ export const CatalogStorefrontPage = () => {
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [cart, setCart] = useState<StorefrontCartItem[]>([]);
   const [search, setSearch] = useState("");
-  const [showCart, setShowCart] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [sortMode, setSortMode] = useState<"none" | "asc" | "desc">("none");
-  const [priceMin, setPriceMin] = useState(0);
-  const [priceMax, setPriceMax] = useState(999);
+  const minBound = 0;
+  const maxBound = 999;
+  const [priceMin, setPriceMin] = useState(minBound);
+  const [priceMax, setPriceMax] = useState(maxBound);
   const [variantModalOpen, setVariantModalOpen] = useState(false);
   const [variantProduct, setVariantProduct] = useState<StorefrontProduct | null>(null);
-  const [variantOptions, setVariantOptions] = useState<Array<{ id: number; description: string; price: number; promotionPrice: number | null }>>([]);
+  const [variantOptions, setVariantOptions] = useState<StorefrontVariant[]>([]);
 
   const pageLogic = useMemo(() => {
     const repository = new CatalogStorefrontApi(getPosApiBaseUrl());
@@ -55,6 +54,7 @@ export const CatalogStorefrontPage = () => {
 
   useEffect(() => {
     setPage(1);
+    setPageInput("1");
     setSelectedCategoryId(null);
   }, [businessId]);
 
@@ -71,6 +71,7 @@ export const CatalogStorefrontPage = () => {
         setCategories(categoriesResponse);
         window.localStorage.setItem("catalog-v2-store-name", business?.name ?? "Catálogo");
         window.localStorage.setItem("idBusiness", businessId);
+        window.localStorage.setItem("telefono", business?.phone ?? "");
       } catch {
         setError("No fue posible cargar la información del negocio.");
       }
@@ -187,7 +188,7 @@ export const CatalogStorefrontPage = () => {
     setVariantModalOpen(true);
   };
 
-  const addVariantToCart = (variant: { id: number; description: string; price: number; promotionPrice: number | null }) => {
+  const addVariantToCart = (variant: StorefrontVariant, quantity: number, buyNow: boolean) => {
     if (!variantProduct) return;
     const syntheticId = Number(`${variantProduct.id}${variant.id}`);
     const variantPrice = variant.promotionPrice && variant.promotionPrice > 0 ? variant.promotionPrice : variant.price;
@@ -195,28 +196,47 @@ export const CatalogStorefrontPage = () => {
     setCart((current) => {
       const existing = current.find((item) => item.productId === syntheticId);
       if (existing) {
-        return current.map((item) => (item.productId === syntheticId ? { ...item, quantity: item.quantity + 1 } : item));
+        return current.map((item) =>
+          item.productId === syntheticId ? { ...item, quantity: item.quantity + quantity } : item,
+        );
       }
-      return [...current, { productId: syntheticId, name: `${variantProduct.name} · ${variant.description}`, price: variantPrice, quantity: 1, image: variantProduct.image }];
+      return [
+        ...current,
+        {
+          productId: syntheticId,
+          name: `${variantProduct.name} · ${variant.description}`,
+          price: variantPrice,
+          quantity,
+          image: variantProduct.image,
+        },
+      ];
     });
+
     setVariantModalOpen(false);
     setVariantProduct(null);
     setVariantOptions([]);
     setToast("Variante agregada al carrito");
+
+    if (buyNow) {
+      navigate("/v2/catalogo/pedido");
+    }
   };
 
   const productsWithImage = useMemo(
     () => filteredProducts.filter((product) => Boolean(product.image && product.image.trim().length > 0)),
     [filteredProducts],
   );
-  const phoneDigits = (store?.phone ?? "").replace(/\D/g, "");
-  const whatsappOrderLink = phoneDigits
-    ? `https://wa.me/${phoneDigits}?text=${encodeURIComponent(formatWhatsappText(store?.name ?? "Catálogo digital", cart, total))}`
-    : null;
-
   const handleSelectCategory = (categoryId: number | null) => {
     setSelectedCategoryId(categoryId);
     setPage(1);
+    setPageInput("1");
+  };
+
+  const changePage = (nextPage: number) => {
+    const safePage = Math.min(totalPages, Math.max(1, nextPage));
+    setPage(safePage);
+    setPageInput(String(safePage));
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -224,20 +244,25 @@ export const CatalogStorefrontPage = () => {
       <header className="catalog-v2__header">
         <h1>{store?.name || "Catálogo digital"}</h1>
         <Link to="/v2/catalogo/pedido" className="catalog-v2__cart-link" aria-label="Ver carrito">
-          🛒
+          <FiShoppingCart />
           {totalItems > 0 ? <span>{totalItems}</span> : null}
         </Link>
       </header>
 
       <section className="catalog-v2__tools" aria-label="Búsqueda de productos">
-        <input
-          type="search"
-          value={search}
-          onChange={(event) => setSearch(event.target.value)}
-          placeholder="Buscar producto..."
-          aria-label="Buscar producto"
-        />
-              <button type="button" className="catalog-v2__filter-btn" onClick={() => setShowFilters(true)}>Filtros</button>
+        <div className="catalog-v2__search-wrap">
+          <input
+            type="search"
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Busca un producto"
+            aria-label="Buscar producto"
+          />
+          <FiSearch />
+        </div>
+        <button type="button" className="catalog-v2__filter-btn" onClick={() => setShowFilters(true)} aria-label="Abrir filtros">
+          <FiSliders />
+        </button>
       </section>
 
       <section className="catalog-v2__categories" aria-label="Categorías de catálogo">
@@ -285,13 +310,28 @@ export const CatalogStorefrontPage = () => {
 
       {!loading && totalPages > 1 ? (
         <nav className="catalog-v2__pagination" aria-label="Paginación de catálogo">
-          <button type="button" onClick={() => setPage((current) => Math.max(1, current - 1))} disabled={page === 1}>
+          <button type="button" onClick={() => changePage(page - 1)} disabled={page === 1}>
             Anterior
           </button>
           <span>Página {page} de {totalPages}</span>
+          <div className="catalog-v2__pagination-jump">
+            <input
+              type="text"
+              inputMode="numeric"
+              value={pageInput}
+              onChange={(event) => setPageInput(event.target.value.replace(/[^\d]/g, ""))}
+              onKeyDown={(event) => {
+                if (event.key === "Enter") {
+                  changePage(Number(pageInput || page));
+                }
+              }}
+              aria-label="Ir a la página"
+            />
+            <button type="button" onClick={() => changePage(Number(pageInput || page))}>Ir</button>
+          </div>
           <button
             type="button"
-            onClick={() => setPage((current) => Math.min(totalPages, current + 1))}
+            onClick={() => changePage(page + 1)}
             disabled={page === totalPages}
           >
             Siguiente
@@ -299,38 +339,31 @@ export const CatalogStorefrontPage = () => {
         </nav>
       ) : null}
 
-      <aside className={`catalog-v2__cart ${showCart ? "is-open" : ""}`} aria-label="Carrito">
-        <h3>Carrito</h3>
-        <p>{totalItems} artículo(s)</p>
-        <ul>
-          {cart.map((item) => (
-            <li key={item.productId}>
-              <span>{item.name} × {item.quantity}</span>
-              <strong>{money(item.price * item.quantity)}</strong>
-            </li>
-          ))}
-        </ul>
-        <div className="catalog-v2__total">Total: <strong>{money(total)}</strong></div>
-        <div className="catalog-v2__cart-actions">
-          <button type="button" onClick={() => setCart([])} disabled={cart.length === 0}>Vaciar</button>
-          {whatsappOrderLink ? (
-            <a href={whatsappOrderLink} target="_blank" rel="noreferrer" className={cart.length === 0 ? "is-disabled" : ""}>
-              Pedir por WhatsApp
-            </a>
-          ) : null}
-        </div>
-      </aside>
 
       {showFilters ? (
         <div className="catalog-v2-filters__backdrop">
           <aside className="catalog-v2-filters">
+            <button type="button" className="catalog-v2-filters__close" onClick={() => setShowFilters(false)} aria-label="Cerrar filtros">
+              <FiX />
+            </button>
             <h3>Filtros</h3>
-            <label><input type="radio" checked={sortMode === "asc"} onChange={() => setSortMode("asc")} /> Precio de menor a mayor</label>
-            <label><input type="radio" checked={sortMode === "desc"} onChange={() => setSortMode("desc")} /> Precio de mayor a menor</label>
-            <label>Min<input type="number" value={priceMin} onChange={(e) => setPriceMin(Number(e.target.value || 0))} /></label>
-            <label>Max<input type="number" value={priceMax} onChange={(e) => setPriceMax(Number(e.target.value || 999))} /></label>
+            <label className="catalog-v2-filters__check"><input type="checkbox" checked={sortMode === "asc"} onChange={() => setSortMode((value) => value === "asc" ? "none" : "asc")} /><span>Precio de menor a mayor</span></label>
+            <label className="catalog-v2-filters__check"><input type="checkbox" checked={sortMode === "desc"} onChange={() => setSortMode((value) => value === "desc" ? "none" : "desc")} /><span>Precio de mayor a menor</span></label>
+            <div className="catalog-v2-filters__range">
+              <p>Rango de precios</p>
+              <div className="catalog-v2-filters__range-legend">
+                <span>${minBound}</span>
+                <span>${maxBound}</span>
+              </div>
+              <div>
+                <label>Mínimo<input type="number" value={priceMin} onChange={(e) => setPriceMin(Math.max(minBound, Math.min(Number(e.target.value || minBound), priceMax)))} /></label>
+                <label>Máximo<input type="number" value={priceMax} onChange={(e) => setPriceMax(Math.min(maxBound, Math.max(Number(e.target.value || maxBound), priceMin)))} /></label>
+              </div>
+              <input type="range" min={minBound} max={maxBound} value={priceMin} onChange={(e) => setPriceMin(Math.min(Number(e.target.value), priceMax))} aria-label="Precio mínimo" />
+              <input type="range" min={minBound} max={maxBound} value={priceMax} onChange={(e) => setPriceMax(Math.max(Number(e.target.value), priceMin))} aria-label="Precio máximo" />
+            </div>
             <div className="catalog-v2-filters__actions">
-              <button type="button" onClick={() => { setSortMode("none"); setPriceMin(0); setPriceMax(999); }}>Limpiar</button>
+              <button type="button" onClick={() => { setSortMode("none"); setPriceMin(minBound); setPriceMax(maxBound); }}>Limpiar</button>
               <button type="button" onClick={() => setShowFilters(false)}>Aplicar</button>
             </div>
           </aside>
@@ -340,15 +373,18 @@ export const CatalogStorefrontPage = () => {
       <VariantSelectionModalV2
         open={variantModalOpen}
         productName={variantProduct?.name ?? "Variantes"}
+        productImage={variantProduct?.image}
+        productBasePrice={variantProduct?.price}
         variants={variantOptions}
+        formatPrice={money}
         onClose={() => setVariantModalOpen(false)}
         onConfirm={addVariantToCart}
       />
 
       {totalItems > 0 ? (
-        <button type="button" className="catalog-v2__cart-fab" onClick={() => setShowCart((current) => !current)}>
-          {showCart ? "Ocultar carrito" : `Ver carrito (${totalItems}) · ${money(total)}`}
-        </button>
+        <Link to="/v2/catalogo/pedido" className="catalog-v2__cart-fab">
+          Ver carrito ({totalItems}) · {money(total)}
+        </Link>
       ) : null}
     </main>
   );
