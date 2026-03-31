@@ -454,33 +454,7 @@ export const PosV2LoyaltyPage = () => {
           )}
         </article> : null}
 
-        {(loyaltyView === "all" || loyaltyView === "coupons") ? <article className="pos-v2-loyalty__card">
-          <div className="pos-v2-loyalty__header-actions">
-            <h2>Cupones del negocio</h2>
-            <button type="button" className="pos-v2-loyalty__ghost-btn" onClick={() => setIsCouponsModalOpen(true)}>Ver mis cupones</button>
-          </div>
-          <div className="pos-v2-loyalty__form">
-            <label>
-              Filtrar por descripción
-              <input value={couponDescriptionQuery} onChange={(event) => setCouponDescriptionQuery(event.target.value)} placeholder="Escribe parte de la descripción..." />
-            </label>
-          </div>
-          <div className="pos-v2-loyalty__detail">
-            <p><strong>Resumen:</strong> {loadingCoupons ? "cargando..." : `${filteredCoupons.length} cupón(es)`}</p>
-            <p><strong>Activos:</strong> {groupedCoupons.actives.length} · <strong>Inactivos:</strong> {groupedCoupons.inactives.length}</p>
-            {filteredCoupons.filter((entry) => isCouponActive(entry)).slice(0, 6).map((entry) => (
-              <p key={`${entry.id}-${entry.qr}`}>
-                <span className="pos-v2-loyalty__status-dot pos-v2-loyalty__status-dot--active" aria-hidden="true" /> {entry.description || "Cupón"} · {entry.totalUsers}/{entry.maxRedemptions} canjes
-              </p>
-            ))}
-            {filteredCoupons.filter((entry) => !isCouponActive(entry)).slice(0, 4).map((entry) => (
-              <p key={`inactive-${entry.id}-${entry.qr}`}>
-                <span className="pos-v2-loyalty__status-dot pos-v2-loyalty__status-dot--inactive" aria-hidden="true" /> {entry.description || "Cupón"} · {entry.totalUsers}/{entry.maxRedemptions} canjes
-              </p>
-            ))}
-            {!loadingCoupons && filteredCoupons.length === 0 ? <p>No hay cupones para ese criterio.</p> : null}
-          </div>
-        </article> : null}
+       
 
         {(loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
           <h2>Resumen de visitas</h2>
