@@ -19,6 +19,8 @@ type ShippingOptions = {
   PaymentMetod: boolean;
 };
 
+type CartItem = { productId: number; variantId?: number; name: string; price: number; quantity: number };
+
 const defaultShippingOptions: ShippingOptions = {
   ContactInformation: true,
   ShippingMetod: true,
@@ -192,7 +194,7 @@ export const CatalogOrderInfoPage = () => {
     if (!validate()) return;
 
     const raw = window.localStorage.getItem(`catalog-v2-cart:${businessId}`);
-    const cart = raw ? (JSON.parse(raw) as Array<{ name: string; price: number; quantity: number }>) : [];
+    const cart = raw ? (JSON.parse(raw) as CartItem[]) : [];
     if (!cart.length) {
       setGeneralError("Tu carrito está vacío.");
       return;
@@ -202,6 +204,28 @@ export const CatalogOrderInfoPage = () => {
     setGeneralError(null);
 
     try {
+      const orderPayload = {
+        Order: {
+          Name: shippingOptions.ContactInformation ? name.trim() : "",
+          Business_Id: businessId,
+          Delivery: deliveryMethod === "domicilio" ? 1 : 0,
+          PaymentMethod: shippingOptions.PaymentMetod ? paymentMethod : "",
+          Address: buildAddress(),
+          PhoneNumber: shippingOptions.ContactInformation ? phone.trim() : "",
+        },
+        OrderDetails: cart.map((item) => ({
+          Quantity: Math.max(1, Number(item.quantity) || 1),
+          ...(item.variantId
+            ? { Variant_Id: Number(item.variantId) || 0 }
+            : { Product_Id: Number(item.productId) || 0 }),
+        })),
+      };
+
+      const orderResult = await api.createCatalogOrder(orderPayload);
+      if (!orderResult) {
+        throw new Error("No se pudo registrar el pedido en el servidor.");
+      }
+
       if (paymentMethod === "tarjeta") {
         const [stripeConfig, businessConfig] = await Promise.all([
           api.getStripeConfig(),

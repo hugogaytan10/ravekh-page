@@ -45,6 +45,7 @@ export const CatalogStorefrontPage = () => {
   const [variantModalOpen, setVariantModalOpen] = useState(false);
   const [variantProduct, setVariantProduct] = useState<StorefrontProduct | null>(null);
   const [variantOptions, setVariantOptions] = useState<StorefrontVariant[]>([]);
+  const [cartReady, setCartReady] = useState(false);
 
   const pageLogic = useMemo(() => {
     const repository = new CatalogStorefrontApi(getPosApiBaseUrl());
@@ -103,19 +104,26 @@ export const CatalogStorefrontPage = () => {
   useEffect(() => {
     if (!businessId) return;
     const saved = window.localStorage.getItem(`catalog-v2-cart:${businessId}`);
-    if (!saved) return;
+    if (!saved) {
+      setCart([]);
+      setCartReady(true);
+      return;
+    }
     try {
       const parsed = JSON.parse(saved) as StorefrontCartItem[];
       if (Array.isArray(parsed)) setCart(parsed);
+      else setCart([]);
     } catch {
-      // ignore
+      setCart([]);
+    } finally {
+      setCartReady(true);
     }
   }, [businessId]);
 
   useEffect(() => {
-    if (!businessId) return;
+    if (!businessId || !cartReady) return;
     window.localStorage.setItem(`catalog-v2-cart:${businessId}`, JSON.stringify(cart));
-  }, [businessId, cart]);
+  }, [businessId, cart, cartReady]);
 
   useEffect(() => {
     if (!toast) return;
@@ -123,7 +131,17 @@ export const CatalogStorefrontPage = () => {
     return () => window.clearTimeout(timeoutId);
   }, [toast]);
 
-  const addToCart = (product: StorefrontProduct) => {
+  const addToCart = async (product: StorefrontProduct) => {
+    if (product.variantsCount && product.variantsCount > 0) {
+      const variants = await pageLogic.loadVariants(product.id);
+      if (variants.length > 0) {
+        setVariantProduct(product);
+        setVariantOptions(variants);
+        setVariantModalOpen(true);
+        return;
+      }
+    }
+
     setCart((current) => {
       const existing = current.find((item) => item.productId === product.id);
       if (existing) {
@@ -146,6 +164,13 @@ export const CatalogStorefrontPage = () => {
       current
         .map((item) => (item.productId === product.id ? { ...item, quantity: Math.max(0, item.quantity - 1) } : item))
         .filter((item) => item.quantity > 0),
+    );
+  };
+
+  const setProductQuantity = (product: StorefrontProduct, quantity: number) => {
+    const safeQuantity = Math.max(1, Math.min(999, quantity));
+    setCart((current) =>
+      current.map((item) => (item.productId === product.id ? { ...item, quantity: safeQuantity } : item)),
     );
   };
 
@@ -204,6 +229,7 @@ export const CatalogStorefrontPage = () => {
         ...current,
         {
           productId: syntheticId,
+          variantId: variant.id,
           name: `${variantProduct.name} · ${variant.description}`,
           price: variantPrice,
           quantity,
@@ -249,26 +275,35 @@ export const CatalogStorefrontPage = () => {
         </Link>
       </header>
 
-      <section className="catalog-v2__tools" aria-label="Búsqueda de productos">
-        <div className="catalog-v2__search-wrap">
+      <section className="flex gap-2" aria-label="Búsqueda de productos">
+        <div className="relative flex-1">
           <input
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
             placeholder="Busca un producto"
             aria-label="Buscar producto"
+            className="w-full min-h-[46px] rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 pr-10 text-[var(--text-primary)] placeholder:text-[var(--text-muted)] outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20"
           />
-          <FiSearch />
+          <FiSearch className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[var(--text-muted)] text-xl" />
         </div>
-        <button type="button" className="catalog-v2__filter-btn" onClick={() => setShowFilters(true)} aria-label="Abrir filtros">
+        <button
+          type="button"
+          className="grid h-[46px] w-[46px] place-items-center rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+          onClick={() => setShowFilters(true)}
+          aria-label="Abrir filtros"
+        >
           <FiSliders />
         </button>
       </section>
 
-      <section className="catalog-v2__categories" aria-label="Categorías de catálogo">
+      <section className="flex gap-3 overflow-x-auto py-1" aria-label="Categorías de catálogo">
         <button
           type="button"
-          className={`catalog-v2__category-chip ${selectedCategoryId === null ? "is-active" : ""}`}
+          className={`whitespace-nowrap border-b-2 bg-transparent pb-1 text-sm ${selectedCategoryId === null
+            ? "border-[var(--text-primary)] text-[var(--text-primary)] font-semibold"
+            : "border-transparent text-[var(--text-muted)]"
+            }`}
           onClick={() => handleSelectCategory(null)}
         >
           Todo
@@ -277,7 +312,10 @@ export const CatalogStorefrontPage = () => {
           <button
             key={category.id}
             type="button"
-            className={`catalog-v2__category-chip ${selectedCategoryId === category.id ? "is-active" : ""}`}
+            className={`whitespace-nowrap border-b-2 bg-transparent pb-1 text-sm ${selectedCategoryId === category.id
+              ? "border-[var(--text-primary)] text-[var(--text-primary)] font-semibold"
+              : "border-transparent text-[var(--text-muted)]"
+              }`}
             onClick={() => handleSelectCategory(category.id)}
           >
             {category.name}
@@ -297,6 +335,7 @@ export const CatalogStorefrontPage = () => {
             onAdd={addToCart}
             onRemove={removeFromCart}
             onDecrement={decrementFromCart}
+            onSetQuantity={setProductQuantity}
             onQuickView={handleQuickView}
             existingQuantities={cartQuantityMap}
             formatPrice={money}
@@ -309,16 +348,25 @@ export const CatalogStorefrontPage = () => {
       </section>
 
       {!loading && totalPages > 1 ? (
-        <nav className="catalog-v2__pagination" aria-label="Paginación de catálogo">
-          <button type="button" onClick={() => changePage(page - 1)} disabled={page === 1}>
+        <nav
+          className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface)] p-2"
+          aria-label="Paginación de catálogo"
+        >
+          <button
+            type="button"
+            className="min-h-9 rounded-lg border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 text-sm font-semibold text-[var(--text-primary)] disabled:opacity-45"
+            onClick={() => changePage(page - 1)}
+            disabled={page === 1}
+          >
             Anterior
           </button>
-          <span>Página {page} de {totalPages}</span>
-          <div className="catalog-v2__pagination-jump">
+          <span className="text-sm text-[var(--text-secondary)]">Página {page} de {totalPages}</span>
+          <div className="flex items-center gap-1.5">
             <input
               type="text"
               inputMode="numeric"
               value={pageInput}
+              className="h-9 w-14 rounded-lg border border-[var(--border-default)] bg-[var(--bg-subtle)] text-center text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20"
               onChange={(event) => setPageInput(event.target.value.replace(/[^\d]/g, ""))}
               onKeyDown={(event) => {
                 if (event.key === "Enter") {
@@ -327,10 +375,17 @@ export const CatalogStorefrontPage = () => {
               }}
               aria-label="Ir a la página"
             />
-            <button type="button" onClick={() => changePage(Number(pageInput || page))}>Ir</button>
+            <button
+              type="button"
+              className="min-h-9 rounded-lg border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 text-sm font-semibold text-[var(--text-primary)]"
+              onClick={() => changePage(Number(pageInput || page))}
+            >
+              Ir
+            </button>
           </div>
           <button
             type="button"
+            className="min-h-9 rounded-lg border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 text-sm font-semibold text-[var(--text-primary)] disabled:opacity-45"
             onClick={() => changePage(page + 1)}
             disabled={page === totalPages}
           >
@@ -341,30 +396,45 @@ export const CatalogStorefrontPage = () => {
 
 
       {showFilters ? (
-        <div className="catalog-v2-filters__backdrop">
-          <aside className="catalog-v2-filters">
-            <button type="button" className="catalog-v2-filters__close" onClick={() => setShowFilters(false)} aria-label="Cerrar filtros">
+        <div className="fixed inset-0 z-40 grid bg-black/55">
+          <aside className="ml-auto grid h-full w-full max-w-[390px] content-start gap-4 overflow-y-auto border-l border-[var(--border-default)] bg-[var(--bg-surface)] p-4 text-[var(--text-primary)] sm:max-w-[420px] max-sm:mt-auto max-sm:h-auto max-sm:max-w-full max-sm:rounded-t-2xl max-sm:border-l-0 max-sm:border-t">
+            <button
+              type="button"
+              className="grid h-9 w-9 place-items-center rounded-full text-[var(--text-primary)] hover:bg-[var(--bg-subtle)]"
+              onClick={() => setShowFilters(false)}
+              aria-label="Cerrar filtros"
+            >
               <FiX />
             </button>
-            <h3>Filtros</h3>
-            <label className="catalog-v2-filters__check"><input type="checkbox" checked={sortMode === "asc"} onChange={() => setSortMode((value) => value === "asc" ? "none" : "asc")} /><span>Precio de menor a mayor</span></label>
-            <label className="catalog-v2-filters__check"><input type="checkbox" checked={sortMode === "desc"} onChange={() => setSortMode((value) => value === "desc" ? "none" : "desc")} /><span>Precio de mayor a menor</span></label>
-            <div className="catalog-v2-filters__range">
-              <p>Rango de precios</p>
-              <div className="catalog-v2-filters__range-legend">
+            <h3 className="text-3xl font-bold leading-none">Filtros</h3>
+            <label className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 py-2">
+              <span className="text-sm font-medium text-[var(--text-secondary)]">Precio de menor a mayor</span>
+              <input type="checkbox" checked={sortMode === "asc"} onChange={() => setSortMode((value) => value === "asc" ? "none" : "asc")} className="h-5 w-5 shrink-0 rounded accent-[var(--text-primary)]" />
+            </label>
+            <label className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 py-2">
+              <span className="text-sm font-medium text-[var(--text-secondary)]">Precio de mayor a menor</span>
+              <input type="checkbox" checked={sortMode === "desc"} onChange={() => setSortMode((value) => value === "desc" ? "none" : "desc")} className="h-5 w-5 shrink-0 rounded accent-[var(--text-primary)]" />
+            </label>
+            <div className="space-y-3 rounded-2xl border border-[var(--border-default)] bg-[var(--bg-subtle)] p-3">
+              <p className="text-xl font-bold">Rango de precios</p>
+              <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
                 <span>${minBound}</span>
                 <span>${maxBound}</span>
               </div>
-              <div>
-                <label>Mínimo<input type="number" value={priceMin} onChange={(e) => setPriceMin(Math.max(minBound, Math.min(Number(e.target.value || minBound), priceMax)))} /></label>
-                <label>Máximo<input type="number" value={priceMax} onChange={(e) => setPriceMax(Math.min(maxBound, Math.max(Number(e.target.value || maxBound), priceMin)))} /></label>
+              <div className="grid grid-cols-2 gap-2 max-sm:grid-cols-1">
+                <label className="grid min-w-0 gap-1 text-xs font-medium text-[var(--text-secondary)]">Mínimo
+                  <input className="h-11 w-full min-w-0 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20" type="number" value={priceMin} onChange={(e) => setPriceMin(Math.max(minBound, Math.min(Number(e.target.value || minBound), priceMax)))} />
+                </label>
+                <label className="grid min-w-0 gap-1 text-xs font-medium text-[var(--text-secondary)]">Máximo
+                  <input className="h-11 w-full min-w-0 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20" type="number" value={priceMax} onChange={(e) => setPriceMax(Math.min(maxBound, Math.max(Number(e.target.value || maxBound), priceMin)))} />
+                </label>
               </div>
-              <input type="range" min={minBound} max={maxBound} value={priceMin} onChange={(e) => setPriceMin(Math.min(Number(e.target.value), priceMax))} aria-label="Precio mínimo" />
-              <input type="range" min={minBound} max={maxBound} value={priceMax} onChange={(e) => setPriceMax(Math.max(Number(e.target.value), priceMin))} aria-label="Precio máximo" />
+              <input className="w-full accent-[var(--text-primary)]" type="range" min={minBound} max={maxBound} value={priceMin} onChange={(e) => setPriceMin(Math.min(Number(e.target.value), priceMax))} aria-label="Precio mínimo" />
+              <input className="w-full accent-[var(--text-primary)]" type="range" min={minBound} max={maxBound} value={priceMax} onChange={(e) => setPriceMax(Math.max(Number(e.target.value), priceMin))} aria-label="Precio máximo" />
             </div>
-            <div className="catalog-v2-filters__actions">
-              <button type="button" onClick={() => { setSortMode("none"); setPriceMin(minBound); setPriceMax(maxBound); }}>Limpiar</button>
-              <button type="button" onClick={() => setShowFilters(false)}>Aplicar</button>
+            <div className="mt-2 grid grid-cols-2 gap-2 max-sm:grid-cols-1">
+              <button className="min-h-11 rounded-full border border-[var(--border-default)] bg-[var(--bg-subtle)] text-sm font-semibold text-[var(--text-primary)]" type="button" onClick={() => { setSortMode("none"); setPriceMin(minBound); setPriceMax(maxBound); }}>Limpiar</button>
+              <button className="min-h-11 rounded-full bg-[var(--text-primary)] text-sm font-semibold text-[var(--text-inverse)]" type="button" onClick={() => setShowFilters(false)}>Aplicar</button>
             </div>
           </aside>
         </div>

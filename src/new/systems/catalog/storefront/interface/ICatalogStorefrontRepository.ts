@@ -1,5 +1,6 @@
 import { StorefrontCategory, StorefrontProductsPage, StorefrontVariant } from "../api/CatalogStorefrontApi";
 import { StorefrontBusiness, StorefrontProduct } from "../model/CatalogStorefrontModels";
+import { CatalogOrderPayload } from "../model/CatalogStorefrontModels";
 
 export interface ICatalogStorefrontRepository {
   getBusinessById(businessId: string): Promise<StorefrontBusiness | null>;
@@ -8,4 +9,5 @@ export interface ICatalogStorefrontRepository {
   getProductsByCategoryPage(categoryId: number, page: number, limit?: number): Promise<StorefrontProductsPage>;
   getProductById(productId: string): Promise<StorefrontProduct | null>;
   getVariantsByProductId(productId: number): Promise<StorefrontVariant[]>;
+  createCatalogOrder(payload: CatalogOrderPayload): Promise<{ Id?: number; Message?: string } | null>;
 }

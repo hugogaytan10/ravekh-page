@@ -48,35 +48,42 @@ export const VariantSelectionModalV2 = ({
   if (!open) return null;
 
   return (
-    <div className="catalog-v2-variant-modal__backdrop" role="dialog" aria-modal="true">
-      <div className="catalog-v2-variant-modal">
-        <button type="button" className="catalog-v2-variant-modal__icon-close" onClick={onClose} aria-label="Cerrar modal">
+    <div className="fixed inset-0 z-[60] grid place-items-center bg-black/70 p-3" role="dialog" aria-modal="true">
+      <div className="relative max-h-[92vh] w-full max-w-5xl overflow-auto rounded-2xl border border-[var(--border-default)] bg-[var(--bg-surface)] p-4 shadow-2xl">
+        <button type="button" className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-[var(--bg-subtle)] text-[var(--text-primary)]" onClick={onClose} aria-label="Cerrar modal">
           <FiX />
         </button>
 
-        <div className="catalog-v2-variant-modal__layout">
-          <div className="catalog-v2-variant-modal__media">
-            {productImage ? <img src={productImage} alt={productName} /> : <div>Sin imagen</div>}
+        <div className="grid items-start gap-4 md:grid-cols-2">
+          <div className="min-w-0">
+            {productImage ? (
+              <img className="min-h-[260px] w-full rounded-xl bg-[var(--bg-subtle)] object-cover md:min-h-[380px]" src={productImage} alt={productName} />
+            ) : (
+              <div className="grid min-h-[260px] w-full place-items-center rounded-xl bg-[var(--bg-subtle)] text-[var(--text-muted)] md:min-h-[380px]">Sin imagen</div>
+            )}
           </div>
 
-          <div className="catalog-v2-variant-modal__content">
-            <h3>{productName}</h3>
-            <p className="catalog-v2-variant-modal__price">{formatPrice(selectedPrice)}</p>
+          <div className="grid gap-4 pt-1">
+            <h3 className="text-2xl font-bold leading-tight text-[var(--text-primary)] md:text-3xl">{productName}</h3>
+            <p className="text-3xl font-extrabold leading-none text-[var(--text-primary)] md:text-4xl">{formatPrice(selectedPrice)}</p>
 
-            <button type="button" className="catalog-v2-variant-modal__dropdown" aria-label="Seleccionar variante">
+            <button type="button" className="flex min-h-14 w-full items-center justify-between rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 py-2 text-left" aria-label="Seleccionar variante">
               <span>
-                <strong>Variantes</strong>
-                <small>{selectedVariant ? selectedVariant.description : "Selecciona una opción"}</small>
+                <strong className="text-xl font-bold leading-tight text-[var(--text-primary)]">Variantes</strong>
+                <small className="block text-sm text-[var(--text-muted)]">{selectedVariant ? selectedVariant.description : "Selecciona una opción"}</small>
               </span>
               <FiChevronDown />
             </button>
 
-            <div className="catalog-v2-variant-modal__chips">
+            <div className="flex flex-wrap gap-2">
               {variants.map((variant) => (
                 <button
                   key={variant.id}
                   type="button"
-                  className={variant.id === selectedVariantId ? "is-selected" : ""}
+                  className={`min-h-10 rounded-full border px-4 text-sm font-semibold ${variant.id === selectedVariantId
+                    ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+                    : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                    }`}
                   onClick={() => setSelectedVariantId(variant.id)}
                 >
                   {variant.description}
@@ -84,28 +91,28 @@ export const VariantSelectionModalV2 = ({
               ))}
             </div>
 
-            <div className="catalog-v2-variant-modal__quantity">
-              <h4>Cantidad</h4>
+            <div className="grid gap-2">
+              <h4 className="text-2xl font-bold leading-tight text-[var(--text-primary)]">Cantidad</h4>
               {!selectedVariant ? (
-                <p>Selecciona una variante para definir cantidad.</p>
+                <p className="text-sm text-[var(--text-muted)]">Selecciona una variante para definir cantidad.</p>
               ) : (
-                <div>
-                  <button type="button" onClick={() => setQuantity((current) => Math.max(1, current - 1))} aria-label="Disminuir cantidad">
+                <div className="flex items-center gap-3">
+                  <button className="grid h-10 w-10 place-items-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]" type="button" onClick={() => setQuantity((current) => Math.max(1, current - 1))} aria-label="Disminuir cantidad">
                     <FiMinus />
                   </button>
-                  <span>{quantity}</span>
-                  <button type="button" onClick={() => setQuantity((current) => current + 1)} aria-label="Aumentar cantidad">
+                  <span className="min-w-7 text-center text-xl font-bold text-[var(--text-primary)]">{quantity}</span>
+                  <button className="grid h-10 w-10 place-items-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]" type="button" onClick={() => setQuantity((current) => current + 1)} aria-label="Aumentar cantidad">
                     <FiPlus />
                   </button>
                 </div>
               )}
             </div>
 
-            <div className="catalog-v2-variant-modal__actions">
-              <button type="button" className="primary" disabled={!canSubmit} onClick={() => selectedVariant && onConfirm(selectedVariant, quantity, true)}>
+            <div className="mt-1 grid gap-2 sm:grid-cols-2">
+              <button type="button" className="min-h-12 rounded-full bg-[var(--text-primary)] px-4 text-sm font-extrabold text-[var(--text-inverse)] disabled:opacity-55" disabled={!canSubmit} onClick={() => selectedVariant && onConfirm(selectedVariant, quantity, true)}>
                 Comprar ahora
               </button>
-              <button type="button" className="secondary" disabled={!canSubmit} onClick={() => selectedVariant && onConfirm(selectedVariant, quantity, false)}>
+              <button type="button" className="min-h-12 rounded-full border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 text-sm font-extrabold text-[var(--text-primary)] disabled:opacity-55" disabled={!canSubmit} onClick={() => selectedVariant && onConfirm(selectedVariant, quantity, false)}>
                 Agregar al carrito
               </button>
             </div>

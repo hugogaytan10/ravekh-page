@@ -1,5 +1,5 @@
 import { ICatalogStorefrontRepository } from "../interface/ICatalogStorefrontRepository";
-import { StorefrontBusiness, StorefrontProduct } from "../model/CatalogStorefrontModels";
+import { CatalogOrderPayload, StorefrontBusiness, StorefrontProduct } from "../model/CatalogStorefrontModels";
 
 type BusinessResponse = { Id?: number; Name?: string; PhoneNumber?: string | null };
 type CategoryResponse = { Id?: number; id?: number; Name?: string; name?: string };
@@ -86,6 +86,11 @@ const parseNumber = (value: unknown, fallback = 0) => {
 const visitTrackerByBusiness = new Set<string>();
 
 const normalizeImage = (rawImage: unknown, rawImages: unknown) => {
+  const images = normalizeImages(rawImage, rawImages);
+  return images[0] ?? "";
+};
+
+const normalizeImages = (rawImage: unknown, rawImages: unknown) => {
   const asString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
 
   const candidates: string[] = [];
@@ -116,7 +121,7 @@ const normalizeImage = (rawImage: unknown, rawImages: unknown) => {
     }
   }
 
-  return candidates[0] ?? "";
+  return Array.from(new Set(candidates));
 };
 
 const normalizeProducts = (items: ProductResponse[], businessId: string) =>
@@ -127,6 +132,7 @@ const normalizeProducts = (items: ProductResponse[], businessId: string) =>
       name: (item.Name ?? item.name ?? "Producto").toString().trim(),
       description: (item.Description ?? item.description ?? "").toString().trim(),
       image: normalizeImage(item.Image ?? item.image, item.Images ?? item.images),
+      images: normalizeImages(item.Image ?? item.image, item.Images ?? item.images),
       price: parseNumber(item.Price ?? item.price),
       promotionPrice: item.PromotionPrice ?? item.promotionPrice ?? null,
       variantsCount: parseNumber(item.VariantsCount ?? item.variantsCount),
@@ -259,6 +265,16 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
     return (await response.json()) as { sessionId?: string; message?: string } | null;
   }
 
+  async createCatalogOrder(payload: CatalogOrderPayload): Promise<{ Id?: number; Message?: string } | null> {
+    const response = await fetch(`${normalizeBase(this.baseUrl)}ordersCatalog`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) return null;
+    return (await response.json()) as { Id?: number; Message?: string } | null;
+  }
 
   async getVariantsByProductId(productId: number): Promise<StorefrontVariant[]> {
     const response = await fetch(`${normalizeBase(this.baseUrl)}variants/product/${productId}`);
@@ -289,6 +305,7 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
       name: (item.Name ?? item.name ?? "Producto").toString().trim(),
       description: (item.Description ?? item.description ?? "").toString().trim(),
       image: normalizeImage(item.Image ?? item.image, item.Images ?? item.images),
+      images: normalizeImages(item.Image ?? item.image, item.Images ?? item.images),
       price: parseNumber(item.Price ?? item.price),
       promotionPrice:
         item.PromotionPrice != null || item.promotionPrice != null
