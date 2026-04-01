@@ -4,6 +4,8 @@
 .pos-v2-loyalty__tabs button.is-active { background: linear-gradient(135deg, #6d01d1 0%, #7c3aed 100%); border-color: #6d01d1; color: #fff; box-shadow: 0 8px 20px rgba(109, 1, 209, 0.25); }
 .pos-v2-loyalty__card { background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%); border: 1px solid #e5e7eb; border-radius: 16px; padding: 1rem; display: grid; gap: 0.7rem; box-shadow: 0 6px 18px rgba(15, 23, 42, 0.04); }
 .pos-v2-loyalty__card h2, .pos-v2-loyalty__card p { margin: 0; }
+.pos-v2-loyalty__card h2,
+.pos-v2-loyalty__row-head strong { overflow-wrap: anywhere; }
 .pos-v2-loyalty__kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.55rem; }
 .pos-v2-loyalty__kpis p { border: 1px solid #e2e8f0; border-radius: 12px; padding: 0.65rem; display: grid; gap: 0.25rem; }
 .pos-v2-loyalty__kpis strong { font-size: 1.1rem; color: #1e293b; }
@@ -41,7 +43,7 @@
 .pos-v2-loyalty__coupon-qr p { margin: 0; font-size: 0.78rem; color: #64748b; word-break: break-all; text-align: center; }
 .pos-v2-loyalty__modal { position: fixed; inset: 0; z-index: 80; background: rgba(2, 6, 23, 0.55); display: flex; align-items: flex-end; justify-content: center; padding: 1rem; }
 .pos-v2-loyalty__modal-card { width: 100%; max-width: 460px; border-radius: 16px; background: #fff; padding: 0.9rem; display: grid; gap: 0.55rem; border: 1px solid #e2e8f0; }
-.pos-v2-loyalty__modal-card--wide { max-width: 960px; max-height: 90vh; overflow: auto; }
+.pos-v2-loyalty__modal-card--wide { max-width: 960px; max-height: 90vh; overflow: auto; min-width: 0; }
 .pos-v2-loyalty__modal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; }
 .pos-v2-loyalty__modal-head { display: flex; align-items: center; justify-content: space-between; }
 .pos-v2-loyalty__modal-head h3 { margin: 0; font-size: 1rem; color: #0f172a; }
@@ -49,6 +51,9 @@
 .pos-v2-loyalty__modal-card > button { border: 1px solid #d1d9e7; border-radius: 10px; background: #fff; padding: 0.6rem 0.7rem; text-align: left; font-weight: 700; color: #334155; }
 .pos-v2-loyalty__modal-card > button.is-active { border-color: #6d01d1; background: #f5f3ff; color: #4c1d95; }
 :root[data-theme="dark"] .pos-v2-loyalty__card { background: linear-gradient(180deg, #111827 0%, #0f172a 100%); border-color: #374151; box-shadow: 0 8px 20px rgba(2, 6, 23, 0.35); }
+:root[data-theme="dark"] .pos-v2-loyalty__card h2,
+:root[data-theme="dark"] .pos-v2-loyalty__row-head strong,
+:root[data-theme="dark"] .pos-v2-loyalty__row-head p { color: #f8fafc; }
 :root[data-theme="dark"] .pos-v2-loyalty__tabs button { background: #111827; border-color: #475569; color: #f8fafc; }
 :root[data-theme="dark"] .pos-v2-loyalty__tabs button.is-active { background: linear-gradient(135deg, #6f5cc6 0%, #8b5cf6 100%); border-color: #8b5cf6; color: #f5f3ff; }
 :root[data-theme="dark"] .pos-v2-loyalty__kpis p { border-color: #334155; background: rgba(15, 23, 42, 0.55); }

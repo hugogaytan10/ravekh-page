@@ -8,6 +8,7 @@ import { MoreModulePage } from "../pages/MoreModulePage";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { clearPosSessionSnapshot, POS_SESSION_STORAGE_KEYS, readPosSessionSnapshot, readPosStringList, writePosStringList } from "../../../shared/config/posSession";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
+import { buildPosPublicCatalogUrl } from "../../../shared/config/posExternalLinks";
 import "./PosV2MorePage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -26,6 +27,8 @@ export const PosV2MorePage = () => {
   const [actionMessage, setActionMessage] = useState<string>("");
 
   const modulePage = useMemo(() => new MoreModulePage(new MoreModuleService(API_BASE_URL)), []);
+  const sessionSnapshot = useMemo(() => readPosSessionSnapshot(), []);
+  const catalogUrl = useMemo(() => buildPosPublicCatalogUrl(sessionSnapshot.businessId), [sessionSnapshot.businessId]);
   const allItems = useMemo(() => MORE_MODULE_SECTIONS.flatMap((section) => section.items), []);
   const isReadyModule = (item: MoreModuleLink): boolean =>
     item.status === "available" || (item.actionType === "beta-action" && modulePage.supportsInlineExecution(item.id));
@@ -96,6 +99,28 @@ export const PosV2MorePage = () => {
   const handleSignOut = () => {
     clearPosSessionSnapshot();
     navigate(POS_V2_PATHS.login);
+  };
+
+  const copyCatalogUrl = async () => {
+    try {
+      if (navigator?.clipboard?.writeText) {
+        await navigator.clipboard.writeText(catalogUrl);
+      } else {
+        const helper = document.createElement("textarea");
+        helper.value = catalogUrl;
+        helper.setAttribute("readonly", "true");
+        helper.style.position = "absolute";
+        helper.style.left = "-9999px";
+        document.body.appendChild(helper);
+        helper.select();
+        document.execCommand("copy");
+        document.body.removeChild(helper);
+      }
+
+      setActionMessage("URL del catálogo copiada.");
+    } catch {
+      setActionMessage("No fue posible copiar la URL. Puedes copiarla manualmente.");
+    }
   };
 
   const runBetaAction = async (item: MoreModuleLink) => {
@@ -208,6 +233,18 @@ export const PosV2MorePage = () => {
               .map((item) => (
                 <button key={item.id} type="button" onClick={() => openModule(item)}>{item.title}</button>
               ))}
+          </div>
+          <div className="pos-v2-more__catalog-copy">
+            <label htmlFor="public-catalog-url">URL pública de catálogo</label>
+            <input id="public-catalog-url" value={catalogUrl} readOnly />
+            <div className="pos-v2-more__quick-tools-grid">
+              <button type="button" onClick={() => window.open(catalogUrl, "_blank", "noopener,noreferrer")}>
+                Abrir catálogo
+              </button>
+              <button type="button" onClick={() => void copyCatalogUrl()}>
+                Copiar URL
+              </button>
+            </div>
           </div>
         </section>
 

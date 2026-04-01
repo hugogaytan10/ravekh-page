@@ -5,6 +5,7 @@ This folder is the feature-first entry point for the loyalty system.
 ## Current feature modules
 
 - `rewards-management`
+- `customer-experience` (portal de cliente para validar token, progreso de visitas y canje de cupones)
 
 Each feature is expected to contain:
 

@@ -1,6 +1,7 @@
 .pos-v2-sales-home {
   display: grid;
   gap: 0.9rem;
+  min-width: 0;
 }
 
 .pos-v2-sales-layout {
@@ -82,6 +83,7 @@
 .pos-v2-sales-home__toolbar {
   display: grid;
   gap: 0.6rem;
+  min-width: 0;
 }
 .pos-v2-sales-home__toolbar-actions {
   display: flex;
@@ -122,14 +124,16 @@
   background: #fff;
   border-radius: 10px;
   overflow: hidden;
+  min-width: 0;
 }
 
 .pos-v2-sales-home__view-switch button {
   border: none;
   background: transparent;
-  padding: 0.45rem 0.75rem;
+  padding: 0.45rem 0.7rem;
   font-weight: 600;
   color: #6b7280;
+  min-width: 0;
 }
 
 .pos-v2-sales-home__view-switch button.is-active {
@@ -147,6 +151,7 @@
   background: rgba(255, 255, 255, 0.95);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.65);
   scroll-snap-type: x proximity;
+  scrollbar-width: thin;
 }
 
 .pos-v2-sales-home__categories button {
@@ -978,7 +983,7 @@
     line-height: 1;
   }
 
-  .pos-v2-sales-home__mobile-summary-dock {
+.pos-v2-sales-home__mobile-summary-dock {
     position: fixed;
     left: 0;
     right: 0;
@@ -991,6 +996,7 @@
     grid-template-columns: auto 1fr;
     align-items: center;
     gap: 0.5rem;
+    min-width: 0;
   }
 
   .pos-v2-sales-home__mobile-summary-dock button {
@@ -1006,6 +1012,11 @@
     border-radius: 9999px;
     padding: 0.55rem 0.8rem;
     text-align: center;
+    width: 100%;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .pos-v2-sales-home__product-card.is-list-item {
@@ -1276,6 +1287,40 @@
 
 :root[data-theme="dark"] .pos-v2-sales-home__sale-modal-card p {
   color: #ddd6fe;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__mobile-summary-dock {
+  background: rgba(17, 24, 39, 0.96);
+  border-top-color: #374151;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__mobile-summary-dock button {
+  color: #e5e7eb;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__mobile-summary-dock .is-summary {
+  background: #030712;
+  color: #f9fafb;
+  border: 1px solid #4b5563;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__quick-tools {
+  background: #0b1120;
+  border: 1px solid #374151;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__quick-tools button {
+  background: #111827;
+  color: #f9fafb;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__promo-strip {
+  background: #111827;
+  border-color: #374151;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__promo-strip button {
+  color: #e5e7eb;
 }
 
 :root[data-theme="dark"] .pos-v2-sales-home__sale-modal-actions button {

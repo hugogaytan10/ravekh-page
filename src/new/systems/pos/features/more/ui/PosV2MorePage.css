@@ -373,6 +373,11 @@
   grid-template-columns: minmax(0, 1fr);
 }
 
+.pos-v2-more__catalog-copy label {
+  font-weight: 700;
+  color: #1e293b;
+}
+
 .pos-v2-more__catalog-copy input {
   min-height: 42px;
   border-radius: 10px;
@@ -516,6 +521,10 @@
 :root[data-theme="dark"] .pos-v2-more__catalog-copy input {
   background: #0f172a;
   border-color: #334155;
+  color: #e2e8f0;
+}
+
+:root[data-theme="dark"] .pos-v2-more__catalog-copy label {
   color: #e2e8f0;
 }
 
