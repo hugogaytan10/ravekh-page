@@ -1,4 +1,4 @@
-import { URL } from "../../Components/CatalogoWeb/Const/Const";
+import { URL } from "../../../../../../Components/CatalogoWeb/Const/Const";
 import type { ClaimCouponPayload, Coupon, CouponHasUser, CreateCouponPayload } from "../models/coupon";
 import type { LoginPayload } from "../models/auth";
 

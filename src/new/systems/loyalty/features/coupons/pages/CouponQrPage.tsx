@@ -1,13 +1,13 @@
 import React, { useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import cuponsito from "../../assets/Cupones/Coupon";
+import cuponsito from "../../../../../../assets/Cupones/Coupon";
 import QRCode from "../lib/QRCode";
 import QRErrorCorrectLevel from "../lib/QRCode/QRErrorCorrectLevel";
 import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { getCuponesUserId, getCuponesUserName, hasCuponesSession } from "../services/session";
 import type { Coupon } from "../models/coupon";
-import {WEB_COUPONS_DOMAIN} from "../../Components/CatalogoWeb/Cupones/shared/constants";
+import {WEB_COUPONS_DOMAIN} from "../../../../../../Components/CatalogoWeb/Cupones/shared/constants";
 
 const CouponQrPage: React.FC = () => {
   const navigate = useNavigate();

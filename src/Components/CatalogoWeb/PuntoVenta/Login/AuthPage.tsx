@@ -5,7 +5,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { loginToServer, signUpToServer } from "./Peticiones";
 import { jwtDecode } from "jwt-decode";
 import { AppContext } from "../../Context/AppContext";
-import { persistCuponesAuthSession } from "../../../../coupons/services/authSession";
+import { persistCuponesAuthSession } from "../../../../new/systems/loyalty/features/coupons/services/authSession";
 interface DecodedToken {
   name: string;
   email: string;

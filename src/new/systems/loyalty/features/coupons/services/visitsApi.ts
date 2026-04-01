@@ -1,4 +1,4 @@
-import { URL } from "../../Components/CatalogoWeb/Const/Const";
+import { URL } from "../../../../../../Components/CatalogoWeb/Const/Const";
 import type { Visits } from "../models/coupon";
 
 type RedeemVisitResponse = { visitCreated: boolean; couponGenerated: boolean };

@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import cubito from "../../assets/Cupones/cubito.png";
-import bolsita from "../../assets/Cupones/bolsita.png";
-import cajita from "../../assets/Cupones/cajita.png";
-import carterita from "../../assets/Cupones/carterita.png";
-import papitas from "../../assets/Cupones/papitas.png";
+import cubito from "../../../../../../assets/Cupones/cubito.png";
+import bolsita from "../../../../../../assets/Cupones/bolsita.png";
+import cajita from "../../../../../../assets/Cupones/cajita.png";
+import carterita from "../../../../../../assets/Cupones/carterita.png";
+import papitas from "../../../../../../assets/Cupones/papitas.png";
 import { AutoImageCarousel } from "../components/AutoImageCarousel";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import {
