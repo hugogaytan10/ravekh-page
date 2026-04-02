@@ -1,5 +1,5 @@
 import React from "react";
-import cuponsito from "../../../../../../assets/Cupones/cuponsito.png";
+import cuponsito from "../assets/cuponsito.png";
 import type { CouponsTheme } from "../interface/theme";
 
 type CouponsPageHeaderProps = {

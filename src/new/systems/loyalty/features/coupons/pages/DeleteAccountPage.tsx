@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import cuponsito from "../../../../../../assets/Cupones/cuponsito.png";
+import cuponsito from "../assets/cuponsito.png";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { deleteCouponsAccount } from "../services/couponsApi";
 import {

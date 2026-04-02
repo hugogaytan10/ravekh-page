@@ -1,9 +1,9 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCouponsTheme } from "./useCouponsTheme";
-import homeIcon from "../../../../../../assets/Cupones/home.svg";
-import couponIcon from "../../../../../../assets/Cupones/coupon.svg";
-import settingsIcon from "../../../../../../assets/Cupones/settings.svg";
+import homeIcon from "../assets/home.svg";
+import couponIcon from "../assets/coupon.svg";
+import settingsIcon from "../assets/settings.svg";
 
 type CuponesNavKey = "inicio" | "cupones" | "ajustes";
 interface CuponesNavProps { active: CuponesNavKey; }
