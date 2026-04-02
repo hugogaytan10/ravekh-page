@@ -2,7 +2,23 @@ import { HttpClient } from "../../../../core/api/HttpClient";
 import { IDashboardRepository } from "../interface/IDashboardRepository";
 import { ComparisonMetric, DashboardSnapshot, TopSellingItem } from "../model/DashboardMetrics";
 
-type ComparisonResponse = { current?: number; previous?: number; Current?: number; Previous?: number };
+type ComparisonTotals = {
+  averageToday?: number;
+  averageYesterday?: number;
+  thisMonthTotal?: number;
+  lastMonthTotal?: number;
+  thisMonthBalance?: number;
+  lastMonthBalance?: number;
+};
+
+type ComparisonResponse = {
+  current?: number;
+  previous?: number;
+  Current?: number;
+  Previous?: number;
+  total?: ComparisonTotals;
+  Total?: ComparisonTotals;
+};
 type TopItemResponse = {
   Id?: number;
   id?: number;
@@ -14,6 +30,8 @@ type TopItemResponse = {
   categoryName?: string;
   Quantity?: number;
   quantity?: number;
+  TotalQuantity?: number;
+  totalQuantity?: number;
   TotalSales?: number;
   totalSales?: number;
 };
@@ -71,13 +89,15 @@ export class PosDashboardApi implements IDashboardRepository {
   }
 
   async getNewCustomersToday(businessId: number, token: string): Promise<number> {
-    const payload = await this.httpClient.request<{ total?: number; Total?: number } | DataWrapper<{ total?: number; Total?: number }>>({
+    const payload = await this.httpClient.request<
+      { total?: number; Total?: number; totalToday?: number; TotalToday?: number } | DataWrapper<{ total?: number; Total?: number; totalToday?: number; TotalToday?: number }>
+    >({
       method: "GET",
       path: `report2/customers-added-today/${businessId}`,
       token,
     });
     const data = this.unwrapPayload(payload);
-    return Number(data.total ?? data.Total ?? 0);
+    return Number(data.totalToday ?? data.TotalToday ?? data.total ?? data.Total ?? 0);
   }
 
   async getSnapshot(businessId: number, month: number, token: string): Promise<DashboardSnapshot> {
@@ -93,7 +113,11 @@ export class PosDashboardApi implements IDashboardRepository {
   }
 
   private mapComparison(response: ComparisonResponse): ComparisonMetric {
-    return new ComparisonMetric(Number(response.current ?? response.Current ?? 0), Number(response.previous ?? response.Previous ?? 0));
+    const totals = response.total ?? response.Total;
+    const current = response.current ?? response.Current ?? totals?.averageToday ?? totals?.thisMonthTotal ?? totals?.thisMonthBalance ?? 0;
+    const previous = response.previous ?? response.Previous ?? totals?.averageYesterday ?? totals?.lastMonthTotal ?? totals?.lastMonthBalance ?? 0;
+
+    return new ComparisonMetric(Number(current), Number(previous));
   }
 
   private mapTopItems(response: TopItemResponse[] = []): TopSellingItem[] {
@@ -103,7 +127,7 @@ export class PosDashboardApi implements IDashboardRepository {
           new TopSellingItem(
             Number(item.id ?? item.Id ?? 0),
             item.name ?? item.Name ?? item.productName ?? item.ProductName ?? item.categoryName ?? item.CategoryName ?? "Sin nombre",
-            Number(item.quantity ?? item.Quantity ?? item.totalSales ?? item.TotalSales ?? 0),
+            Number(item.quantity ?? item.Quantity ?? item.totalQuantity ?? item.TotalQuantity ?? 0),
           ),
       )
       .filter((item) => item.name.trim().length > 0 && Number.isFinite(item.quantity) && item.quantity >= 0);

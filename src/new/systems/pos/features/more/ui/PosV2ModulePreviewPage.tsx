@@ -73,7 +73,16 @@ export const PosV2ModulePreviewPage = () => {
   const [taxSuccess, setTaxSuccess] = useState("");
   const [exportLoading, setExportLoading] = useState(false);
   const [exportError, setExportError] = useState("");
-  const [exportRows, setExportRows] = useState<Array<{ label: string; quantity: number; total: number }>>([]);
+  const [exportRows, setExportRows] = useState<Array<{
+    id: number;
+    label: string;
+    quantity: number;
+    total: number;
+    price: number;
+    earnings: number;
+    coinId: number | null;
+    hasActivity: boolean;
+  }>>([]);
   const [exportScope, setExportScope] = useState<"products" | "employees" | "customers">("products");
   const [exportPeriod, setExportPeriod] = useState<"today" | "month" | "year">("month");
   const [cashClosingLoading, setCashClosingLoading] = useState(false);
@@ -141,6 +150,10 @@ export const PosV2ModulePreviewPage = () => {
 
   const modulePage = useMemo(() => new MoreModulePage(new MoreModuleService(API_BASE_URL)), []);
   const factory = useMemo(() => new ModernSystemsFactory(API_BASE_URL), []);
+  const exportTotalQuantity = useMemo(() => exportRows.reduce((sum, row) => sum + row.quantity, 0), [exportRows]);
+  const exportTotalAmount = useMemo(() => exportRows.reduce((sum, row) => sum + row.total, 0), [exportRows]);
+  const exportAverageTicket = useMemo(() => (exportRows.length > 0 ? exportTotalAmount / exportRows.length : 0), [exportRows, exportTotalAmount]);
+  const exportInactiveCount = useMemo(() => exportRows.filter((row) => !row.hasActivity).length, [exportRows]);
 
   const runBetaAction = async () => {
     setLoading(true);
@@ -290,6 +303,108 @@ export const PosV2ModulePreviewPage = () => {
     loadStripeConnect();
     loadBusinessStatus();
   }, [factory, moduleId, businessIdInput, token, employeeIdInput, exportScope, exportPeriod]);
+
+  const buildExportFileName = () => {
+    const scopeLabel = exportScope === "products" ? "productos" : exportScope === "employees" ? "empleados" : "clientes";
+    const periodLabel = exportPeriod === "today" ? "hoy" : exportPeriod === "month" ? "mes" : "anio";
+    const stamp = new Date().toISOString().slice(0, 10);
+    return `reporte-${scopeLabel}-${periodLabel}-${stamp}`;
+  };
+
+  const escapeCsvCell = (value: string | number) => {
+    const text = String(value ?? "");
+    if (text.includes(",") || text.includes("\"") || text.includes("\n")) {
+      return `"${text.replace(/"/g, "\"\"")}"`;
+    }
+    return text;
+  };
+
+  const exportAsCsv = () => {
+    if (exportRows.length === 0) {
+      setExportError("No hay datos para exportar en CSV con los filtros actuales.");
+      return;
+    }
+    setExportError("");
+    const headers = ["ID", "Etiqueta", "Cantidad/Pedidos", "Total ventas", "Precio", "Ganancia", "CoinId", "Actividad"];
+    const rows = exportRows.map((row) => [
+      row.id,
+      row.label,
+      row.quantity,
+      row.total.toFixed(2),
+      row.price.toFixed(2),
+      row.earnings.toFixed(2),
+      row.coinId ?? "N/A",
+      row.hasActivity ? "Con actividad" : "Sin actividad",
+    ]);
+    const csvContent = [headers, ...rows].map((line) => line.map(escapeCsvCell).join(",")).join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `${buildExportFileName()}.csv`;
+    link.click();
+    URL.revokeObjectURL(link.href);
+  };
+
+  const exportAsPdf = () => {
+    if (exportRows.length === 0) {
+      setExportError("No hay datos para exportar en PDF con los filtros actuales.");
+      return;
+    }
+    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=1024,height=720");
+    if (!printWindow) {
+      setExportError("No fue posible abrir la ventana de impresión. Revisa el bloqueador de ventanas.");
+      return;
+    }
+    const rowsMarkup = exportRows
+      .map(
+        (row) =>
+          `<tr>
+            <td>${row.id}</td>
+            <td>${row.label}</td>
+            <td style="text-align:right;">${row.quantity}</td>
+            <td style="text-align:right;">$${row.total.toFixed(2)}</td>
+            <td style="text-align:right;">$${row.price.toFixed(2)}</td>
+            <td style="text-align:right;">$${row.earnings.toFixed(2)}</td>
+            <td style="text-align:center;">${row.coinId ?? "N/A"}</td>
+          </tr>`,
+      )
+      .join("");
+    const html = `
+      <html>
+        <head>
+          <title>${buildExportFileName()}</title>
+          <style>
+            body { font-family: Inter, Arial, sans-serif; padding: 24px; color: #0f172a; }
+            h1 { margin: 0 0 8px; font-size: 22px; }
+            p { margin: 0 0 4px; color: #334155; }
+            table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+            th, td { border: 1px solid #e2e8f0; padding: 8px; font-size: 13px; }
+            th { background: #f8fafc; text-align: left; }
+            .summary { margin-top: 12px; display: grid; gap: 4px; }
+          </style>
+        </head>
+        <body>
+          <h1>Exportar reportes</h1>
+          <p>Alcance: ${exportScope}</p>
+          <p>Periodo: ${exportPeriod}</p>
+          <div class="summary">
+            <p>Filas: ${exportRows.length}</p>
+            <p>Sin actividad: ${exportInactiveCount}</p>
+            <p>Total cantidad: ${exportTotalQuantity}</p>
+            <p>Total monto: $${exportTotalAmount.toFixed(2)}</p>
+          </div>
+          <table>
+            <thead><tr><th>ID</th><th>Etiqueta</th><th>Cant/Pedidos</th><th>Total</th><th>Precio</th><th>Ganancia</th><th>Coin</th></tr></thead>
+            <tbody>${rowsMarkup}</tbody>
+          </table>
+        </body>
+      </html>
+    `;
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
 
   const saveTax = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -467,18 +582,6 @@ export const PosV2ModulePreviewPage = () => {
         {moduleId !== "business" ? <p>{data.description}</p> : null}
         {moduleId !== "business" && data.warning ? <p className="pos-v2-module-preview__warning">⚠️ {data.warning}</p> : null}
 
-        {modulePage.supportsInlineExecution(moduleId) && !["payment-methods", "business", "stripe-connect"].includes(moduleId) ? (
-          <section className="pos-v2-module-preview__beta">
-            <h3>Funciones beta disponibles</h3>
-            <p>Ejecuta una lectura real del módulo para validar funcionalidad.</p>
-            <button type="button" onClick={runBetaAction} disabled={loading}>
-              {loading ? "Ejecutando..." : "Probar función beta"}
-            </button>
-            {betaError ? <p className="pos-v2-module-preview__error">{betaError}</p> : null}
-            {betaResponse ? <pre>{betaResponse}</pre> : null}
-          </section>
-        ) : null}
-
         {moduleId === "business" ? (
           <section className="pos-v2-module-preview__beta">
 
@@ -580,6 +683,9 @@ export const PosV2ModulePreviewPage = () => {
         {moduleId === "exports" ? (
           <section className="pos-v2-module-preview__beta">
             <h3>Exportar reportes</h3>
+            <p className="pos-v2-module-preview__subtitle">
+              Filtra tu reporte y descárgalo directamente en CSV o PDF para compartirlo con contabilidad.
+            </p>
             <div className="pos-v2-module-preview__inputs">
               <select value={exportScope} onChange={(event) => setExportScope(event.target.value as "products" | "employees" | "customers")}>
                 <option value="products">Productos</option>
@@ -592,6 +698,36 @@ export const PosV2ModulePreviewPage = () => {
                 <option value="year">Año</option>
               </select>
             </div>
+            <div className="pos-v2-module-preview__summary-grid" aria-label="Resumen de exportación">
+              <article>
+                <small>Filas</small>
+                <strong>{exportRows.length}</strong>
+              </article>
+              <article>
+                <small>Cantidad total</small>
+                <strong>{exportTotalQuantity}</strong>
+              </article>
+              <article>
+                <small>Monto total</small>
+                <strong>${exportTotalAmount.toFixed(2)}</strong>
+              </article>
+              <article>
+                <small>Promedio por fila</small>
+                <strong>${exportAverageTicket.toFixed(2)}</strong>
+              </article>
+              <article>
+                <small>Sin actividad</small>
+                <strong>{exportInactiveCount}</strong>
+              </article>
+            </div>
+            <div className="pos-v2-module-preview__actions-inline">
+              <button type="button" onClick={exportAsCsv} disabled={exportLoading || exportRows.length === 0}>
+                Exportar CSV
+              </button>
+              <button type="button" onClick={exportAsPdf} disabled={exportLoading || exportRows.length === 0}>
+                Exportar PDF
+              </button>
+            </div>
             {exportLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
             {exportError ? <p className="pos-v2-module-preview__error">{exportError}</p> : null}
             {!exportLoading && !exportError ? (
@@ -600,8 +736,13 @@ export const PosV2ModulePreviewPage = () => {
                 {exportRows.length === 0 ? <p>No hay datos para el filtro seleccionado.</p> : null}
                 {exportRows.slice(0, 10).map((row, index) => (
                   <article key={`${row.label}-${index}`} className="pos-v2-module-preview__row is-inline">
-                    <strong>{row.label}</strong>
-                    <small>Cant: {row.quantity} · Total: ${row.total.toFixed(2)}</small>
+                    <strong>{row.label} <span className="pos-v2-module-preview__chip">ID {row.id}</span></strong>
+                    <small>
+                      Pedidos/Cant: {row.quantity} · Ventas: ${row.total.toFixed(2)} · Ganancia: ${row.earnings.toFixed(2)}
+                    </small>
+                    <small>
+                      Precio: ${row.price.toFixed(2)} · CoinId: {row.coinId ?? "N/A"} · {row.hasActivity ? "Con actividad" : "Sin actividad"}
+                    </small>
                   </article>
                 ))}
               </div>
