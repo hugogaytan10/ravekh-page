@@ -1,6 +1,6 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { IReportingRepository } from "../interface/IReportingRepository";
-import { IncomePoint, ReportRange, ReportSale, SalesReport, SalesSummary } from "../model/SalesReport";
+import { IncomePoint, ReportLeaderboardItem, ReportProductItem, ReportRange, ReportSale, SalesReport, SalesSummary } from "../model/SalesReport";
 
 type NullableNumber = number | string | null | undefined;
 type NullableText = string | null | undefined;
@@ -91,6 +91,28 @@ type LegacySalesResponse = {
   commands?: LegacySalesItem[];
 };
 
+type BackendCustomerItem = {
+  CustomerId?: NullableNumber;
+  CustomerName?: NullableText;
+  TotalSales?: NullableNumber;
+  TotalOrders?: NullableNumber;
+};
+
+type BackendEmployeeItem = {
+  EmployeeId?: NullableNumber;
+  EmployeeName?: NullableText;
+  TotalSales?: NullableNumber;
+  TotalOrders?: NullableNumber;
+};
+
+type BackendProductItem = {
+  Id?: NullableNumber;
+  Name?: NullableText;
+  Quantity?: NullableNumber;
+  TotalSales?: NullableNumber;
+  Earnings?: NullableNumber;
+};
+
 const toNumber = (value: NullableNumber): number => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -138,6 +160,12 @@ const mapRangeToLegacyDate = (range: ReportRange): "DÍA" | "MES" | "AÑO" => {
   return "AÑO";
 };
 
+const mapRangeToSuffix = (range: ReportRange): "today" | "month" | "year" => {
+  if (range === "DAY") return "today";
+  if (range === "MONTH") return "month";
+  return "year";
+};
+
 const unwrapPayload = <T>(payload: T | LegacyDataWrapper<T>): T => {
   if (payload && typeof payload === "object") {
     const wrappedPayload = payload as LegacyDataWrapper<T>;
@@ -151,24 +179,28 @@ export class PosReportingApi implements IReportingRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
   async getSalesReport(businessId: number, token?: string): Promise<SalesReport> {
-    const payload = await this.httpClient.request<LegacyReportResponse>({
-      method: "GET",
-      path: `report/${businessId}`,
-      token,
-    });
+    try {
+      const payload = await this.httpClient.request<LegacyReportResponse>({
+        method: "GET",
+        path: `report/${businessId}`,
+        token,
+      });
 
-    const report = this.unwrapReport(unwrapPayload(payload));
+      const report = this.unwrapReport(unwrapPayload(payload));
 
-    return new SalesReport(
-      businessId,
-      this.toSummary(report.Day ?? report.day ?? report.Dia ?? report.dia),
-      this.toSummary(report.Month ?? report.month ?? report.Mes ?? report.mes),
-      this.toSummary(report.Year ?? report.year ?? report.Anio ?? report.anio ?? report.Año ?? report.año),
-    );
+      return new SalesReport(
+        businessId,
+        this.toSummary(report.Day ?? report.day ?? report.Dia ?? report.dia),
+        this.toSummary(report.Month ?? report.month ?? report.Mes ?? report.mes),
+        this.toSummary(report.Year ?? report.year ?? report.Anio ?? report.anio ?? report.Año ?? report.año),
+      );
+    } catch {
+      return SalesReport.empty(businessId);
+    }
   }
 
   async getIncomeSeries(businessId: number, range: ReportRange, token?: string): Promise<IncomePoint[]> {
-    const suffix = range === "DAY" ? "today" : range === "MONTH" ? "month" : "year";
+    const suffix = mapRangeToSuffix(range);
 
     const response = await this.httpClient.request<LegacyIncomePointResponse[] | LegacyDataWrapper<LegacyIncomePointResponse[]>>({
       method: "GET",
@@ -213,6 +245,73 @@ export class PosReportingApi implements IReportingRepository {
     ]
       .filter((sale) => sale.id !== "0")
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+
+  async getProductsLeaderboard(businessId: number, range: ReportRange, token: string): Promise<ReportProductItem[]> {
+    const suffix = mapRangeToSuffix(range);
+    const payload = await this.httpClient.request<BackendProductItem[] | LegacyDataWrapper<BackendProductItem[]>>({
+      method: "GET",
+      path: `report/products/${suffix}/${businessId}`,
+      token,
+    });
+
+    const rows = unwrapPayload(payload);
+    if (!Array.isArray(rows)) return [];
+
+    return rows
+      .map((item) => new ReportProductItem(
+        toNumber(item.Id),
+        toText(item.Name, "Sin producto"),
+        Math.max(0, Math.round(toNumber(item.Quantity))),
+        toNumber(item.TotalSales),
+        toNumber(item.Earnings),
+      ))
+      .filter((item) => item.name.trim().length > 0)
+      .sort((a, b) => b.quantity - a.quantity || b.totalSales - a.totalSales);
+  }
+
+  async getEmployeesLeaderboard(businessId: number, range: ReportRange, token: string): Promise<ReportLeaderboardItem[]> {
+    const suffix = mapRangeToSuffix(range);
+    const payload = await this.httpClient.request<BackendEmployeeItem[] | LegacyDataWrapper<BackendEmployeeItem[]>>({
+      method: "GET",
+      path: `report/employee/${suffix}/${businessId}`,
+      token,
+    });
+
+    const rows = unwrapPayload(payload);
+    if (!Array.isArray(rows)) return [];
+
+    return rows
+      .map((item) => new ReportLeaderboardItem(
+        Math.round(toNumber(item.EmployeeId)),
+        toText(item.EmployeeName, "Sin empleado"),
+        toNumber(item.TotalSales),
+        Math.max(0, Math.round(toNumber(item.TotalOrders))),
+      ))
+      .filter((item) => item.name.trim().length > 0)
+      .sort((a, b) => b.totalSales - a.totalSales || b.totalOrders - a.totalOrders);
+  }
+
+  async getCustomersLeaderboard(businessId: number, range: ReportRange, token: string): Promise<ReportLeaderboardItem[]> {
+    const suffix = mapRangeToSuffix(range);
+    const payload = await this.httpClient.request<BackendCustomerItem[] | LegacyDataWrapper<BackendCustomerItem[]>>({
+      method: "GET",
+      path: `report/customer/${suffix}/${businessId}`,
+      token,
+    });
+
+    const rows = unwrapPayload(payload);
+    if (!Array.isArray(rows)) return [];
+
+    return rows
+      .map((item) => new ReportLeaderboardItem(
+        Math.round(toNumber(item.CustomerId)),
+        toText(item.CustomerName, "Sin cliente"),
+        toNumber(item.TotalSales),
+        Math.max(0, Math.round(toNumber(item.TotalOrders))),
+      ))
+      .filter((item) => item.name.trim().length > 0)
+      .sort((a, b) => b.totalSales - a.totalSales || b.totalOrders - a.totalOrders);
   }
 
   private unwrapReport(payload: LegacyReportResponse): LegacyReportResponse {

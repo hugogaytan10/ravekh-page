@@ -91,3 +91,22 @@ export class ReportSale {
     public readonly status = "Pendiente",
   ) {}
 }
+
+export class ReportLeaderboardItem {
+  constructor(
+    public readonly id: number,
+    public readonly name: string,
+    public readonly totalSales: number,
+    public readonly totalOrders: number,
+  ) {}
+}
+
+export class ReportProductItem {
+  constructor(
+    public readonly id: number,
+    public readonly name: string,
+    public readonly quantity: number,
+    public readonly totalSales: number,
+    public readonly earnings: number,
+  ) {}
+}

@@ -29,6 +29,18 @@ export async function run(): Promise<void> {
         };
       }
 
+      if (method === "GET" && path === "report/products/month/22") {
+        return [{ Id: 1725, Name: "jajajjiji", Quantity: 10, TotalSales: 2000, Earnings: 2000 }];
+      }
+
+      if (method === "GET" && path === "report/employee/month/22") {
+        return [{ EmployeeId: 1, EmployeeName: "Ravekh", TotalSales: 3100.27, TotalOrders: 2 }];
+      }
+
+      if (method === "GET" && path === "report/customer/month/22") {
+        return [{ CustomerId: 1, CustomerName: "Joncho Rosales", TotalSales: null, TotalOrders: null }];
+      }
+
       throw new Error(`Unexpected call ${method} ${path}`);
     },
   };
@@ -52,8 +64,33 @@ export async function run(): Promise<void> {
   assert.equal(sales[1].type, "ORDER");
   assert.deepEqual(calls[2]?.body, { business_Id: 22, date: "MES", payment: "TODOS" });
 
+  const topProducts = await api.getProductsLeaderboard(22, "MONTH", "token");
+  const topEmployees = await api.getEmployeesLeaderboard(22, "MONTH", "token");
+  const topCustomers = await api.getCustomersLeaderboard(22, "MONTH", "token");
+  assert.equal(topProducts[0]?.quantity, 10);
+  assert.equal(topEmployees[0]?.totalSales, 3100.27);
+  assert.equal(topCustomers[0]?.totalSales, 0);
+
   assert.deepEqual(
     calls.map((call) => `${call.method} ${call.path}`),
-    ["GET report/22", "GET income/month/22", "POST sales/payment"],
+    [
+      "GET report/22",
+      "GET income/month/22",
+      "POST sales/payment",
+      "GET report/products/month/22",
+      "GET report/employee/month/22",
+      "GET report/customer/month/22",
+    ],
   );
+
+  const fallbackApi = new PosReportingApi({
+    request: async ({ method, path }: { method: string; path: string }) => {
+      if (method === "GET" && path === "report/99") {
+        throw new Error("500 Internal Server Error");
+      }
+      return [];
+    },
+  } as never);
+  const emptyReport = await fallbackApi.getSalesReport(99, "token");
+  assert.equal(emptyReport.month.income, 0);
 }

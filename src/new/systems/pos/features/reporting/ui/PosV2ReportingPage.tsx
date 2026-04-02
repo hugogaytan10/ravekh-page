@@ -13,6 +13,7 @@ import {
   Tooltip,
 } from "chart.js";
 import { Bar, Doughnut, Line } from "react-chartjs-2";
+import { HiMiniCube, HiMiniUser, HiMiniUserGroup } from "react-icons/hi2";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
@@ -124,9 +125,8 @@ export const PosV2ReportingPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const [topProducts, setTopProducts] = useState<TopChartItem[]>([]);
-  const [topCategories, setTopCategories] = useState<TopChartItem[]>([]);
-  const [newCustomersToday, setNewCustomersToday] = useState(0);
-  const [insightMonth, setInsightMonth] = useState(() => new Date().getMonth() + 1);
+  const [topEmployees, setTopEmployees] = useState<TopChartItem[]>([]);
+  const [topCustomers, setTopCustomers] = useState<TopChartItem[]>([]);
   const [tableRange, setTableRange] = useState<ReportRange>("DAY");
   const [salesQuery, setSalesQuery] = useState("");
   const [salesStatus, setSalesStatus] = useState<"TODOS" | "PENDIENTE" | "ENTREGADO">("TODOS");
@@ -134,11 +134,10 @@ export const PosV2ReportingPage = () => {
   const salesRequestRef = useRef(0);
   const topChartsRequestRef = useRef(0);
 
-  const { reportingPage, dashboardPage } = useMemo(() => {
+  const { reportingPage } = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
     return {
       reportingPage: factory.createPosReportingPage(),
-      dashboardPage: factory.createPosDashboardAnalyticsPage(),
     };
   }, []);
 
@@ -171,21 +170,17 @@ export const PosV2ReportingPage = () => {
     setError(null);
 
     try {
-      const summaryPromise = reportingPage
-        .loadSummary(businessId, range, cleanToken)
-        .then((summaryData) => summaryData);
-      const seriesPromise = reportingPage
-        .loadIncomeSeries(businessId, range, cleanToken)
-        .then((incomeSeries) => incomeSeries);
-
-      const [summaryData, incomeSeries] = await Promise.all([summaryPromise, seriesPromise]);
+      const [summaryResult, incomeResult] = await Promise.allSettled([
+        reportingPage.loadSummary(businessId, range, cleanToken),
+        reportingPage.loadIncomeSeries(businessId, range, cleanToken),
+      ]);
 
       if (reportRequestRef.current !== reportRequestId) {
         return;
       }
 
-      setSummary(summaryData);
-      setSeries(incomeSeries);
+      setSummary(summaryResult.status === "fulfilled" ? summaryResult.value : DEFAULT_SUMMARY);
+      setSeries(incomeResult.status === "fulfilled" ? incomeResult.value : []);
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "No se pudieron cargar los reportes.";
       if (reportRequestRef.current === reportRequestId) {
@@ -229,8 +224,8 @@ export const PosV2ReportingPage = () => {
   const loadTopCharts = useCallback(async () => {
     if (!hasBusinessId || !hasToken) {
       setTopProducts([]);
-      setTopCategories([]);
-      setNewCustomersToday(0);
+      setTopEmployees([]);
+      setTopCustomers([]);
       return;
     }
 
@@ -239,19 +234,27 @@ export const PosV2ReportingPage = () => {
     setTopChartsLoading(true);
 
     try {
-      const snapshot = await dashboardPage.loadViewModel(businessId, insightMonth, cleanToken);
+      const [productsRows, employeeRows, customerRows] = await Promise.all([
+        reportingPage.loadProductsLeaderboard(businessId, range, cleanToken),
+        reportingPage.loadEmployeesLeaderboard(businessId, range, cleanToken),
+        reportingPage.loadCustomersLeaderboard(businessId, range, cleanToken),
+      ]);
       if (topChartsRequestRef.current !== requestId) {
         return;
       }
 
-      setTopProducts(snapshot.topProducts.slice(0, 5));
-      setTopCategories(snapshot.topCategories.slice(0, 5));
-      setNewCustomersToday(snapshot.newCustomersToday);
+      setTopProducts(productsRows.slice(0, 5).map((item) => ({ name: item.name, quantity: item.quantity || item.totalSales })));
+      setTopEmployees(employeeRows.slice(0, 5).map((item) => ({ name: item.name, quantity: item.totalSales })));
+      setTopCustomers(customerRows.slice(0, 5).map((item) => ({ name: item.name, quantity: item.totalSales })));
+      setSummary((previous) => ({
+        ...previous,
+        bestSeller: previous.bestSeller !== "Sin datos" ? previous.bestSeller : (productsRows[0]?.name ?? "Sin datos"),
+      }));
     } catch (cause) {
       if (topChartsRequestRef.current === requestId) {
         setTopProducts([]);
-        setTopCategories([]);
-        setNewCustomersToday(0);
+        setTopEmployees([]);
+        setTopCustomers([]);
         showToast("error", cause instanceof Error ? cause.message : "No se pudieron cargar gráficas avanzadas.");
       }
     } finally {
@@ -259,7 +262,7 @@ export const PosV2ReportingPage = () => {
         setTopChartsLoading(false);
       }
     }
-  }, [businessId, cleanToken, dashboardPage, hasBusinessId, hasToken, insightMonth, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, hasToken, range, reportingPage, showToast]);
 
   useEffect(() => {
     if (hasBusinessId) {
@@ -284,14 +287,6 @@ export const PosV2ReportingPage = () => {
       cardRatio: clampPercentage(summary.cardSalesPercentage),
     }),
     [summary],
-  );
-
-  const monthOptions = useMemo(
-    () => Array.from({ length: 12 }, (_, index) => ({
-      value: index + 1,
-      label: new Date(new Date().getFullYear(), index, 1).toLocaleString("es-MX", { month: "long" }),
-    })),
-    [],
   );
 
   const trendChartData = useMemo(() => ({
@@ -375,19 +370,7 @@ export const PosV2ReportingPage = () => {
       .slice(0, 5);
   }, [sales]);
 
-  const fallbackTopCategories = useMemo<TopChartItem[]>(() => {
-    const grouped = new Map<string, number>();
-    for (const sale of sales) {
-      const label = sale.type === "ORDER" ? "Pedidos online" : "Comandas";
-      grouped.set(label, (grouped.get(label) ?? 0) + (Number(sale.quantity) || 0));
-    }
-    return Array.from(grouped.entries())
-      .map(([name, quantity]) => ({ name, quantity }))
-      .sort((a, b) => b.quantity - a.quantity);
-  }, [sales]);
-
   const displayTopProducts = topProducts.length > 0 ? topProducts : fallbackTopProducts;
-  const displayTopCategories = topCategories.length > 0 ? topCategories : fallbackTopCategories;
   const hasOverviewValues = summary.income > 0 || summary.earnings > 0 || summary.averageSale > 0;
 
   const topProductsChartData = useMemo(() => ({
@@ -403,17 +386,30 @@ export const PosV2ReportingPage = () => {
     ],
   }), [displayTopProducts]);
 
-  const topCategoriesChartData = useMemo(() => ({
-    labels: displayTopCategories.map((item, index) => item.name || `Categoría ${index + 1}`),
+  const topEmployeesChartData = useMemo(() => ({
+    labels: topEmployees.map((item, index) => item.name || `Empleado ${index + 1}`),
     datasets: [
       {
-        label: "Categorías más vendidas",
-        data: displayTopCategories.map((item) => item.quantity),
+        label: "Ventas por empleado",
+        data: topEmployees.map((item) => item.quantity),
         backgroundColor: ["#06b6d4", "#22d3ee", "#67e8f9", "#0ea5e9", "#0284c7"],
         borderWidth: 0,
       },
     ],
-  }), [displayTopCategories]);
+  }), [topEmployees]);
+
+  const topCustomersChartData = useMemo(() => ({
+    labels: topCustomers.map((item, index) => item.name || `Cliente ${index + 1}`),
+    datasets: [
+      {
+        label: "Ventas por cliente",
+        data: topCustomers.map((item) => item.quantity),
+        borderRadius: 8,
+        borderSkipped: false,
+        backgroundColor: ["#f97316", "#fb923c", "#fdba74", "#fed7aa", "#ffedd5"],
+      },
+    ],
+  }), [topCustomers]);
 
   const businessOverviewData = useMemo(() => ({
     labels: ["Ingresos", "Ganancia", "Ticket promedio"],
@@ -506,7 +502,6 @@ export const PosV2ReportingPage = () => {
         <header className="pos-v2-reporting__header">
           <div>
             <h2>Insights de ventas</h2>
-            <p>Métricas accionables, diseño limpio y visualización moderna para móvil, tablet y desktop.</p>
           </div>
           <div className="pos-v2-reporting__filters">
             <label>
@@ -523,16 +518,6 @@ export const PosV2ReportingPage = () => {
         {error ? <p className="pos-v2-reporting__error">{error}</p> : null}
         {toast ? <p className={`pos-v2-reporting__toast is-${toast.type}`}>{toast.message}</p> : null}
 
-        <section className="pos-v2-reporting__legend" aria-label="Leyenda de reportes">
-          <span><i className="is-cash" />Efectivo</span>
-          <span><i className="is-card" />Tarjeta</span>
-          <span><i className="is-trend" />Tendencia de ingresos</span>
-          <span><i className="is-profit" />Ganancia</span>
-          <span><i className="is-ticket" />Ticket promedio</span>
-          <span><i className="is-products" />Top productos</span>
-          <span><i className="is-categories" />Top categorías</span>
-        </section>
-
         <section className="pos-v2-reporting__content">
           {loading ? (
             Array.from({ length: 4 }).map((_, index) => (
@@ -544,57 +529,14 @@ export const PosV2ReportingPage = () => {
             ))
           ) : null}
 
-          {!loading ? <article className="pos-v2-reporting__card">
-            <h3>Mix de cobro</h3>
-            {(derivedKpis.cashRatio > 0 || derivedKpis.cardRatio > 0) ? (
-              <div className="pos-v2-reporting__doughnut">
-                <Doughnut data={paymentChartData} options={doughnutOptions} />
-              </div>
-            ) : (
-              <p className="is-empty">Sin cobros para este rango. Prueba con otro periodo.</p>
-            )}
-            <div className="pos-v2-reporting__progress">
-              <span style={{ width: `${derivedKpis.cashRatio}%` }} />
-              <span style={{ width: `${derivedKpis.cardRatio}%` }} />
-            </div>
-            <p>Efectivo: <strong>{derivedKpis.cashRatio}%</strong></p>
-            <p>Tarjeta: <strong>{derivedKpis.cardRatio}%</strong></p>
-          </article> : null}
-
-          {!loading ? <article className="pos-v2-reporting__card">
-            <h3>Rentabilidad</h3>
-            <p>Margen bruto: <strong>{derivedKpis.margin}%</strong></p>
-          </article> : null}
-
-          {!loading ? <article className="pos-v2-reporting__card">
-            <h3>Top desempeño</h3>
-            <p>Producto más vendido: <strong>{summary.bestSeller}</strong></p>
-            <p>Categoría líder: <strong>{summary.bestCategory || "Sin datos"}</strong></p>
-            <p>Nuevos clientes hoy: <strong>{newCustomersToday}</strong></p>
-          </article> : null}
-
-          {!loading ? <article className="pos-v2-reporting__card">
-            <h3>Resumen comercial</h3>
-            {hasOverviewValues ? (
-              <div className="pos-v2-reporting__doughnut">
-                <Doughnut data={businessOverviewData} options={doughnutOptions} />
-              </div>
-            ) : (
-              <p className="is-empty">Aún no hay datos consolidados de ingresos/ganancia.</p>
-            )}
-            <p>Ingresos: <strong>{moneyFormatter.format(summary.income)}</strong></p>
-            <p>Ganancia: <strong>{moneyFormatter.format(summary.earnings)}</strong></p>
-          </article> : null}
 
           <article className="pos-v2-reporting__card">
             <header>
               <h3>Top productos</h3>
-              <select value={insightMonth} onChange={(event) => setInsightMonth(Number(event.target.value))}>
-                {monthOptions.map((month) => <option key={month.value} value={month.value}>{month.label}</option>)}
-              </select>
+              <HiMiniCube aria-hidden="true" />
             </header>
             {topChartsLoading ? <div className="pos-v2-reporting__chart-skeleton" aria-hidden="true" /> : null}
-            {!topChartsLoading && displayTopProducts.length === 0 ? <p className="is-empty">Sin datos de productos para el mes.</p> : null}
+            {!topChartsLoading && displayTopProducts.length === 0 ? <p className="is-empty">Sin datos de productos para este rango.</p> : null}
             {!topChartsLoading && displayTopProducts.length > 0 ? (
               <>
                 {topProducts.length === 0 ? <p className="pos-v2-reporting__hint">Mostrando estimación con ventas del periodo seleccionado.</p> : null}
@@ -605,19 +547,22 @@ export const PosV2ReportingPage = () => {
 
           <article className="pos-v2-reporting__card">
             <header>
-              <h3>Top categorías</h3>
-              <select value={insightMonth} onChange={(event) => setInsightMonth(Number(event.target.value))}>
-                {monthOptions.map((month) => <option key={month.value} value={month.value}>{month.label}</option>)}
-              </select>
+              <h3>Ventas por empleado</h3>
+              <HiMiniUser aria-hidden="true" />
             </header>
             {topChartsLoading ? <div className="pos-v2-reporting__chart-skeleton" aria-hidden="true" /> : null}
-            {!topChartsLoading && displayTopCategories.length === 0 ? <p className="is-empty">Sin datos de categorías para el mes.</p> : null}
-            {!topChartsLoading && displayTopCategories.length > 0 ? (
-              <>
-                {topCategories.length === 0 ? <p className="pos-v2-reporting__hint">Estimación basada en tipo de venta (pedido/comanda).</p> : null}
-                <div className="pos-v2-reporting__mini-line"><Doughnut data={topCategoriesChartData} options={doughnutOptions} /></div>
-              </>
-            ) : null}
+            {!topChartsLoading && topEmployees.length === 0 ? <p className="is-empty">Sin datos de empleados para este rango.</p> : null}
+            {!topChartsLoading && topEmployees.length > 0 ? <div className="pos-v2-reporting__mini-line"><Doughnut data={topEmployeesChartData} options={doughnutOptions} /></div> : null}
+          </article>
+
+          <article className="pos-v2-reporting__card">
+            <header>
+              <h3>Ventas por cliente</h3>
+              <HiMiniUserGroup aria-hidden="true" />
+            </header>
+            {topChartsLoading ? <div className="pos-v2-reporting__chart-skeleton" aria-hidden="true" /> : null}
+            {!topChartsLoading && topCustomers.length === 0 ? <p className="is-empty">Sin datos de clientes para este rango.</p> : null}
+            {!topChartsLoading && topCustomers.length > 0 ? <div className="pos-v2-reporting__mini-line"><Bar data={topCustomersChartData} options={quantityBarOptions} /></div> : null}
           </article>
 
           <article className="pos-v2-reporting__card is-full">
