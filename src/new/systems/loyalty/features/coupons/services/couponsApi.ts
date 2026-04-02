@@ -1,4 +1,4 @@
-import { URL } from "../../../../../../Components/CatalogoWeb/Const/Const";
+import { COUPONS_API_URL } from "../config/couponsEnv";
 import type { ClaimCouponPayload, Coupon, CouponHasUser, CreateCouponPayload } from "../models/coupon";
 import type { LoginPayload } from "../models/auth";
 
@@ -39,7 +39,7 @@ const buildHttpError = async (response: Response, fallback: string): Promise<Err
 };
 
 const createCoupon = async (payload: CreateCouponPayload): Promise<Response> => {
-  const response = await fetch(`${URL}coupons`, {
+  const response = await fetch(`${COUPONS_API_URL}coupons`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -59,7 +59,7 @@ const getCouponsByBusiness = async (businessId: number): Promise<Coupon[]> => {
     return [];
   }
 
-  const response = await fetch(`${URL}coupons/business/${businessId}`);
+  const response = await fetch(`${COUPONS_API_URL}coupons/business/${businessId}`);
 
   if (!response.ok) {
     throw await buildHttpError(response, "No se pudieron cargar los cupones.");
@@ -74,7 +74,7 @@ const getCouponById = async (couponId: number): Promise<Coupon | null> => {
     return null;
   }
 
-  const response = await fetch(`${URL}coupons/${couponId}`);
+  const response = await fetch(`${COUPONS_API_URL}coupons/${couponId}`);
 
   if (!response.ok) {
     throw await buildHttpError(response, "No se pudo cargar el cupón.");
@@ -89,7 +89,7 @@ const getCouponDisponibility = async (userId: number): Promise<Coupon[] | null> 
   }
 
   try {
-    const response = await fetch(`${URL}coupons/user/${userId}`);
+    const response = await fetch(`${COUPONS_API_URL}coupons/user/${userId}`);
     if (!response.ok) {
       throw await buildHttpError(response, "No se pudieron cargar las relaciones de cupones del usuario.");
     }
@@ -107,7 +107,7 @@ const getCouponsByUser = async (userId: number): Promise<CouponHasUser[] | null>
   }
 
   try {
-    const response = await fetch(`${URL}couponhasusers/user/${userId}`);
+    const response = await fetch(`${COUPONS_API_URL}couponhasusers/user/${userId}`);
     if (!response.ok) {
       throw await buildHttpError(response, "No se pudieron cargar las relaciones de cupones del usuario.");
     }
@@ -132,7 +132,7 @@ const getClaimedCouponsByUser = async (userId: number): Promise<Coupon[]> => {
 };
 
 const claimCoupon = async (payload: ClaimCouponPayload): Promise<unknown> => {
-  const response = await fetch(`${URL}coupons/take`, {
+  const response = await fetch(`${COUPONS_API_URL}coupons/take`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -152,7 +152,7 @@ const redeemCouponByUser = async (couponId: number, userId: number): Promise<unk
     throw new Error("Datos inválidos para reclamar el cupón.");
   }
 
-  const response = await fetch(`${URL}couponhasusers/coupon/${couponId}/user/${userId}`, {
+  const response = await fetch(`${COUPONS_API_URL}couponhasusers/coupon/${couponId}/user/${userId}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -178,7 +178,7 @@ const getCouponsDisponibilityByUser = async (userId: number): Promise<Coupon[]> 
 };
 
 const updateCoupon = async (couponId: number, payload: CreateCouponPayload): Promise<Response> => {
-  const response = await fetch(`${URL}coupons/${couponId}`, {
+  const response = await fetch(`${COUPONS_API_URL}coupons/${couponId}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
@@ -194,7 +194,7 @@ const updateCoupon = async (couponId: number, payload: CreateCouponPayload): Pro
 };
 
 const deleteCoupon = async (couponId: number): Promise<Response> => {
-  const response = await fetch(`${URL}coupons/${couponId}`, {
+  const response = await fetch(`${COUPONS_API_URL}coupons/${couponId}`, {
     method: "DELETE",
   });
 
@@ -206,7 +206,7 @@ const deleteCoupon = async (couponId: number): Promise<Response> => {
 };
 
 const deleteCouponsAccount = async (userId: number, token: string): Promise<{ message?: string } | null> => {
-  const response = await fetch(`${URL}employee/${userId}`, {
+  const response = await fetch(`${COUPONS_API_URL}employee/${userId}`, {
     method: "DELETE",
     headers: {
       "Content-Type": "application/json",
@@ -224,7 +224,7 @@ const deleteCouponsAccount = async (userId: number, token: string): Promise<{ me
 };
 
 const loginCupones = async (payload: LoginPayload): Promise<LoginResponse> => {
-  const response = await fetch(`${URL}Login`, {
+  const response = await fetch(`${COUPONS_API_URL}Login`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -240,7 +240,7 @@ const loginCupones = async (payload: LoginPayload): Promise<LoginResponse> => {
 };
 
 const registerCupones = async (payload: RegisterPayload): Promise<RegisterResponse> => {
-  const response = await fetch(`${URL}employee`, {
+  const response = await fetch(`${COUPONS_API_URL}employee`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -256,7 +256,7 @@ const registerCupones = async (payload: RegisterPayload): Promise<RegisterRespon
 };
 
 const resetPassword = async (body: { Email: string; Password: string }) => {
-  const url = `${URL}resetpassword`;
+  const url = `${COUPONS_API_URL}resetpassword`;
 
   const response = await fetch(url, {
     method: "PUT",

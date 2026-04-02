@@ -1,4 +1,4 @@
-import { URL } from "../../../../../../Components/CatalogoWeb/Const/Const";
+import { COUPONS_API_URL } from "../config/couponsEnv";
 import type { Visits } from "../models/coupon";
 
 type RedeemVisitResponse = { visitCreated: boolean; couponGenerated: boolean };
@@ -9,7 +9,7 @@ type RedeemVisitPayload = Partial<RedeemVisitResponse> & {
 };
 
 const getVisitsByUserId = async (userId: number): Promise<Visits[]> => {
-  const endpoint = `${URL}visits/user/${userId}`;
+  const endpoint = `${COUPONS_API_URL}visits/user/${userId}`;
   const response = await fetch(endpoint);
   if (!response.ok) {
     throw new Error("No se pudieron cargar las visitas del usuario.");
@@ -18,7 +18,7 @@ const getVisitsByUserId = async (userId: number): Promise<Visits[]> => {
 };
 
 const getVisitHistoryByUserId = async (userId: number): Promise<Visits[]> => {
-  const endpoint = `${URL}visits/user/history/${userId}`;
+  const endpoint = `${COUPONS_API_URL}visits/user/history/${userId}`;
   const response = await fetch(endpoint);
   if (!response.ok) {
     throw new Error("No se pudo cargar el historial de visitas.");
@@ -50,7 +50,7 @@ const redeemVisitQr = async (
   userId: number,
   options?: { signal?: AbortSignal; regenerateDynamicQr?: boolean },
 ) => {
-  const response = await fetch(`${URL}visits/qr/redeem`, {
+  const response = await fetch(`${COUPONS_API_URL}visits/qr/redeem`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
