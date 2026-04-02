@@ -38,7 +38,7 @@ export const ProcessFive = () => {
       <span className=" block w-full text-white text-sm text-center absolute top-4 rombo">
         Desarrollo 5
       </span>
-      <h2 className=" text-gray-50 font-bold text-4xl w-full md:w-1/4 text-center ">
+      <h2 className=" text-gray-50 font-bold text-4xl w-full md:w-1/4 text-center mt-10">
         {shouldAnimate && <AnimatedText text="Desarrollo" />}
       </h2>
       <div className="relative w-full md:w-1/4 flex items-center justify-center">

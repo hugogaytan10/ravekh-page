@@ -38,7 +38,7 @@ export const ProcessThree = () => {
       <span className="  w-full text-white text-sm text-center top-4 absolute  rombo">
         Wireframe 3
       </span>
-      <h2 className=" text-gray-50 font-bold text-4xl p-1 ml-8 w-full md:w-1/4 text-center ">
+      <h2 className=" text-gray-50 font-bold text-4xl p-1 ml-8 w-full md:w-1/4 text-center mt-10">
         {shouldAnimate && <AnimatedText text="Wireframe" />}
       </h2>
       <div className="relative w-full md:w-1/4 flex items-center justify-center">

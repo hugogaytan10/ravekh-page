@@ -54,7 +54,7 @@ export const Contact = () => {
           {formik.touched.email && formik.errors.email ? <div className="text-red-500 ml-8 text-sm">{formik.errors.email}</div> : null}
         </div>
         <h5 className="contact-caption">Envíanos un correo personal con tus necesidades y nos pondremos en contacto</h5>
-        <button type="submit" className="btn">
+        <button type="submit" className="btn w-1/2 btn-primary">
           Enviar
         </button>
       </form>

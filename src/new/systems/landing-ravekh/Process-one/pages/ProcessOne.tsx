@@ -38,7 +38,7 @@ export const ProcessOne = () => {
         <span className=" block w-full text-white text-sm text-center absolute top-4 rombo">
           Proceso 1
         </span>
-        <h2 className=" text-gray-50 font-bold text-4xl  w-full md:w-1/4 text-center mb-10">
+        <h2 className=" text-gray-50 font-bold text-4xl  w-full md:w-1/4 text-center mb-10 mt-10">
           {shouldAnimate && <AnimatedText text="Análisis" />}
         </h2>
         <div className="relative w-full md:w-1/4 flex items-center justify-center">

@@ -138,7 +138,7 @@ export const Contacto = ({ catalogo }) => {
                 <h5 className={`w-full font-medium text-left px-4 mb-4 ${catalogo ? 'text-black' : 'text-gray-100'}`} >
                     Envíanos un correo personal con tus necesidades y nos pondremos en contacto
                 </h5>
-                <button type='submit' className=' btn'>
+                <button type='submit' className='btn'>
                     Enviar
                 </button>
             </form>
