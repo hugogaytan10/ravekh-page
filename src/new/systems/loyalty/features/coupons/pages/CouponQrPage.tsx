@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import cuponsito from "../../../../../../assets/Cupones/Coupon";
+import cuponsito from "../assets/Coupon";
 import QRCode from "../lib/QRCode";
 import QRErrorCorrectLevel from "../lib/QRCode/QRErrorCorrectLevel";
 import { CuponesNav } from "../interface/CouponsNav";

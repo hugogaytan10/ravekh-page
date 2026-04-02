@@ -25,7 +25,7 @@ export class FetchHttpClient implements HttpClient {
     const response = await fetch(url.toString(), {
       method: request.method,
       headers,
-      body: request.body ? (isFormData ? request.body : JSON.stringify(request.body)) : undefined,
+      body: request.body ? (isFormData ? request.body : JSON.stringify(request.body)) : null,
     });
 
     const responseData = (await response.json().catch(() => null)) as TResponse | { message?: string } | null;

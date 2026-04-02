@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import cuponsito from "../../../../../../assets/Cupones/cuponsito.png";
-import bolsita from "../../../../../../assets/Cupones/bolsita.png";
-import cajita from "../../../../../../assets/Cupones/cajita.png";
-import carterita from "../../../../../../assets/Cupones/carterita.png";
-import tiendita from "../../../../../../assets/Cupones/tiendita.png";
+import cuponsito from "../assets/cuponsito.png";
+import bolsita from "../assets/bolsita.png";
+import cajita from "../assets/cajita.png";
+import carterita from "../assets/carterita.png";
+import tiendita from "../assets/tiendita.png";
 import { AutoImageCarousel } from "../components/AutoImageCarousel";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { resetPassword } from "../services/couponsApi";
