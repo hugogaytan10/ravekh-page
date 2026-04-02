@@ -35,6 +35,17 @@ for (const suite of suites) {
     target: "node20",
     sourcemap: false,
     logLevel: "silent",
+    loader: {
+      ".svg": "dataurl",
+      ".png": "dataurl",
+      ".jpg": "dataurl",
+      ".jpeg": "dataurl",
+      ".webp": "dataurl",
+      ".css": "text",
+    },
+    define: {
+      "import.meta.env": "{}",
+    },
   });
 
   const mod = await import(pathToFileURL(outfile).href);
