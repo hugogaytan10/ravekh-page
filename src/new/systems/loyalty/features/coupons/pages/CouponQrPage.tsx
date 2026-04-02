@@ -7,7 +7,8 @@ import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { getCuponesUserId, getCuponesUserName, hasCuponesSession } from "../services/session";
 import type { Coupon } from "../models/coupon";
-import {WEB_COUPONS_DOMAIN} from "../../../../../../Components/CatalogoWeb/Cupones/shared/constants";
+import { WEB_COUPONS_DOMAIN } from "../config/couponsEnv";
+import { FiArrowLeft } from "react-icons/fi";
 
 const CouponQrPage: React.FC = () => {
   const navigate = useNavigate();
@@ -102,7 +103,7 @@ const CouponQrPage: React.FC = () => {
             className="h-12 w-12 rounded-2xl border flex items-center justify-center shadow-[0_12px_24px_rgba(0,0,0,0.12)]"
             style={{ backgroundColor: theme.surface, borderColor: theme.border }}
           >
-            <span className="text-lg">←</span>
+            <FiArrowLeft size={20} aria-hidden="true" />
           </button>
           <div className="flex items-center gap-3">
             <div
