@@ -247,23 +247,6 @@ export const PosV2MorePage = () => {
             </div>
           </div>
         </section>
-
-        <section className="pos-v2-more__pending" aria-label="Módulos pendientes por migrar">
-          <div className="pos-v2-more__section-head">
-            <h3>Módulos faltantes por completar</h3>
-            <p>Estos módulos siguen en beta/preview mientras cerramos paridad funcional con sistemas previos.</p>
-          </div>
-          <div className="pos-v2-more__warning-grid">
-            {pendingItems.slice(0, 8).map((item) => (
-              <article key={`pending-${item.id}`}>
-                <h4>{item.title}</h4>
-                <p>{item.description}</p>
-                <button type="button" onClick={() => openModule(item)}>{item.status === "beta" ? "Abrir beta" : "Abrir preview"}</button>
-              </article>
-            ))}
-          </div>
-        </section>
-
   
         {filteredSections.map((section) => (
           <section key={section.title} className="pos-v2-more__section" aria-label={section.title}>
