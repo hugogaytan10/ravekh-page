@@ -259,9 +259,6 @@ export const PosV2MorePage = () => {
                 <article key={`${section.title}-${item.title}`} className="pos-v2-more__item">
                   <div className="pos-v2-more__meta">
                     <h4>{item.title}</h4>
-                    <span className={item.status === "available" ? "is-available" : item.status === "beta" ? "is-beta" : "is-preview"}>
-                      {item.status === "available" ? "Disponible" : item.status === "beta" ? "Beta" : "Vista previa"}
-                    </span>
                   </div>
                   <p>{item.description}</p>
                   <div className="pos-v2-more__item-actions">

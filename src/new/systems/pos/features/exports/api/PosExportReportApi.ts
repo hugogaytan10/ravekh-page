@@ -67,8 +67,8 @@ export class PosExportReportApi implements IExportReportRepository {
   }
 
   private toItem(item: RawReportItem): ExportReportItem {
-    const id = Number(item.Id ?? item.id ?? item.ProductId ?? item.productId ?? item.EmployeeId ?? item.employeeId ?? item.CustomerId ?? item.customerId ?? 0);
-    const label = item.Name
+    const id = this.toNumber(item.Id ?? item.id ?? item.ProductId ?? item.productId ?? item.EmployeeId ?? item.employeeId ?? item.CustomerId ?? item.customerId);
+    const label = this.toText(item.Name
       ?? item.name
       ?? item.ProductName
       ?? item.productName
@@ -76,21 +76,32 @@ export class PosExportReportApi implements IExportReportRepository {
       ?? item.employeeName
       ?? item.CustomerName
       ?? item.customerName
-      ?? "Sin nombre";
-    const quantity = Number(item.Quantity ?? item.quantity ?? item.TotalOrders ?? item.totalOrders ?? 0);
-    const total = Number(item.Total ?? item.total ?? item.TotalSales ?? item.totalSales ?? 0);
-    const price = Number(item.Price ?? item.price ?? 0);
-    const earnings = Number(item.Earnings ?? item.earnings ?? total);
+      ?? "Sin nombre");
+    const quantity = this.toNumber(item.Quantity ?? item.quantity ?? item.TotalOrders ?? item.totalOrders);
+    const total = this.toNumber(item.Total ?? item.total ?? item.TotalSales ?? item.totalSales);
+    const price = this.toNumber(item.Price ?? item.price);
+    const earnings = this.toNumber(item.Earnings ?? item.earnings ?? total);
     const coinId = item.CoinId ?? item.coinId ?? null;
 
     return new ExportReportItem(
       id,
       label,
-      Number.isFinite(quantity) ? quantity : 0,
-      Number.isFinite(total) ? total : 0,
-      Number.isFinite(price) ? price : 0,
-      Number.isFinite(earnings) ? earnings : 0,
+      quantity,
+      total,
+      price,
+      earnings,
       coinId,
     );
+  }
+
+  private toNumber(value: unknown): number {
+    const parsed = Number(value ?? 0);
+    return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  private toText(value: unknown): string {
+    if (typeof value !== "string") return "Sin nombre";
+    const clean = value.trim();
+    return clean.length > 0 ? clean : "Sin nombre";
   }
 }

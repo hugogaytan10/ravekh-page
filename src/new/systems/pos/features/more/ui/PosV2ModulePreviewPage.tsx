@@ -1,5 +1,6 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import { FiFileText, FiPrinter } from "react-icons/fi";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { MoreModulePage } from "../pages/MoreModulePage";
 import { MoreModuleService } from "../services/MoreModuleService";
@@ -319,6 +320,14 @@ export const PosV2ModulePreviewPage = () => {
     return text;
   };
 
+  const escapeHtml = (value: string | number | null | undefined) =>
+    String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll("\"", "&quot;")
+      .replaceAll("'", "&#39;");
+
   const exportAsCsv = () => {
     if (exportRows.length === 0) {
       setExportError("No hay datos para exportar en CSV con los filtros actuales.");
@@ -337,12 +346,17 @@ export const PosV2ModulePreviewPage = () => {
       row.hasActivity ? "Con actividad" : "Sin actividad",
     ]);
     const csvContent = [headers, ...rows].map((line) => line.map(escapeCsvCell).join(",")).join("\n");
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `${buildExportFileName()}.csv`;
-    link.click();
-    URL.revokeObjectURL(link.href);
+    try {
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const objectUrl = URL.createObjectURL(blob);
+      link.href = objectUrl;
+      link.download = `${buildExportFileName()}.csv`;
+      link.click();
+      URL.revokeObjectURL(objectUrl);
+    } catch {
+      setExportError("No fue posible generar el CSV. Intenta de nuevo.");
+    }
   };
 
   const exportAsPdf = () => {
@@ -359,13 +373,13 @@ export const PosV2ModulePreviewPage = () => {
       .map(
         (row) =>
           `<tr>
-            <td>${row.id}</td>
-            <td>${row.label}</td>
+            <td>${escapeHtml(row.id)}</td>
+            <td>${escapeHtml(row.label)}</td>
             <td style="text-align:right;">${row.quantity}</td>
             <td style="text-align:right;">$${row.total.toFixed(2)}</td>
             <td style="text-align:right;">$${row.price.toFixed(2)}</td>
             <td style="text-align:right;">$${row.earnings.toFixed(2)}</td>
-            <td style="text-align:center;">${row.coinId ?? "N/A"}</td>
+            <td style="text-align:center;">${escapeHtml(row.coinId ?? "N/A")}</td>
           </tr>`,
       )
       .join("");
@@ -722,10 +736,10 @@ export const PosV2ModulePreviewPage = () => {
             </div>
             <div className="pos-v2-module-preview__actions-inline">
               <button type="button" onClick={exportAsCsv} disabled={exportLoading || exportRows.length === 0}>
-                Exportar CSV
+                <FiFileText aria-hidden="true" /> Exportar CSV
               </button>
               <button type="button" onClick={exportAsPdf} disabled={exportLoading || exportRows.length === 0}>
-                Exportar PDF
+                <FiPrinter aria-hidden="true" /> Exportar PDF
               </button>
             </div>
             {exportLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
@@ -736,7 +750,7 @@ export const PosV2ModulePreviewPage = () => {
                 {exportRows.length === 0 ? <p>No hay datos para el filtro seleccionado.</p> : null}
                 {exportRows.slice(0, 10).map((row, index) => (
                   <article key={`${row.label}-${index}`} className="pos-v2-module-preview__row is-inline">
-                    <strong>{row.label} <span className="pos-v2-module-preview__chip">ID {row.id}</span></strong>
+                    <strong>{row.label} </strong>
                     <small>
                       Pedidos/Cant: {row.quantity} · Ventas: ${row.total.toFixed(2)} · Ganancia: ${row.earnings.toFixed(2)}
                     </small>
