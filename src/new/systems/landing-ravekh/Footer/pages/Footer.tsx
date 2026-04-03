@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 import fb from "../../assets/logo-facebook.svg";
 import ig from "../../assets/logo-instagram.svg";
 export const Footer = () => {
@@ -20,6 +21,24 @@ export const Footer = () => {
           <a target="_blank" href="https://www.instagram.com/rave_kh/">
             <img src={ig} alt="ig" />
           </a>
+        </div>
+
+        <div className="mt-8 grid gap-2 text-center">
+          <p className="text-white font-semibold">Políticas de privacidad</p>
+          <div className="flex flex-wrap justify-center gap-3 text-sm">
+            <Link to="/politicas/ravekh-pos" className="text-white underline">
+              Ravekh POS
+            </Link>
+            <Link to="/politicas/ravekh" className="text-white underline">
+              Ravekh
+            </Link>
+            <Link to="/politicas/lealtad" className="text-white underline">
+              Lealtad
+            </Link>
+            <Link to="/politicas/catalogo" className="text-white underline">
+              Catálogo
+            </Link>
+          </div>
         </div>
       </div>
     </div>
