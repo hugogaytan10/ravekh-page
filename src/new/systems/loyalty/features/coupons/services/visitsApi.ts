@@ -60,7 +60,6 @@ const redeemVisitQr = async (
   });
   
   const payload = await parseResponsePayload(response);
-  console.log("Respuesta del canje de visita:", { status: response.status, payload });
   if (!response.ok) {
     const hasSuccessSignal = payload?.visitCreated || payload?.couponGenerated || payload?.success;
 

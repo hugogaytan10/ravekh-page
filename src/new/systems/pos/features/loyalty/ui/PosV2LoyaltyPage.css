@@ -16,7 +16,7 @@
 .pos-v2-loyalty__form input { min-height: 42px; border: 1px solid #d1d9e7; border-radius: 10px; padding: 0.5rem 0.7rem; background: #fff; color: #1f2937; }
 .pos-v2-loyalty__form select { min-height: 42px; border: 1px solid #d1d9e7; border-radius: 10px; padding: 0.5rem 0.7rem; background: #fff; color: #1f2937; }
 .pos-v2-loyalty__form button { min-height: 40px; border: 1px solid #4f46e5; border-radius: 10px; background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); color: #fff; font-weight: 700; }
-.pos-v2-loyalty__detail { display: grid; gap: 0.4rem; }
+.pos-v2-loyalty__detail { display: grid; gap: 0.4rem; min-width: 0; }
 .pos-v2-loyalty__hint { font-size: 0.8rem; color: #475569; border: 1px dashed #cbd5e1; border-radius: 10px; padding: 0.55rem 0.65rem; background: #f8fafc; }
 .pos-v2-loyalty__business { display: grid; gap: 0.35rem; }
 .pos-v2-loyalty__business .is-on { color: #15803d; font-weight: 700; }
@@ -39,8 +39,12 @@
 .pos-v2-loyalty__row-card small { color: #64748b; font-weight: 600; }
 .pos-v2-loyalty__progress { border-radius: 999px; height: 8px; background: #e2e8f0; overflow: hidden; }
 .pos-v2-loyalty__progress span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(135deg, #6d01d1 0%, #7c3aed 100%); }
-.pos-v2-loyalty__coupon-qr { display: grid; gap: 0.5rem; justify-items: center; border: 1px dashed #d1d9e7; border-radius: 12px; padding: 0.75rem; }
+.pos-v2-loyalty__coupon-qr { display: grid; gap: 0.5rem; justify-items: center; border: 1px dashed #d1d9e7; border-radius: 12px; padding: 0.75rem; width: 100%; min-width: 0; }
+.pos-v2-loyalty__coupon-qr img { width: min(170px, 100%); height: auto; }
 .pos-v2-loyalty__coupon-qr p { margin: 0; font-size: 0.78rem; color: #64748b; word-break: break-all; text-align: center; }
+.pos-v2-loyalty__code { display: inline-block; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; font-size: 0.78rem; }
+.pos-v2-loyalty__code--block { display: block; width: 100%; }
+.pos-v2-loyalty__meta { display: grid; gap: 0.2rem; min-width: 0; }
 .pos-v2-loyalty__modal { position: fixed; inset: 0; z-index: 80; background: rgba(2, 6, 23, 0.55); display: flex; align-items: flex-end; justify-content: center; padding: 1rem; }
 .pos-v2-loyalty__modal-card { width: 100%; max-width: 460px; border-radius: 16px; background: #fff; padding: 0.9rem; display: grid; gap: 0.55rem; border: 1px solid #e2e8f0; }
 .pos-v2-loyalty__modal-card--wide { max-width: 960px; max-height: 90vh; overflow: auto; min-width: 0; }
@@ -78,6 +82,7 @@
 :root[data-theme="dark"] .pos-v2-loyalty__progress { background: #334155; }
 :root[data-theme="dark"] .pos-v2-loyalty__coupon-qr { border-color: #334155; background: rgba(15, 23, 42, 0.65); }
 :root[data-theme="dark"] .pos-v2-loyalty__coupon-qr p { color: #cbd5e1; }
+:root[data-theme="dark"] .pos-v2-loyalty__code { color: #cbd5e1; }
 :root[data-theme="dark"] .pos-v2-loyalty__modal-card { background: #0f172a; border-color: #334155; }
 :root[data-theme="dark"] .pos-v2-loyalty__modal-head h3 { color: #e2e8f0; }
 :root[data-theme="dark"] .pos-v2-loyalty__modal-head button { color: #cbd5e1; }

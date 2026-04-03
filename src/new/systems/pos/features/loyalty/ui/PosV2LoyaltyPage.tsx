@@ -434,7 +434,7 @@ export const PosV2LoyaltyPage = () => {
               <p><strong>ID:</strong> {coupon.id}</p>
               <p><strong>Descripción:</strong> {coupon.description}</p>
               <p><strong>Límite:</strong> {coupon.maxRedemptions} canjes</p>
-              <p><strong>QR:</strong> {coupon.qr || couponQrValue || "N/A"}</p>
+              <p><strong>QR:</strong> <span className="pos-v2-loyalty__code">{coupon.qr || couponQrValue || "N/A"}</span></p>
               {coupon.valid ? <p><strong>Vigencia:</strong> {new Date(coupon.valid).toLocaleString("es-MX")}</p> : null}
               {couponQrDisplayValue ? (
                 <div className="pos-v2-loyalty__coupon-qr">
@@ -499,8 +499,8 @@ export const PosV2LoyaltyPage = () => {
                         height={170}
                       />
                     ) : null}
-                    <p>Token: {item.token || "-"}</p>
-                    <p>{qrValue || "Sin URL"}</p>
+                    <p>Token: <span className="pos-v2-loyalty__code">{item.token || "-"}</span></p>
+                    <p className="pos-v2-loyalty__code">{qrValue || "Sin URL"}</p>
                     <button type="button" className="pos-v2-loyalty__ghost-btn" onClick={() => printVisitTicket(qrValue, `Ticket visita #${index + 1}`)}>Imprimir ticket</button>
                   </div>
                 </article>
@@ -520,8 +520,14 @@ export const PosV2LoyaltyPage = () => {
           <div className="pos-v2-loyalty__detail">
             {!dynamicQr ? <p>No hay QR dinámico generado aún.</p> : (
               <>
-                <p><strong>Token:</strong> {dynamicQr.token || "-"}</p>
-                <p><strong>URL:</strong> {dynamicQr.qrUrl}</p>
+                <div className="pos-v2-loyalty__meta">
+                  <strong>Token:</strong>
+                  <span className="pos-v2-loyalty__code pos-v2-loyalty__code--block">{dynamicQr.token || "-"}</span>
+                </div>
+                <div className="pos-v2-loyalty__meta">
+                  <strong>URL:</strong>
+                  <span className="pos-v2-loyalty__code pos-v2-loyalty__code--block">{dynamicQr.qrUrl}</span>
+                </div>
                 <p><strong>Renueva en:</strong> {dynamicQr.refreshAfterSeconds}s</p>
                 <div className="pos-v2-loyalty__coupon-qr">
                   <img
@@ -657,7 +663,7 @@ export const PosV2LoyaltyPage = () => {
                         <strong>{isActive ? "Activo" : "Inactivo"}</strong>
                       </div>
                       <small>{entry.totalUsers}/{entry.maxRedemptions} canjes</small>
-                      <small>{couponLink}</small>
+                      <small className="pos-v2-loyalty__code">{couponLink}</small>
                       <div className="pos-v2-loyalty__quick-actions">
                         <button
                           type="button"
