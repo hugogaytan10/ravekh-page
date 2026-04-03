@@ -128,16 +128,7 @@ export const LandingPageRavekhPage = (): JSX.Element => {
             }}
           >
             <ul className="floating-systems-menu__list">
-              <li>
-                <NavLink to="/v2/login-punto-venta" onClick={closeSystemsMenu}>
-                  POS V2
-                </NavLink>
-              </li>
-              <li>
-                <NavLink to="/v2/pos/health" onClick={closeSystemsMenu}>
-                  POS Health
-                </NavLink>
-              </li>
+             
               <li>
                 <NavLink to="/pos" onClick={closeSystemsMenu}>
                   Acceso POS
@@ -145,14 +136,10 @@ export const LandingPageRavekhPage = (): JSX.Element => {
               </li>
               <li>
                 <NavLink to="/v2/loyalty/clone/cupones" onClick={closeSystemsMenu}>
-                  Fidelidad 1:1
+                  Sistema de fidelidad
                 </NavLink>
               </li>
-              <li>
-                <NavLink to="/catalogo/1" onClick={closeSystemsMenu}>
-                  Catálogo público
-                </NavLink>
-              </li>
+             
               <li>
                 <button type="button" onClick={() => scrollToSection("proyectos")} className="floating-systems-menu__button">
                   Proyectos
