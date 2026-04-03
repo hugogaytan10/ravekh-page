@@ -8,6 +8,8 @@ import { PosModeEntryPage } from "../systems/pos/routing/PosModeEntryPage";
 import { POS_V2_ROUTES } from "../systems/pos/routing/PosV2Routes";
 import { LoyaltyCustomerRoutes } from "../systems/loyalty/features/customer-experience/ui/LoyaltyCustomerRoutes";
 import { LoyaltyCustomerLegacyCloneRoutes } from "../systems/loyalty/features/customer-experience/ui/LoyaltyCustomerLegacyCloneRoutes";
+import { PrivacyPoliciesIndexPage } from "../systems/legal/pages/PrivacyPoliciesIndexPage";
+import { PrivacyPolicyPage } from "../systems/legal/pages/PrivacyPolicyPage";
 
 const LegacyCatalogRedirect = () => {
   const { idBusiness } = useParams<{ idBusiness: string }>();
@@ -43,6 +45,8 @@ export const NewAppRoutes = () => {
       <Route path="/v2/catalogo/pedido-info" element={<CatalogOrderInfoPage />} />
       <Route path="/v2/loyalty/customer/*" element={<LoyaltyCustomerRoutes />} />
       <Route path="/v2/loyalty/clone/*" element={<LoyaltyCustomerLegacyCloneRoutes />} />
+      <Route path="/politicas" element={<PrivacyPoliciesIndexPage />} />
+      <Route path="/politicas/:policySlug" element={<PrivacyPolicyPage />} />
 
       {/* Compatibilidad de URLs antiguas sin dependencias a módulos legacy */}
       <Route path="/catalogo/:idBusiness" element={<LegacyCatalogRedirect />} />

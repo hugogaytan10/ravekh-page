@@ -8,6 +8,7 @@ import { ProcessTwo } from "../Process-two/pages/ProcessTwo";
 import { ProcessThree } from "../Process-Three/pages/ProcessThree";
 import { ProcessFour } from "../Process-Four/pages/ProcessFour";
 import { ProcessFive } from "../Process-Five/pages/ProcessFive";
+import { ProjectsShowcase } from "../Projects/pages/ProjectsShowcase";
 import { Characteristics } from "../Characteristics/pages/Characteristics";
 import { Contact } from "../Contact/pages/Contact";
 import { Footer } from "../Footer/pages/Footer";
@@ -66,6 +67,17 @@ export const LandingPageRavekhPage = (): JSX.Element => {
 
     setIsSystemsMenuOpen(false);
     setIsSystemsMenuClosing(true);
+  };
+
+  const scrollToSection = (sectionId: string) => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const target = container.querySelector<HTMLElement>(`#${sectionId}`);
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: "smooth", block: "start" });
+    closeSystemsMenu();
   };
 
   useEffect(() => {
@@ -141,6 +153,16 @@ export const LandingPageRavekhPage = (): JSX.Element => {
                   Catálogo público
                 </NavLink>
               </li>
+              <li>
+                <button type="button" onClick={() => scrollToSection("proyectos")} className="floating-systems-menu__button">
+                  Proyectos
+                </button>
+              </li>
+              <li>
+                <NavLink to="/politicas" onClick={closeSystemsMenu}>
+                  Políticas
+                </NavLink>
+              </li>
             </ul>
           </nav>
         )}
@@ -192,6 +214,13 @@ export const LandingPageRavekhPage = (): JSX.Element => {
           data-endcolor="0,0,0"
         >
           <Characteristics />
+        </section>
+
+        <section
+          className="snap-start w-full"
+          data-endcolor="20,0,40"
+        >
+          <ProjectsShowcase />
         </section>
 
         <section
