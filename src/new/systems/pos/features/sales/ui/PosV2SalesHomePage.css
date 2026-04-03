@@ -167,13 +167,13 @@
   scroll-snap-align: start;
 }
 
-.pos-v2-sales-home__categories button.is-active {
-  border-color: #6d01d1 !important;
-  color: #6d01d1 !important;
-  background: #f5edff !important;
+:root[data-theme="light"] 
+.pos-v2-sales-home__categories 
+button.is-active{
+  border-color: #6d01d1;
+  color: #6d01d1;
+  background: #f5edff;
 }
-
-
 
 .pos-v2-sales-home__products.is-grid {
   display: grid;
