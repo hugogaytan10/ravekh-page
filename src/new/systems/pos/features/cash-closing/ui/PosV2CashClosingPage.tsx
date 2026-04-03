@@ -64,6 +64,7 @@ export const PosV2CashClosingPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string>("");
   const canCloseCash = useMemo(() => getOwnerCapability(session.token), [session.token]);
+  const hasSalesToClose = currentTotal > 0;
 
   const page = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
@@ -173,13 +174,24 @@ export const PosV2CashClosingPage = () => {
       return;
     }
 
+    if (!hasSalesToClose) {
+      setError("No hay ventas acumuladas para cerrar caja.");
+      return;
+    }
+
     setSaving(true);
     setError(null);
 
     try {
       const totalBeforeClosing = await page.loadCurrentTotal(employeeId, session.token);
+      const normalizedTotal = Number(totalBeforeClosing || 0);
+      if (!Number.isFinite(normalizedTotal) || normalizedTotal <= 0) {
+        setCurrentTotal(0);
+        setError("No hay ventas acumuladas para cerrar caja.");
+        return;
+      }
       await page.register({ employeeId }, session.token);
-      setToast(`Corte registrado por ${moneyFormatter.format(totalBeforeClosing)}.`);
+      setToast(`Corte registrado por ${moneyFormatter.format(normalizedTotal)}.`);
       await refreshEmployeeData(employeeId, session.token);
     } catch {
       setError("No fue posible registrar el corte de caja.");
@@ -202,7 +214,10 @@ export const PosV2CashClosingPage = () => {
         {!session.hasSession ? <p className="pos-v2-cash-closing__error">No hay sesión activa. Inicia sesión para gestionar cierres.</p> : null}
         {error ? <p className="pos-v2-cash-closing__error">{error}</p> : null}
         {toast ? <p className="pos-v2-cash-closing__toast">{toast}</p> : null}
-        {!canCloseCash ? <p className="pos-v2-cash-closing__warning">��� Solo cuentas dueñas/administradoras pueden ejecutar el cierre.</p> : null}
+        {!canCloseCash ? <p className="pos-v2-cash-closing__warning">Solo cuentas dueñas/administradoras pueden ejecutar el cierre.</p> : null}
+        {session.hasSession && canCloseCash && !loading && !hasSalesToClose ? (
+          <p className="pos-v2-cash-closing__warning">No hay ventas registradas todavía (total en $0.00), así que el corte está deshabilitado.</p>
+        ) : null}
 
         <section className="pos-v2-cash-closing__card">
           <h3>Registrar corte</h3>
@@ -219,7 +234,7 @@ export const PosV2CashClosingPage = () => {
             <p className="pos-v2-cash-closing__hint">
               Total calculado por backend para cierre actual: <strong>{moneyFormatter.format(currentTotal)}</strong>
             </p>
-            <button type="submit" disabled={saving || loading || !canCloseCash}>{saving ? "Guardando..." : "Confirmar corte"}</button>
+            <button type="submit" disabled={saving || loading || !canCloseCash || !hasSalesToClose}>{saving ? "Guardando..." : "Confirmar corte"}</button>
           </form>
         </section>
 

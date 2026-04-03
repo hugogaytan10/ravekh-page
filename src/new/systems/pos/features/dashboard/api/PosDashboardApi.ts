@@ -127,7 +127,7 @@ export class PosDashboardApi implements IDashboardRepository {
           new TopSellingItem(
             Number(item.id ?? item.Id ?? 0),
             item.name ?? item.Name ?? item.productName ?? item.ProductName ?? item.categoryName ?? item.CategoryName ?? "Sin nombre",
-            Number(item.quantity ?? item.Quantity ?? item.totalQuantity ?? item.TotalQuantity ?? 0),
+            Number(item.quantity ?? item.Quantity ?? item.totalQuantity ?? item.TotalQuantity ?? item.totalSales ?? item.TotalSales ?? 0),
           ),
       )
       .filter((item) => item.name.trim().length > 0 && Number.isFinite(item.quantity) && item.quantity >= 0);

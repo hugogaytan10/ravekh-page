@@ -787,6 +787,7 @@ export const ProductsV2PosPage = () => {
                 const imageCandidates = [product.image, ...product.images].map((candidate) => toImageUrl(candidate)).filter(Boolean) as string[];
                 const uniqueImages = Array.from(new Set(imageCandidates));
                 const preview = uniqueImages[0] ?? null;
+                const variantsCount = Math.max(product.variants.length, product.variantsCount ?? 0);
                 const colors = Array.from(new Set([
                   ...product.variants.map((variant) => variant.color?.trim()),
                   ...product.extras.filter((extra) => extra.type.toUpperCase() === "COLOR").map((extra) => extra.description.trim()),
@@ -812,7 +813,9 @@ export const ProductsV2PosPage = () => {
                       </div>
                       {product.categoryName ? <small className="pos-v2-products__simple-meta">Categoría: {product.categoryName}</small> : null}
 
-                      <small className="pos-v2-products__simple-meta">Variantes: {product.variants.length} · Fotos: {uniqueImages.length}</small>
+                      <small className="pos-v2-products__simple-meta">
+                        {variantsCount > 0 ? `Variantes: ${variantsCount} · ` : ""}Fotos: {uniqueImages.length}
+                      </small>
                       {(colors.length > 0 || sizes.length > 0) ? (
                         <small className="pos-v2-products__simple-meta">
                           {colors.length > 0 ? `Colores: ${colors.join(", ")}` : "Colores: --"} · {sizes.length > 0 ? `Tallas: ${sizes.join(", ")}` : "Tallas: --"}

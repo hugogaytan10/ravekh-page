@@ -7,6 +7,7 @@ import "./PosV2SalesHomePage.css";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { POS_SESSION_STORAGE_KEYS, readPosSessionSnapshot } from "../../../shared/config/posSession";
+import { getDefaultPosPrinter, readPosPrinters } from "../../../shared/config/posPrinters";
 
 type SaleItemVm = {
   id: number;
@@ -58,6 +59,61 @@ type CompletedSale = {
   customerName?: string;
   createdAt: string;
   items: CompletedSaleLine[];
+};
+
+const getIsoDate = (offsetDays = 0): string => {
+  const date = new Date();
+  if (offsetDays) {
+    date.setDate(date.getDate() + offsetDays);
+  }
+  return date.toISOString().slice(0, 10);
+};
+
+const printHtmlDocument = (title: string, html: string): boolean => {
+  const printWindow = window.open("", "_blank", "noopener,noreferrer,width=820,height=960");
+  if (printWindow) {
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+    printWindow.focus();
+    window.setTimeout(() => {
+      printWindow.print();
+    }, 220);
+    return true;
+  }
+
+  const iframe = document.createElement("iframe");
+  iframe.setAttribute("title", title);
+  iframe.style.position = "fixed";
+  iframe.style.right = "0";
+  iframe.style.bottom = "0";
+  iframe.style.width = "0";
+  iframe.style.height = "0";
+  iframe.style.border = "0";
+  document.body.appendChild(iframe);
+
+  const frameDocument = iframe.contentDocument;
+  const frameWindow = iframe.contentWindow;
+  if (!frameDocument || !frameWindow) {
+    document.body.removeChild(iframe);
+    return false;
+  }
+
+  frameDocument.open();
+  frameDocument.write(html);
+  frameDocument.close();
+
+  window.setTimeout(() => {
+    frameWindow.focus();
+    frameWindow.print();
+    window.setTimeout(() => {
+      if (iframe.parentNode) {
+        iframe.parentNode.removeChild(iframe);
+      }
+    }, 500);
+  }, 180);
+
+  return true;
 };
 
 type CustomerVm = {
@@ -204,7 +260,11 @@ export const PosV2SalesHomePage = () => {
   const [selectedTableZoneId, setSelectedTableZoneId] = useState<string>("");
   const [selectedTableId, setSelectedTableId] = useState<string>("");
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
-  const [printingSale, setPrintingSale] = useState<CompletedSale | null>(null);
+  const [quoteBusinessName, setQuoteBusinessName] = useState("Mi negocio");
+  const [quoteClientName, setQuoteClientName] = useState("");
+  const [quoteLogoUrl, setQuoteLogoUrl] = useState("");
+  const [quoteIssueDate, setQuoteIssueDate] = useState(() => getIsoDate(0));
+  const [quoteValidUntil, setQuoteValidUntil] = useState(() => getIsoDate(7));
   const [isMobileTablesOpen, setIsMobileTablesOpen] = useState(false);
   const [loadingTables, setLoadingTables] = useState(false);
   const [tablesError, setTablesError] = useState<string | null>(null);
@@ -240,12 +300,6 @@ export const PosV2SalesHomePage = () => {
   };
 
   const getCurrentSession = () => readPosSessionSnapshot();
-
-  useEffect(() => {
-    const clearPrinting = () => setPrintingSale(null);
-    window.addEventListener("afterprint", clearPrinting);
-    return () => window.removeEventListener("afterprint", clearPrinting);
-  }, []);
 
   useEffect(() => {
     const { token, businessId } = getCurrentSession();
@@ -330,6 +384,28 @@ export const PosV2SalesHomePage = () => {
 
   useEffect(() => {
     const { token, businessId } = getCurrentSession();
+    if (!token || !businessId) return;
+
+    fetch(new URL(`business/${businessId}`, API_BASE_URL).toString(), {
+      headers: {
+        "Content-Type": "application/json",
+        token,
+        Authorization: `Bearer ${token}`,
+      },
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: { Name?: string; name?: string; Logo?: string; logo?: string } | null) => {
+        if (!payload) return;
+        const businessName = String(payload.Name ?? payload.name ?? "").trim();
+        const logoUrl = String(payload.Logo ?? payload.logo ?? "").trim();
+        if (businessName) setQuoteBusinessName(businessName);
+        if (logoUrl) setQuoteLogoUrl(logoUrl);
+      })
+      .catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    const { token, businessId } = getCurrentSession();
 
     if (!token || !businessId) {
       setSalesTax(null);
@@ -390,6 +466,14 @@ export const PosV2SalesHomePage = () => {
         setCustomersError(cause instanceof Error ? cause.message : "No fue posible cargar clientes.");
       });
   }, []);
+
+  useEffect(() => {
+    if (!selectedCustomerId) return;
+    const selectedCustomer = customers.find((customer) => String(customer.id) === selectedCustomerId);
+    if (selectedCustomer?.name) {
+      setQuoteClientName(selectedCustomer.name);
+    }
+  }, [selectedCustomerId, customers]);
 
   useEffect(() => {
     const { token, businessId } = getCurrentSession();
@@ -1062,8 +1146,150 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
-    setPrintingSale(sale);
-    window.setTimeout(() => window.print(), 180);
+    const configuredPrinters = readPosPrinters();
+    const defaultPrinter = getDefaultPosPrinter(configuredPrinters);
+    const resolvedPaper = defaultPrinter?.paperMm ?? "80";
+    if (!defaultPrinter) {
+      setUiMessage("No hay impresora predeterminada registrada. Se usa formato estándar de 80 mm para imprimir.");
+    }
+
+    const pageWidth = `${resolvedPaper}mm`;
+    const printableLines = sale.items
+      .map((item) => `<li><span>${item.name} x${item.quantity}</span><strong>$${item.lineTotal.toFixed(2)}</strong></li>`)
+      .join("");
+    const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Ticket ${sale.folio}</title>
+    <style>
+      @page { size: ${resolvedPaper}mm auto; margin: 3mm; }
+      * { box-sizing: border-box; }
+      body { margin: 0; font-family: Inter, Arial, sans-serif; color: #111827; }
+      .ticket { width: ${pageWidth}; padding: 2mm; }
+      h1 { margin: 0 0 2mm; font-size: 14px; text-align: center; }
+      p { margin: 0 0 1.4mm; font-size: 11px; }
+      ul { list-style: none; margin: 2mm 0; padding: 0; display: grid; gap: 1mm; }
+      li { display: flex; justify-content: space-between; gap: 3mm; border-bottom: 1px dashed #d1d5db; padding-bottom: 1mm; font-size: 11px; }
+      .total { font-size: 12px; font-weight: 700; margin-top: 1.6mm; }
+      .meta { font-size: 10px; color: #4b5563; }
+    </style>
+  </head>
+  <body>
+    <section class="ticket">
+      <h1>Ticket de venta</h1>
+      <p class="meta">Impresora: ${defaultPrinter?.name ?? "No configurada"} · ${resolvedPaper} mm</p>
+      <p><strong>Folio:</strong> ${sale.folio}</p>
+      <p><strong>Fecha:</strong> ${new Date(sale.createdAt).toLocaleString("es-MX")}</p>
+      <p><strong>Mesa:</strong> ${sale.table}</p>
+      <p><strong>Método:</strong> ${sale.paymentMethodLabel}</p>
+      <p><strong>Cliente:</strong> ${sale.customerName ?? "General"}</p>
+      <ul>${printableLines}</ul>
+      <p class="total">Total: $${sale.total.toFixed(2)}</p>
+    </section>
+  </body>
+</html>`;
+
+    const opened = printHtmlDocument(`Ticket ${sale.folio}`, html);
+    if (!opened) {
+      setValidationError("No pudimos abrir la ventana de impresión. Verifica permisos del navegador.");
+    }
+  };
+
+  const handleGenerateQuotePdf = () => {
+    if (!quoteClientName.trim()) {
+      setValidationError("Agrega el nombre del cliente para generar la cotización.");
+      return;
+    }
+    if (cartItems.length === 0) {
+      setValidationError("Agrega productos al carrito para generar la cotización.");
+      return;
+    }
+
+    const quoteNumber = `COT-${Date.now().toString().slice(-6)}`;
+    const subtotal = totals.subtotal;
+    const tax = totals.taxAmount;
+    const total = totals.total;
+    const rows = cartItems
+      .map((item, index) => `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${item.name}</td>
+          <td>${item.quantity}</td>
+          <td>$${item.price.toFixed(2)}</td>
+          <td>$${(item.price * item.quantity).toFixed(2)}</td>
+        </tr>
+      `)
+      .join("");
+    const logoMarkup = quoteLogoUrl.trim()
+      ? `<img src="${quoteLogoUrl.trim()}" alt="Logo negocio" style="max-height:68px;max-width:160px;object-fit:contain;" />`
+      : `<div style="font-weight:700;font-size:14px;">${quoteBusinessName.trim() || "Mi negocio"}</div>`;
+
+    const html = `<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Cotización ${quoteNumber}</title>
+    <style>
+      @page { size: A4; margin: 12mm; }
+      body { margin: 0; font-family: Inter, Arial, sans-serif; color: #111827; }
+      .quote { width: 100%; }
+      .head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 10px; margin-bottom: 14px; }
+      h1 { margin: 0; font-size: 22px; }
+      p { margin: 3px 0; font-size: 12px; }
+      table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+      th, td { border: 1px solid #e5e7eb; padding: 7px; font-size: 12px; text-align: left; }
+      th { background: #f8fafc; }
+      .num { text-align: right; }
+      .summary { margin-top: 12px; margin-left: auto; width: min(100%, 320px); }
+      .summary p { display: flex; justify-content: space-between; }
+      .summary .total { font-size: 16px; font-weight: 800; }
+      .foot { margin-top: 16px; font-size: 11px; color: #6b7280; }
+    </style>
+  </head>
+  <body>
+    <section class="quote">
+      <div class="head">
+        <div>${logoMarkup}</div>
+        <div>
+          <h1>Cotización</h1>
+          <p><strong>Folio:</strong> ${quoteNumber}</p>
+          <p><strong>Cliente:</strong> ${quoteClientName.trim()}</p>
+          <p><strong>Emisión:</strong> ${quoteIssueDate}</p>
+          <p><strong>Vigencia:</strong> ${quoteValidUntil}</p>
+        </div>
+      </div>
+
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Producto</th>
+            <th>Cantidad</th>
+            <th>Precio unitario</th>
+            <th>Subtotal</th>
+          </tr>
+        </thead>
+        <tbody>${rows}</tbody>
+      </table>
+
+      <div class="summary">
+        <p><span>Subtotal</span><strong>$${subtotal.toFixed(2)}</strong></p>
+        <p><span>Impuesto</span><strong>$${tax.toFixed(2)}</strong></p>
+        <p class="total"><span>Total</span><strong>$${total.toFixed(2)}</strong></p>
+      </div>
+
+      <p class="foot">Esta cotización respeta precios hasta la fecha de vigencia indicada.</p>
+    </section>
+  </body>
+</html>`;
+
+    const opened = printHtmlDocument(`Cotización ${quoteNumber}`, html);
+    if (!opened) {
+      setValidationError("No pudimos abrir la ventana para generar PDF de cotización.");
+      return;
+    }
+    setUiMessage(`Cotización ${quoteNumber} lista. En la ventana de impresión selecciona “Guardar como PDF”.`);
   };
 
   return (
@@ -1138,8 +1364,6 @@ export const PosV2SalesHomePage = () => {
 
           {loadingProducts ? <p className="pos-v2-sales-home__empty">Cargando productos…</p> : null}
           {productsError ? <p className="pos-v2-sales-home__error">{productsError}</p> : null}
-          {uiMessage ? <p className="pos-v2-sales-home__info">{uiMessage}</p> : null}
-
           <div className={`pos-v2-sales-home__products ${isGrid ? "is-grid" : "is-list"}`}>
             {filteredProducts.map((product) => {
               const sellableVariants = product.variants.filter((variant) => variant.stock === null || variant.stock > 0);
@@ -1393,11 +1617,37 @@ export const PosV2SalesHomePage = () => {
               </button>
             </div>
 
+            <section className="pos-v2-sales-home__quote-card" aria-label="Generador de cotización">
+              <h4>Cotización (PDF)</h4>
+              <label>
+                Nombre del cliente
+                <input value={quoteClientName} onChange={(event) => setQuoteClientName(event.target.value)} placeholder="Ej. María López" />
+              </label>
+              <small className="pos-v2-sales-home__customer-hint">
+                Negocio: <strong>{quoteBusinessName || "Mi negocio"}</strong>{quoteLogoUrl ? " · Logo cargado" : " · Sin logo configurado"}
+              </small>
+              <div className="pos-v2-sales-home__quote-dates">
+                <label>
+                  Fecha de emisión
+                  <input type="date" value={quoteIssueDate} onChange={(event) => setQuoteIssueDate(event.target.value)} />
+                </label>
+                <label>
+                  Vigencia de cotización
+                  <input type="date" value={quoteValidUntil} onChange={(event) => setQuoteValidUntil(event.target.value)} />
+                </label>
+              </div>
+              <button type="button" className="pos-v2-sales-home__quote-btn" onClick={handleGenerateQuotePdf} disabled={cartItems.length === 0}>
+                Generar cotización PDF
+              </button>
+            </section>
+
             {validationError ? <p className="pos-v2-sales-home__error">{validationError}</p> : null}
             {ticket ? <p className="pos-v2-sales-home__ticket">{ticket}</p> : null}
           </div>
         </aside>
       </section>
+
+      {uiMessage ? <p className="pos-v2-sales-home__info" role="status" aria-live="polite">{uiMessage}</p> : null}
 
       {variantSelection ? (
         <section className="pos-v2-sales-home__variant-modal" role="dialog" aria-modal="true" aria-label="Seleccionar variante" onClick={() => setVariantSelection(null)}>
@@ -1681,26 +1931,6 @@ export const PosV2SalesHomePage = () => {
         </div>
       ) : null}
 
-      {printingSale ? (
-        <section className="pos-v2-sales-home__printable-ticket" aria-label={`Ticket ${printingSale.folio}`}>
-          <h1>Ticket de venta</h1>
-          <p><strong>Folio:</strong> {printingSale.folio}</p>
-          <p><strong>Fecha:</strong> {new Date(printingSale.createdAt).toLocaleString("es-MX")}</p>
-          <p><strong>Mesa:</strong> {printingSale.table}</p>
-          <p><strong>Método:</strong> {printingSale.paymentMethodLabel}</p>
-          <p><strong>Cliente:</strong> {printingSale.customerName ?? "General"}</p>
-          <h2>Detalle</h2>
-          <ul>
-            {printingSale.items.map((item, index) => (
-              <li key={`${printingSale.folio}-${item.name}-${index}`}>
-                <span>{item.name} x{item.quantity}</span>
-                <strong>${item.lineTotal.toFixed(2)}</strong>
-              </li>
-            ))}
-          </ul>
-          <p><strong>Total:</strong> ${printingSale.total.toFixed(2)}</p>
-        </section>
-      ) : null}
     </PosV2Shell>
   );
 };

@@ -54,6 +54,8 @@ type ProductResponse = {
   quantity?: number | null;
   Variants?: LegacyVariantResponse[];
   variants?: LegacyVariantResponse[];
+  VariantsCount?: number | string | null;
+  variantsCount?: number | string | null;
 };
 
 type LegacyVariantResponse = {
@@ -249,6 +251,7 @@ export class PosProductsApi implements IProductsRepository {
       payload.barcode ?? null,
       payload.variants ?? [],
       payload.extras ?? [],
+      payload.variants?.length ?? 0,
     );
   }
 
@@ -363,6 +366,11 @@ export class PosProductsApi implements IProductsRepository {
 
   private toDomain(product: ProductResponse, extras: ProductExtra[] = [], forcedVariants?: ProductVariant[]): ManagedProduct {
     const variants = forcedVariants ?? (product.Variants ?? product.variants ?? []).map((variant) => this.toDomainVariant(variant));
+    const rawVariantsCount = product.VariantsCount ?? product.variantsCount;
+    const parsedVariantsCount = typeof rawVariantsCount === "string" ? Number(rawVariantsCount.trim()) : Number(rawVariantsCount);
+    const variantsCount = Number.isFinite(parsedVariantsCount) && parsedVariantsCount > 0
+      ? parsedVariantsCount
+      : variants.length;
     return new ManagedProduct(
       product.Id ?? product.id ?? 0,
       product.Business_Id ?? product.business_Id ?? product.businessId ?? 0,
@@ -388,6 +396,7 @@ export class PosProductsApi implements IProductsRepository {
       product.Barcode ?? product.barcode ?? null,
       variants,
       extras,
+      variantsCount,
     );
   }
 

@@ -83,6 +83,7 @@ export class ManagedProduct {
     public readonly barcode: string | null,
     public readonly variants: ProductVariant[],
     public readonly extras: ProductExtra[],
+    public readonly variantsCount: number = 0,
   ) {}
 
   toSaveDto(): SaveManagedProductDto {
