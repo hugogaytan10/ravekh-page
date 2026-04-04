@@ -163,6 +163,38 @@
 .pos-v2-products__skeleton-media { height: 120px; }
 .pos-v2-products__skeleton-line { height: 12px; }
 .pos-v2-products__skeleton-line.short { width: 60%; }
+.pos-v2-products__pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: .6rem;
+}
+.pos-v2-products__pagination-goto {
+  display: inline-flex;
+  align-items: center;
+  gap: .4rem;
+}
+.pos-v2-products__pagination-goto label {
+  display: inline-flex;
+  align-items: center;
+  gap: .35rem;
+  font-size: .82rem;
+  color: var(--product-muted);
+  font-weight: 700;
+}
+.pos-v2-products__pagination-goto input {
+  width: 86px;
+  min-height: 36px;
+  padding: .35rem .45rem;
+}
+.pos-v2-products__pagination-goto button {
+  min-height: 36px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  background: #fff;
+  padding: .35rem .65rem;
+  font-weight: 700;
+}
 
 .pos-v2-products__modal-backdrop { position: fixed; inset: 0; background: var(--product-overlay); z-index: 85; display: grid; place-items: center; padding: .8rem; }
 .pos-v2-products__modal-backdrop.is-sheet { align-items: end; padding: 0; }

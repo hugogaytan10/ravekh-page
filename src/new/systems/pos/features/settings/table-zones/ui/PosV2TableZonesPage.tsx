@@ -566,7 +566,13 @@ export const PosV2TableZonesPage = () => {
                   <span>{zone.isActive ? "Activa" : "Inactiva"} · ID {zone.id}</span>
                 </div>
                 <div className="pos-v2-table-zones__actions">
-                  <button type="button" className="is-secondary-chip" onClick={() => setSelectedZoneId(String(zone.id))}>{selectedZoneId === String(zone.id) ? "Seleccionada" : "Ver mesas"}</button>
+                  <button
+                    type="button"
+                    className={`is-secondary-chip ${selectedZoneId === String(zone.id) ? "is-active" : ""}`}
+                    onClick={() => setSelectedZoneId(String(zone.id))}
+                  >
+                    {selectedZoneId === String(zone.id) ? "Seleccionada" : "Ver mesas"}
+                  </button>
                   <button type="button" className="is-secondary-chip" onClick={() => { setZoneEditId(zone.id); setZoneName(zone.name); setIsZoneModalOpen(true); }}>Editar</button>
                   <button type="button" className="is-danger" onClick={() => setDeleteTarget({ kind: "zone", id: zone.id, name: zone.name })} disabled={saving}>Eliminar</button>
                 </div>

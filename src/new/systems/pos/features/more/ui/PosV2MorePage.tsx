@@ -5,7 +5,6 @@ import { MORE_MODULE_SECTIONS } from "../config/moreModules";
 import {
   MoreModuleExecutionContext,
   MoreModuleLink,
-  MoreModuleStatus,
 } from "../model/MoreModule";
 import { MoreModuleService } from "../services/MoreModuleService";
 import { MoreModulePage } from "../pages/MoreModulePage";
@@ -27,12 +26,6 @@ const FAVORITES_KEY = POS_SESSION_STORAGE_KEYS.moreFavorites;
 export const PosV2MorePage = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
-  const [viewMode, setViewMode] = useState<"working" | "development">(
-    "working",
-  );
-  const [statusFilter, setStatusFilter] = useState<"all" | MoreModuleStatus>(
-    "all",
-  );
   const [betaLoadingId, setBetaLoadingId] = useState<string | null>(null);
   const [betaResult, setBetaResult] = useState<{
     id: string;
@@ -67,40 +60,26 @@ export const PosV2MorePage = () => {
     () => allItems.filter((item) => isReadyModule(item)),
     [allItems],
   );
-  const developmentItems = useMemo(
-    () => allItems.filter((item) => item.status !== "available"),
-    [allItems],
-  );
   const summary = useMemo(
     () => ({
-      total: allItems.length,
+      total: workingItems.length,
       working: workingItems.length,
-      development: developmentItems.length,
       favorites: favorites.length,
     }),
     [
-      allItems.length,
       workingItems.length,
-      developmentItems.length,
       favorites.length,
     ],
   );
   const favoriteItems = allItems
     .filter((item) => favorites.includes(item.id))
     .sort((a, b) => a.title.localeCompare(b.title, "es-MX"));
-  const pendingItems = allItems.filter((item) => item.status !== "available");
   const normalizedQuery = query.trim().toLowerCase();
 
   const filteredSections = useMemo(() => {
-    const shouldIncludeItem = (item: MoreModuleLink): boolean => {
-      if (viewMode === "working") return isReadyModule(item);
-      if (statusFilter === "all") return item.status !== "available";
-      return item.status === statusFilter;
-    };
-
     return MORE_MODULE_SECTIONS.map((section) => {
       const items = section.items.filter((item) => {
-        const matchesStatus = shouldIncludeItem(item);
+        const matchesStatus = isReadyModule(item);
         const matchesQuery =
           normalizedQuery.length === 0
             ? true
@@ -113,7 +92,7 @@ export const PosV2MorePage = () => {
 
       return { ...section, items };
     }).filter((section) => section.items.length > 0);
-  }, [normalizedQuery, statusFilter, viewMode, modulePage]);
+  }, [normalizedQuery, modulePage]);
 
   useEffect(() => {
     writePosStringList(FAVORITES_KEY, favorites);
@@ -238,10 +217,6 @@ export const PosV2MorePage = () => {
             <article>
               <h3>Operativos</h3>
               <p>{summary.working}</p>
-            </article>
-            <article>
-              <h3>En desarrollo</h3>
-              <p>{summary.development}</p>
             </article>
             <article>
               <h3>Favoritos</h3>
@@ -411,8 +386,6 @@ export const PosV2MorePage = () => {
               type="button"
               onClick={() => {
                 setQuery("");
-                setStatusFilter("all");
-                setViewMode("working");
               }}
             >
               Limpiar filtros y volver a operativos

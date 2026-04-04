@@ -26,6 +26,7 @@ type ProductItemVm = {
   showInStore: boolean;
   volume: boolean;
   price: number | null;
+  costPerItem: number | null;
   promotionPrice: number | null;
   stock: number | null;
   expDate: string | null;
@@ -123,6 +124,7 @@ export const ProductsV2PosPage = () => {
   const [toast, setToast] = useState<ToastState>(null);
   const [saveResult, setSaveResult] = useState<SaveResultState>(null);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageInput, setPageInput] = useState("1");
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [productsLimit, setProductsLimit] = useState(() => (window.localStorage.getItem("plan") ?? "").trim() || DEFAULT_PRODUCTS_LIMIT);
@@ -130,6 +132,7 @@ export const ProductsV2PosPage = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [costPerItem, setCostPerItem] = useState("");
   const [stock, setStock] = useState("");
   const [forSale, setForSale] = useState(true);
   const [showInStore, setShowInStore] = useState(true);
@@ -157,6 +160,7 @@ export const ProductsV2PosPage = () => {
     setName("");
     setDescription("");
     setPrice("");
+    setCostPerItem("");
     setStock("");
     setForSale(true);
     setShowInStore(true);
@@ -235,6 +239,7 @@ export const ProductsV2PosPage = () => {
           showInStore: product.showInStore,
           volume: product.volume,
           price: product.price,
+          costPerItem: product.costPerItem,
           promotionPrice: product.promotionPrice,
           stock: product.stock,
           expDate: product.expDate,
@@ -286,6 +291,10 @@ export const ProductsV2PosPage = () => {
   useEffect(() => {
     loadProducts(1);
   }, [businessId, token, productsLimit]);
+
+  useEffect(() => {
+    setPageInput(String(currentPage));
+  }, [currentPage]);
 
   const visibleProducts = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
@@ -391,6 +400,7 @@ export const ProductsV2PosPage = () => {
     }
 
     const parsedPrice = price.trim() === "" ? null : Number(price);
+    const parsedCostPerItem = costPerItem.trim() === "" ? null : Number(costPerItem);
     const parsedStock = stock.trim() === "" ? null : Number(stock);
 
     if (parsedPrice !== null && (Number.isNaN(parsedPrice) || parsedPrice < 0)) {
@@ -400,6 +410,11 @@ export const ProductsV2PosPage = () => {
 
     if (parsedStock !== null && (Number.isNaN(parsedStock) || parsedStock < 0)) {
       setError("El stock debe ser un número válido mayor o igual a 0.");
+      return;
+    }
+
+    if (parsedCostPerItem !== null && (Number.isNaN(parsedCostPerItem) || parsedCostPerItem < 0)) {
+      setError("El costo por producto debe ser un número válido mayor o igual a 0.");
       return;
     }
 
@@ -430,7 +445,7 @@ export const ProductsV2PosPage = () => {
         quantity: null,
         image: allImages[0] || undefined,
         images: allImages,
-        costPerItem: null,
+        costPerItem: parsedCostPerItem,
         barcode: null,
         categoryId: selectedCategoryId,
         variants: mappedVariants(),
@@ -514,6 +529,7 @@ export const ProductsV2PosPage = () => {
       setName(detail.name);
       setDescription(detail.description);
       setPrice(detail.price == null ? "" : String(detail.price));
+      setCostPerItem(detail.costPerItem == null ? "" : String(detail.costPerItem));
       setStock(detail.stock == null ? "" : String(detail.stock));
       setForSale(detail.forSale);
       setShowInStore(detail.showInStore);
@@ -714,6 +730,23 @@ export const ProductsV2PosPage = () => {
     }
   };
 
+  const handleGoToPage = (event: FormEvent) => {
+    event.preventDefault();
+    const parsedTarget = Number(pageInput);
+    if (!Number.isFinite(parsedTarget)) {
+      setPageInput(String(currentPage));
+      return;
+    }
+
+    const boundedPage = Math.min(totalPages, Math.max(1, Math.trunc(parsedTarget)));
+    if (boundedPage === currentPage) {
+      setPageInput(String(boundedPage));
+      return;
+    }
+
+    void loadProducts(boundedPage);
+  };
+
   return (
     <PosV2Shell title="Productos" subtitle="Catálogo moderno para operar tu POS de forma rápida.">
       <section className="pos-v2-products">
@@ -851,6 +884,20 @@ export const ProductsV2PosPage = () => {
             <nav className="pos-v2-products__pagination" aria-label="Paginación de productos">
               <button type="button" onClick={() => loadProducts(Math.max(1, currentPage - 1))} disabled={currentPage <= 1}>Anterior</button>
               <span>Página {currentPage} de {totalPages} · {totalItems} productos</span>
+              <form className="pos-v2-products__pagination-goto" onSubmit={handleGoToPage}>
+                <label>
+                  Ir a
+                  <input
+                    type="number"
+                    min={1}
+                    max={Math.max(totalPages, 1)}
+                    value={pageInput}
+                    onChange={(event) => setPageInput(event.target.value)}
+                    aria-label="Ir a página"
+                  />
+                </label>
+                <button type="submit" disabled={totalPages <= 1}>Ir</button>
+              </form>
               <button type="button" onClick={() => loadProducts(Math.min(totalPages, currentPage + 1))} disabled={currentPage >= totalPages}>Siguiente</button>
             </nav>
           ) : null}
@@ -905,6 +952,10 @@ export const ProductsV2PosPage = () => {
                   <label>
                     Precio (opcional)
                     <input type="number" min="0" step="0.01" inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} />
+                  </label>
+                  <label>
+                    Costo por producto (opcional)
+                    <input type="number" min="0" step="0.01" inputMode="decimal" value={costPerItem} onChange={(event) => setCostPerItem(event.target.value)} />
                   </label>
 
                   <label>
