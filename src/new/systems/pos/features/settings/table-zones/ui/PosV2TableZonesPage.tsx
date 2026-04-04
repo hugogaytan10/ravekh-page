@@ -497,9 +497,6 @@ export const PosV2TableZonesPage = () => {
             <h2>Mesas y zonas</h2>
             <p>Flujo moderno: primero administras zonas y luego administras las mesas dentro de cada zona.</p>
           </div>
-          <button type="button" onClick={loadZones} disabled={isLoading || !hasSession}>
-            {isLoading ? "Actualizando..." : "Actualizar listado"}
-          </button>
         </header>
 
         {error ? <p className="pos-v2-table-zones__error" role="alert" aria-live="assertive">{error}</p> : null}
@@ -507,13 +504,7 @@ export const PosV2TableZonesPage = () => {
 
         <section className="pos-v2-table-zones__toolbar">
           <article className="pos-v2-table-zones__status">
-            <span className={`is-pill ${isTableOrderEnabled ? "is-active" : "is-inactive"}`}>
-              Pedidos con mesa: {isTableOrderEnabled ? "Activo" : "Inactivo"}
-            </span>
-            <span className="is-pill">Negocio #{hasSession ? businessId : "sin sesión"}</span>
-            <button type="button" className="is-secondary-chip" onClick={handleToggleTableOrders} disabled={saving || !hasSession}>
-              {isTableOrderEnabled ? "Desactivar pedidos con mesa" : "Activar pedidos con mesa"}
-            </button>
+          
           </article>
           <article className="pos-v2-table-zones__quick-actions">
             <button type="button" className="is-secondary-chip" aria-label="Crear nueva zona" onClick={() => { setZoneEditId(null); setZoneName(""); setIsZoneModalOpen(true); }}>

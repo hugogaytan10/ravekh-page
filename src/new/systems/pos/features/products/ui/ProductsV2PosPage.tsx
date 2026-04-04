@@ -779,12 +779,6 @@ export const ProductsV2PosPage = () => {
         {error ? <p className="pos-v2-products__error" role="alert">{error}</p> : null}
         {toast ? <p className={`pos-v2-products__toast is-${toast.type}`} role="status">{toast.message}</p> : null}
 
-        <section className="pos-v2-products__stats" aria-label="Resumen de productos">
-          <article><span>Total</span><strong>{stats.total}</strong></article>
-          <article><span>Activos</span><strong>{stats.active}</strong></article>
-          <article><span>Archivados</span><strong>{stats.archived}</strong></article>
-          <article><span>Con variantes</span><strong>{stats.withVariants}</strong></article>
-        </section>
 
         <section className="pos-v2-products__catalog" aria-label="Listado de productos">
           <div className="pos-v2-products__catalog-header">

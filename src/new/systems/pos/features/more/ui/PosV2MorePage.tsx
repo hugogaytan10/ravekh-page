@@ -203,26 +203,6 @@ export const PosV2MorePage = () => {
       <section className="pos-v2-more">
         <header className="pos-v2-more__header">
           <h2>Centro de operaciones</h2>
-          <p>Lista de módulos operativos del sistema POS</p>
-
-  
-          <section
-            className="pos-v2-more__summary"
-            aria-label="Resumen de módulos"
-          >
-            <article>
-              <h3>Total módulos</h3>
-              <p>{summary.total}</p>
-            </article>
-            <article>
-              <h3>Operativos</h3>
-              <p>{summary.working}</p>
-            </article>
-            <article>
-              <h3>Favoritos</h3>
-              <p>{summary.favorites}</p>
-            </article>
-          </section>
         </header>
 
         {favoriteItems.length > 0 ? (
