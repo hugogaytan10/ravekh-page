@@ -88,7 +88,7 @@ export const CatalogStorefrontPage = () => {
       setLoading(true);
       setError(null);
       try {
-        const productsPage = await pageLogic.loadProducts(businessId, page, selectedCategoryId);
+        const productsPage = await pageLogic.loadProducts(businessId, page, selectedCategoryId, store?.plan ?? undefined);
         setProducts(productsPage.products);
         setTotalPages(productsPage.pagination.totalPages);
       } catch {
@@ -99,7 +99,7 @@ export const CatalogStorefrontPage = () => {
     };
 
     void run();
-  }, [businessId, page, pageLogic, selectedCategoryId]);
+  }, [businessId, page, pageLogic, selectedCategoryId, store?.plan]);
 
   useEffect(() => {
     if (!businessId) return;

@@ -11,6 +11,7 @@ import { MoreModulePage } from "../pages/MoreModulePage";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import {
   clearPosSessionSnapshot,
+  isSalesOnlyOperator,
   POS_SESSION_STORAGE_KEYS,
   readPosSessionSnapshot,
   readPosStringList,
@@ -44,14 +45,17 @@ export const PosV2MorePage = () => {
     [],
   );
   const sessionSnapshot = useMemo(() => readPosSessionSnapshot(), []);
+  const isSalesOnlyUser = useMemo(() => isSalesOnlyOperator(sessionSnapshot.token), [sessionSnapshot.token]);
+  const allowedModuleIdsForSalesOnly = useMemo(() => new Set(["printers"]), []);
   const catalogUrl = useMemo(
     () => buildPosPublicCatalogUrl(sessionSnapshot.businessId),
     [sessionSnapshot.businessId],
   );
-  const allItems = useMemo(
-    () => MORE_MODULE_SECTIONS.flatMap((section) => section.items),
-    [],
-  );
+  const allItems = useMemo(() => {
+    const items = MORE_MODULE_SECTIONS.flatMap((section) => section.items);
+    if (!isSalesOnlyUser) return items;
+    return items.filter((item) => allowedModuleIdsForSalesOnly.has(item.id));
+  }, [allowedModuleIdsForSalesOnly, isSalesOnlyUser]);
   const isReadyModule = (item: MoreModuleLink): boolean =>
     item.status === "available" ||
     (item.actionType === "beta-action" &&
@@ -79,6 +83,7 @@ export const PosV2MorePage = () => {
   const filteredSections = useMemo(() => {
     return MORE_MODULE_SECTIONS.map((section) => {
       const items = section.items.filter((item) => {
+        const matchesRole = !isSalesOnlyUser || allowedModuleIdsForSalesOnly.has(item.id);
         const matchesStatus = isReadyModule(item);
         const matchesQuery =
           normalizedQuery.length === 0
@@ -87,12 +92,12 @@ export const PosV2MorePage = () => {
                 .toLowerCase()
                 .includes(normalizedQuery);
 
-        return matchesStatus && matchesQuery;
+        return matchesRole && matchesStatus && matchesQuery;
       });
 
       return { ...section, items };
     }).filter((section) => section.items.length > 0);
-  }, [normalizedQuery, modulePage]);
+  }, [allowedModuleIdsForSalesOnly, isSalesOnlyUser, normalizedQuery, modulePage]);
 
   useEffect(() => {
     writePosStringList(FAVORITES_KEY, favorites);

@@ -11,12 +11,12 @@ export class CatalogStorefrontService {
     return this.repository.getCategoriesByBusiness(businessId);
   }
 
-  getProductsByBusiness(businessId: string, page: number, limit = 30) {
-    return this.repository.getProductsByBusinessPage(businessId, page, limit);
+  getProductsByBusiness(businessId: string, page: number, planLimit?: string) {
+    return this.repository.getProductsByBusinessPage(businessId, page, planLimit);
   }
 
-  getProductsByCategory(categoryId: number, page: number, limit = 30) {
-    return this.repository.getProductsByCategoryPage(categoryId, page, limit);
+  getProductsByCategory(categoryId: number, page: number, planLimit?: string) {
+    return this.repository.getProductsByCategoryPage(categoryId, page, planLimit);
   }
 
   getProduct(productId: string) {

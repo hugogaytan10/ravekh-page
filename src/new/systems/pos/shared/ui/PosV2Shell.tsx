@@ -1,6 +1,7 @@
-import { ReactNode, useEffect, useState } from "react";
+import { ReactNode, useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { FiBarChart2, FiBox, FiDollarSign, FiMoreHorizontal, FiShoppingCart } from "react-icons/fi";
+import { isSalesOnlyOperator, readPosSessionSnapshot } from "../config/posSession";
 import "./PosV2Shell.css";
 
 type PosV2ShellProps = {
@@ -41,6 +42,12 @@ export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
     window.localStorage.setItem(THEME_STORAGE_KEY, theme);
   }, [theme]);
 
+  const navItems = useMemo(() => {
+    const { token } = readPosSessionSnapshot();
+    if (!token || !isSalesOnlyOperator(token)) return NAV_ITEMS;
+    return NAV_ITEMS.filter((item) => item.to === "/v2/MainSales" || item.to === "/v2/more");
+  }, []);
+
   return (
     <div className="pos-v2-shell">
       <header className="pos-v2-shell__header">
@@ -71,7 +78,7 @@ export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
       <main className="pos-v2-shell__content">{children}</main>
 
       <nav className="pos-v2-shell__bottom-nav" aria-label="Navegación principal POS v2">
-        {NAV_ITEMS.map(({ to, label, Icon }) => (
+        {navItems.map(({ to, label, Icon }) => (
           <NavLink
             key={to}
             to={to}

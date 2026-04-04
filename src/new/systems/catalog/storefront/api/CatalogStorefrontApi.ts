@@ -1,7 +1,7 @@
 import { ICatalogStorefrontRepository } from "../interface/ICatalogStorefrontRepository";
 import { CatalogOrderPayload, StorefrontBusiness, StorefrontProduct } from "../model/CatalogStorefrontModels";
 
-type BusinessResponse = { Id?: number; Name?: string; PhoneNumber?: string | null };
+type BusinessResponse = { Id?: number; Name?: string; PhoneNumber?: string | null; Plan?: string | null; plan?: string | null };
 type CategoryResponse = { Id?: number; id?: number; Name?: string; name?: string };
 type ProductResponse = {
   Id?: number;
@@ -174,6 +174,7 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
       id: Number(data.Id ?? 0),
       name: data.Name?.trim() || "Tienda",
       phone: data.PhoneNumber ?? null,
+      plan: String(data.Plan ?? data.plan ?? "").trim() || null,
     };
   }
 
@@ -188,7 +189,7 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
       .filter((item) => item.id > 0 && item.name.length > 0);
   }
 
-  async getProductsByBusinessPage(businessId: string, page = 1, limit = 30): Promise<StorefrontProductsPage> {
+  async getProductsByBusinessPage(businessId: string, page = 1, planLimit?: string): Promise<StorefrontProductsPage> {
     const businessKey = String(businessId).trim();
     const visit = visitTrackerByBusiness.has(businessKey) ? 2 : 1;
     visitTrackerByBusiness.add(businessKey);
@@ -196,7 +197,7 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
     const response = await fetch(`${normalizeBase(this.baseUrl)}products/showstore/stockgtzero/${businessId}/1?page=${page}&visit=${visit}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ Limit: String(limit) }),
+      body: JSON.stringify({ Limit: String(planLimit ?? "30") }),
     });
 
     if (!response.ok) {
@@ -213,11 +214,11 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
     return normalizeProductsPage(raw, page, businessId);
   }
 
-  async getProductsByCategoryPage(categoryId: number, page = 1, limit = 30): Promise<StorefrontProductsPage> {
+  async getProductsByCategoryPage(categoryId: number, page = 1, planLimit?: string): Promise<StorefrontProductsPage> {
     const response = await fetch(`${normalizeBase(this.baseUrl)}products/category/availablegtzero/${categoryId}?page=${page}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ Limit: String(limit) }),
+      body: JSON.stringify({ Limit: String(planLimit ?? "30") }),
     });
 
     if (!response.ok) {

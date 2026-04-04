@@ -896,7 +896,7 @@ export const PosV2SalesHomePage = () => {
       ? [
         {
           id: null,
-          description: "Producto base",
+          description: product.name,
           color: product.color ?? null,
           size: null,
           price: product.price,

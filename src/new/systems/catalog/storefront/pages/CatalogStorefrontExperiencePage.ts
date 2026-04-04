@@ -7,12 +7,12 @@ export class CatalogStorefrontExperiencePage {
     return Promise.all([this.service.getBusiness(businessId), this.service.getCategories(businessId)]);
   }
 
-  loadProducts(businessId: string, page: number, categoryId?: number | null) {
+  loadProducts(businessId: string, page: number, categoryId?: number | null, planLimit?: string) {
     if (categoryId != null) {
-      return this.service.getProductsByCategory(categoryId, page);
+      return this.service.getProductsByCategory(categoryId, page, planLimit);
     }
 
-    return this.service.getProductsByBusiness(businessId, page);
+    return this.service.getProductsByBusiness(businessId, page, planLimit);
   }
 
   loadProductDetail(productId: string) {

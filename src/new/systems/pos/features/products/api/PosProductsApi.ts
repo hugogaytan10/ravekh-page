@@ -191,23 +191,26 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   async create(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct> {
-    let response: ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null;
+    let response: ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number; insertId?: number } | null;
     let createdProductId: number | null = null;
+    let variantsSyncedViaCreatePayload = false;
     try {
-      response = await this.httpClient.request<ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null>({
+      response = await this.httpClient.request<ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number; insertId?: number } | null>({
         method: "POST",
         path: POS_ENDPOINTS.products(),
         token,
-        body: this.toMutationBody(payload, true, false),
+        body: this.toMutationBody(payload, true, true),
       });
+      variantsSyncedViaCreatePayload = true;
     } catch (cause) {
       if (!payload.extras?.length) throw cause;
-      response = await this.httpClient.request<ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null>({
+      response = await this.httpClient.request<ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number; insertId?: number } | null>({
         method: "POST",
         path: POS_ENDPOINTS.products(),
         token,
-        body: this.toMutationBody(payload, false, false),
+        body: this.toMutationBody(payload, false, true),
       });
+      variantsSyncedViaCreatePayload = true;
       const created = this.extractCreatedProduct(response);
       const productId = created?.Id ?? created?.id;
       if (productId) {
@@ -217,8 +220,12 @@ export class PosProductsApi implements IProductsRepository {
     }
 
     const created = this.extractCreatedProduct(response);
-    createdProductId = createdProductId ?? (Number(created?.Id ?? created?.id ?? 0) || null);
-    if (createdProductId && (payload.variants?.length ?? 0) > 0) {
+    const fallbackInsertId = response && typeof response === "object" && "insertId" in response
+      ? Number((response as { insertId?: number }).insertId ?? 0)
+      : 0;
+    createdProductId = createdProductId ?? (Number(created?.Id ?? created?.id ?? 0) || (Number.isFinite(fallbackInsertId) && fallbackInsertId > 0 ? fallbackInsertId : null));
+
+    if (!variantsSyncedViaCreatePayload && createdProductId && (payload.variants?.length ?? 0) > 0) {
       await this.syncVariants(createdProductId, payload.variants ?? [], token);
     }
 
@@ -642,7 +649,7 @@ export class PosProductsApi implements IProductsRepository {
     return rest;
   }
 
-  private extractCreatedProduct(response: ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number } | null): ProductResponse | null {
+  private extractCreatedProduct(response: ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number; insertId?: number } | null): ProductResponse | null {
     if (!response || typeof response !== "object") return null;
     if ("Product" in response && response.Product) return response.Product;
     if ("product" in response && response.product) return response.product;

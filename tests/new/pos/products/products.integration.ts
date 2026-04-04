@@ -106,6 +106,7 @@ export async function run(): Promise<void> {
       showInStore: true,
       available: true,
       categoryId: 3,
+      variants: [{ description: "Botella 500ml", price: 30, stock: 8, color: "VERDE" }],
       extras: [
         { description: "M", type: "TALLA" },
         { description: "VERDE", type: "COLOR" },
@@ -167,7 +168,22 @@ export async function run(): Promise<void> {
       OptStock: null,
       Volume: false,
     },
-    Variants: null,
+    Variants: [
+      {
+        Id: undefined,
+        Product_Id: undefined,
+        Description: "Botella 500ml",
+        Barcode: null,
+        Color: "VERDE",
+        Price: 30,
+        PromotionPrice: null,
+        CostPerItem: null,
+        Stock: 8,
+        ExpDate: null,
+        MinStock: null,
+        OptStock: null,
+      },
+    ],
     Extras: [
       { Description: "M", Type: "TALLA" },
       { Description: "VERDE", Type: "COLOR" },
