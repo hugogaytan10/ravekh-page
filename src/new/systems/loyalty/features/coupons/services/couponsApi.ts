@@ -62,7 +62,7 @@ const getCouponsByBusiness = async (businessId: number): Promise<Coupon[]> => {
   const response = await fetch(`${COUPONS_API_URL}coupons/business/${businessId}`);
 
   if (!response.ok) {
-    throw await buildHttpError(response, "No se pudieron cargar los cupones.");
+    throw await buildHttpError(response, "No se pudieron cargar los coupons.");
   }
 
   const data = await parseJsonOrNull<Coupon[]>(response);
@@ -91,13 +91,13 @@ const getCouponDisponibility = async (userId: number): Promise<Coupon[] | null> 
   try {
     const response = await fetch(`${COUPONS_API_URL}coupons/user/${userId}`);
     if (!response.ok) {
-      throw await buildHttpError(response, "No se pudieron cargar las relaciones de cupones del usuario.");
+      throw await buildHttpError(response, "No se pudieron cargar las relaciones de coupons del usuario.");
     }
 
     const data = await parseJsonOrNull<Coupon[] | null>(response);
     return Array.isArray(data) ? data : [];
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : "Error al obtener las relaciones de cupones del usuario.");
+    throw new Error(error instanceof Error ? error.message : "Error al obtener las relaciones de coupons del usuario.");
   }
 };
 
@@ -109,13 +109,13 @@ const getCouponsByUser = async (userId: number): Promise<CouponHasUser[] | null>
   try {
     const response = await fetch(`${COUPONS_API_URL}couponhasusers/user/${userId}`);
     if (!response.ok) {
-      throw await buildHttpError(response, "No se pudieron cargar las relaciones de cupones del usuario.");
+      throw await buildHttpError(response, "No se pudieron cargar las relaciones de coupons del usuario.");
     }
 
     const data = await parseJsonOrNull<CouponHasUser[] | null>(response);
     return Array.isArray(data) ? data : [];
   } catch (error) {
-    throw new Error(error instanceof Error ? error.message : "Error al obtener los cupones del usuario.");
+    throw new Error(error instanceof Error ? error.message : "Error al obtener los coupons del usuario.");
   }
 };
 

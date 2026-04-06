@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useMemo, useState } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { FiBarChart2, FiBox, FiDollarSign, FiMoreHorizontal, FiShoppingCart } from "react-icons/fi";
 import { isSalesOnlyOperator, readPosSessionSnapshot } from "../config/posSession";
+import { POS_V2_PATHS } from "../../routing/PosV2Paths";
 import "./PosV2Shell.css";
 
 type PosV2ShellProps = {
@@ -15,11 +16,11 @@ type UiTheme = "light" | "dark";
 const THEME_STORAGE_KEY = "pos-v2-ui-theme";
 
 const NAV_ITEMS = [
-  { to: "/v2/MainSales", label: "Ventas", Icon: FiShoppingCart },
-  { to: "/v2/main-products/items", label: "Productos", Icon: FiBox },
-  { to: "/v2/MainFinances", label: "Finanzas", Icon: FiDollarSign },
-  { to: "/v2/dashboard", label: "Reportes", Icon: FiBarChart2 },
-  { to: "/v2/more", label: "Más", Icon: FiMoreHorizontal },
+  { to: POS_V2_PATHS.sales, label: "Ventas", Icon: FiShoppingCart },
+  { to: POS_V2_PATHS.products, label: "Productos", Icon: FiBox },
+  { to: POS_V2_PATHS.finances, label: "Finanzas", Icon: FiDollarSign },
+  { to: POS_V2_PATHS.reports, label: "Reportes", Icon: FiBarChart2 },
+  { to: POS_V2_PATHS.more, label: "Más", Icon: FiMoreHorizontal },
 ];
 
 export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
@@ -45,7 +46,7 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
   const navItems = useMemo(() => {
     const { token } = readPosSessionSnapshot();
     if (!token || !isSalesOnlyOperator(token)) return NAV_ITEMS;
-    return NAV_ITEMS.filter((item) => item.to === "/v2/MainSales" || item.to === "/v2/more");
+    return NAV_ITEMS.filter((item) => item.to === POS_V2_PATHS.sales || item.to === POS_V2_PATHS.more);
   }, []);
 
   return (

@@ -489,7 +489,7 @@ export const PosV2ReportingPage = () => {
           <section className="pos-v2-reporting__session-empty">
             <h2>Sesión requerida</h2>
             <p>Inicia sesión en POS v2 para ver reportes y gráficas.</p>
-            <button type="button" onClick={() => navigate("/v2/login-punto-venta")}>Ir a iniciar sesión</button>
+            <button type="button" onClick={() => navigate(POS_V2_PATHS.login)}>Ir a iniciar sesión</button>
           </section>
         </section>
       </PosV2Shell>

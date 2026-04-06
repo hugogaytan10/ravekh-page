@@ -12,7 +12,7 @@ const SuccessPage: React.FC = () => {
 
   useEffect(() => {
     if (!hasCuponesSession()) {
-      navigate("/cupones", { replace: true });
+      navigate("/coupons", { replace: true });
     }
   }, [navigate]);
 
@@ -87,7 +87,7 @@ const SuccessPage: React.FC = () => {
               type="button"
               className="w-full rounded-full px-4 py-3 text-sm font-bold shadow-[0_10px_22px_rgba(0,0,0,0.2)]"
               style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-              onClick={() => navigate("/cupones/admin/escanear")}
+              onClick={() => navigate("/coupons/admin/scan")}
             >
               Escanear otro cupón
             </button>
@@ -95,7 +95,7 @@ const SuccessPage: React.FC = () => {
               type="button"
               className="w-full rounded-full border px-4 py-3 text-sm font-bold"
               style={{ borderColor: theme.border, backgroundColor: theme.surfaceElevated, color: theme.textPrimary }}
-              onClick={() => navigate("/cupones/admin")}
+              onClick={() => navigate("/coupons/admin")}
             >
               Volver al panel
             </button>

@@ -7,7 +7,6 @@ import { CatalogOrderInfoPage } from "../systems/catalog/storefront/ui/CatalogOr
 import { PosModeEntryPage } from "../systems/pos/routing/PosModeEntryPage";
 import { POS_V2_ROUTES } from "../systems/pos/routing/PosV2Routes";
 import { LoyaltyCustomerRoutes } from "../systems/loyalty/features/customer-experience/ui/LoyaltyCustomerRoutes";
-import { LoyaltyCustomerLegacyCloneRoutes } from "../systems/loyalty/features/customer-experience/ui/LoyaltyCustomerLegacyCloneRoutes";
 import { PrivacyPoliciesIndexPage } from "../systems/legal/pages/PrivacyPoliciesIndexPage";
 import { PrivacyPolicyPage } from "../systems/legal/pages/PrivacyPolicyPage";
 
@@ -27,10 +26,42 @@ const LegacyCategoryRedirect = () => {
   return <Navigate to={`/v2/catalogo/0${search}`} replace />;
 };
 
-const LoyaltyClonePathRedirect = () => {
+const LEGACY_LOYALTY_PATH_SEGMENTS: Array<[string, string]> = [
+  ["cupones", "coupons"],
+  ["visitas", "visits"],
+  ["registro", "register"],
+  ["mis-cupones", "my-coupons"],
+  ["ajustes", "settings"],
+  ["eliminar-cuenta", "delete-account"],
+  ["cambio-nombre", "change-name"],
+  ["reclamo-web", "web-claim"],
+  ["nuevo", "new"],
+  ["escanear", "scan"],
+  ["confirmado", "success"],
+];
+
+const normalizeLegacyLoyaltyPath = (rawPath: string): string => {
+  let normalized = rawPath;
+
+  normalized = normalized.replace(/^\/?v2\/loyalty\/(customer|clone)\/?/i, "");
+  normalized = normalized.replace(/^\/?cuponespv\/?/i, "");
+  normalized = normalized.replace(/^\/?cupones\/?/i, "");
+  normalized = normalized.replace(/^\/?visit\/redeem\/?/i, "visits/redeem");
+
+  for (const [from, to] of LEGACY_LOYALTY_PATH_SEGMENTS) {
+    const expression = new RegExp(`(^|/)${from}(?=/|$)`, "gi");
+    normalized = normalized.replace(expression, `$1${to}`);
+  }
+
+  normalized = normalized.replace(/^\/+/, "");
+  return normalized;
+};
+
+const LoyaltyLegacyRedirect = () => {
   const location = useLocation();
-  const normalizedPath = location.pathname.replace(/^\/+/, "");
-  return <Navigate to={`/v2/loyalty/clone/${normalizedPath}${location.search}`} replace />;
+  const translatedPath = normalizeLegacyLoyaltyPath(location.pathname);
+  const targetPath = translatedPath.length > 0 ? `/coupons/${translatedPath}` : "/coupons";
+  return <Navigate to={`${targetPath}${location.search}`} replace />;
 };
 
 export const NewAppRoutes = () => {
@@ -43,8 +74,7 @@ export const NewAppRoutes = () => {
       <Route path="/v2/catalogo/producto/:productId/:phone" element={<CatalogProductDetailPage />} />
       <Route path="/v2/catalogo/pedido" element={<CatalogCartPage />} />
       <Route path="/v2/catalogo/pedido-info" element={<CatalogOrderInfoPage />} />
-      <Route path="/v2/loyalty/customer/*" element={<LoyaltyCustomerRoutes />} />
-      <Route path="/v2/loyalty/clone/*" element={<LoyaltyCustomerLegacyCloneRoutes />} />
+      <Route path="/coupons/*" element={<LoyaltyCustomerRoutes />} />
       <Route path="/politicas" element={<PrivacyPoliciesIndexPage />} />
       <Route path="/politicas/:policySlug" element={<PrivacyPolicyPage />} />
 
@@ -54,9 +84,11 @@ export const NewAppRoutes = () => {
       <Route path="/catalogo/pedido" element={<Navigate to="/v2/catalogo/pedido" replace />} />
       <Route path="/catalogo/pedido-info" element={<Navigate to="/v2/catalogo/pedido-info" replace />} />
       <Route path="/categoria/:idCategoria" element={<LegacyCategoryRedirect />} />
-      <Route path="/cupones/*" element={<LoyaltyClonePathRedirect />} />
-      <Route path="/cuponespv/*" element={<LoyaltyClonePathRedirect />} />
-      <Route path="/visit/redeem" element={<LoyaltyClonePathRedirect />} />
+      <Route path="/v2/loyalty/customer/*" element={<LoyaltyLegacyRedirect />} />
+      <Route path="/v2/loyalty/clone/*" element={<LoyaltyLegacyRedirect />} />
+      <Route path="/cupones/*" element={<LoyaltyLegacyRedirect />} />
+      <Route path="/cuponespv/*" element={<LoyaltyLegacyRedirect />} />
+      <Route path="/visit/redeem" element={<LoyaltyLegacyRedirect />} />
 
       <Route path="/pos" element={<PosModeEntryPage />} />
       {POS_V2_ROUTES}

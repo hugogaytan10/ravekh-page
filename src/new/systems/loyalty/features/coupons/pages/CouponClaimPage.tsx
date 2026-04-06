@@ -95,15 +95,16 @@ const CouponClaimPage: React.FC = () => {
     try {
       await claimCoupon({ Coupon_Id: coupon.Id, User_Id: userId });
       clearPendingCouponClaimId();
-      navigate("/cupones/nuevo", {
+      navigate("/coupons/new", {
         replace: true,
         state: {
           title: "¡Felicidades!",
           message: "Has canjeado tu cupón exitosamente.",
-          primaryLabel: "Ver mis cupones",
-          primaryTo: "/cupones/mis-cupones",
+          primaryLabel: "Ver mis coupons",
+          primaryTo: "/coupons/home",
+          primaryState: { view: "myCoupons" as const },
           secondaryLabel: "Ir al inicio",
-          secondaryTo: "/cupones/home",
+          secondaryTo: "/coupons/home",
         },
       });
     } catch (error) {
@@ -139,7 +140,7 @@ const CouponClaimPage: React.FC = () => {
         <header className="flex items-center gap-3 pt-8 px-1" style={{ color: theme.textPrimary }}>
           <button
             type="button"
-            onClick={() => navigate("/cupones/cupones")}
+            onClick={() => navigate("/coupons/home", { state: { view: "myCoupons" as const } })}
             className="h-12 w-12 rounded-2xl border flex items-center justify-center shadow-[0_12px_24px_rgba(0,0,0,0.12)]"
             style={{ backgroundColor: theme.surface, borderColor: theme.border }}
           >
@@ -190,7 +191,7 @@ const CouponClaimPage: React.FC = () => {
                       style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
                       onClick={() => {
                         setPendingCouponClaimId(coupon.Id);
-                        navigate(`/cupones?couponId=${coupon.Id}`);
+                        navigate(`/coupons?couponId=${coupon.Id}`);
                       }}
                     >
                       Inicia sesión para reclamar
@@ -214,7 +215,7 @@ const CouponClaimPage: React.FC = () => {
           </section>
         </main>
 
-        <CuponesNav active="cupones" />
+        <CuponesNav active="coupons" />
       </div>
     </div>
   );

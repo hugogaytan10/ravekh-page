@@ -71,22 +71,22 @@ const LoginPage: React.FC = () => {
       const { role } = persistCuponesAuthSession(loginResponse);
 
       if (role === "ADMINISTRADOR") {
-        navigate("/cupones/admin");
+        navigate("/coupons/admin");
         return;
       }
 
       if (effectivePendingCouponId) {
         clearPendingCouponClaimId();
-        navigate(`/cupones/${effectivePendingCouponId}?autoclaim=1`, { replace: true });
+        navigate(`/coupons/${effectivePendingCouponId}?autoclaim=1`, { replace: true });
         return;
       }
 
       if (effectiveToken) {
-        navigate(`/visit/redeem?token=${encodeURIComponent(effectiveToken)}`);
+        navigate(`/coupons/visits/redeem?token=${encodeURIComponent(effectiveToken)}`);
         return;
       }
 
-      navigate("/cupones/home");
+      navigate("/coupons/home");
     } catch (error) {
       setCuponesSession(false);
       setErrorMessage(error instanceof Error ? error.message : "No se pudo iniciar sesión.");
@@ -152,7 +152,7 @@ const LoginPage: React.FC = () => {
               if (effectiveToken) params.set("token", effectiveToken);
               if (effectivePendingCouponId) params.set("couponId", String(effectivePendingCouponId));
               const suffix = params.toString();
-              navigate(`/cupones/reset-password${suffix ? `?${suffix}` : ""}`);
+              navigate(`/coupons/reset-password${suffix ? `?${suffix}` : ""}`);
             }}
           >
             Recuperar contraseña
@@ -186,7 +186,7 @@ const LoginPage: React.FC = () => {
                 params.set("couponId", String(effectivePendingCouponId));
               }
               const suffix = params.toString();
-              navigate(`/cupones/registro${suffix ? `?${suffix}` : ""}`);
+              navigate(`/coupons/register${suffix ? `?${suffix}` : ""}`);
             }}
           >
             puedes crearla

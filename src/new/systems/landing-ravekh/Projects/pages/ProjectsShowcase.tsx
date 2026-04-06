@@ -21,10 +21,10 @@ const projects: ProjectItem[] = [
   {
     title: "Ravekh Lealtad",
     description:
-      "Experiencia de fidelización con cupones, recompensas, historial de visitas y canje para clientes.",
+      "Experiencia de fidelización con coupons, recompensas, historial de visitas y canje para clientes.",
     status: "Terminado",
     stack: ["React", "Customer Experience", "QR"],
-    link: "/v2/loyalty/clone/cupones",
+    link: "/coupons",
   },
   {
     title: "Ravekh Catálogo",

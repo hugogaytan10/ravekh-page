@@ -93,16 +93,16 @@ const RegisterPage: React.FC = () => {
 
         if (effectivePendingCouponId) {
           clearPendingCouponClaimId();
-          navigate(`/cupones/${effectivePendingCouponId}?autoclaim=1`, { replace: true });
+          navigate(`/coupons/${effectivePendingCouponId}?autoclaim=1`, { replace: true });
           return;
         }
 
         if (effectiveToken) {
-          navigate(`/visit/redeem?token=${encodeURIComponent(effectiveToken)}`);
+          navigate(`/coupons/visits/redeem?token=${encodeURIComponent(effectiveToken)}`);
           return;
         }
 
-        navigate("/cupones/home");
+        navigate("/coupons/home");
         return;
       }
 
@@ -111,16 +111,16 @@ const RegisterPage: React.FC = () => {
 
       if (effectivePendingCouponId) {
         clearPendingCouponClaimId();
-        navigate(`/cupones/${effectivePendingCouponId}?autoclaim=1`, { replace: true });
+        navigate(`/coupons/${effectivePendingCouponId}?autoclaim=1`, { replace: true });
         return;
       }
 
       if (effectiveToken) {
-        navigate(`/visit/redeem?token=${encodeURIComponent(effectiveToken)}`);
+        navigate(`/coupons/visits/redeem?token=${encodeURIComponent(effectiveToken)}`);
         return;
       }
 
-      navigate("/cupones/home");
+      navigate("/coupons/home");
     } catch (error) {
       setErrorMessage("No se pudo registrar la cuenta. Intenta nuevamente.");
     } finally {
@@ -212,7 +212,7 @@ const RegisterPage: React.FC = () => {
                 params.set("couponId", String(effectivePendingCouponId));
               }
               const suffix = params.toString();
-              navigate(`/cupones${suffix ? `?${suffix}` : ""}`);
+              navigate(`/coupons${suffix ? `?${suffix}` : ""}`);
             }}
           >
             inicia sesión

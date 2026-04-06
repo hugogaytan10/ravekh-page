@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import cuponsito from "../assets/cuponsito.png";
 import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
@@ -25,11 +25,14 @@ const TicketIcon: React.FC<{ className?: string }> = ({ className }) => (
 
 const HomePage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const userName = getCuponesUserName();
   const { theme } = useCouponsTheme();
   const [visits, setVisits] = useState<Visits[]>([]);
   const [visitsError, setVisitsError] = useState<string>("");
-  const [activeView, setActiveView] = useState<HomeView>("overview");
+  const [activeView, setActiveView] = useState<HomeView>(
+    (location.state as { view?: HomeView } | null)?.view === "myCoupons" ? "myCoupons" : "overview",
+  );
 
   const [isLoadingCoupons, setIsLoadingCoupons] = useState<boolean>(false);
   const [claimedCoupons, setClaimedCoupons] = useState<Coupon[]>([]);
@@ -40,9 +43,17 @@ const HomePage: React.FC = () => {
     return typeof currentUserId === "number" && Number.isFinite(currentUserId) ? currentUserId : null;
   }, []);
 
+
+  useEffect(() => {
+    const requestedView = (location.state as { view?: HomeView } | null)?.view;
+    if (requestedView === "myCoupons" || requestedView === "overview") {
+      setActiveView(requestedView);
+    }
+  }, [location.state]);
+
   useEffect(() => {
     if (!hasCuponesSession()) {
-      navigate("/cupones", { replace: true });
+      navigate("/coupons", { replace: true });
     }
   }, [navigate]);
 
@@ -77,7 +88,7 @@ const HomePage: React.FC = () => {
 
       try {
         if (!userId) {
-          setClaimedCouponsError("Necesitamos tu sesión activa para ver tus cupones.");
+          setClaimedCouponsError("Necesitamos tu sesión activa para ver tus coupons.");
           setClaimedCoupons([]);
           return;
         }
@@ -90,7 +101,7 @@ const HomePage: React.FC = () => {
         setClaimedCoupons(safeCoupons);
       } catch (error) {
         setClaimedCoupons([]);
-        setClaimedCouponsError(error instanceof Error ? error.message : "No se pudieron cargar tus cupones.");
+        setClaimedCouponsError(error instanceof Error ? error.message : "No se pudieron cargar tus coupons.");
       } finally {
         setIsLoadingCoupons(false);
       }
@@ -124,8 +135,8 @@ const HomePage: React.FC = () => {
         ) : (
           <CouponsPageHeader
             theme={theme}
-            title="Mis cupones reclamados"
-            subtitle="Estos cupones ya son tuyos."
+            title="Mis coupons reclamados"
+            subtitle="Estos coupons ya son tuyos."
             showAvatar={false}
             onBack={() => setActiveView("overview")}
             backLabel="Volver a inicio"
@@ -177,7 +188,7 @@ const HomePage: React.FC = () => {
                 type="button"
                 className="flex flex-col items-center justify-center rounded-xl px-2 py-3 shadow-[0_12px_24px_rgba(0,0,0,0.2)] border"
                 style={{ backgroundColor: theme.accent, color: theme.textPrimary, borderColor: theme.border }}
-                onClick={() => navigate("/cupones/visitas")}
+                onClick={() => navigate("/coupons/visits")}
               >
                 <img src={cuponsito} alt="Mis visitas" className="h-12 w-12 object-contain" />
                 <span className="mt-2 font-bold text-sm">Mis visitas</span>
@@ -188,8 +199,8 @@ const HomePage: React.FC = () => {
                 style={{ backgroundColor: theme.accent, color: theme.textPrimary, borderColor: theme.border }}
                 onClick={() => setActiveView("myCoupons")}
               >
-                <img src={cuponsito} alt="Mis cupones" className="h-12 w-12 object-contain" />
-                <span className="mt-2 font-bold text-sm">Mis cupones</span>
+                <img src={cuponsito} alt="Mis coupons" className="h-12 w-12 object-contain" />
+                <span className="mt-2 font-bold text-sm">Mis coupons</span>
               </button>
             </div>
           </main>
@@ -197,7 +208,7 @@ const HomePage: React.FC = () => {
           <main className="mt-8 relative space-y-5 pb-10">
             {isLoadingCoupons ? (
               <p className="text-sm font-semibold" style={{ color: theme.textMuted }}>
-                Cargando mis cupones...
+                Cargando mis coupons...
               </p>
             ) : null}
 
@@ -205,7 +216,7 @@ const HomePage: React.FC = () => {
 
             {!isLoadingCoupons && !claimedCouponsError && claimedCoupons.length === 0 ? (
               <p className="text-sm font-semibold" style={{ color: theme.textMuted }}>
-                Aún no tienes cupones reclamados.
+                Aún no tienes coupons reclamados.
               </p>
             ) : null}
 
@@ -228,7 +239,7 @@ const HomePage: React.FC = () => {
                     type="button"
                     className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold shadow-[0_6px_14px_rgba(0,0,0,0.18)]"
                     style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-                    onClick={() => navigate("/cupones/qr", { state: { coupon } })}
+                    onClick={() => navigate("/coupons/qr", { state: { coupon } })}
                   >
                     Mostrar QR
                   </button>

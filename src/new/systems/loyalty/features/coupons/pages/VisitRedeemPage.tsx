@@ -116,7 +116,7 @@ const VisitRedeemPage: React.FC = () => {
           theme={theme}
           title="Registro de visita"
           subtitle="Valida tu QR para sumar visitas."
-          onBack={() => navigate("/cupones/home")}
+          onBack={() => navigate("/coupons/home")}
           backLabel="Volver a inicio"
         />
 
@@ -128,7 +128,7 @@ const VisitRedeemPage: React.FC = () => {
             >
               <p className="text-base font-extrabold">Inicia sesión para continuar</p>
               <p className="text-sm" style={{ color: theme.textMuted }}>
-                Necesitamos tu cuenta para registrar la visita. Luego podrás ver tus cupones aquí mismo.
+                Necesitamos tu cuenta para registrar la visita. Luego podrás ver tus coupons aquí mismo.
               </p>
               <div className="mt-4 flex flex-col gap-3">
                 <button
@@ -136,7 +136,7 @@ const VisitRedeemPage: React.FC = () => {
                   className="w-full rounded-full px-4 py-2 text-sm font-bold"
                   style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
                   onClick={() =>
-                    navigate(`/cupones${effectiveToken ? `?token=${encodeURIComponent(effectiveToken)}` : ""}`)
+                    navigate(`/coupons${effectiveToken ? `?token=${encodeURIComponent(effectiveToken)}` : ""}`)
                   }
                 >
                   Iniciar sesión
@@ -146,7 +146,7 @@ const VisitRedeemPage: React.FC = () => {
                   className="w-full rounded-full border px-4 py-2 text-sm font-bold"
                   style={{ borderColor: theme.border, backgroundColor: theme.surfaceElevated, color: theme.textPrimary }}
                   onClick={() =>
-                    navigate(`/cupones/registro${effectiveToken ? `?token=${encodeURIComponent(effectiveToken)}` : ""}`)
+                    navigate(`/coupons/register${effectiveToken ? `?token=${encodeURIComponent(effectiveToken)}` : ""}`)
                   }
                 >
                   Crear cuenta
@@ -193,9 +193,9 @@ const VisitRedeemPage: React.FC = () => {
                       type="button"
                       className="w-full rounded-full px-4 py-2 text-sm font-bold"
                       style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-                      onClick={() => navigate("/cupones/mis-cupones")}
+                      onClick={() => navigate("/coupons/my-coupons")}
                     >
-                      Ver mis cupones
+                      Ver mis coupons
                     </button>
                   ) : null}
                 </div>
@@ -209,7 +209,7 @@ const VisitRedeemPage: React.FC = () => {
                 type="button"
                 className="w-full rounded-full px-4 py-3 text-sm font-bold"
                 style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-                onClick={() => navigate("/cupones/home")}
+                onClick={() => navigate("/coupons/home")}
               >
                 Ir a inicio
               </button>
@@ -217,9 +217,9 @@ const VisitRedeemPage: React.FC = () => {
                 type="button"
                 className="w-full rounded-full border px-4 py-3 text-sm font-bold"
                 style={{ borderColor: theme.border, backgroundColor: theme.surfaceElevated, color: theme.textPrimary }}
-                onClick={() => navigate("/cupones/mis-cupones")}
+                onClick={() => navigate("/coupons/my-coupons")}
               >
-                Ver mis cupones
+                Ver mis coupons
               </button>
             </div>
           ) : null}

@@ -6,7 +6,7 @@ const previewPath = (id: string) => POS_V2_PATHS.morePreview(id);
 export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
   {
     title: "Operación diaria",
-    subtitle: "Flujos principales del POS funcionales en v2.",
+    subtitle: "Flujos principales del POS funcionales",
     items: [
       { id: "sales", title: "Ventas", description: "Punto de venta y cobro rápido.", path: POS_V2_PATHS.sales, status: "available", actionType: "route" },
       { id: "products", title: "Productos", description: "Catálogo y edición de artículos.", path: POS_V2_PATHS.products, status: "available", actionType: "route" },
@@ -25,7 +25,7 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
       { id: "payment-methods", title: "Métodos de pago", description: "Configura efectivo, tarjeta y pagos en línea.", path: previewPath("payment-methods"), status: "available", actionType: "route" },
       { id: "stripe-connect", title: "Stripe Connect", description: "Conecta tu cuenta Stripe para cobros con tarjeta.", path: previewPath("stripe-connect"), status: "available", actionType: "route" },
       { id: "exports", title: "Exportar reportes", description: "Descarga reportes para contabilidad.", path: previewPath("exports"), status: "available", actionType: "route" },
-      { id: "inventory", title: "Inventario", description: "Módulo de stock desacoplado para v2.", path: POS_V2_PATHS.inventory, status: "available", actionType: "route" },
+      { id: "inventory", title: "Inventario", description: "Módulo de stock desacoplado.", path: POS_V2_PATHS.inventory, status: "available", actionType: "route" },
       { id: "customers", title: "Clientes", description: "Catálogo de clientes y seguimiento.", path: POS_V2_PATHS.customers, status: "available", actionType: "route" },
       { id: "employees", title: "Empleados", description: "Administración de personal y permisos.", path: POS_V2_PATHS.employees, status: "available", actionType: "route" },
       { id: "cash-closing", title: "Corte de caja", description: "Cierres de caja al final de turno.", path: POS_V2_PATHS.cashClosing, status: "available", actionType: "route" },
@@ -34,7 +34,7 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
   },
   {
     title: "Servicios",
-    subtitle: "Módulos de fidelidad disponibles en POS v2.",
+    subtitle: "Módulos de fidelidad disponibles.",
     items: [
       { id: "coupons", title: "Cupones", description: "Administración de campañas y promociones para clientes.", path: POS_V2_PATHS.coupons, status: "available", actionType: "route" },
       { id: "visits", title: "Visitas", description: "Seguimiento de visitas y recompensas por recurrencia.", path: POS_V2_PATHS.visits, status: "available", actionType: "route" },

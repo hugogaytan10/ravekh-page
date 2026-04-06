@@ -6,8 +6,8 @@ import { useCouponsTheme, type ThemePreference } from "../interface/useCouponsTh
 import { getCuponesUserName, hasCuponesSession, setCuponesSession } from "../services/session";
 
 const options = [
-  { label: "Cambiar nombre", path: "/cupones/cambio-nombre" },
-  { label: "Eliminar cuenta", path: "/cupones/eliminar-cuenta" },
+  { label: "Cambiar nombre", path: "/coupons/change-name" },
+  { label: "Eliminar cuenta", path: "/coupons/delete-account" },
 ];
 
 const ArrowIcon: React.FC = () => (
@@ -31,7 +31,7 @@ const SettingsPage: React.FC = () => {
 
   useEffect(() => {
     if (!hasCuponesSession()) {
-      navigate("/cupones", { replace: true });
+      navigate("/coupons", { replace: true });
     }
   }, [navigate]);
 
@@ -128,7 +128,7 @@ const SettingsPage: React.FC = () => {
             style={{ backgroundColor: theme.accent, color: theme.textPrimary, borderColor: theme.border }}
             onClick={() => {
               setCuponesSession(false);
-              navigate("/cupones", { replace: true });
+              navigate("/coupons", { replace: true });
             }}
           >
             <span>Cerrar sesión</span>

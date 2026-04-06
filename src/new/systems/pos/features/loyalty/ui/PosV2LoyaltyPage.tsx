@@ -87,7 +87,7 @@ export const PosV2LoyaltyPage = () => {
     event.preventDefault();
 
     if (!session.hasSession) {
-      setError("No hay sesión activa para crear cupones.");
+      setError("No hay sesión activa para crear coupons.");
       return;
     }
 
@@ -226,7 +226,7 @@ export const PosV2LoyaltyPage = () => {
   const currentCouponLink = useMemo(() => {
     if (!coupon) return "";
     const suffix = coupon.id || coupon.qr;
-    return suffix ? `${couponsDomain}/cupones/${suffix}` : "";
+    return suffix ? `${couponsDomain}/coupons/${suffix}` : "";
   }, [coupon, couponsDomain]);
 
   const couponQrDisplayValue = useMemo(() => {
@@ -262,7 +262,7 @@ export const PosV2LoyaltyPage = () => {
 
   const handlePrintVisitBatch = () => {
     const values = visitQrTokens
-      .map((item) => item.qrUrl || (item.token ? `${couponsDomain}/visit/redeem?token=${encodeURIComponent(item.token)}` : ""))
+      .map((item) => item.qrUrl || (item.token ? `${couponsDomain}/coupons/visits/redeem?token=${encodeURIComponent(item.token)}` : ""))
       .filter(Boolean);
     if (!values.length) return;
     const printWindow = window.open("", "_blank", "width=520,height=900");
@@ -397,7 +397,7 @@ export const PosV2LoyaltyPage = () => {
           <div className="pos-v2-loyalty__header-actions">
             <h2>Cupones</h2>
             <div className="pos-v2-loyalty__quick-actions">
-              <button type="button" onClick={() => setIsCouponsModalOpen(true)}>Mis cupones</button>
+              <button type="button" onClick={() => setIsCouponsModalOpen(true)}>Mis coupons</button>
             </div>
           </div>
           <div className="pos-v2-loyalty__kpis">
@@ -486,8 +486,8 @@ export const PosV2LoyaltyPage = () => {
             <button type="button" onClick={handlePrintVisitBatch} disabled={visitQrTokens.length === 0}>Imprimir lote de QR</button>
           </form>
           <div className="pos-v2-loyalty__detail">
-            {visitQrTokens.slice(0, 5).map((item, index) => {
-              const qrValue = item.qrUrl || (item.token ? `${couponsDomain}/visit/redeem?token=${encodeURIComponent(item.token)}` : "");
+            {visitQrTokens.map((item, index) => {
+              const qrValue = item.qrUrl || (item.token ? `${couponsDomain}/coupons/visits/redeem?token=${encodeURIComponent(item.token)}` : "");
               return (
                 <article key={`${item.token}-${index}`} className="pos-v2-loyalty__row-card">
                   <div className="pos-v2-loyalty__coupon-qr">
@@ -635,11 +635,11 @@ export const PosV2LoyaltyPage = () => {
         ) : null}
 
         {isCouponsModalOpen ? (
-          <section className="pos-v2-loyalty__modal" role="dialog" aria-modal="true" aria-label="Mis cupones">
+          <section className="pos-v2-loyalty__modal" role="dialog" aria-modal="true" aria-label="Mis coupons">
             <div className="pos-v2-loyalty__modal-card pos-v2-loyalty__modal-card--wide">
               <div className="pos-v2-loyalty__modal-head">
-                <h3>Mis cupones</h3>
-                <button type="button" onClick={() => setIsCouponsModalOpen(false)} aria-label="Cerrar cupones">×</button>
+                <h3>Mis coupons</h3>
+                <button type="button" onClick={() => setIsCouponsModalOpen(false)} aria-label="Cerrar coupons">×</button>
               </div>
               <form className="pos-v2-loyalty__form">
                 <label>
@@ -651,11 +651,11 @@ export const PosV2LoyaltyPage = () => {
                   />
                 </label>
               </form>
-              <p>{loadingCoupons ? "Cargando cupones..." : `${couponList.length} cupón(es) encontrados.`}</p>
+              <p>{loadingCoupons ? "Cargando coupons..." : `${couponList.length} cupón(es) encontrados.`}</p>
               <div className="pos-v2-loyalty__modal-grid">
                 {couponList.filter((entry) => entry.description.toLowerCase().includes(modalCouponQuery.trim().toLowerCase())).map((entry) => {
                   const isActive = isCouponActive(entry);
-                  const couponLink = `${couponsDomain}/cupones/${entry.id || entry.qr}`;
+                  const couponLink = `${couponsDomain}/coupons/${entry.id || entry.qr}`;
                   return (
                     <article key={`modal-coupon-${entry.id}-${entry.qr}`} className="pos-v2-loyalty__row-card">
                       <div className="pos-v2-loyalty__row-head">
@@ -688,7 +688,7 @@ export const PosV2LoyaltyPage = () => {
                     </article>
                   );
                 })}
-                {!loadingCoupons && couponList.length === 0 ? <p>No hay cupones creados aún.</p> : null}
+                {!loadingCoupons && couponList.length === 0 ? <p>No hay coupons creados aún.</p> : null}
               </div>
             </div>
           </section>

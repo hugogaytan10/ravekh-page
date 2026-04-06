@@ -5,6 +5,7 @@ import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import "./PosV2LoginPage.css";
+import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 
 const API_BASE_URL = getPosApiBaseUrl();
 const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
@@ -80,7 +81,7 @@ export const PosV2LoginPage = () => {
   useEffect(() => {
     const existingToken = window.localStorage.getItem(TOKEN_KEY);
     if (existingToken) {
-      navigate("/v2/MainSales", { replace: true });
+      navigate(POS_V2_PATHS.sales, { replace: true });
     }
   }, [navigate]);
 
@@ -98,7 +99,7 @@ export const PosV2LoginPage = () => {
     try {
       const session = await authPage.signIn({ email: signInEmail, password: signInPassword });
       persistSession(session);
-      navigate("/v2/MainSales", { replace: true });
+      navigate(POS_V2_PATHS.sales, { replace: true });
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo iniciar sesión en POS v2.");
     } finally {
@@ -155,7 +156,7 @@ export const PosV2LoginPage = () => {
       });
 
       persistSession(session);
-      navigate("/v2/MainSales", { replace: true });
+      navigate(POS_V2_PATHS.sales, { replace: true });
     } catch (cause) {
       console.log("Error durante el registro en POS v2:", cause);
       setError(cause instanceof Error ? cause.message : "No se pudo crear la cuenta en POS v2.");

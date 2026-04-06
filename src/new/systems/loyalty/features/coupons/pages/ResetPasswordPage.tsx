@@ -67,7 +67,7 @@ const RecoverPasswordPage: React.FC = () => {
     }
 
     const suffix = params.toString();
-    return `/cupones${suffix ? `?${suffix}` : ""}`;
+    return `/coupons${suffix ? `?${suffix}` : ""}`;
   }, [effectivePendingCouponId, effectiveToken]);
 
   const handleFocus = (event: React.FocusEvent<HTMLInputElement>) => {

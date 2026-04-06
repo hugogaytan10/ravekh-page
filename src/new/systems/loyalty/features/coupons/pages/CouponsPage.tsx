@@ -29,15 +29,15 @@ const CouponsPage: React.FC = () => {
 
   const fallbackCopy = useMemo(() => {
     if (!userId && !businessId) {
-      return "Configura tu negocio para ver cupones disponibles.";
+      return "Configura tu negocio para ver coupons disponibles.";
     }
 
-    return "Aún no hay cupones disponibles para reclamar.";
+    return "Aún no hay coupons disponibles para reclamar.";
   }, [businessId, userId]);
 
   useEffect(() => {
     if (!hasCuponesSession()) {
-      navigate("/cupones", { replace: true });
+      navigate("/coupons", { replace: true });
     }
   }, [navigate]);
 
@@ -70,7 +70,7 @@ const CouponsPage: React.FC = () => {
         }
       } catch (error) {
         if (!isMounted) return;
-        setErrorMessage(error instanceof Error ? error.message : "No se pudieron cargar los cupones.");
+        setErrorMessage(error instanceof Error ? error.message : "No se pudieron cargar los coupons.");
       } finally {
         if (isMounted) {
           setIsLoading(false);
@@ -94,7 +94,7 @@ const CouponsPage: React.FC = () => {
     try {
       await claimCoupon({ Coupon_Id: coupon.Id, User_Id: userId });
       setCoupons((prevCoupons) => prevCoupons.filter((currentCoupon) => currentCoupon.Id !== coupon.Id));
-      setInfoMessage("Cupón reclamado correctamente. Ya lo puedes ver en Mis cupones.");
+      setInfoMessage("Cupón reclamado correctamente. Ya lo puedes ver en Mis coupons.");
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : "No se pudo reclamar el cupón.");
     } finally {
@@ -140,7 +140,7 @@ const CouponsPage: React.FC = () => {
 
           {isLoading ? (
             <p className="text-sm font-semibold" style={{ color: theme.textMuted }}>
-              Cargando cupones...
+              Cargando coupons...
             </p>
           ) : null}
 
@@ -190,7 +190,7 @@ const CouponsPage: React.FC = () => {
                     type="button"
                     className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold shadow-[0_6px_14px_rgba(0,0,0,0.18)]"
                     style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-                    onClick={() => navigate("/cupones/qr", { state: { coupon } })}
+                    onClick={() => navigate("/coupons/qr", { state: { coupon } })}
                   >
                     Mostrar QR
                   </button>
@@ -201,7 +201,7 @@ const CouponsPage: React.FC = () => {
         }
         </main>
 
-        <CuponesNav active="cupones" />
+        <CuponesNav active="coupons" />
       </div>
     </div>
   );

@@ -31,7 +31,7 @@ const CouponWebRedeemPage: React.FC = () => {
 
     if (!isAdmin) {
       setStatus("error");
-      setMessage("Solo un usuario con rol ADMINISTRADOR puede reclamar cupones desde la web.");
+      setMessage("Solo un usuario con rol ADMINISTRADOR puede reclamar coupons desde la web.");
       return;
     }
 

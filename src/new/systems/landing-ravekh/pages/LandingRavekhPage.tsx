@@ -135,7 +135,7 @@ export const LandingPageRavekhPage = (): JSX.Element => {
                 </NavLink>
               </li>
               <li>
-                <NavLink to="/v2/loyalty/clone/cupones" onClick={closeSystemsMenu}>
+                <NavLink to="/coupons" onClick={closeSystemsMenu}>
                   Sistema de fidelidad
                 </NavLink>
               </li>

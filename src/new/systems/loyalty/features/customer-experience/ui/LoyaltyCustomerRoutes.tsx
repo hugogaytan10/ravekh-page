@@ -21,21 +21,22 @@ export const LoyaltyCustomerRoutes = () => {
   return (
     <Routes>
       <Route path="" element={<LoginPage />} />
-      <Route path="visitas" element={<VisitHistoryPage />} />
-      <Route path="registro" element={<RegisterPage />} />
+      <Route path="visits" element={<VisitHistoryPage />} />
+      <Route path="register" element={<RegisterPage />} />
       <Route path="reset-password" element={<RecoverPasswordPage />} />
       <Route path="home" element={<HomePage />} />
-      <Route path="mis-cupones" element={<MyCouponsPage />} />
-      <Route path="ajustes" element={<SettingsPage />} />
-      <Route path="eliminar-cuenta" element={<DeleteAccountPage />} />
-      <Route path="admin/escanear" element={<ScanPage />} />
-      <Route path="admin/confirmado" element={<SuccessPage />} />
-      <Route path="cambio-nombre" element={<ChangeName />} />
+      <Route path="my-coupons" element={<MyCouponsPage />} />
+      <Route path="settings" element={<SettingsPage />} />
+      <Route path="delete-account" element={<DeleteAccountPage />} />
+      <Route path="admin" element={<ScanPage />} />
+      <Route path="admin/scan" element={<ScanPage />} />
+      <Route path="admin/success" element={<SuccessPage />} />
+      <Route path="change-name" element={<ChangeName />} />
       <Route path="qr" element={<CouponQrPage />} />
-      <Route path="reclamo-web" element={<CouponWebRedeemPage />} />
-      <Route path="cupones" element={<CouponsPage />} />
-      <Route path="nuevo" element={<CouponCongratsPage />} />
-      <Route path="visit/redeem" element={<VisitRedeemPage />} />
+      <Route path="web-claim" element={<CouponWebRedeemPage />} />
+      <Route path="coupons" element={<CouponsPage />} />
+      <Route path="new" element={<CouponCongratsPage />} />
+      <Route path="visits/redeem" element={<VisitRedeemPage />} />
       <Route path=":couponId" element={<CouponClaimPage />} />
       <Route path="*" element={<Navigate to="." replace />} />
     </Routes>

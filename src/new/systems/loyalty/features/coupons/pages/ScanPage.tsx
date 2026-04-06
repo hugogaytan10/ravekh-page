@@ -47,7 +47,7 @@ const ScanPage: React.FC = () => {
 
   useEffect(() => {
     if (!hasCuponesSession()) {
-      navigate("/cupones", { replace: true });
+      navigate("/coupons", { replace: true });
     }
   }, [navigate]);
 
@@ -59,7 +59,7 @@ const ScanPage: React.FC = () => {
         setCouponsError("");
       } catch (error) {
         const message =
-          error instanceof Error ? error.message : "No se pudieron cargar los cupones.";
+          error instanceof Error ? error.message : "No se pudieron cargar los coupons.";
         setCouponsError(message);
       } finally {
         setIsLoadingCoupons(false);
@@ -326,7 +326,7 @@ const ScanPage: React.FC = () => {
                 type="button"
                 className="rounded-full px-4 py-2 text-sm font-bold shadow-[0_10px_22px_rgba(0,0,0,0.2)]"
                 style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-                onClick={() => navigate("/cupones/home")}
+                onClick={() => navigate("/coupons/home")}
               >
                 Volver
               </button>
@@ -365,7 +365,7 @@ const ScanPage: React.FC = () => {
             <p className="text-base font-extrabold">Datos del cupón</p>
             <div className="mt-3 space-y-2 text-sm font-semibold">
               {isLoadingCoupons ? (
-                <p style={{ color: theme.textMuted }}>Cargando cupones...</p>
+                <p style={{ color: theme.textMuted }}>Cargando coupons...</p>
               ) : null}
             </div>
           </section>

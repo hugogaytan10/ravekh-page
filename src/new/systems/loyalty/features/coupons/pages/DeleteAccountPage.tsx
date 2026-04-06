@@ -26,7 +26,7 @@ const DeleteAccountPage: React.FC = () => {
 
   useEffect(() => {
     if (!hasCuponesSession()) {
-      navigate("/cupones", { replace: true });
+      navigate("/coupons", { replace: true });
     }
   }, [navigate]);
 
@@ -50,7 +50,7 @@ const DeleteAccountPage: React.FC = () => {
         setCuponesUserId();
         setCuponesBusinessId();
         setCuponesToken();
-        localStorage.removeItem("cupones-role");
+        localStorage.removeItem("coupons-role");
         setModalMessage("Cuenta eliminada con éxito.");
         setDidDelete(true);
       } else {
@@ -89,7 +89,7 @@ const DeleteAccountPage: React.FC = () => {
           <div>
             <p className="text-sm font-semibold">Eliminar cuenta</p>
             <p className="text-sm" style={{ color: theme.textMuted }}>
-              Esta acción eliminará tu cuenta de cupones.
+              Esta acción eliminará tu cuenta de coupons.
             </p>
           </div>
         </header>
@@ -101,7 +101,7 @@ const DeleteAccountPage: React.FC = () => {
           >
             <p className="text-base font-extrabold">Confirma la eliminación</p>
             <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>
-              Al eliminar tu cuenta perderás acceso a tus cupones y tu historial de visitas.
+              Al eliminar tu cuenta perderás acceso a tus coupons y tu historial de visitas.
             </p>
             <div className="mt-4 flex items-center gap-3">
               <button
@@ -138,7 +138,7 @@ const DeleteAccountPage: React.FC = () => {
               type="button"
               className="w-full rounded-full border px-4 py-3 text-sm font-bold"
               style={{ borderColor: theme.border, backgroundColor: theme.surfaceElevated, color: theme.textPrimary }}
-              onClick={() => navigate("/cupones/ajustes")}
+              onClick={() => navigate("/coupons/settings")}
             >
               Volver a ajustes
             </button>
@@ -196,7 +196,7 @@ const DeleteAccountPage: React.FC = () => {
                   onClick={() => {
                     setResultModalVisible(false);
                     if (didDelete) {
-                      navigate("/cupones", { replace: true });
+                      navigate("/coupons", { replace: true });
                     }
                   }}
                 >

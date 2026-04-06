@@ -57,7 +57,7 @@ const VisitHistoryPage: React.FC = () => {
 
   useEffect(() => {
     if (!hasCuponesSession()) {
-      navigate("/cupones", { replace: true });
+      navigate("/coupons", { replace: true });
     }
   }, [navigate]);
 
@@ -159,7 +159,7 @@ const VisitHistoryPage: React.FC = () => {
           theme={theme}
           title="Historial de visitas"
           subtitle="Revisa tus visitas más recientes."
-          onBack={() => navigate("/cupones/home")}
+          onBack={() => navigate("/coupons/home")}
           backLabel="Volver a inicio"
         />
 

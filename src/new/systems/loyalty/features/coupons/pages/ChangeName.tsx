@@ -14,7 +14,7 @@ const ChangeName: React.FC = () => {
 
   useEffect(() => {
     if (!hasCuponesSession()) {
-      navigate("/cupones", { replace: true });
+      navigate("/coupons", { replace: true });
     }
   }, [navigate]);
 
@@ -28,7 +28,7 @@ const ChangeName: React.FC = () => {
     setMessage("Nombre actualizado correctamente.");
     setTimeout(() => {
       setIsSaving(false);
-      navigate("/cupones/ajustes");
+      navigate("/coupons/settings");
     }, 900);
   };
 
@@ -57,7 +57,7 @@ const ChangeName: React.FC = () => {
           <div>
             <p className="text-sm font-semibold">Actualiza tu nombre</p>
             <p className="text-sm" style={{ color: theme.textMuted }}>
-              Este nombre se mostrará en tus cupones.
+              Este nombre se mostrará en tus coupons.
             </p>
           </div>
         </header>
@@ -99,7 +99,7 @@ const ChangeName: React.FC = () => {
               type="button"
               className="w-full rounded-full border px-4 py-3 text-sm font-bold"
               style={{ borderColor: theme.border, backgroundColor: theme.surfaceElevated, color: theme.textPrimary }}
-              onClick={() => navigate("/cupones/ajustes")}
+              onClick={() => navigate("/coupons/settings")}
             >
               Cancelar
             </button>

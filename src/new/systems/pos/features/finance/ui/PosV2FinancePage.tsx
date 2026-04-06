@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
+import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import type { FinanceEntry } from "../model/FinanceEntry";
 import "./PosV2FinancePage.css";
@@ -309,7 +310,7 @@ export const PosV2FinancePage = () => {
         <section className="pos-v2-finance pos-v2-finance--empty">
           <h2>Sesión requerida</h2>
           <p>Para ver tus finanzas, primero inicia sesión en POS v2.</p>
-          <button type="button" onClick={() => navigate("/v2/login-punto-venta")}>Ir a iniciar sesión</button>
+          <button type="button" onClick={() => navigate(POS_V2_PATHS.login)}>Ir a iniciar sesión</button>
         </section>
       </PosV2Shell>
     );

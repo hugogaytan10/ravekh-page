@@ -5,7 +5,7 @@ import homeIcon from "../assets/home.svg";
 import couponIcon from "../assets/coupon.svg";
 import settingsIcon from "../assets/settings.svg";
 
-type CuponesNavKey = "inicio" | "cupones" | "ajustes";
+type CuponesNavKey = "inicio" | "coupons" | "ajustes";
 interface CuponesNavProps { active: CuponesNavKey; }
 
 const whiteIconFilter = "brightness(0) invert(1)";
@@ -15,7 +15,7 @@ const ANIM_MS = 220;
 
 const indexByKey: Record<CuponesNavKey, number> = {
   inicio: 0,
-  cupones: 1,
+  coupons: 1,
   ajustes: 2,
 };
 
@@ -25,9 +25,9 @@ const CuponesNav: React.FC<CuponesNavProps> = ({ active }) => {
 
   const navItems = useMemo(
     () => [
-      { key: "inicio" as const, label: "Inicio", icon: homeIcon, path: "/cupones/home" },
-      { key: "cupones" as const, label: "Cupones", icon: couponIcon, path: "/cupones/cupones" },
-      { key: "ajustes" as const, label: "Ajustes", icon: settingsIcon, path: "/cupones/ajustes" },
+      { key: "inicio" as const, label: "Inicio", icon: homeIcon, path: "/coupons/home" },
+      { key: "coupons" as const, label: "Cupones", icon: couponIcon, path: "/coupons/coupons" },
+      { key: "ajustes" as const, label: "Ajustes", icon: settingsIcon, path: "/coupons/settings" },
     ],
     []
   );
@@ -93,7 +93,7 @@ const CuponesNav: React.FC<CuponesNavProps> = ({ active }) => {
             paddingLeft: 18,
             paddingRight: 18,
           }}
-          aria-label="Navegación de cupones"
+          aria-label="Navegación de coupons"
         >
           {/* PILL ANIMADO (NO se sale porque el nav tiene overflow-hidden) */}
           <div

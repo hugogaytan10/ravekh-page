@@ -43,7 +43,7 @@ const CouponQrPage: React.FC = () => {
       userId: String(userId || 0),
     });
 
-    return `${WEB_COUPONS_DOMAIN}/cupones/reclamo-web?${params.toString()}`;
+    return `${WEB_COUPONS_DOMAIN}/coupons/web-claim?${params.toString()}`;
   }, [coupon.Id, userId]);
 
   const renderQrSvg = (payload: string) => {
@@ -77,7 +77,7 @@ const CouponQrPage: React.FC = () => {
 
   useEffect(() => {
     if (!hasCuponesSession()) {
-      navigate("/cupones", { replace: true });
+      navigate("/coupons", { replace: true });
     }
   }, [navigate]);
 
@@ -168,14 +168,14 @@ const CouponQrPage: React.FC = () => {
               type="button"
               className="w-full rounded-full px-4 py-3 text-sm font-bold shadow-[0_10px_22px_rgba(0,0,0,0.2)]"
               style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-              onClick={() => navigate("/cupones/mis-cupones")}
+              onClick={() => navigate("/coupons/my-coupons")}
             >
-              Volver a mis cupones
+              Volver a mis coupons
             </button>
           </div>
         </main>
 
-        <CuponesNav active="cupones" />
+        <CuponesNav active="coupons" />
       </div>
     </div>
   );

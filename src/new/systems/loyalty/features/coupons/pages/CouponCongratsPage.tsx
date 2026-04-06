@@ -1,5 +1,5 @@
 import React, { useEffect } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useLocation, useNavigate, type NavigateOptions } from "react-router-dom";
 import cuponsito from "../assets/cuponsito.png";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { hasCuponesSession } from "../services/session";
@@ -17,19 +17,23 @@ const CouponCongratsPage: React.FC = () => {
         primaryTo?: string;
         secondaryLabel?: string;
         secondaryTo?: string;
+        primaryState?: NavigateOptions["state"];
+        secondaryState?: NavigateOptions["state"];
       }
     | null;
 
   const title = customState?.title || "Felicidades";
   const message = customState?.message || "Has obtenido un nuevo cupón";
   const primaryLabel = customState?.primaryLabel || "Continuar acumulando";
-  const primaryTo = customState?.primaryTo || "/cupones/home";
+  const primaryTo = customState?.primaryTo || "/coupons/home";
   const secondaryLabel = customState?.secondaryLabel || "Ver mi QR";
-  const secondaryTo = customState?.secondaryTo || "/cupones/qr";
+  const secondaryTo = customState?.secondaryTo || "/coupons/qr";
+  const primaryState = customState?.primaryState;
+  const secondaryState = customState?.secondaryState;
 
   useEffect(() => {
     if (!hasCuponesSession()) {
-      navigate("/cupones", { replace: true });
+      navigate("/coupons", { replace: true });
     }
   }, [navigate]);
 
@@ -51,7 +55,7 @@ const CouponCongratsPage: React.FC = () => {
         <header className="flex items-center gap-3 pt-8 px-1" style={{ color: theme.textPrimary }}>
           <button
             type="button"
-            onClick={() => navigate(-1)}
+            onClick={() => navigate(primaryTo, { state: primaryState })}
             className="h-12 w-12 rounded-2xl border flex items-center justify-center shadow-[0_10px_20px_rgba(0,0,0,0.12)]"
             style={{ backgroundColor: theme.surface, borderColor: theme.border }}
           >
@@ -76,7 +80,7 @@ const CouponCongratsPage: React.FC = () => {
               type="button"
               className="w-full rounded-full px-4 py-3 text-sm font-bold shadow-[0_12px_24px_rgba(0,0,0,0.18)]"
               style={{ backgroundColor: theme.accent, color: theme.textPrimary }}
-              onClick={() => navigate(primaryTo)}
+              onClick={() => navigate(primaryTo, { state: primaryState })}
             >
               {primaryLabel}
             </button>
@@ -84,7 +88,7 @@ const CouponCongratsPage: React.FC = () => {
               type="button"
               className="text-sm font-semibold"
               style={{ color: theme.textMuted }}
-              onClick={() => navigate(secondaryTo)}
+              onClick={() => navigate(secondaryTo, { state: secondaryState })}
             >
               {secondaryLabel}
             </button>
