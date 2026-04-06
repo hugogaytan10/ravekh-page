@@ -22,7 +22,7 @@ const NAV_ITEMS = [
   { to: "/v2/more", label: "Más", Icon: FiMoreHorizontal },
 ];
 
-export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
+export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
   const navigate = useNavigate();
   const [theme, setTheme] = useState<UiTheme>(() => {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
@@ -53,9 +53,7 @@ export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
       <header className="pos-v2-shell__header">
         <div>
           <button type="button" className="pos-v2-shell__back" onClick={() => navigate(-1)}>← Regresar</button>
-          <p className="pos-v2-shell__brand">Ravekh POS</p>
           <h1 className="pos-v2-shell__title">{title}</h1>
-          {subtitle ? <p className="pos-v2-shell__subtitle">{subtitle}</p> : null}
         </div>
         <div className="pos-v2-shell__header-actions">
           <button
@@ -71,7 +69,6 @@ export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
             </span>
             <span>Oscuro</span>
           </button>
-          <span className="pos-v2-shell__badge">v2</span>
         </div>
       </header>
 

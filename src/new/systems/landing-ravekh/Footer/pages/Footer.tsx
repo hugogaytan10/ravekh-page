@@ -14,7 +14,7 @@ export const Footer = () => {
         <div className="flex justify-center gap-2 mt-5">
           <a
             target="_blank"
-            href="https://web.facebook.com/profile.php?id=61554291776089"
+            href="https://www.facebook.com/profile.php?id=61572797407020"
           >
             <img src={fb} alt="fb" />
           </a>

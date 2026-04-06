@@ -16,19 +16,11 @@
 .pos-v2-shell__header {
   background: linear-gradient(115deg, #6d01d1 0%, #7c3aed 45%, #9333ea 100%);
   color: #fff;
-  padding: 0.65rem 0.85rem;
+  padding: 0.5rem 0.75rem;
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 0.8rem;
-}
-
-.pos-v2-shell__brand {
-  margin: 0;
-  font-size: 0.72rem;
-  opacity: 0.9;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  align-items: center;
+  gap: 0.6rem;
 }
 
 .pos-v2-shell__back {
@@ -43,24 +35,16 @@
 }
 
 .pos-v2-shell__title {
-  margin: 0.15rem 0 0;
-  font-size: 0.98rem;
-  font-weight: 700;
-  line-height: 1.25;
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
 }
 
 .pos-v2-shell__subtitle {
   margin: 0.2rem 0 0;
   font-size: 0.85rem;
   opacity: 0.95;
-}
-
-.pos-v2-shell__badge {
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.35);
-  border-radius: 9999px;
-  padding: 0.2rem 0.55rem;
-  font-weight: 700;
 }
 
 .pos-v2-shell__header-actions {
@@ -186,7 +170,6 @@
     flex-direction: row;
     justify-content: flex-start;
     gap: 0.6rem;
-    padding-inline: 0.75rem;
   }
 
   .pos-v2-shell__nav-item.is-active {

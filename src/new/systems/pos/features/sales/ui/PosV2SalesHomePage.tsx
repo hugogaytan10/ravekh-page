@@ -981,11 +981,16 @@ export const PosV2SalesHomePage = () => {
   };
 
   const discountValue = Number(discountPercent);
+  const scrollToProductsTop = () => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  };
   const goToPage = () => {
     const target = Number(pageInput);
     if (!Number.isFinite(target)) return;
     const normalized = Math.min(Math.max(1, Math.floor(target)), totalPages);
+    if (normalized === currentPage) return;
     setCurrentPage(normalized);
+    scrollToProductsTop();
   };
 
   const resolveEmployeeId = (token: string): number => {
@@ -1284,7 +1289,7 @@ export const PosV2SalesHomePage = () => {
   };
 
   return (
-    <PosV2Shell title="Entorno de prueba de Ravekh POS v2">
+    <PosV2Shell title="Ravekh">
       <section className="pos-v2-sales-home pos-v2-sales-layout">
         <div className="pos-v2-sales-home__mobile-steps" role="tablist" aria-label="Flujo de venta">
           {mobileSteps.map(({ key, label, helper, Icon }) => {
@@ -1399,7 +1404,14 @@ export const PosV2SalesHomePage = () => {
 
           {!loadingProducts && !productsError && totalPages > 1 ? (
             <nav className="pos-v2-sales-home__pagination" aria-label="Paginación de productos">
-              <button type="button" onClick={() => setCurrentPage((page) => Math.max(1, page - 1))} disabled={!hasPrevPage}>
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentPage((page) => Math.max(1, page - 1));
+                  scrollToProductsTop();
+                }}
+                disabled={!hasPrevPage}
+              >
                 Anterior
               </button>
               <span>Página {currentPage} de {totalPages}</span>
@@ -1420,7 +1432,14 @@ export const PosV2SalesHomePage = () => {
                 />
                 <button type="button" onClick={goToPage}>Ir</button>
               </label>
-              <button type="button" onClick={() => setCurrentPage((page) => page + 1)} disabled={!hasNextPage}>
+              <button
+                type="button"
+                onClick={() => {
+                  setCurrentPage((page) => page + 1);
+                  scrollToProductsTop();
+                }}
+                disabled={!hasNextPage}
+              >
                 Siguiente
               </button>
             </nav>
