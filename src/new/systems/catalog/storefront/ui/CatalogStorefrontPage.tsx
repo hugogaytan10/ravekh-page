@@ -9,6 +9,7 @@ import { StorefrontBusiness, StorefrontCartItem, StorefrontProduct } from "../mo
 import { StorefrontProductGrid } from "./StorefrontProductGrid";
 import { VariantSelectionModalV2 } from "./VariantSelectionModalV2";
 import "./CatalogStorefrontPage.css";
+import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
@@ -22,6 +23,7 @@ const SkeletonGrid = () => (
 );
 
 export const CatalogStorefrontPage = () => {
+  useCatalogThemeSync();
   const navigate = useNavigate();
   const { businessId = "" } = useParams<{ businessId: string }>();
   const [store, setStore] = useState<StorefrontBusiness | null>(null);
@@ -213,25 +215,29 @@ export const CatalogStorefrontPage = () => {
     setVariantModalOpen(true);
   };
 
-  const addVariantToCart = (variant: StorefrontVariant, quantity: number, buyNow: boolean) => {
+  const addVariantToCart = ({ variant, quantity, buyNow }: { variant: StorefrontVariant | null; quantity: number; buyNow: boolean }) => {
     if (!variantProduct) return;
-    const syntheticId = Number(`${variantProduct.id}${variant.id}`);
-    const variantPrice = variant.promotionPrice && variant.promotionPrice > 0 ? variant.promotionPrice : variant.price;
+    const isBaseProduct = variant == null;
+    const productIdToStore = isBaseProduct ? variantProduct.id : Number(`${variantProduct.id}${variant.id}`);
+    const selectedPrice = isBaseProduct
+      ? (variantProduct.promotionPrice && variantProduct.promotionPrice > 0 ? variantProduct.promotionPrice : variantProduct.price)
+      : (variant.promotionPrice && variant.promotionPrice > 0 ? variant.promotionPrice : variant.price);
+    const selectedName = isBaseProduct ? variantProduct.name : `${variantProduct.name} · ${variant.description}`;
 
     setCart((current) => {
-      const existing = current.find((item) => item.productId === syntheticId);
+      const existing = current.find((item) => item.productId === productIdToStore);
       if (existing) {
         return current.map((item) =>
-          item.productId === syntheticId ? { ...item, quantity: item.quantity + quantity } : item,
+          item.productId === productIdToStore ? { ...item, quantity: item.quantity + quantity } : item,
         );
       }
       return [
         ...current,
         {
-          productId: syntheticId,
-          variantId: variant.id,
-          name: `${variantProduct.name} · ${variant.description}`,
-          price: variantPrice,
+          productId: productIdToStore,
+          variantId: variant?.id,
+          name: selectedName,
+          price: selectedPrice,
           quantity,
           image: variantProduct.image,
         },

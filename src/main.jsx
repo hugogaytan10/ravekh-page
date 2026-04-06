@@ -5,9 +5,10 @@ import './index.css'
 
 const root = document.documentElement
 const POS_V2_THEME_KEY = 'pos-v2-ui-theme'
-const storedTheme = localStorage.getItem(POS_V2_THEME_KEY)
 const resolveTheme = () => {
+  const storedTheme = localStorage.getItem(POS_V2_THEME_KEY)
   if (storedTheme === 'dark' || storedTheme === 'light') return storedTheme
+  if (window.matchMedia?.('(prefers-color-scheme: dark)').matches) return 'dark'
   return 'light'
 }
 root.setAttribute('data-theme', resolveTheme())

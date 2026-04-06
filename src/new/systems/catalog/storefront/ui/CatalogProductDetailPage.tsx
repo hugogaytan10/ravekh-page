@@ -6,16 +6,18 @@ import { CatalogStorefrontApi, StorefrontVariant } from "../api/CatalogStorefron
 import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExperiencePage";
 import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
+import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
 
 export const CatalogProductDetailPage = () => {
+  useCatalogThemeSync();
   const navigate = useNavigate();
-  const { productId = "" } = useParams<{ productId: string; phone: string }>();
+  const { productId = "", phone = "" } = useParams<{ productId: string; phone: string }>();
   const [product, setProduct] = useState<StorefrontProduct | null>(null);
   const [variants, setVariants] = useState<StorefrontVariant[]>([]);
-  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | "base" | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -34,6 +36,8 @@ export const CatalogProductDetailPage = () => {
         const response = await pageLogic.loadProductDetail(productId);
         setProduct(response);
         if (response) {
+          window.localStorage.setItem("idBusiness", String(response.businessId));
+          window.localStorage.setItem("telefono", phone);
           const variantResponse = await pageLogic.loadVariants(response.id);
           setVariants(variantResponse);
         } else {
@@ -45,7 +49,7 @@ export const CatalogProductDetailPage = () => {
     };
 
     if (productId) void run();
-  }, [pageLogic, productId]);
+  }, [pageLogic, phone, productId]);
 
   useEffect(() => {
     setActiveImage(0);
@@ -56,8 +60,9 @@ export const CatalogProductDetailPage = () => {
 
   const buildCartWithSelection = () => {
     if (!product) return;
+    const isBaseSelected = selectedVariantId === "base";
     const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? null;
-    if (variants.length > 0 && !selectedVariant) {
+    if (variants.length > 0 && !selectedVariant && !isBaseSelected) {
       return null;
     }
 
@@ -65,7 +70,7 @@ export const CatalogProductDetailPage = () => {
     const productLabel = selectedVariant ? `${product.name} · ${selectedVariant.description}` : product.name;
     const priceToStore = selectedVariant
       ? (selectedVariant.promotionPrice && selectedVariant.promotionPrice > 0 ? selectedVariant.promotionPrice : selectedVariant.price)
-      : product.price;
+      : (product.promotionPrice && product.promotionPrice > 0 ? product.promotionPrice : product.price);
 
     const key = `catalog-v2-cart:${product.businessId}`;
     const raw = window.localStorage.getItem(key);
@@ -83,7 +88,7 @@ export const CatalogProductDetailPage = () => {
     setDetailError(null);
     const ok = buildCartWithSelection();
     if (!ok) {
-      setDetailError("Selecciona una variante antes de agregar al carrito.");
+      setDetailError("Selecciona una opción antes de agregar al carrito.");
       return;
     }
 
@@ -94,7 +99,7 @@ export const CatalogProductDetailPage = () => {
     setDetailError(null);
     const ok = buildCartWithSelection();
     if (!ok) {
-      setDetailError("Selecciona una variante antes de continuar.");
+      setDetailError("Selecciona una opción antes de continuar.");
       return;
     }
     navigate("/v2/catalogo/pedido");
@@ -104,6 +109,7 @@ export const CatalogProductDetailPage = () => {
   if (!product) return <main className="mx-auto grid max-w-5xl gap-4 p-4"><p className="text-[var(--text-secondary)]">No encontramos este producto.</p></main>;
   const images = Array.from(new Set([product.image, ...(product.images ?? [])].filter(Boolean)));
   const currentImage = images[activeImage] ?? product.image;
+  const isBaseSelected = selectedVariantId === "base";
   const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? null;
   const effectivePrice = selectedVariant
     ? (selectedVariant.promotionPrice && selectedVariant.promotionPrice > 0 ? selectedVariant.promotionPrice : selectedVariant.price)
@@ -195,6 +201,17 @@ export const CatalogProductDetailPage = () => {
             <div className="grid gap-2">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Variantes</h3>
               <div className="flex flex-wrap gap-2">
+                <button
+                  key="base"
+                  type="button"
+                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${isBaseSelected
+                    ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+                    : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                    }`}
+                  onClick={() => setSelectedVariantId("base")}
+                >
+                  {product.name}
+                </button>
                 {variants.map((variant) => (
                   <button
                     key={variant.id}

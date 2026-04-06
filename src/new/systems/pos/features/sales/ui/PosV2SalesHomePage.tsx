@@ -69,51 +69,42 @@ const getIsoDate = (offsetDays = 0): string => {
   return date.toISOString().slice(0, 10);
 };
 
+const isMobileDevice = (): boolean =>
+  /Android|iPhone|iPad|iPod|Windows Phone|webOS/i.test(window.navigator.userAgent || "");
+
 const printHtmlDocument = (title: string, html: string): boolean => {
-  const printWindow = window.open("", "_blank", "noopener,noreferrer,width=820,height=960");
-  if (printWindow) {
-    printWindow.document.open();
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.focus();
-    window.setTimeout(() => {
-      printWindow.print();
-    }, 220);
+  const previewBlob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const previewUrl = URL.createObjectURL(previewBlob);
+  const mobile = isMobileDevice();
+  const targetWindow = window.open(previewUrl, "_blank", mobile ? undefined : "noopener,noreferrer,width=820,height=960");
+
+  if (targetWindow) {
+    if (mobile) {
+      targetWindow.focus();
+      window.setTimeout(() => URL.revokeObjectURL(previewUrl), 60_000);
+      return true;
+    }
+
+    const cleanup = () => URL.revokeObjectURL(previewUrl);
+    targetWindow.addEventListener("afterprint", () => {
+      cleanup();
+      targetWindow.close();
+    }, { once: true });
+    targetWindow.addEventListener("load", () => {
+      targetWindow.focus();
+      targetWindow.print();
+    }, { once: true });
+    window.setTimeout(cleanup, 60_000);
     return true;
   }
 
-  const iframe = document.createElement("iframe");
-  iframe.setAttribute("title", title);
-  iframe.style.position = "fixed";
-  iframe.style.right = "0";
-  iframe.style.bottom = "0";
-  iframe.style.width = "0";
-  iframe.style.height = "0";
-  iframe.style.border = "0";
-  document.body.appendChild(iframe);
-
-  const frameDocument = iframe.contentDocument;
-  const frameWindow = iframe.contentWindow;
-  if (!frameDocument || !frameWindow) {
-    document.body.removeChild(iframe);
-    return false;
+  if (mobile) {
+    window.location.href = previewUrl;
+    return true;
   }
 
-  frameDocument.open();
-  frameDocument.write(html);
-  frameDocument.close();
-
-  window.setTimeout(() => {
-    frameWindow.focus();
-    frameWindow.print();
-    window.setTimeout(() => {
-      if (iframe.parentNode) {
-        iframe.parentNode.removeChild(iframe);
-      }
-    }, 500);
-  }, 180);
-
-  return true;
+  URL.revokeObjectURL(previewUrl);
+  return false;
 };
 
 type CustomerVm = {

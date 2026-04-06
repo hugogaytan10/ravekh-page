@@ -4,6 +4,7 @@ import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
 import { CatalogStorefrontApi } from "../api/CatalogStorefrontApi";
 import { getStripe } from "./stripeClient";
 import "./CatalogOrderInfoPage.css";
+import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
 type PaymentMethod = "efectivo" | "transferencia" | "tarjeta" | "enlace";
 type OpenSection = "contact" | "delivery" | "address" | "payment" | null;
@@ -36,6 +37,7 @@ const hasAnyAddressFieldEnabled = (options: ShippingOptions) =>
   options.Street || options.ZipCode || options.City || options.State || options.References;
 
 export const CatalogOrderInfoPage = () => {
+  useCatalogThemeSync();
   const navigate = useNavigate();
   const api = useMemo(() => new CatalogStorefrontApi(getPosApiBaseUrl()), []);
   const storeName = window.localStorage.getItem("catalog-v2-store-name") || "Catálogo";

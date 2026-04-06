@@ -10,7 +10,7 @@ type Props = {
   variants: StorefrontVariant[];
   formatPrice: (value: number) => string;
   onClose: () => void;
-  onConfirm: (variant: StorefrontVariant, quantity: number, buyNow: boolean) => void;
+  onConfirm: (selection: { variant: StorefrontVariant | null; quantity: number; buyNow: boolean }) => void;
 };
 
 export const VariantSelectionModalV2 = ({
@@ -23,7 +23,7 @@ export const VariantSelectionModalV2 = ({
   onClose,
   onConfirm,
 }: Props) => {
-  const [selectedVariantId, setSelectedVariantId] = useState<number | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<number | "base" | null>(null);
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
@@ -37,13 +37,14 @@ export const VariantSelectionModalV2 = ({
     [selectedVariantId, variants],
   );
 
+  const isBaseSelected = selectedVariantId === "base";
   const selectedPrice = selectedVariant
     ? selectedVariant.promotionPrice && selectedVariant.promotionPrice > 0
       ? selectedVariant.promotionPrice
       : selectedVariant.price
     : productBasePrice ?? 0;
 
-  const canSubmit = Boolean(selectedVariant);
+  const canSubmit = isBaseSelected || Boolean(selectedVariant);
 
   if (!open) return null;
 
@@ -70,12 +71,25 @@ export const VariantSelectionModalV2 = ({
             <button type="button" className="flex min-h-14 w-full items-center justify-between rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 py-2 text-left" aria-label="Seleccionar variante">
               <span>
                 <strong className="text-xl font-bold leading-tight text-[var(--text-primary)]">Variantes</strong>
-                <small className="block text-sm text-[var(--text-muted)]">{selectedVariant ? selectedVariant.description : "Selecciona una opción"}</small>
+                <small className="block text-sm text-[var(--text-muted)]">
+                  {isBaseSelected ? productName : selectedVariant ? selectedVariant.description : "Selecciona una opción"}
+                </small>
               </span>
               <FiChevronDown />
             </button>
 
             <div className="flex flex-wrap gap-2">
+              <button
+                key="base"
+                type="button"
+                className={`min-h-10 rounded-full border px-4 text-sm font-semibold ${isBaseSelected
+                  ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+                  : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                  }`}
+                onClick={() => setSelectedVariantId("base")}
+              >
+                {productName}
+              </button>
               {variants.map((variant) => (
                 <button
                   key={variant.id}
@@ -93,8 +107,8 @@ export const VariantSelectionModalV2 = ({
 
             <div className="grid gap-2">
               <h4 className="text-2xl font-bold leading-tight text-[var(--text-primary)]">Cantidad</h4>
-              {!selectedVariant ? (
-                <p className="text-sm text-[var(--text-muted)]">Selecciona una variante para definir cantidad.</p>
+              {!canSubmit ? (
+                <p className="text-sm text-[var(--text-muted)]">Selecciona una opción para definir cantidad.</p>
               ) : (
                 <div className="flex items-center gap-3">
                   <button className="grid h-10 w-10 place-items-center rounded-full bg-[var(--text-primary)] text-[var(--text-inverse)]" type="button" onClick={() => setQuantity((current) => Math.max(1, current - 1))} aria-label="Disminuir cantidad">
@@ -109,10 +123,20 @@ export const VariantSelectionModalV2 = ({
             </div>
 
             <div className="mt-1 grid gap-2 sm:grid-cols-2">
-              <button type="button" className="min-h-12 rounded-full bg-[var(--text-primary)] px-4 text-sm font-extrabold text-[var(--text-inverse)] disabled:opacity-55" disabled={!canSubmit} onClick={() => selectedVariant && onConfirm(selectedVariant, quantity, true)}>
+              <button
+                type="button"
+                className="min-h-12 rounded-full bg-[var(--text-primary)] px-4 text-sm font-extrabold text-[var(--text-inverse)] disabled:opacity-55"
+                disabled={!canSubmit}
+                onClick={() => onConfirm({ variant: selectedVariant, quantity, buyNow: true })}
+              >
                 Comprar ahora
               </button>
-              <button type="button" className="min-h-12 rounded-full border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 text-sm font-extrabold text-[var(--text-primary)] disabled:opacity-55" disabled={!canSubmit} onClick={() => selectedVariant && onConfirm(selectedVariant, quantity, false)}>
+              <button
+                type="button"
+                className="min-h-12 rounded-full border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 text-sm font-extrabold text-[var(--text-primary)] disabled:opacity-55"
+                disabled={!canSubmit}
+                onClick={() => onConfirm({ variant: selectedVariant, quantity, buyNow: false })}
+              >
                 Agregar al carrito
               </button>
             </div>

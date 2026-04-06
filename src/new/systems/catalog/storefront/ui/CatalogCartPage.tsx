@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiMinus, FiPlus, FiTrash2 } from "react-icons/fi";
 import { StorefrontCartItem } from "../model/CatalogStorefrontModels";
 import "./CatalogCartPage.css";
+import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
@@ -24,6 +25,7 @@ const loadCart = (businessId: string): StorefrontCartItem[] => {
 };
 
 export const CatalogCartPage = () => {
+  useCatalogThemeSync();
   const navigate = useNavigate();
   const businessId = getBusinessId();
   const [cart, setCart] = useState<StorefrontCartItem[]>(() => loadCart(businessId));
