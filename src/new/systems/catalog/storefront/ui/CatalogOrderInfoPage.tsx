@@ -20,7 +20,19 @@ type ShippingOptions = {
   PaymentMetod: boolean;
 };
 
-type CartItem = { productId: number; variantId?: number; name: string; price: number; quantity: number };
+type CartItem = {
+  cartKey?: string;
+  productId: number;
+  variantId?: number;
+  colorId?: number;
+  sizeId?: number;
+  colorName?: string;
+  sizeName?: string;
+  name: string;
+  price: number;
+  cost?: number;
+  quantity: number;
+};
 
 const defaultShippingOptions: ShippingOptions = {
   ContactInformation: true,
@@ -220,6 +232,10 @@ export const CatalogOrderInfoPage = () => {
           ...(item.variantId
             ? { Variant_Id: Number(item.variantId) || 0 }
             : { Product_Id: Number(item.productId) || 0 }),
+          ...(item.colorId ? { Color_Id: Number(item.colorId) || 0 } : {}),
+          ...(item.sizeId ? { Size_Id: Number(item.sizeId) || 0 } : {}),
+          ...(item.price ? { Price: Number(item.price) || 0 } : {}),
+          ...(item.cost ? { Cost: Number(item.cost) || 0 } : {}),
         })),
       };
 

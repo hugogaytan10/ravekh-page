@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { FiChevronDown, FiPlus, FiMinus, FiX } from "react-icons/fi";
-import { StorefrontVariant } from "../api/CatalogStorefrontApi";
+import { StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
 
 type Props = {
   open: boolean;
@@ -8,9 +8,11 @@ type Props = {
   productImage?: string;
   productBasePrice?: number;
   variants: StorefrontVariant[];
+  colors: StorefrontProductExtra[];
+  sizes: StorefrontProductExtra[];
   formatPrice: (value: number) => string;
   onClose: () => void;
-  onConfirm: (selection: { variant: StorefrontVariant | null; quantity: number; buyNow: boolean }) => void;
+  onConfirm: (selection: { variant: StorefrontVariant | null; color: StorefrontProductExtra | null; size: StorefrontProductExtra | null; quantity: number; buyNow: boolean }) => void;
 };
 
 export const VariantSelectionModalV2 = ({
@@ -19,16 +21,22 @@ export const VariantSelectionModalV2 = ({
   productImage,
   productBasePrice,
   variants,
+  colors,
+  sizes,
   formatPrice,
   onClose,
   onConfirm,
 }: Props) => {
   const [selectedVariantId, setSelectedVariantId] = useState<number | "base" | null>(null);
+  const [selectedColorId, setSelectedColorId] = useState<number | null>(null);
+  const [selectedSizeId, setSelectedSizeId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState(1);
 
   useEffect(() => {
     if (!open) return;
     setSelectedVariantId(null);
+    setSelectedColorId(null);
+    setSelectedSizeId(null);
     setQuantity(1);
   }, [open]);
 
@@ -36,6 +44,8 @@ export const VariantSelectionModalV2 = ({
     () => variants.find((variant) => variant.id === selectedVariantId) || null,
     [selectedVariantId, variants],
   );
+  const selectedColor = useMemo(() => colors.find((color) => color.id === selectedColorId) || null, [colors, selectedColorId]);
+  const selectedSize = useMemo(() => sizes.find((size) => size.id === selectedSizeId) || null, [selectedSizeId, sizes]);
 
   const isBaseSelected = selectedVariantId === "base";
   const selectedPrice = selectedVariant
@@ -44,7 +54,9 @@ export const VariantSelectionModalV2 = ({
       : selectedVariant.price
     : productBasePrice ?? 0;
 
-  const canSubmit = isBaseSelected || Boolean(selectedVariant);
+  const hasVariantSelection = variants.length === 0 || isBaseSelected || Boolean(selectedVariant);
+  const hasAnyOptionSelected = hasVariantSelection || Boolean(selectedColor) || Boolean(selectedSize);
+  const canSubmit = hasAnyOptionSelected;
 
   if (!open) return null;
 
@@ -79,17 +91,19 @@ export const VariantSelectionModalV2 = ({
             </button>
 
             <div className="flex flex-wrap gap-2">
-              <button
-                key="base"
-                type="button"
-                className={`min-h-10 rounded-full border px-4 text-sm font-semibold ${isBaseSelected
-                  ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
-                  : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
-                  }`}
-                onClick={() => setSelectedVariantId("base")}
-              >
-                {productName}
-              </button>
+              {variants.length > 0 ? (
+                <button
+                  key="base"
+                  type="button"
+                  className={`min-h-10 rounded-full border px-4 text-sm font-semibold ${isBaseSelected
+                    ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+                    : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                    }`}
+                  onClick={() => setSelectedVariantId("base")}
+                >
+                  {productName}
+                </button>
+              ) : null}
               {variants.map((variant) => (
                 <button
                   key={variant.id}
@@ -104,6 +118,48 @@ export const VariantSelectionModalV2 = ({
                 </button>
               ))}
             </div>
+
+            {colors.length > 0 ? (
+              <div className="grid gap-2">
+                <h4 className="text-lg font-bold leading-tight text-[var(--text-primary)]">Color</h4>
+                <div className="flex flex-wrap gap-2">
+                  {colors.map((color) => (
+                    <button
+                      key={color.id}
+                      type="button"
+                      className={`min-h-10 rounded-full border px-4 text-sm font-semibold ${color.id === selectedColorId
+                        ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+                        : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                        }`}
+                      onClick={() => setSelectedColorId((current) => (current === color.id ? null : color.id))}
+                    >
+                      {color.description}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
+
+            {sizes.length > 0 ? (
+              <div className="grid gap-2">
+                <h4 className="text-lg font-bold leading-tight text-[var(--text-primary)]">Talla</h4>
+                <div className="flex flex-wrap gap-2">
+                  {sizes.map((size) => (
+                    <button
+                      key={size.id}
+                      type="button"
+                      className={`min-h-10 rounded-full border px-4 text-sm font-semibold ${size.id === selectedSizeId
+                        ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+                        : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                        }`}
+                      onClick={() => setSelectedSizeId((current) => (current === size.id ? null : size.id))}
+                    >
+                      {size.description}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ) : null}
 
             <div className="grid gap-2">
               <h4 className="text-2xl font-bold leading-tight text-[var(--text-primary)]">Cantidad</h4>
@@ -127,7 +183,7 @@ export const VariantSelectionModalV2 = ({
                 type="button"
                 className="min-h-12 rounded-full bg-[var(--text-primary)] px-4 text-sm font-extrabold text-[var(--text-inverse)] disabled:opacity-55"
                 disabled={!canSubmit}
-                onClick={() => onConfirm({ variant: selectedVariant, quantity, buyNow: true })}
+                onClick={() => onConfirm({ variant: selectedVariant, color: selectedColor, size: selectedSize, quantity, buyNow: true })}
               >
                 Comprar ahora
               </button>
@@ -135,7 +191,7 @@ export const VariantSelectionModalV2 = ({
                 type="button"
                 className="min-h-12 rounded-full border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 text-sm font-extrabold text-[var(--text-primary)] disabled:opacity-55"
                 disabled={!canSubmit}
-                onClick={() => onConfirm({ variant: selectedVariant, quantity, buyNow: false })}
+                onClick={() => onConfirm({ variant: selectedVariant, color: selectedColor, size: selectedSize, quantity, buyNow: false })}
               >
                 Agregar al carrito
               </button>

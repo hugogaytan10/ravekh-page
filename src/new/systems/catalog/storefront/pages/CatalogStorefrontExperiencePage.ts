@@ -22,4 +22,8 @@ export class CatalogStorefrontExperiencePage {
   loadVariants(productId: number) {
     return this.service.getVariants(productId);
   }
+
+  loadExtras(productId: number) {
+    return this.service.getExtras(productId);
+  }
 }

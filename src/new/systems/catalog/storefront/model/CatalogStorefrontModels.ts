@@ -18,10 +18,16 @@ export type StorefrontBusiness = {
 };
 
 export type StorefrontCartItem = {
+  cartKey?: string;
   productId: number;
   variantId?: number;
+  colorId?: number;
+  sizeId?: number;
+  colorName?: string;
+  sizeName?: string;
   name: string;
   price: number;
+  cost?: number;
   quantity: number;
   image: string;
 };
@@ -39,5 +45,9 @@ export type CatalogOrderPayload = {
     Quantity: number;
     Product_Id?: number;
     Variant_Id?: number;
+    Color_Id?: number;
+    Size_Id?: number;
+    Price?: number;
+    Cost?: number;
   }>;
 };

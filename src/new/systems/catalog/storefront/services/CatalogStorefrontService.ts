@@ -26,4 +26,8 @@ export class CatalogStorefrontService {
   getVariants(productId: number) {
     return this.repository.getVariantsByProductId(productId);
   }
+
+  getExtras(productId: number) {
+    return this.repository.getProductExtrasByProductId(productId);
+  }
 }

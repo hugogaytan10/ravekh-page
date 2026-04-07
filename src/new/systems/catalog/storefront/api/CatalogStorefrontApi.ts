@@ -44,9 +44,23 @@ export type StorefrontProductsPage = {
 export type StorefrontVariant = {
   id: number;
   description: string;
+  color?: string;
   price: number;
   promotionPrice: number | null;
+  costPerItem: number | null;
   stock: number | null;
+};
+
+export type StorefrontProductExtra = {
+  id: number;
+  productId: number;
+  description: string;
+  type: string;
+};
+
+export type StorefrontProductExtras = {
+  colors: StorefrontProductExtra[];
+  sizes: StorefrontProductExtra[];
 };
 
 export type StorefrontBusinessCheckoutConfig = {
@@ -280,18 +294,43 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
   async getVariantsByProductId(productId: number): Promise<StorefrontVariant[]> {
     const response = await fetch(`${normalizeBase(this.baseUrl)}variants/product/${productId}`);
     if (!response.ok) return [];
-    const raw = (await response.json()) as Array<{ Id?: number; Description?: string; Price?: number | string; PromotionPrice?: number | string; Stock?: number | string }>;
+    const raw = (await response.json()) as Array<{ Id?: number; Description?: string; Color?: string; Price?: number | string; PromotionPrice?: number | string; CostPerItem?: number | string; Stock?: number | string }>;
     if (!Array.isArray(raw)) return [];
 
     return raw
       .map((item) => ({
         id: parseNumber(item.Id),
         description: (item.Description || "Variante").trim(),
+        color: item.Color?.trim() || "",
         price: parseNumber(item.Price),
         promotionPrice: item.PromotionPrice != null ? parseNumber(item.PromotionPrice) : null,
+        costPerItem: item.CostPerItem != null ? parseNumber(item.CostPerItem) : null,
         stock: item.Stock != null ? parseNumber(item.Stock) : null,
       }))
       .filter((item) => item.id > 0);
+  }
+
+  async getProductExtrasByProductId(productId: number): Promise<StorefrontProductExtras> {
+    const empty: StorefrontProductExtras = { colors: [], sizes: [] };
+    const response = await fetch(`${normalizeBase(this.baseUrl)}extras/product/${productId}`);
+    if (!response.ok) return empty;
+    const raw = (await response.json()) as Record<string, Array<{ Id?: number; Product_Id?: number; Description?: string; Type?: string }>>;
+    if (!raw || typeof raw !== "object") return empty;
+
+    const normalizeExtras = (values: Array<{ Id?: number; Product_Id?: number; Description?: string; Type?: string }> | undefined) =>
+      (Array.isArray(values) ? values : [])
+        .map((item) => ({
+          id: parseNumber(item.Id),
+          productId: parseNumber(item.Product_Id),
+          description: (item.Description ?? "").trim(),
+          type: (item.Type ?? "").trim().toUpperCase(),
+        }))
+        .filter((item) => item.id > 0 && item.description.length > 0);
+
+    return {
+      colors: normalizeExtras(raw.COLOR),
+      sizes: normalizeExtras(raw.TALLA),
+    };
   }
 
   async getProductById(productId: string): Promise<StorefrontProduct | null> {

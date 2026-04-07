@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FiSearch, FiShoppingCart, FiSliders, FiX } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
-import { CatalogStorefrontApi, StorefrontCategory, StorefrontVariant } from "../api/CatalogStorefrontApi";
+import { CatalogStorefrontApi, StorefrontCategory, StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
 import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExperiencePage";
 import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontBusiness, StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
@@ -47,6 +47,8 @@ export const CatalogStorefrontPage = () => {
   const [variantModalOpen, setVariantModalOpen] = useState(false);
   const [variantProduct, setVariantProduct] = useState<StorefrontProduct | null>(null);
   const [variantOptions, setVariantOptions] = useState<StorefrontVariant[]>([]);
+  const [colorOptions, setColorOptions] = useState<StorefrontProductExtra[]>([]);
+  const [sizeOptions, setSizeOptions] = useState<StorefrontProductExtra[]>([]);
   const [cartReady, setCartReady] = useState(false);
 
   const pageLogic = useMemo(() => {
@@ -134,14 +136,14 @@ export const CatalogStorefrontPage = () => {
   }, [toast]);
 
   const addToCart = async (product: StorefrontProduct) => {
-    if (product.variantsCount && product.variantsCount > 0) {
-      const variants = await pageLogic.loadVariants(product.id);
-      if (variants.length > 0) {
-        setVariantProduct(product);
-        setVariantOptions(variants);
-        setVariantModalOpen(true);
-        return;
-      }
+    const [variants, extras] = await Promise.all([pageLogic.loadVariants(product.id), pageLogic.loadExtras(product.id)]);
+    if (variants.length > 0 || extras.colors.length > 0 || extras.sizes.length > 0) {
+      setVariantProduct(product);
+      setVariantOptions(variants);
+      setColorOptions(extras.colors);
+      setSizeOptions(extras.sizes);
+      setVariantModalOpen(true);
+      return;
     }
 
     setCart((current) => {
@@ -179,7 +181,7 @@ export const CatalogStorefrontPage = () => {
   const cartQuantityMap = useMemo(
     () =>
       cart.reduce<Record<number, number>>((acc, item) => {
-        acc[item.productId] = item.quantity;
+        acc[item.productId] = (acc[item.productId] ?? 0) + item.quantity;
         return acc;
       }, {}),
     [cart],
@@ -208,36 +210,51 @@ export const CatalogStorefrontPage = () => {
   }, [normalizedSearch, products, priceMax, priceMin, sortMode]);
 
   const handleQuickView = async (product: StorefrontProduct) => {
-    const variants = await pageLogic.loadVariants(product.id);
-    if (!variants.length) return;
+    const [variants, extras] = await Promise.all([pageLogic.loadVariants(product.id), pageLogic.loadExtras(product.id)]);
+    if (!variants.length && !extras.colors.length && !extras.sizes.length) return;
     setVariantProduct(product);
     setVariantOptions(variants);
+    setColorOptions(extras.colors);
+    setSizeOptions(extras.sizes);
     setVariantModalOpen(true);
   };
 
-  const addVariantToCart = ({ variant, quantity, buyNow }: { variant: StorefrontVariant | null; quantity: number; buyNow: boolean }) => {
+  const addVariantToCart = ({ variant, color, size, quantity, buyNow }: { variant: StorefrontVariant | null; color: StorefrontProductExtra | null; size: StorefrontProductExtra | null; quantity: number; buyNow: boolean }) => {
     if (!variantProduct) return;
-    const isBaseProduct = variant == null;
-    const productIdToStore = isBaseProduct ? variantProduct.id : Number(`${variantProduct.id}${variant.id}`);
+    const hasVariants = variantOptions.length > 0;
+    const isBaseProduct = !hasVariants || variant == null;
+    const cartKey = [variantProduct.id, variant?.id ?? "base", color?.id ?? "nc", size?.id ?? "ns"].join("-");
+    const productIdToStore = variantProduct.id;
     const selectedPrice = isBaseProduct
       ? (variantProduct.promotionPrice && variantProduct.promotionPrice > 0 ? variantProduct.promotionPrice : variantProduct.price)
       : (variant.promotionPrice && variant.promotionPrice > 0 ? variant.promotionPrice : variant.price);
-    const selectedName = isBaseProduct ? variantProduct.name : `${variantProduct.name} · ${variant.description}`;
+    const selectedCost = variant?.costPerItem ?? undefined;
+    const selectedName = [
+      isBaseProduct ? variantProduct.name : `${variantProduct.name} · ${variant.description}`,
+      color?.description ? `Color: ${color.description}` : "",
+      size?.description ? `Talla: ${size.description}` : "",
+    ].filter(Boolean).join(" · ");
 
     setCart((current) => {
-      const existing = current.find((item) => item.productId === productIdToStore);
+      const existing = current.find((item) => (item.cartKey ?? String(item.productId)) === cartKey);
       if (existing) {
         return current.map((item) =>
-          item.productId === productIdToStore ? { ...item, quantity: item.quantity + quantity } : item,
+          (item.cartKey ?? String(item.productId)) === cartKey ? { ...item, quantity: item.quantity + quantity } : item,
         );
       }
       return [
         ...current,
         {
+          cartKey,
           productId: productIdToStore,
           variantId: variant?.id,
+          colorId: color?.id,
+          sizeId: size?.id,
+          colorName: color?.description,
+          sizeName: size?.description,
           name: selectedName,
           price: selectedPrice,
+          cost: selectedCost,
           quantity,
           image: variantProduct.image,
         },
@@ -247,6 +264,8 @@ export const CatalogStorefrontPage = () => {
     setVariantModalOpen(false);
     setVariantProduct(null);
     setVariantOptions([]);
+    setColorOptions([]);
+    setSizeOptions([]);
     setToast("Variante agregada al carrito");
 
     if (buyNow) {
@@ -452,8 +471,16 @@ export const CatalogStorefrontPage = () => {
         productImage={variantProduct?.image}
         productBasePrice={variantProduct?.price}
         variants={variantOptions}
+        colors={colorOptions}
+        sizes={sizeOptions}
         formatPrice={money}
-        onClose={() => setVariantModalOpen(false)}
+        onClose={() => {
+          setVariantModalOpen(false);
+          setVariantProduct(null);
+          setVariantOptions([]);
+          setColorOptions([]);
+          setSizeOptions([]);
+        }}
         onConfirm={addVariantToCart}
       />
 

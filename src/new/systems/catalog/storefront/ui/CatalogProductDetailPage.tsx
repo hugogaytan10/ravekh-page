@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
-import { CatalogStorefrontApi, StorefrontVariant } from "../api/CatalogStorefrontApi";
+import { CatalogStorefrontApi, StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
 import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExperiencePage";
 import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
@@ -17,7 +17,11 @@ export const CatalogProductDetailPage = () => {
   const { productId = "", phone = "" } = useParams<{ productId: string; phone: string }>();
   const [product, setProduct] = useState<StorefrontProduct | null>(null);
   const [variants, setVariants] = useState<StorefrontVariant[]>([]);
+  const [colors, setColors] = useState<StorefrontProductExtra[]>([]);
+  const [sizes, setSizes] = useState<StorefrontProductExtra[]>([]);
   const [selectedVariantId, setSelectedVariantId] = useState<number | "base" | null>(null);
+  const [selectedColorId, setSelectedColorId] = useState<number | null>(null);
+  const [selectedSizeId, setSelectedSizeId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
   const [detailError, setDetailError] = useState<string | null>(null);
@@ -38,10 +42,17 @@ export const CatalogProductDetailPage = () => {
         if (response) {
           window.localStorage.setItem("idBusiness", String(response.businessId));
           window.localStorage.setItem("telefono", phone);
-          const variantResponse = await pageLogic.loadVariants(response.id);
+          const [variantResponse, extrasResponse] = await Promise.all([
+            pageLogic.loadVariants(response.id),
+            pageLogic.loadExtras(response.id),
+          ]);
           setVariants(variantResponse);
+          setColors(extrasResponse.colors);
+          setSizes(extrasResponse.sizes);
         } else {
           setVariants([]);
+          setColors([]);
+          setSizes([]);
         }
       } finally {
         setLoading(false);
@@ -54,6 +65,8 @@ export const CatalogProductDetailPage = () => {
   useEffect(() => {
     setActiveImage(0);
     setSelectedVariantId(null);
+    setSelectedColorId(null);
+    setSelectedSizeId(null);
     setQuantity(1);
     setDetailError(null);
   }, [productId]);
@@ -62,23 +75,47 @@ export const CatalogProductDetailPage = () => {
     if (!product) return;
     const isBaseSelected = selectedVariantId === "base";
     const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? null;
+    const selectedColor = colors.find((color) => color.id === selectedColorId) ?? null;
+    const selectedSize = sizes.find((size) => size.id === selectedSizeId) ?? null;
     if (variants.length > 0 && !selectedVariant && !isBaseSelected) {
       return null;
     }
+    const hasAnyOption = variants.length > 0 || colors.length > 0 || sizes.length > 0;
+    if (hasAnyOption && !isBaseSelected && !selectedVariant && !selectedColor && !selectedSize) {
+      return null;
+    }
 
-    const productIdToStore = selectedVariant ? Number(`${product.id}${selectedVariant.id}`) : product.id;
-    const productLabel = selectedVariant ? `${product.name} · ${selectedVariant.description}` : product.name;
+    const cartKey = [product.id, selectedVariant?.id ?? "base", selectedColor?.id ?? "nc", selectedSize?.id ?? "ns"].join("-");
+    const productLabel = [
+      selectedVariant ? `${product.name} · ${selectedVariant.description}` : product.name,
+      selectedColor?.description ? `Color: ${selectedColor.description}` : "",
+      selectedSize?.description ? `Talla: ${selectedSize.description}` : "",
+    ].filter(Boolean).join(" · ");
     const priceToStore = selectedVariant
       ? (selectedVariant.promotionPrice && selectedVariant.promotionPrice > 0 ? selectedVariant.promotionPrice : selectedVariant.price)
       : (product.promotionPrice && product.promotionPrice > 0 ? product.promotionPrice : product.price);
+    const costToStore = selectedVariant?.costPerItem ?? undefined;
 
     const key = `catalog-v2-cart:${product.businessId}`;
     const raw = window.localStorage.getItem(key);
     const current = raw ? (JSON.parse(raw) as StorefrontCartItem[]) : [];
-    const existing = current.find((item) => item.productId === productIdToStore);
+    const existing = current.find((item) => (item.cartKey ?? String(item.productId)) === cartKey);
     const updated = existing
-      ? current.map((item) => (item.productId === productIdToStore ? { ...item, quantity: item.quantity + quantity } : item))
-      : [...current, { productId: productIdToStore, variantId: selectedVariant?.id, name: productLabel, price: priceToStore, quantity, image: product.image }];
+      ? current.map((item) => ((item.cartKey ?? String(item.productId)) === cartKey ? { ...item, quantity: item.quantity + quantity } : item))
+      : [...current, {
+        cartKey,
+        productId: product.id,
+        variantId: selectedVariant?.id,
+        colorId: selectedColor?.id,
+        sizeId: selectedSize?.id,
+        colorName: selectedColor?.description,
+        sizeName: selectedSize?.description,
+        name: productLabel,
+        price: priceToStore,
+        cost: costToStore,
+        quantity,
+        image: product.image,
+      }];
 
     window.localStorage.setItem(key, JSON.stringify(updated));
     return true;
@@ -223,6 +260,46 @@ export const CatalogProductDetailPage = () => {
                     onClick={() => setSelectedVariantId(variant.id)}
                   >
                     {variant.description}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {colors.length > 0 ? (
+            <div className="grid gap-2">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Color</h3>
+              <div className="flex flex-wrap gap-2">
+                {colors.map((color) => (
+                  <button
+                    key={color.id}
+                    type="button"
+                    className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${selectedColorId === color.id
+                      ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+                      : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                      }`}
+                    onClick={() => setSelectedColorId((current) => current === color.id ? null : color.id)}
+                  >
+                    {color.description}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+          {sizes.length > 0 ? (
+            <div className="grid gap-2">
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Talla</h3>
+              <div className="flex flex-wrap gap-2">
+                {sizes.map((size) => (
+                  <button
+                    key={size.id}
+                    type="button"
+                    className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${selectedSizeId === size.id
+                      ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+                      : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                      }`}
+                    onClick={() => setSelectedSizeId((current) => current === size.id ? null : size.id)}
+                  >
+                    {size.description}
                   </button>
                 ))}
               </div>
