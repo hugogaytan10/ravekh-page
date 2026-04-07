@@ -80,7 +80,7 @@ export class RewardsManagementPage {
   async getVisitHistory(
     businessId: number,
     token: string,
-  ): Promise<Array<{ id: number; userId: number; userName: string; date: string; visitCount: number; totalVisits: number }>> {
+  ): Promise<Array<{ id: number; userId: number; userName: string; date: string; visitCount: number; totalVisits: number; minVisits: number }>> {
     const visits = await this.service.getVisitHistory(businessId, token);
     return visits.map((visit) => ({
       id: visit.id,
@@ -89,6 +89,7 @@ export class RewardsManagementPage {
       date: visit.date,
       visitCount: visit.visitCount,
       totalVisits: visit.totalVisits,
+      minVisits: visit.minVisits,
     }));
   }
 

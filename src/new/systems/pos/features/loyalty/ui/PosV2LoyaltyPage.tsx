@@ -5,6 +5,8 @@ import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
+import QRCode from "../../../../loyalty/features/coupons/lib/QRCode";
+import QRErrorCorrectLevel from "../../../../loyalty/features/coupons/lib/QRCode/QRErrorCorrectLevel";
 import "./PosV2LoyaltyPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -17,6 +19,95 @@ const toLegacyDateTime = (value: string): string | undefined => {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return undefined;
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())} ${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+};
+
+const renderQrAsDataUrl = (value: string): string => {
+  const qr = new QRCode(0, QRErrorCorrectLevel.M);
+  qr.addData(value);
+  qr.make();
+
+  const moduleCount = qr.getModuleCount();
+  const size = 240;
+  const margin = 12;
+  const moduleSize = (size - margin * 2) / moduleCount;
+  const rects: string[] = [];
+
+  for (let row = 0; row < moduleCount; row += 1) {
+    for (let col = 0; col < moduleCount; col += 1) {
+      if (qr.isDark(row, col)) {
+        const x = (margin + col * moduleSize).toFixed(4);
+        const y = (margin + row * moduleSize).toFixed(4);
+        const w = moduleSize.toFixed(4);
+        rects.push(`<rect x="${x}" y="${y}" width="${w}" height="${w}" fill="#000000" />`);
+      }
+    }
+  }
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}"><rect width="100%" height="100%" fill="#ffffff"/>${rects.join("")}</svg>`;
+  return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+};
+
+const openPrintPreview = ({ title, content, paperMm = "80" }: { title: string; content: string; paperMm?: "58" | "80" }) => {
+  const printWindow = window.open("", "_blank", "width=520,height=900");
+  if (!printWindow) return;
+
+  const html = `<!doctype html>
+  <html>
+    <head>
+      <title>${title}</title>
+      <style>
+        :root { font-family: Arial, sans-serif; }
+        @page { size: ${paperMm}mm auto; margin: 4mm; }
+        body { margin: 0; background: #f1f5f9; color: #0f172a; }
+        .preview-actions { position: sticky; top: 0; z-index: 10; background: #0f172a; color: #fff; padding: 10px; display: flex; justify-content: center; }
+        .preview-actions button { border: 0; border-radius: 999px; padding: 8px 14px; font-weight: 700; cursor: pointer; background: #22c55e; color: #052e16; }
+        .ticket { margin: 12px auto; max-width: ${paperMm === "58" ? "58mm" : "80mm"}; background: #fff; border-radius: 10px; padding: 10px; text-align: center; }
+        h3 { margin: 0 0 8px 0; font-size: 14px; }
+        p { margin: 6px 0; font-size: 12px; word-break: break-all; }
+        img { display: block; margin: 0 auto; width: 220px; height: 220px; }
+        @media print {
+          body { background: #fff; }
+          .preview-actions { display: none; }
+          .ticket { margin: 0 auto; border-radius: 0; }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="preview-actions"><button type="button" onclick="window.print()">Imprimir ticket</button></div>
+      ${content}
+    </body>
+  </html>`;
+
+  printWindow.document.write(html);
+  printWindow.document.close();
+  printWindow.focus();
+};
+
+const getVisitCycleProgress = (totalVisits: number, minVisits: number) => {
+  const safeMinVisits = Number.isFinite(minVisits) && minVisits > 0 ? minVisits : 0;
+  const safeTotalVisits = Number.isFinite(totalVisits) && totalVisits > 0 ? totalVisits : 0;
+
+  if (!safeMinVisits) {
+    return {
+      minVisits: 0,
+      visitsIntoCycle: safeTotalVisits,
+      completedRewards: 0,
+      progressPercent: 0,
+      cycleLabel: `${safeTotalVisits} visita(s)`,
+    };
+  }
+
+  const visitsIntoCycle = safeTotalVisits % safeMinVisits;
+  const completedRewards = Math.floor(safeTotalVisits / safeMinVisits);
+  const progressPercent = Math.round((visitsIntoCycle / safeMinVisits) * 100);
+
+  return {
+    minVisits: safeMinVisits,
+    visitsIntoCycle,
+    completedRewards,
+    progressPercent,
+    cycleLabel: `${visitsIntoCycle} de ${safeMinVisits}`,
+  };
 };
 
 const isCouponActive = (coupon: { maxRedemptions: number; totalUsers: number; valid: string }) => {
@@ -40,7 +131,7 @@ export const PosV2LoyaltyPage = () => {
   const [limitUsers, setLimitUsers] = useState("10");
   const [validDateTime, setValidDateTime] = useState("");
   const [topClientsSort, setTopClientsSort] = useState<"mostFrequent" | "leastFrequent">("mostFrequent");
-  const [visitLog, setVisitLog] = useState<Array<{ userId: number; userName: string; date: string; visitCount: number; totalVisits: number }>>([]);
+  const [visitLog, setVisitLog] = useState<Array<{ userId: number; userName: string; date: string; visitCount: number; totalVisits: number; minVisits: number }>>([]);
   const [couponList, setCouponList] = useState<Array<{ id: number; qr: string; description: string; maxRedemptions: number; totalUsers: number; valid: string }>>([]);
   const [loadingVisits, setLoadingVisits] = useState(false);
   const [loadingCoupons, setLoadingCoupons] = useState(false);
@@ -167,24 +258,32 @@ export const PosV2LoyaltyPage = () => {
   }, [couponDescriptionQuery, couponList]);
 
   const visitsSummary = useMemo(() => {
-    const totalVisits = visitLog.reduce((acc, visit) => acc + Number(visit.visitCount || 0), 0);
-    const customers = new Set(visitLog.map((visit) => visit.userId).filter((id) => id > 0));
+    const byUser = new Map<number, number>();
+    visitLog.forEach((visit) => {
+      if (!Number.isFinite(visit.userId) || visit.userId <= 0) return;
+      const current = byUser.get(visit.userId) ?? 0;
+      byUser.set(visit.userId, Math.max(current, Number(visit.totalVisits || 0), Number(visit.visitCount || 0)));
+    });
+
+    const totalVisits = Array.from(byUser.values()).reduce((acc, visits) => acc + visits, 0);
     return {
       totalVisits,
-      uniqueCustomers: customers.size,
+      uniqueCustomers: byUser.size,
     };
   }, [visitLog]);
 
   const topClients = useMemo(() => {
-    const byUser = new Map<number, { userId: number; userName: string; totalVisits: number; lastVisit?: string }>();
+    const byUser = new Map<number, { userId: number; userName: string; totalVisits: number; minVisits: number; lastVisit?: string }>();
     visitLog.forEach((visit) => {
       const current = byUser.get(visit.userId) || {
         userId: visit.userId,
         userName: visit.userName || `Cliente ${visit.userId}`,
         totalVisits: 0,
+        minVisits: 0,
         lastVisit: "",
       };
       current.totalVisits = Math.max(current.totalVisits, Number(visit.totalVisits || 0), Number(visit.visitCount || 0));
+      current.minVisits = Math.max(current.minVisits, Number(visit.minVisits || 0));
       current.lastVisit = visit.date;
       byUser.set(visit.userId, current);
     });
@@ -194,10 +293,6 @@ export const PosV2LoyaltyPage = () => {
       .slice(0, 8);
   }, [topClientsSort, visitLog]);
 
-  const maxTopVisits = useMemo(
-    () => topClients.reduce((max, item) => Math.max(max, Number(item.totalVisits || 0)), 0),
-    [topClients],
-  );
 
   const filteredVisits = useMemo(() => {
     const term = visitQuery.trim().toLowerCase();
@@ -238,26 +333,22 @@ export const PosV2LoyaltyPage = () => {
   const handlePrintCouponQr = () => {
     const value = couponQrDisplayValue;
     if (!value) return;
-    const printWindow = window.open("", "_blank", "width=420,height=720");
-    if (!printWindow) return;
-    const qrImage = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(value)}" width="220" height="220" alt="QR" />`;
-    printWindow.document.write(`<!doctype html><html><head><title>Imprimir cupón</title></head><body><div style="text-align:center;font-family:Arial;padding:16px;">${qrImage}<p style="font-size:12px;word-break:break-all;">${value}</p></div></body></html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    const qrImage = `<img src="${renderQrAsDataUrl(value)}" width="220" height="220" alt="QR" />`;
+    openPrintPreview({
+      title: "Imprimir cupón",
+      paperMm: printerFormat,
+      content: `<div class="ticket"><h3>Cupón de fidelidad</h3>${qrImage}<p>${value}</p></div>`,
+    });
   };
 
   const printVisitTicket = (qrValue: string, title = "QR visita") => {
     if (!qrValue) return;
-    const printWindow = window.open("", "_blank", "width=420,height=720");
-    if (!printWindow) return;
-    const qrImage = `<img src="https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrValue)}" width="220" height="220" alt="QR" />`;
-    printWindow.document.write(`<!doctype html><html><head><title>${title}</title><style>@page{size:${printerFormat}mm auto;margin:4mm;}body{font-family:Arial;text-align:center;}h3{font-size:14px;}</style></head><body><h3>${title}</h3>${qrImage}</body></html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+    const qrImage = `<img src="${renderQrAsDataUrl(qrValue)}" width="220" height="220" alt="QR" />`;
+    openPrintPreview({
+      title,
+      paperMm: printerFormat,
+      content: `<div class="ticket"><h3>${title}</h3>${qrImage}<p>${qrValue}</p></div>`,
+    });
   };
 
   const handlePrintVisitBatch = () => {
@@ -265,14 +356,19 @@ export const PosV2LoyaltyPage = () => {
       .map((item) => item.qrUrl || (item.token ? `${couponsDomain}/coupons/visits/redeem?token=${encodeURIComponent(item.token)}` : ""))
       .filter(Boolean);
     if (!values.length) return;
-    const printWindow = window.open("", "_blank", "width=520,height=900");
-    if (!printWindow) return;
-    const cards = values.map((value, index) => `<div style="border:1px dashed #cbd5e1;border-radius:8px;padding:8px;margin-bottom:8px;text-align:center;"><p style="font-size:12px;margin:4px 0;">QR ${index + 1}</p><img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(value)}" width="180" height="180" alt="QR"/></div>`).join("");
-    printWindow.document.write(`<!doctype html><html><head><title>Lote QR visitas</title><style>@page{size:${printerFormat}mm auto;margin:4mm;}body{font-family:Arial;}</style></head><body>${cards}</body></html>`);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-    printWindow.close();
+
+    const cards = values
+      .map((value, index) => {
+        const qrImage = `<img src="${renderQrAsDataUrl(value)}" width="220" height="220" alt="QR" />`;
+        return `<div class="ticket"><h3>QR ${index + 1}</h3>${qrImage}<p>${value}</p></div>`;
+      })
+      .join("");
+
+    openPrintPreview({
+      title: "Lote QR visitas",
+      paperMm: printerFormat,
+      content: cards,
+    });
   };
 
   const handleUpdateCoupon = async (event: FormEvent) => {
@@ -562,9 +658,15 @@ export const PosV2LoyaltyPage = () => {
                 </div>
                 <div className="pos-v2-loyalty__progress" aria-hidden="true">
                   <span
-                    style={{ width: `${maxTopVisits > 0 ? Math.round((visit.totalVisits / maxTopVisits) * 100) : 0}%` }}
+                    style={{ width: `${getVisitCycleProgress(visit.totalVisits, visit.minVisits).progressPercent}%` }}
                   />
                 </div>
+                <small>
+                  Ciclo actual: {getVisitCycleProgress(visit.totalVisits, visit.minVisits).cycleLabel}
+                  {getVisitCycleProgress(visit.totalVisits, visit.minVisits).minVisits > 0
+                    ? ` · recompensa cada ${getVisitCycleProgress(visit.totalVisits, visit.minVisits).minVisits} visitas`
+                    : ""}
+                </small>
                 <small>Última visita: {visit.lastVisit ? new Date(visit.lastVisit).toLocaleDateString("es-MX") : "N/A"}</small>
               </article>
             ))}
@@ -575,11 +677,15 @@ export const PosV2LoyaltyPage = () => {
         {(loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
           <h2>Visitas totales por cliente</h2>
           <div className="pos-v2-loyalty__detail">
-            {visitsByCustomer.map((item) => (
-              <p key={`total-${item.userId}`}>
-                {item.userName} · <strong>{item.totalVisits}</strong> visita(s)
-              </p>
-            ))}
+            {visitsByCustomer.map((item) => {
+              const cycle = getVisitCycleProgress(item.totalVisits, item.minVisits);
+              return (
+                <p key={`total-${item.userId}`}>
+                  {item.userName} · <strong>{item.totalVisits}</strong> visita(s)
+                  {cycle.minVisits > 0 ? ` · ciclo ${cycle.cycleLabel}` : ""}
+                </p>
+              );
+            })}
             {!loadingVisits && visitsByCustomer.length === 0 ? <p>No hay visitas registradas todavía.</p> : null}
           </div>
         </article> : null}
@@ -709,6 +815,12 @@ export const PosV2LoyaltyPage = () => {
                       <p>{visit.userName}</p>
                       <strong>{visit.totalVisits}</strong>
                     </div>
+                    <small>
+                      Ciclo: {getVisitCycleProgress(visit.totalVisits, visit.minVisits).cycleLabel}
+                      {getVisitCycleProgress(visit.totalVisits, visit.minVisits).completedRewards > 0
+                        ? ` · premios logrados: ${getVisitCycleProgress(visit.totalVisits, visit.minVisits).completedRewards}`
+                        : ""}
+                    </small>
                     <small>Última visita: {visit.lastVisit ? new Date(visit.lastVisit).toLocaleString("es-MX") : "N/A"}</small>
                   </article>
                 ))}

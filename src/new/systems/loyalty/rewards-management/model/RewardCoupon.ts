@@ -31,6 +31,7 @@ export class RewardVisit {
     public readonly date: string,
     public readonly visitCount: number,
     public readonly totalVisits: number,
+    public readonly minVisits: number = 0,
   ) {}
 }
 

@@ -79,22 +79,8 @@ const printHtmlDocument = (title: string, html: string): boolean => {
   const targetWindow = window.open(previewUrl, "_blank", mobile ? undefined : "noopener,noreferrer,width=820,height=960");
 
   if (targetWindow) {
-    if (mobile) {
-      targetWindow.focus();
-      window.setTimeout(() => URL.revokeObjectURL(previewUrl), 60_000);
-      return true;
-    }
-
-    const cleanup = () => URL.revokeObjectURL(previewUrl);
-    targetWindow.addEventListener("afterprint", () => {
-      cleanup();
-      targetWindow.close();
-    }, { once: true });
-    targetWindow.addEventListener("load", () => {
-      targetWindow.focus();
-      targetWindow.print();
-    }, { once: true });
-    window.setTimeout(cleanup, 60_000);
+    targetWindow.focus();
+    window.setTimeout(() => URL.revokeObjectURL(previewUrl), 60_000);
     return true;
   }
 
@@ -1153,6 +1139,13 @@ export const PosV2SalesHomePage = () => {
     const printableLines = sale.items
       .map((item) => `<li><span>${item.name} x${item.quantity}</span><strong>$${item.lineTotal.toFixed(2)}</strong></li>`)
       .join("");
+    const storeName = quoteBusinessName.trim() || "Mi negocio";
+    const saleDate = new Date(sale.createdAt);
+    const safeSaleDate = Number.isNaN(saleDate.getTime()) ? new Date() : saleDate;
+    const saleDateLabel = safeSaleDate.toLocaleDateString("es-MX");
+    const saleTimeLabel = safeSaleDate.toLocaleTimeString("es-MX");
+    const printDate = new Date();
+
     const html = `<!doctype html>
 <html>
   <head>
@@ -1161,22 +1154,32 @@ export const PosV2SalesHomePage = () => {
     <style>
       @page { size: ${resolvedPaper}mm auto; margin: 3mm; }
       * { box-sizing: border-box; }
-      body { margin: 0; font-family: Inter, Arial, sans-serif; color: #111827; }
-      .ticket { width: ${pageWidth}; padding: 2mm; }
+      body { margin: 0; font-family: Inter, Arial, sans-serif; color: #111827; background: #f8fafc; }
+      .preview-actions { position: sticky; top: 0; z-index: 2; display: flex; justify-content: center; padding: 8px; background: #111827; }
+      .preview-actions button { border: 0; border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; background: #22c55e; color: #052e16; }
+      .ticket { width: ${pageWidth}; padding: 2mm; margin: 8px auto; background: #fff; }
       h1 { margin: 0 0 2mm; font-size: 14px; text-align: center; }
       p { margin: 0 0 1.4mm; font-size: 11px; }
       ul { list-style: none; margin: 2mm 0; padding: 0; display: grid; gap: 1mm; }
       li { display: flex; justify-content: space-between; gap: 3mm; border-bottom: 1px dashed #d1d5db; padding-bottom: 1mm; font-size: 11px; }
       .total { font-size: 12px; font-weight: 700; margin-top: 1.6mm; }
       .meta { font-size: 10px; color: #4b5563; }
+      @media print {
+        body { background: #fff; }
+        .preview-actions { display: none; }
+        .ticket { margin: 0 auto; }
+      }
     </style>
   </head>
   <body>
+    <div class="preview-actions"><button type="button" onclick="window.print()">Imprimir ticket</button></div>
     <section class="ticket">
       <h1>Ticket de venta</h1>
-      <p class="meta">Impresora: ${defaultPrinter?.name ?? "No configurada"} · ${resolvedPaper} mm</p>
+      <p><strong>Tienda:</strong> ${storeName}</p>
       <p><strong>Folio:</strong> ${sale.folio}</p>
-      <p><strong>Fecha:</strong> ${new Date(sale.createdAt).toLocaleString("es-MX")}</p>
+      <p><strong>Fecha:</strong> ${saleDateLabel}</p>
+      <p><strong>Hora:</strong> ${saleTimeLabel}</p>
+      <p><strong>Impresión:</strong> ${printDate.toLocaleString("es-MX")}</p>
       <p><strong>Mesa:</strong> ${sale.table}</p>
       <p><strong>Método:</strong> ${sale.paymentMethodLabel}</p>
       <p><strong>Cliente:</strong> ${sale.customerName ?? "General"}</p>

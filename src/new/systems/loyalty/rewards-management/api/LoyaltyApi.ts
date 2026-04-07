@@ -37,6 +37,8 @@ type VisitResponse = {
   Date?: string;
   VisitCount?: number;
   TotalVisits?: number;
+  MinVisits?: number;
+  minVisits?: number;
 };
 
 type VisitQrTokenResponse = {
@@ -282,6 +284,7 @@ export class LoyaltyApi implements IRewardRepository {
     const userName = String(response.UserName ?? "").trim();
     const visitCount = Number(response.VisitCount ?? 0);
     const totalVisits = Number(response.TotalVisits ?? visitCount);
+    const minVisits = Number(response.MinVisits ?? response.minVisits ?? 0);
     const createdAt = String(response.Date ?? new Date().toISOString());
     const id = Number(response.Id ?? Date.now());
 
@@ -297,6 +300,7 @@ export class LoyaltyApi implements IRewardRepository {
       createdAt,
       visitCount,
       Number.isFinite(totalVisits) ? totalVisits : visitCount,
+      Number.isFinite(minVisits) && minVisits > 0 ? minVisits : 0,
     );
   }
 }
