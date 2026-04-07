@@ -1,14 +1,29 @@
-import React, { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useMemo } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import cuponsito from "../assets/cuponsito.png";
 import { CuponesNav } from "../interface/CouponsNav";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { getCuponesUserName, hasCuponesSession } from "../services/session";
 
+type SuccessNavigationState = {
+  title?: string;
+  subtitle?: string;
+  detail?: string;
+};
+
 const SuccessPage: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const userName = getCuponesUserName();
   const { theme } = useCouponsTheme();
+  const successState = useMemo(() => {
+    const state = (location.state as SuccessNavigationState | null) ?? null;
+    return {
+      title: state?.title?.trim() || "Venta completada",
+      subtitle: state?.subtitle?.trim() || "El cupón se aplicó correctamente y quedó registrado.",
+      detail: state?.detail?.trim() || "QR: QR-AB12C-9F4D · Cupón validado",
+    };
+  }, [location.state]);
 
   useEffect(() => {
     if (!hasCuponesSession()) {
@@ -57,9 +72,9 @@ const SuccessPage: React.FC = () => {
             >
               <span className="text-3xl">✅</span>
             </div>
-            <p className="mt-4 text-xl font-extrabold">Venta completada</p>
+            <p className="mt-4 text-xl font-extrabold">{successState.title}</p>
             <p className="mt-2 text-sm" style={{ color: theme.textMuted }}>
-              El cupón se aplicó correctamente y quedó registrado.
+              {successState.subtitle}
             </p>
           </section>
 
@@ -76,9 +91,7 @@ const SuccessPage: React.FC = () => {
               </span>
             </div>
             <div className="mt-3 space-y-2 text-sm font-semibold" style={{ color: theme.textMuted }}>
-              <p>QR: QR-AB12C-9F4D</p>
-              <p>Cupón: 2x1 en salchitacos</p>
-              <p>Redención: 1 usuario</p>
+              <p>{successState.detail}</p>
             </div>
           </section>
 

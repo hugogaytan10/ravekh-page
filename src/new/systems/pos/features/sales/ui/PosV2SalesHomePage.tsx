@@ -1176,6 +1176,7 @@ export const PosV2SalesHomePage = () => {
     <section class="ticket">
       <h1>Ticket de venta</h1>
       <p><strong>Tienda:</strong> ${storeName}</p>
+      <p class="meta">Formato: ${resolvedPaper} mm</p>
       <p><strong>Folio:</strong> ${sale.folio}</p>
       <p><strong>Fecha:</strong> ${saleDateLabel}</p>
       <p><strong>Hora:</strong> ${saleTimeLabel}</p>

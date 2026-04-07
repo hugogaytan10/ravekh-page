@@ -4,6 +4,8 @@ import cuponsito from "../assets/cuponsito.png";
 import { useCouponsTheme } from "../interface/useCouponsTheme";
 import { redeemCouponByUser } from "../services/couponsApi";
 import { getCuponesRole, getCuponesUserName, hasCuponesSession } from "../services/session";
+import { readPosSessionSnapshot, resolvePosOperatorRole } from "../../../../pos/shared/config/posSession";
+import { POS_V2_PATHS } from "../../../../pos/routing/PosV2Paths";
 
 const CouponWebRedeemPage: React.FC = () => {
   const navigate = useNavigate();
@@ -15,13 +17,17 @@ const CouponWebRedeemPage: React.FC = () => {
   const userId = useMemo(() => Number(searchParams.get("userId")), [searchParams]);
 
   const isValidPayload = Number.isInteger(couponId) && couponId > 0 && Number.isInteger(userId) && userId > 0;
-  const isAdmin = getCuponesRole().toUpperCase() === "ADMINISTRADOR";
+  const legacyCouponsAdmin = getCuponesRole().toUpperCase() === "ADMINISTRADOR";
+  const posSession = readPosSessionSnapshot();
+  const posRole = resolvePosOperatorRole(posSession.token);
+  const hasPosSession = posSession.token.length > 0 && Number.isFinite(posSession.businessId) && posSession.businessId > 0;
+  const canRedeemFromWeb = legacyCouponsAdmin || posRole === "admin" || posRole === "manager" || posRole === "staff";
 
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [message, setMessage] = useState("");
 
   useEffect(() => {
-    if (!hasCuponesSession()) {
+    if (!hasCuponesSession() && !hasPosSession) {
       navigate("/login-punto-venta", {
         replace: true,
         state: { redirectTo: window.location.pathname + window.location.search }
@@ -29,9 +35,9 @@ const CouponWebRedeemPage: React.FC = () => {
       return;
     }
 
-    if (!isAdmin) {
+    if (!canRedeemFromWeb) {
       setStatus("error");
-      setMessage("Solo un usuario con rol ADMINISTRADOR puede reclamar coupons desde la web.");
+      setMessage("Necesitas iniciar sesión en POS con rol ADMINISTRADOR, GERENTE o AYUDANTE para canjear en web.");
       return;
     }
 
@@ -54,8 +60,26 @@ const CouponWebRedeemPage: React.FC = () => {
           return;
         }
 
+        const successMessage = `Felicidades, se canjeó con éxito el cupón #${couponId}.`;
         setStatus("success");
-        setMessage("El cupón fue reclamado correctamente.");
+        setMessage(successMessage);
+
+        if (hasPosSession) {
+          navigate(POS_V2_PATHS.loyalty, {
+            replace: true,
+            state: { webCouponRedeemSuccess: successMessage },
+          });
+          return;
+        }
+
+        navigate("/coupons/admin/success", {
+          replace: true,
+          state: {
+            title: "Felicidades",
+            subtitle: "Se canjeó con éxito el cupón.",
+            detail: `Cupón #${couponId} · Usuario #${userId}`,
+          },
+        });
       } catch (error) {
         if (!isMounted) {
           return;
@@ -71,7 +95,7 @@ const CouponWebRedeemPage: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [couponId, isAdmin, isValidPayload, navigate, userId]);
+  }, [canRedeemFromWeb, couponId, hasPosSession, isValidPayload, navigate, userId]);
 
   return (
     <div

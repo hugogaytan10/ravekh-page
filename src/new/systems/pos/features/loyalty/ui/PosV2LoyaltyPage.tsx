@@ -7,6 +7,7 @@ import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import QRCode from "../../../../loyalty/features/coupons/lib/QRCode";
 import QRErrorCorrectLevel from "../../../../loyalty/features/coupons/lib/QRCode/QRErrorCorrectLevel";
+import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
 import "./PosV2LoyaltyPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -312,9 +313,9 @@ export const PosV2LoyaltyPage = () => {
   }, []);
 
   const couponsDomain = useMemo(() => {
-    if (typeof window !== "undefined") {
-      return window.location.hostname.includes("localhost") ? "http://localhost:5173" : "https://ravekh.com";
-    }
+    const configuredDomain = WEB_COUPONS_DOMAIN.trim();
+    if (configuredDomain) return configuredDomain.replace(/\/$/, "");
+    if (typeof window !== "undefined") return window.location.origin;
     return "https://ravekh.com";
   }, []);
 
@@ -422,6 +423,13 @@ export const PosV2LoyaltyPage = () => {
     const timeout = window.setTimeout(() => setToast(""), 3500);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => {
+    const state = (location.state as { webCouponRedeemSuccess?: string } | null) ?? null;
+    const message = state?.webCouponRedeemSuccess?.trim();
+    if (!message) return;
+    setToast(message);
+  }, [location.state]);
 
   useEffect(() => {
     if (!session.hasSession || (loyaltyView !== "all" && loyaltyView !== "coupons")) return;
