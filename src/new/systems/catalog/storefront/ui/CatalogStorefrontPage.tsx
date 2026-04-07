@@ -235,15 +235,13 @@ export const CatalogStorefrontPage = () => {
       size?.description ? `Talla: ${size.description}` : "",
     ].filter(Boolean).join(" · ");
 
-    setCart((current) => {
-      const existing = current.find((item) => (item.cartKey ?? String(item.productId)) === cartKey);
-      if (existing) {
-        return current.map((item) =>
-          (item.cartKey ?? String(item.productId)) === cartKey ? { ...item, quantity: item.quantity + quantity } : item,
-        );
-      }
-      return [
-        ...current,
+    const existing = cart.find((item) => (item.cartKey ?? String(item.productId)) === cartKey);
+    const nextCart = existing
+      ? cart.map((item) =>
+        (item.cartKey ?? String(item.productId)) === cartKey ? { ...item, quantity: item.quantity + quantity } : item,
+      )
+      : [
+        ...cart,
         {
           cartKey,
           productId: productIdToStore,
@@ -259,7 +257,11 @@ export const CatalogStorefrontPage = () => {
           image: variantProduct.image,
         },
       ];
-    });
+
+    setCart(nextCart);
+    if (businessId) {
+      window.localStorage.setItem(`catalog-v2-cart:${businessId}`, JSON.stringify(nextCart));
+    }
 
     setVariantModalOpen(false);
     setVariantProduct(null);
