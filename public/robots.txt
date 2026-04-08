@@ -1,0 +1,11 @@
+User-agent: *
+Allow: /
+
+# Rutas privadas / operativas
+Disallow: /pos
+Disallow: /v2/pos
+Disallow: /coupons
+Disallow: /cupones
+Disallow: /cuponespv
+
+Sitemap: https://ravekh.com/sitemap.xml
