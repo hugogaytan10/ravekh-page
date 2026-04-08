@@ -1,0 +1,229 @@
+.pos-v2-cash-closing {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.pos-v2-cash-closing__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.pos-v2-cash-closing__header h2 {
+  margin: 0;
+}
+
+.pos-v2-cash-closing__header p {
+  margin: 0.35rem 0 0;
+  color: #64748b;
+}
+
+.pos-v2-cash-closing__header button,
+.pos-v2-cash-closing__form button {
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  min-height: 38px;
+  padding: 0.45rem 0.8rem;
+  background: #0f172a;
+  color: #fff;
+  font-weight: 700;
+}
+
+.pos-v2-cash-closing__header button:disabled,
+.pos-v2-cash-closing__form button:disabled {
+  opacity: 0.65;
+}
+
+.pos-v2-cash-closing__card {
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 0.9rem;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.pos-v2-cash-closing__card h3,
+.pos-v2-cash-closing__card p {
+  margin: 0;
+}
+
+.pos-v2-cash-closing__form {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.pos-v2-cash-closing__form label {
+  display: grid;
+  gap: 0.25rem;
+  font-size: 0.86rem;
+  color: #334155;
+  font-weight: 600;
+}
+
+.pos-v2-cash-closing__form input,
+.pos-v2-cash-closing__form select {
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  padding: 0.45rem 0.65rem;
+}
+
+.pos-v2-cash-closing__grid {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.pos-v2-cash-closing__history {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.pos-v2-cash-closing__history li {
+  border: 1px solid #e2e8f0;
+  background: #f8fafc;
+  border-radius: 10px;
+  padding: 0.55rem 0.65rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pos-v2-cash-closing__history li div {
+  display: grid;
+  gap: 0.15rem;
+}
+
+.pos-v2-cash-closing__history li small {
+  color: #64748b;
+}
+
+.pos-v2-cash-closing__history li.is-empty {
+  justify-content: center;
+  color: #64748b;
+}
+
+.pos-v2-cash-closing__current {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.pos-v2-cash-closing__error,
+.pos-v2-cash-closing__toast,
+.pos-v2-cash-closing__warning {
+  margin: 0;
+  border-radius: 10px;
+  padding: 0.65rem 0.75rem;
+}
+
+.pos-v2-cash-closing__error {
+  border: 1px solid #fecaca;
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.pos-v2-cash-closing__toast {
+  border: 1px solid #bbf7d0;
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.pos-v2-cash-closing__warning {
+  border: 1px solid #fde68a;
+  background: #fffbeb;
+  color: #92400e;
+}
+
+.pos-v2-cash-closing__hint {
+  margin: 0;
+  color: #475569;
+}
+
+.is-equal {
+  color: #166534;
+  font-weight: 700;
+}
+
+.is-positive {
+  color: #6d28d9;
+  font-weight: 700;
+}
+
+.is-negative {
+  color: #b91c1c;
+  font-weight: 700;
+}
+
+@media (min-width: 1024px) {
+  .pos-v2-cash-closing__grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+:root[data-theme="dark"] .pos-v2-cash-closing__header p,
+:root[data-theme="dark"] .pos-v2-cash-closing__history li small,
+:root[data-theme="dark"] .pos-v2-cash-closing__history li.is-empty,
+:root[data-theme="dark"] .pos-v2-cash-closing__form label {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-cash-closing__card,
+:root[data-theme="dark"] .pos-v2-cash-closing__history li {
+  background: #111827;
+  border-color: #374151;
+}
+
+:root[data-theme="dark"] .pos-v2-cash-closing__form input,
+:root[data-theme="dark"] .pos-v2-cash-closing__form select {
+  background: #0f172a;
+  border-color: #475569;
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-cash-closing__header button,
+:root[data-theme="dark"] .pos-v2-cash-closing__form button {
+  background: #6f5cc6;
+  border-color: #c4b5fd;
+  color: #f5f3ff;
+}
+
+:root[data-theme="dark"] .pos-v2-cash-closing__error {
+  border-color: rgba(220, 38, 38, 0.35);
+  background: rgba(127, 29, 29, 0.35);
+  color: #fecaca;
+}
+
+:root[data-theme="dark"] .pos-v2-cash-closing__toast {
+  border-color: rgba(22, 163, 74, 0.4);
+  background: rgba(20, 83, 45, 0.35);
+  color: #bbf7d0;
+}
+
+:root[data-theme="dark"] .pos-v2-cash-closing__warning {
+  border-color: rgba(245, 158, 11, 0.45);
+  background: rgba(146, 64, 14, 0.35);
+  color: #fde68a;
+}
+
+:root[data-theme="dark"] .pos-v2-cash-closing__hint {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .is-equal {
+  color: #86efac;
+}
+
+:root[data-theme="dark"] .is-positive {
+  color: #7dd3fc;
+}
+
+:root[data-theme="dark"] .is-negative {
+  color: #fda4af;
+}

@@ -1,0 +1,38 @@
+.pos-v2-catalog { display: grid; gap: 0.9rem; }
+.pos-v2-catalog__card { display: grid; gap: 0.75rem; border: 1px solid #e5e7eb; border-radius: 14px; background: #fff; padding: 0.9rem; }
+.pos-v2-catalog__card h2, .pos-v2-catalog__card h3, .pos-v2-catalog__card p { margin: 0; }
+.pos-v2-catalog__card header { display: grid; gap: 0.2rem; }
+.pos-v2-catalog__form { display: grid; gap: 0.5rem; }
+.pos-v2-catalog__form input,
+.pos-v2-catalog__form textarea { border: 1px solid #cbd5e1; border-radius: 10px; padding: 0.5rem 0.65rem; font: inherit; }
+.pos-v2-catalog__form textarea { resize: vertical; min-height: 88px; }
+.pos-v2-catalog__form button { min-height: 38px; border: 1px solid #cbd5e1; border-radius: 10px; background: #0f172a; color: #fff; font-weight: 700; }
+.pos-v2-catalog__list { display: grid; gap: 0.5rem; }
+.pos-v2-catalog__item { border: 1px solid #e2e8f0; border-radius: 10px; padding: 0.6rem; display: grid; gap: 0.25rem; }
+.pos-v2-catalog__item small { color: #64748b; }
+.pos-v2-catalog__error, .pos-v2-catalog__toast { margin: 0; border-radius: 10px; padding: 0.65rem 0.75rem; }
+.pos-v2-catalog__error { border: 1px solid #fecaca; background: #fef2f2; color: #991b1b; }
+.pos-v2-catalog__toast { border: 1px solid #bbf7d0; background: #f0fdf4; color: #166534; }
+
+:root[data-theme="dark"] .pos-v2-catalog__card,
+:root[data-theme="dark"] .pos-v2-catalog__item {
+  background: #111827;
+  border-color: #334155;
+}
+
+:root[data-theme="dark"] .pos-v2-catalog__form input,
+:root[data-theme="dark"] .pos-v2-catalog__form textarea,
+:root[data-theme="dark"] .pos-v2-catalog__form button {
+  border-color: #475569;
+  background: #0f172a;
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-catalog__form button {
+  background: linear-gradient(135deg, #5b21b6 0%, #6d28d9 100%);
+  border-color: #8b5cf6;
+}
+
+:root[data-theme="dark"] .pos-v2-catalog__item small { color: #cbd5e1; }
+:root[data-theme="dark"] .pos-v2-catalog__error { border-color: rgba(220, 38, 38, 0.35); background: rgba(127, 29, 29, 0.35); color: #fecaca; }
+:root[data-theme="dark"] .pos-v2-catalog__toast { border-color: rgba(22, 163, 74, 0.35); background: rgba(20, 83, 45, 0.35); color: #bbf7d0; }

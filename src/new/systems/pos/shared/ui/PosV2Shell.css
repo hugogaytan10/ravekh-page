@@ -1,0 +1,258 @@
+.pos-v2-shell {
+  --pos-v2-accent: #6d01d1;
+  --pos-v2-accent-strong: #4c1d95;
+  --pos-v2-accent-soft: #c4b5fd;
+  --pos-v2-bg-dark: #090014;
+  --pos-v2-surface-dark: #120826;
+  --pos-v2-border-dark: #312e81;
+  min-height: 100vh;
+  background: #f3f4f6;
+  color: #111827;
+  color-scheme: light;
+  padding-bottom: 72px;
+  overflow-x: hidden;
+}
+
+.pos-v2-shell__header {
+  background: linear-gradient(115deg, #6d01d1 0%, #7c3aed 45%, #9333ea 100%);
+  color: #fff;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.pos-v2-shell__back {
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.75rem;
+  padding: 0.22rem 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.pos-v2-shell__title {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  line-height: 1.2;
+}
+
+.pos-v2-shell__subtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  opacity: 0.95;
+}
+
+.pos-v2-shell__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.pos-v2-shell__theme-toggle {
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.73rem;
+  line-height: 1;
+  padding: 0.26rem 0.55rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.pos-v2-shell__theme-toggle-track {
+  width: 38px;
+  height: 20px;
+  border-radius: 9999px;
+  background: rgba(255, 255, 255, 0.42);
+  border: 1px solid rgba(255, 255, 255, 0.6);
+  display: inline-flex;
+  align-items: center;
+  padding: 1px;
+}
+
+.pos-v2-shell__theme-toggle-track.is-dark {
+  background: rgba(109, 1, 209, 0.8);
+}
+
+.pos-v2-shell__theme-toggle-thumb {
+  width: 15px;
+  height: 15px;
+  border-radius: 9999px;
+  background: #fff;
+  transition: transform .2s ease;
+}
+
+.pos-v2-shell__theme-toggle-track.is-dark .pos-v2-shell__theme-toggle-thumb {
+  transform: translateX(17px);
+}
+
+.pos-v2-shell__content {
+  padding: 1rem;
+  margin: 0 auto;
+  min-width: 0;
+}
+
+.pos-v2-shell__bottom-nav {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #fff;
+  border-top: 1px solid #e5e7eb;
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  z-index: 40;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.pos-v2-shell__nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  padding: 0.72rem 0.35rem;
+  color: #9ca3af;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: color .2s ease, background-color .2s ease;
+}
+
+.pos-v2-shell__nav-item.is-active {
+  color: var(--pos-v2-accent);
+  background: rgba(109, 1, 209, 0.07);
+}
+
+.pos-v2-shell__nav-item span {
+  line-height: 1;
+  text-align: center;
+}
+
+@media (min-width: 768px) {
+  .pos-v2-shell {
+    padding-bottom: 0;
+  }
+}
+
+@media (min-width: 1024px) {
+  .pos-v2-shell {
+    padding-left: 116px;
+  }
+
+  .pos-v2-shell__bottom-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 116px;
+    border-top: none;
+    border-right: 1px solid #e5e7eb;
+    grid-template-columns: 1fr;
+    grid-auto-rows: 74px;
+    background: #fff;
+    align-content: center;
+    gap: 0.2rem;
+    padding: 0.4rem;
+  }
+
+  .pos-v2-shell__nav-item {
+    font-size: 0.76rem;
+    border-radius: 12px;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 0.6rem;
+  }
+
+  .pos-v2-shell__nav-item.is-active {
+    background: rgba(109, 1, 209, 0.12);
+  }
+}
+
+/* Respect explicit light/dark theme toggles while keeping system fallback. */
+:root[data-theme="dark"] .pos-v2-shell {
+  background:
+    radial-gradient(circle at 8% -10%, rgba(167, 139, 250, 0.2), transparent 35%),
+    radial-gradient(circle at 100% 0%, rgba(192, 132, 252, 0.18), transparent 30%),
+    linear-gradient(180deg, #090014 0%, #0b1022 100%);
+  color: #f9fafb;
+  color-scheme: dark;
+}
+
+:root[data-theme="dark"] .pos-v2-shell__header {
+  background: linear-gradient(120deg, #2e1065 0%, #4c1d95 42%, #6d28d9 100%);
+  box-shadow: 0 12px 28px rgba(7, 0, 17, 0.45);
+}
+
+:root[data-theme="dark"] .pos-v2-shell__theme-toggle {
+  border-color: rgba(196, 181, 253, 0.5);
+  background: rgba(76, 29, 149, 0.5);
+}
+
+:root[data-theme="dark"] .pos-v2-shell__back {
+  border-color: rgba(196, 181, 253, 0.5);
+  background: rgba(76, 29, 149, 0.45);
+}
+
+:root[data-theme="dark"] .pos-v2-shell__bottom-nav {
+  background: rgba(18, 8, 38, 0.94);
+  border-color: rgba(124, 58, 237, 0.3);
+  backdrop-filter: blur(10px);
+}
+
+:root[data-theme="dark"] .pos-v2-shell__nav-item {
+  color: #c4b5fd;
+}
+
+:root[data-theme="dark"] .pos-v2-shell__nav-item.is-active {
+  color: #ede9fe;
+  background: rgba(139, 92, 246, 0.25);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .pos-v2-shell {
+    background:
+      radial-gradient(circle at 8% -10%, rgba(167, 139, 250, 0.2), transparent 35%),
+      radial-gradient(circle at 100% 0%, rgba(192, 132, 252, 0.18), transparent 30%),
+      linear-gradient(180deg, #090014 0%, #0b1022 100%);
+    color: #f9fafb;
+    color-scheme: dark;
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-shell__header {
+    background: linear-gradient(120deg, #2e1065 0%, #4c1d95 42%, #6d28d9 100%);
+    box-shadow: 0 12px 28px rgba(7, 0, 17, 0.45);
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-shell__theme-toggle {
+    border-color: rgba(196, 181, 253, 0.5);
+    background: rgba(76, 29, 149, 0.5);
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-shell__back {
+    border-color: rgba(196, 181, 253, 0.5);
+    background: rgba(76, 29, 149, 0.45);
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-shell__bottom-nav {
+    background: rgba(18, 8, 38, 0.94);
+    border-color: rgba(124, 58, 237, 0.3);
+    backdrop-filter: blur(10px);
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-shell__nav-item {
+    color: #c4b5fd;
+  }
+
+  :root:not([data-theme="light"]) .pos-v2-shell__nav-item.is-active {
+    color: #ede9fe;
+  }
+}

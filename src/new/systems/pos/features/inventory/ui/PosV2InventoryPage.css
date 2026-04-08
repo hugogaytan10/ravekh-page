@@ -1,0 +1,41 @@
+.pos-v2-inventory { display: grid; gap: 0.9rem; }
+.pos-v2-inventory__header { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.75rem; flex-wrap: wrap; }
+.pos-v2-inventory__header h2 { margin: 0; }
+.pos-v2-inventory__header p { margin: 0.35rem 0 0; color: #64748b; }
+.pos-v2-inventory__header button, .pos-v2-inventory__list button, .pos-v2-inventory__modal button {
+  border: 1px solid #cbd5e1; border-radius: 10px; min-height: 36px; padding: 0.45rem 0.7rem; background: #0f172a; color: #fff; font-weight: 700;
+}
+.pos-v2-inventory__summary { display: grid; gap: 0.6rem; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); }
+.pos-v2-inventory__summary article, .pos-v2-inventory__filters, .pos-v2-inventory__list li { border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; }
+.pos-v2-inventory__summary article { padding: 0.7rem; display: grid; gap: 0.15rem; }
+.pos-v2-inventory__summary small { color: #64748b; }
+.pos-v2-inventory__summary strong { font-size: 1rem; }
+.pos-v2-inventory__filters { padding: 0.75rem; display: grid; gap: 0.5rem; }
+.pos-v2-inventory__filters label { display: grid; gap: 0.25rem; color: #334155; font-weight: 600; font-size: 0.85rem; }
+.pos-v2-inventory__filters input, .pos-v2-inventory__modal input { border: 1px solid #cbd5e1; border-radius: 10px; min-height: 40px; padding: 0.45rem 0.65rem; }
+.pos-v2-inventory__list { margin: 0; padding: 0; list-style: none; display: grid; gap: 0.55rem; }
+.pos-v2-inventory__list li { padding: 0.7rem; display: flex; justify-content: space-between; align-items: center; gap: 0.7rem; }
+.pos-v2-inventory__list li div { display: grid; gap: 0.15rem; }
+.pos-v2-inventory__list li small { color: #64748b; }
+.pos-v2-inventory__list li.is-empty { justify-content: center; color: #64748b; }
+.pos-v2-inventory__item-actions { display: inline-flex; gap: 0.45rem; align-items: center; }
+.pos-v2-inventory__item-actions span { border-radius: 999px; font-size: 0.74rem; font-weight: 700; padding: 0.2rem 0.55rem; }
+.is-low { background: #fee2e2; color: #991b1b; }
+.is-ok { background: #dcfce7; color: #166534; }
+.pos-v2-inventory__modal { position: fixed; inset: 0; background: rgba(15, 23, 42, 0.56); display: grid; place-items: center; padding: 1rem; z-index: 70; }
+.pos-v2-inventory__modal form { width: min(460px, 100%); background: #fff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 0.9rem; display: grid; gap: 0.65rem; }
+.pos-v2-inventory__modal h3, .pos-v2-inventory__modal p { margin: 0; }
+.pos-v2-inventory__modal div { display: inline-flex; justify-content: flex-end; gap: 0.45rem; }
+.pos-v2-inventory__modal .is-secondary, .pos-v2-inventory__list button { background: #fff; color: #0f172a; }
+.pos-v2-inventory__error, .pos-v2-inventory__toast { margin: 0; border-radius: 10px; padding: 0.6rem 0.75rem; }
+.pos-v2-inventory__error { border: 1px solid #fecaca; background: #fef2f2; color: #991b1b; }
+.pos-v2-inventory__toast { border: 1px solid #bbf7d0; background: #f0fdf4; color: #166534; }
+:root[data-theme="dark"] .pos-v2-inventory__header p, :root[data-theme="dark"] .pos-v2-inventory__summary small, :root[data-theme="dark"] .pos-v2-inventory__list li small, :root[data-theme="dark"] .pos-v2-inventory__list li.is-empty, :root[data-theme="dark"] .pos-v2-inventory__filters label { color: #cbd5e1; }
+:root[data-theme="dark"] .pos-v2-inventory__summary article, :root[data-theme="dark"] .pos-v2-inventory__filters, :root[data-theme="dark"] .pos-v2-inventory__list li, :root[data-theme="dark"] .pos-v2-inventory__modal form { background: #111827; border-color: #374151; }
+:root[data-theme="dark"] .pos-v2-inventory__filters input, :root[data-theme="dark"] .pos-v2-inventory__modal input { background: #0f172a; border-color: #475569; color: #f8fafc; }
+:root[data-theme="dark"] .pos-v2-inventory__header button, :root[data-theme="dark"] .pos-v2-inventory__modal button { background: linear-gradient(135deg, #5b21b6 0%, #6d28d9 100%); border-color: #8b5cf6; color: #f5f3ff; }
+:root[data-theme="dark"] .pos-v2-inventory__modal .is-secondary, :root[data-theme="dark"] .pos-v2-inventory__list button { background: #0f172a; border-color: #475569; color: #e2e8f0; }
+:root[data-theme="dark"] .pos-v2-inventory__error { border-color: rgba(220, 38, 38, 0.35); background: rgba(127, 29, 29, 0.35); color: #fecaca; }
+:root[data-theme="dark"] .pos-v2-inventory__toast { border-color: rgba(22, 163, 74, 0.4); background: rgba(20, 83, 45, 0.35); color: #bbf7d0; }
+:root[data-theme="dark"] .is-low { background: rgba(220, 38, 38, 0.25); color: #fecaca; }
+:root[data-theme="dark"] .is-ok { background: rgba(34, 197, 94, 0.2); color: #86efac; }
