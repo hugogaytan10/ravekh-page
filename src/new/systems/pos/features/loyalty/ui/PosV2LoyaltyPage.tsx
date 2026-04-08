@@ -680,74 +680,8 @@ export const PosV2LoyaltyPage = () => {
             ))}
             {!loadingVisits && topClients.length === 0 ? <p>Aún no hay datos para top de clientes.</p> : null}
           </div>
-        </article> : null}
-
-        {(loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
-          <h2>Visitas totales por cliente</h2>
-          <div className="pos-v2-loyalty__detail">
-            {visitsByCustomer.map((item) => {
-              const cycle = getVisitCycleProgress(item.totalVisits, item.minVisits);
-              return (
-                <p key={`total-${item.userId}`}>
-                  {item.userName} · <strong>{item.totalVisits}</strong> visita(s)
-                  {cycle.minVisits > 0 ? ` · ciclo ${cycle.cycleLabel}` : ""}
-                </p>
-              );
-            })}
-            {!loadingVisits && visitsByCustomer.length === 0 ? <p>No hay visitas registradas todavía.</p> : null}
-          </div>
-        </article> : null}
-
-        {(loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
-          <h2>Historial de visitas</h2>
-          <div className="pos-v2-loyalty__form">
-            <label>
-              Buscar cliente por nombre/ID
-              <input value={visitQuery} onChange={(event) => setVisitQuery(event.target.value)} placeholder="Ej. Juan o 123" />
-            </label>
-          </div>
-          <div className="pos-v2-loyalty__detail">
-            <p><strong>Historial:</strong> {loadingVisits ? "cargando..." : `${filteredVisits.length} registro(s)`}</p>
-            {filteredVisits.slice(0, 8).map((visit, index) => (
-              <p key={`${visit.userId}-${visit.date}-${index}`}>
-                {visit.userName || `Usuario ${visit.userId || "-"}`} · +{visit.visitCount} visita(s) · Total: {visit.totalVisits} · {new Date(visit.date).toLocaleString("es-MX")}
-              </p>
-            ))}
-            {!loadingVisits && filteredVisits.length === 0 ? <p>No hay visitas registradas para ese filtro.</p> : null}
-          </div>
-        </article> : null}
-        {isVisitFilterOpen ? (
-          <section className="pos-v2-loyalty__modal" role="dialog" aria-modal="true" aria-label="Filtros de visitas">
-            <div className="pos-v2-loyalty__modal-card">
-              <div className="pos-v2-loyalty__modal-head">
-                <h3>Ordenar top clientes</h3>
-                <button type="button" onClick={() => setIsVisitFilterOpen(false)} aria-label="Cerrar filtros">×</button>
-              </div>
-              <p>Selecciona cómo quieres ordenar el listado.</p>
-              <button
-                type="button"
-                className={topClientsSort === "mostFrequent" ? "is-active" : ""}
-                onClick={() => {
-                  setTopClientsSort("mostFrequent");
-                  setIsVisitFilterOpen(false);
-                }}
-              >
-                Más frecuentes
-              </button>
-              <button
-                type="button"
-                className={topClientsSort === "leastFrequent" ? "is-active" : ""}
-                onClick={() => {
-                  setTopClientsSort("leastFrequent");
-                  setIsVisitFilterOpen(false);
-                }}
-              >
-                Menos frecuentes
-              </button>
-            </div>
-          </section>
-        ) : null}
-
+        </article> : null}   
+      
         {isCouponsModalOpen ? (
           <section className="pos-v2-loyalty__modal" role="dialog" aria-modal="true" aria-label="Mis coupons">
             <div className="pos-v2-loyalty__modal-card pos-v2-loyalty__modal-card--wide">
