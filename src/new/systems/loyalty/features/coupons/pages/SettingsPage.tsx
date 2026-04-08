@@ -29,6 +29,20 @@ const SettingsPage: React.FC = () => {
   const userName = getCuponesUserName();
   const { theme, themeMode, preference, setThemePreference } = useCouponsTheme();
 
+  const clearCuponesSession = () => {
+    [
+      'color',
+      'cupones-business-id',
+      'cupones-name',
+      'cupones-role',
+      'cupones-token',
+      'cupones-user-id',
+      'idBusiness',
+      'nombre',
+      'telefono',
+    ].forEach(k => localStorage.removeItem(k));
+  };
+
   useEffect(() => {
     if (!hasCuponesSession()) {
       navigate("/coupons", { replace: true });
@@ -128,7 +142,8 @@ const SettingsPage: React.FC = () => {
             style={{ backgroundColor: theme.accent, color: theme.textPrimary, borderColor: theme.border }}
             onClick={() => {
               setCuponesSession(false);
-              navigate("/coupons", { replace: true });
+              clearCuponesSession(); // Remove the user data from local storage 
+              navigate("/cupones", { replace: true });
             }}
           >
             <span>Cerrar sesión</span>
