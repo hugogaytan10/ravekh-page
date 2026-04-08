@@ -19,6 +19,20 @@ export const LandingPageRavekhPage = (): JSX.Element => {
   const [statusBarColor, setStatusBarColor] = useState<string>("#6D01D1");
   const [isSystemsMenuOpen, setIsSystemsMenuOpen] = useState(false);
   const [isSystemsMenuClosing, setIsSystemsMenuClosing] = useState(false);
+  const pageTitle = "Ravekh | Desarrollo de software, POS y fidelización";
+  const pageDescription = "Creamos software a la medida: punto de venta (POS), fidelización de clientes y soluciones web para escalar tu negocio.";
+  const seoKeywords = "software a medida, sistema POS, fidelización de clientes, desarrollo web, Ravekh";
+  const canonicalUrl = typeof window !== "undefined" ? `${window.location.origin}/` : "/";
+  const previewImage = typeof window !== "undefined" ? `${window.location.origin}/ravekh.png` : "/ravekh.png";
+  const organizationJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "Organization",
+    name: "Ravekh",
+    url: canonicalUrl,
+    logo: previewImage,
+    sameAs: ["https://api.whatsapp.com/send?phone=524451113370"],
+    description: pageDescription,
+  };
 
   useEffect(() => {
     const container = containerRef.current;
@@ -100,7 +114,24 @@ export const LandingPageRavekhPage = (): JSX.Element => {
   return (
     <HelmetProvider>
       <Helmet>
+        <title>{pageTitle}</title>
+        <meta name="description" content={pageDescription} />
+        <meta name="keywords" content={seoKeywords} />
+        <meta name="robots" content="index,follow,max-image-preview:large" />
+        <link rel="canonical" href={canonicalUrl} />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Ravekh" />
+        <meta property="og:title" content={pageTitle} />
+        <meta property="og:description" content={pageDescription} />
+        <meta property="og:url" content={canonicalUrl} />
+        <meta property="og:image" content={previewImage} />
+        <meta property="og:locale" content="es_MX" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={pageTitle} />
+        <meta name="twitter:description" content={pageDescription} />
+        <meta name="twitter:image" content={previewImage} />
         <meta name="theme-color" content={statusBarColor} />
+        <script type="application/ld+json">{JSON.stringify(organizationJsonLd)}</script>
       </Helmet>
 
       <div

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { FiCreditCard, FiDollarSign, FiGrid, FiRepeat, FiShoppingBag, FiTrash2 } from "react-icons/fi";
 import { jwtDecode } from "jwt-decode";
@@ -122,6 +122,28 @@ type VariantApiResponse = {
   Price?: number | null;
   PromotionPrice?: number | null;
   Stock?: number | null;
+};
+type TableProductApiResponse = {
+  Id?: number | null;
+  Table_Id?: number | null;
+  Product_Id?: number | null;
+  Variant_Id?: number | null;
+  Quantity?: number | null;
+};
+type TableProductDetailApiResponse = {
+  Id?: number | null;
+  Product_Id?: number | null;
+  Variant_Id?: number | null;
+  Quantity?: number | null;
+  ProductName?: string | null;
+  Name?: string | null;
+  VariantName?: string | null;
+  Description?: string | null;
+  Price?: number | null;
+  VariantPrice?: number | null;
+  ProductPrice?: number | null;
+  Price1?: number | null;
+  ProductId?: number | null;
 };
 type TableApiResponse = {
   Id?: number | null;
@@ -269,6 +291,8 @@ export const PosV2SalesHomePage = () => {
   const [variantsCache, setVariantsCache] = useState<Record<number, SaleVariantVm[]>>({});
   const [uiMessage, setUiMessage] = useState<string>("");
   const [variantModalError, setVariantModalError] = useState<string | null>(null);
+  const loadingTableDraftRef = useRef(false);
+  const skippingDraftSyncRef = useRef(false);
 
   const debugLog = (...args: unknown[]) => {
     if (window.localStorage.getItem(DEBUG_KEY) === "true") {
@@ -669,6 +693,157 @@ export const PosV2SalesHomePage = () => {
     () => visibleTables.find((table) => String(table.id) === selectedTableId)?.name ?? "Sin mesa",
     [visibleTables, selectedTableId],
   );
+
+  const resolveCartItemFromTableDraft = (
+    row: TableProductDetailApiResponse,
+    productCatalog?: SaleItemVm,
+  ): CartItemVm | null => {
+    const directProductId = Number(row.Product_Id ?? row.ProductId ?? 0);
+    const fallbackId = Number(row.Id ?? 0);
+    const productId = Number.isFinite(directProductId) && directProductId > 0
+      ? directProductId
+      : Number.isFinite(fallbackId) && fallbackId > 0
+        ? fallbackId
+        : 0;
+    if (!Number.isFinite(productId) || productId <= 0) return null;
+
+    const variantIdCandidate = Number(row.Variant_Id);
+    const variantId = Number.isFinite(variantIdCandidate) && variantIdCandidate > 0 ? variantIdCandidate : null;
+    const quantityCandidate = Number(row.Quantity ?? 1);
+    const quantity = Number.isFinite(quantityCandidate) && quantityCandidate > 0 ? Math.floor(quantityCandidate) : 1;
+
+    const variantFromCatalog = variantId !== null
+      ? productCatalog?.variants.find((item) => item.id === variantId) ?? null
+      : null;
+
+    const fallbackName = String(row.ProductName ?? row.Name ?? "").trim();
+    const fallbackVariantLabel = String(row.VariantName ?? row.Description ?? "").trim();
+    const rawPrice = Number(row.VariantPrice ?? row.Price ?? row.Price1 ?? row.ProductPrice ?? productCatalog?.price ?? 0);
+    const safePrice = Number.isFinite(rawPrice) && rawPrice >= 0 ? rawPrice : 0;
+    const variantLabel = variantFromCatalog
+      ? toVariantLabel(variantFromCatalog)
+      : fallbackVariantLabel.length > 0
+        ? fallbackVariantLabel
+        : null;
+
+    const cartKey = toCartKey(productId, variantId);
+    return {
+      cartKey,
+      productId,
+      name: productCatalog?.name ?? (fallbackName || `Producto #${productId}`),
+      price: variantFromCatalog?.price ?? safePrice,
+      quantity,
+      variantId,
+      variantLabel,
+      colorId: null,
+      sizeId: null,
+      colorLabel: variantFromCatalog?.color ?? null,
+      sizeLabel: variantFromCatalog?.size ?? null,
+    };
+  };
+
+  useEffect(() => {
+    const { token } = getCurrentSession();
+    if (!token || !selectedTableId) return;
+
+    const tableId = Number(selectedTableId);
+    if (!Number.isFinite(tableId) || tableId <= 0) return;
+
+    const headers = {
+      "Content-Type": "application/json",
+      token,
+      Authorization: `Bearer ${token}`,
+    };
+
+    loadingTableDraftRef.current = true;
+    skippingDraftSyncRef.current = true;
+
+    fetch(new URL(`table_products/products/${tableId}`, API_BASE_URL).toString(), { headers })
+      .then(async (response) => {
+        if (!response.ok) {
+          throw new Error(`No se pudo cargar borrador de mesa (${response.status}).`);
+        }
+
+        const payload = (await response.json().catch(() => [])) as TableProductDetailApiResponse[] | null;
+        const rows = Array.isArray(payload) ? payload : [];
+
+        const nextCart = rows.reduce<Record<string, CartItemVm>>((accumulator, row) => {
+          const productId = Number(row.Product_Id ?? row.ProductId ?? row.Id ?? 0);
+          const productCatalog = products.find((item) => item.id === productId);
+          const parsed = resolveCartItemFromTableDraft(row, productCatalog);
+          if (!parsed) return accumulator;
+          accumulator[parsed.cartKey] = parsed;
+          return accumulator;
+        }, {});
+
+        setCart(nextCart);
+      })
+      .catch((error) => {
+        console.error("[POS-V2-SALES] Error al cargar borrador de mesa", error);
+        setValidationError(error instanceof Error ? error.message : "No se pudo recuperar el borrador de la mesa.");
+      })
+      .finally(() => {
+        loadingTableDraftRef.current = false;
+        window.setTimeout(() => {
+          skippingDraftSyncRef.current = false;
+        }, 0);
+      });
+  }, [products, selectedTableId]);
+
+  useEffect(() => {
+    const { token } = getCurrentSession();
+    if (!token || !selectedTableId || loadingTableDraftRef.current || skippingDraftSyncRef.current) {
+      return;
+    }
+
+    const tableId = Number(selectedTableId);
+    if (!Number.isFinite(tableId) || tableId <= 0) return;
+
+    const headers = {
+      "Content-Type": "application/json",
+      token,
+      Authorization: `Bearer ${token}`,
+    };
+
+    const syncDraft = async () => {
+      const payload = Object.values(cart).map((item) => ({
+        Table_Id: tableId,
+        Product_Id: item.productId,
+        Variant_Id: item.variantId ?? undefined,
+        Quantity: item.quantity,
+      }));
+
+      if (payload.length === 0) {
+        const existingResponse = await fetch(new URL(`table_products/table/${tableId}`, API_BASE_URL).toString(), { headers });
+        const existingPayload = (await existingResponse.json().catch(() => [])) as TableProductApiResponse[] | null;
+        const existingRows = Array.isArray(existingPayload) ? existingPayload : [];
+        await Promise.all(
+          existingRows
+            .map((row) => Number(row.Id))
+            .filter((id) => Number.isFinite(id) && id > 0)
+            .map((id) => fetch(new URL(`table_products/${id}`, API_BASE_URL).toString(), {
+              method: "DELETE",
+              headers,
+            })),
+        );
+        return;
+      }
+
+      const response = await fetch(new URL("table_products", API_BASE_URL).toString(), {
+        method: "POST",
+        headers,
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        throw new Error(`No se pudo guardar borrador en mesa (${response.status}).`);
+      }
+    };
+
+    syncDraft().catch((error) => {
+      console.error("[POS-V2-SALES] Error al sincronizar borrador de mesa", error);
+    });
+  }, [cart, selectedTableId]);
 
   const totals = useMemo(() => {
     const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
@@ -1105,6 +1280,38 @@ export const PosV2SalesHomePage = () => {
         createdAt: new Date().toISOString(),
         items: printableItems,
       });
+      if (selectedTableId) {
+        const tableId = Number(selectedTableId);
+        if (Number.isFinite(tableId) && tableId > 0) {
+          fetch(new URL(`table_products/table/${tableId}`, API_BASE_URL).toString(), {
+            headers: {
+              "Content-Type": "application/json",
+              token,
+              Authorization: `Bearer ${token}`,
+            },
+          })
+            .then(async (response) => {
+              const payload = (await response.json().catch(() => [])) as TableProductApiResponse[] | null;
+              const rows = Array.isArray(payload) ? payload : [];
+              await Promise.all(
+                rows
+                  .map((row) => Number(row.Id))
+                  .filter((id) => Number.isFinite(id) && id > 0)
+                  .map((id) => fetch(new URL(`table_products/${id}`, API_BASE_URL).toString(), {
+                    method: "DELETE",
+                    headers: {
+                      "Content-Type": "application/json",
+                      token,
+                      Authorization: `Bearer ${token}`,
+                    },
+                  })),
+              );
+            })
+            .catch((error) => {
+              console.error("[POS-V2-SALES] Error al limpiar borrador de mesa al finalizar venta", error);
+            });
+        }
+      }
       setCart({});
       setDiscountPercent("0");
       setMobileStep("catalog");
