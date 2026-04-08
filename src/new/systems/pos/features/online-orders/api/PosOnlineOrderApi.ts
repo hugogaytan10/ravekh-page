@@ -19,12 +19,26 @@ type UpdateOrderStatusResponse = OrderCatalogResponse | {
 };
 
 type OrderDetailItemResponse = {
-  Id?: number;
-  Name?: string;
-  Price?: number;
-  Item_Quantity?: number;
-  Image?: string;
-  Images?: string[];
+  Item_Id: number;
+  Item_Name: string;
+  Item_Price: number;
+  Item_Stock: number;
+  Item_Image: string;
+  Item_Description: string;
+  Item_CostPerItem?: number;
+  Item_Quantity: number;
+  Item_PriceTaxes: number | string;
+  Item_Notes: string;
+  Item_Type: "Product" | "Variant" | string;
+  Employee_Name: string;
+  Customer_Name: string;
+  Category_Id?: number;
+  Category_Name?: string;
+  Color_Id?: number;
+  Color_Name?: string;
+  Size_Id?: number;
+  Size_Name?: string;
+  MoneyTipe?: string;
 };
 
 export class PosOnlineOrderApi implements IOnlineOrderRepository {
@@ -44,18 +58,37 @@ export class PosOnlineOrderApi implements IOnlineOrderRepository {
   }
 
   async getById(orderId: number, token: string): Promise<OnlineOrder> {
-    const response = await this.httpClient.request<
-      | OrderCatalogResponse
-      | { order?: OrderCatalogResponse; orderDetails?: OrderDetailItemResponse[] }
-    >({
+    const response = await this.httpClient.request<OrderDetailItemResponse[] | null>({
       method: "GET",
-      path: `ordersCatalog/details/${orderId}`,
+      path: `products/ordercatalog/${orderId}`,
       token,
     });
 
-    const order = "order" in response && response.order ? response.order : response;
-    const details = "orderDetails" in response && Array.isArray(response.orderDetails) ? response.orderDetails : [];
-    return this.toDomain(order, details);
+    const details = Array.isArray(response) ? response : [];
+    const total = details.reduce((acc, detail) => {
+      const unitPrice = Number(detail.Item_PriceTaxes ?? detail.Item_Price ?? 0);
+      const quantity = Number(detail.Item_Quantity ?? 0);
+      return acc + unitPrice * quantity;
+    }, 0);
+
+    return new OnlineOrder(
+      orderId,
+      0,
+      "PEDIDO",
+      "Guest",
+      total,
+      "",
+      "",
+      "",
+      details.map((detail, index) => ({
+        id: Number(detail.Item_Id ?? index),
+        name: this.toItemName(detail),
+        price: Number(detail.Item_PriceTaxes ?? detail.Item_Price ?? 0),
+        quantity: Number(detail.Item_Quantity ?? 0),
+        image: detail.Item_Image ?? "",
+        itemType: detail.Item_Type ?? "",
+      })),
+    );
   }
 
   async updateStatus(orderId: number, payload: UpdateOnlineOrderStatusDto, token: string): Promise<OnlineOrder> {
@@ -91,11 +124,12 @@ export class PosOnlineOrderApi implements IOnlineOrderRepository {
 
   private toDomain(order: OrderCatalogResponse, details: OrderDetailItemResponse[] = []): OnlineOrder {
     const items: OnlineOrderItem[] = details.map((detail, index) => ({
-      id: Number(detail.Id ?? index),
-      name: detail.Name ?? "Producto",
-      price: Number(detail.Price ?? 0),
+      id: Number(detail.Item_Id ?? index),
+      name: this.toItemName(detail),
+      price: Number(detail.Item_PriceTaxes ?? detail.Item_Price ?? 0),
       quantity: Number(detail.Item_Quantity ?? 0),
-      image: detail.Image || detail.Images?.[0] || "",
+      image: detail.Item_Image || "",
+      itemType: detail.Item_Type ?? "",
     }));
 
     return new OnlineOrder(
@@ -109,6 +143,21 @@ export class PosOnlineOrderApi implements IOnlineOrderRepository {
       order.PhoneNumber ?? "",
       items,
     );
+  }
+
+  private toItemName(detail: OrderDetailItemResponse): string {
+    const baseName = detail.Item_Name ?? "Producto";
+    const normalizedType = (detail.Item_Type ?? "").toLowerCase();
+    if (normalizedType !== "variant") {
+      return baseName;
+    }
+
+    const attributes = [detail.Color_Name, detail.Size_Name].filter((value) => value && value !== "N/A");
+    if (attributes.length === 0) {
+      return baseName;
+    }
+
+    return `${baseName} (${attributes.join(" · ")})`;
   }
 
   private extractOrderResponse(response: UpdateOrderStatusResponse): OrderCatalogResponse | null {

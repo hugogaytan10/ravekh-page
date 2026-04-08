@@ -114,8 +114,18 @@ export const PosV2OnlineOrdersPage = () => {
     setDetailLoading(true);
     setSelectedOrder(null);
     try {
+      const selectedFromList = orders.find((order) => order.id === orderId) ?? null;
       const detail = await page.loadOrderDetails(orderId, token);
-      setSelectedOrder(detail);
+      setSelectedOrder({
+        ...(selectedFromList ?? detail),
+        ...detail,
+        customerName: selectedFromList?.customerName ?? detail.customerName,
+        status: selectedFromList?.status ?? detail.status,
+        address: selectedFromList?.address ?? detail.address,
+        paymentMethod: selectedFromList?.paymentMethod ?? detail.paymentMethod,
+        phoneNumber: selectedFromList?.phoneNumber ?? detail.phoneNumber,
+        total: detail.total > 0 ? detail.total : (selectedFromList?.total ?? detail.total),
+      });
     } catch (cause) {
       setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo cargar el pedido." });
     } finally {
@@ -143,10 +153,10 @@ export const PosV2OnlineOrdersPage = () => {
 
   const summarizeItems = (items: OnlineOrderCardViewModel["items"] | null | undefined) => {
     if (!Array.isArray(items) || items.length === 0) return [];
-    const grouped = new Map<string, { name: string; quantity: number; price: number; image: string }>();
+    const grouped = new Map<string, { name: string; quantity: number; price: number; image: string; itemType: string }>();
 
     for (const item of items) {
-      const key = `${item.name}-${item.price}`;
+      const key = `${item.name}-${item.price}-${item.itemType ?? ""}`;
       const current = grouped.get(key);
       if (current) {
         current.quantity += item.quantity;
@@ -156,6 +166,7 @@ export const PosV2OnlineOrdersPage = () => {
           quantity: item.quantity,
           price: item.price,
           image: item.image,
+          itemType: item.itemType ?? "",
         });
       }
     }
@@ -288,6 +299,7 @@ export const PosV2OnlineOrdersPage = () => {
                             {item.image ? <img src={item.image} alt={item.name} /> : null}
                             <div>
                               <strong>{item.name}</strong>
+                              {item.itemType ? <small>{item.itemType === "Variant" ? "Variante" : "Producto"}</small> : null}
                               <small>{item.quantity} x {formatCurrency(item.price)}</small>
                             </div>
                             <span>{formatCurrency(item.price * item.quantity)}</span>
