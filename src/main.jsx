@@ -9,7 +9,7 @@ const prefersDark = window.matchMedia('(prefers-color-scheme: dark)')
 const resolveTheme = () => {
   if (storedTheme === 'dark' || storedTheme === 'light') return storedTheme
   return prefersDark.matches ? 'dark' : 'light'
-}
+} 
 root.setAttribute('data-theme', resolveTheme())
 if (!storedTheme) {
   prefersDark.addEventListener('change', (event) => {
