@@ -8,6 +8,8 @@ import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { POS_SESSION_STORAGE_KEYS, readPosSessionSnapshot } from "../../../shared/config/posSession";
 import { getDefaultPosPrinter, readPosPrinters } from "../../../shared/config/posPrinters";
+import { hasPosDynamicVisitsQrModule, hasPosLoyaltyModule, normalizePosCouponsPlan } from "../../../shared/config/posLoyaltyPlan";
+import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
 
 type SaleItemVm = {
   id: number;
@@ -55,6 +57,11 @@ type CompletedSale = {
   folio: string;
   paymentMethodLabel: string;
   table: string;
+  subtotal: number;
+  discount: number;
+  taxAmount: number;
+  taxableBase: number;
+  taxDescription?: string;
   total: number;
   customerName?: string;
   createdAt: string;
@@ -279,6 +286,7 @@ export const PosV2SalesHomePage = () => {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPrevPage, setHasPrevPage] = useState(false);
   const [planLimit, setPlanLimit] = useState(() => (window.localStorage.getItem("plan") ?? "").trim() || DEFAULT_SALES_LIMIT);
+  const [couponsPlan, setCouponsPlan] = useState<0 | 1 | 2>(0);
   const [variantSelection, setVariantSelection] = useState<{
     product: SaleItemVm;
     variants: SaleVariantVm[];
@@ -289,10 +297,12 @@ export const PosV2SalesHomePage = () => {
   } | null>(null);
   const [extrasCache, setExtrasCache] = useState<Record<number, ProductExtrasVm>>({});
   const [variantsCache, setVariantsCache] = useState<Record<number, SaleVariantVm[]>>({});
+  const [imageLoadErrors, setImageLoadErrors] = useState<Record<number, true>>({});
   const [uiMessage, setUiMessage] = useState<string>("");
   const [variantModalError, setVariantModalError] = useState<string | null>(null);
   const loadingTableDraftRef = useRef(false);
   const skippingDraftSyncRef = useRef(false);
+  const keepCartForNextTableSelectionRef = useRef(false);
 
   const debugLog = (...args: unknown[]) => {
     if (window.localStorage.getItem(DEBUG_KEY) === "true") {
@@ -301,6 +311,20 @@ export const PosV2SalesHomePage = () => {
   };
 
   const getCurrentSession = () => readPosSessionSnapshot();
+  const handleSelectTable = (nextTableId: string) => {
+    const normalized = String(nextTableId ?? "").trim();
+    const comingFromNoTable = !selectedTableId;
+    const movingToSpecificTable = normalized.length > 0;
+    const hasCartItems = Object.keys(cart).length > 0;
+
+    if (comingFromNoTable && movingToSpecificTable && hasCartItems) {
+      keepCartForNextTableSelectionRef.current = true;
+    } else {
+      keepCartForNextTableSelectionRef.current = false;
+    }
+
+    setSelectedTableId(normalized);
+  };
 
   useEffect(() => {
     const { token, businessId } = getCurrentSession();
@@ -395,14 +419,17 @@ export const PosV2SalesHomePage = () => {
       },
     })
       .then((response) => (response.ok ? response.json() : null))
-      .then((payload: { Name?: string; name?: string; Logo?: string; logo?: string } | null) => {
+      .then((payload: { Name?: string; name?: string; Logo?: string; logo?: string; CouponsPlan?: number; couponsPlan?: number } | null) => {
         if (!payload) return;
         const businessName = String(payload.Name ?? payload.name ?? "").trim();
         const logoUrl = String(payload.Logo ?? payload.logo ?? "").trim();
         if (businessName) setQuoteBusinessName(businessName);
         if (logoUrl) setQuoteLogoUrl(logoUrl);
+        setCouponsPlan(normalizePosCouponsPlan(payload.CouponsPlan ?? payload.couponsPlan ?? 0));
       })
-      .catch(() => undefined);
+      .catch(() => {
+        setCouponsPlan(0);
+      });
   }, []);
 
   useEffect(() => {
@@ -748,6 +775,11 @@ export const PosV2SalesHomePage = () => {
 
     const tableId = Number(selectedTableId);
     if (!Number.isFinite(tableId) || tableId <= 0) return;
+
+    if (keepCartForNextTableSelectionRef.current) {
+      keepCartForNextTableSelectionRef.current = false;
+      return;
+    }
 
     const headers = {
       "Content-Type": "application/json",
@@ -1275,6 +1307,11 @@ export const PosV2SalesHomePage = () => {
         folio,
         paymentMethodLabel,
         table: selectedTableName,
+        subtotal: totals.subtotal,
+        discount: totals.discount,
+        taxAmount: totals.taxAmount,
+        taxableBase: totals.taxableBase,
+        taxDescription: salesTax?.description?.trim() || "Impuesto",
         total: totals.total,
         customerName: customers.find((customer) => String(customer.id) === selectedCustomerId)?.name,
         createdAt: new Date().toISOString(),
@@ -1329,7 +1366,65 @@ export const PosV2SalesHomePage = () => {
     return hasFolio && hasTotal && hasItems;
   };
 
-  const handlePrintSaleTicket = (sale: CompletedSale) => {
+  const resolveVisitQrUrlForTicket = async (): Promise<string | null> => {
+    const { token, businessId } = getCurrentSession();
+    if (!token || !businessId || !hasPosLoyaltyModule(couponsPlan)) return null;
+
+    const couponsDomain = WEB_COUPONS_DOMAIN.trim().replace(/\/$/, "") || (typeof window !== "undefined" ? window.location.origin : "https://ravekh.com");
+
+    if (hasPosDynamicVisitsQrModule(couponsPlan)) {
+      const dynamicResponse = await fetch(new URL("visits/qr/dynamic/next", API_BASE_URL).toString(), {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          token,
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({ businessId, domain: couponsDomain }),
+      });
+
+      const dynamicPayload = (await dynamicResponse.json().catch(() => null)) as
+        | { qrUrl?: string; data?: { qrUrl?: string } }
+        | null;
+
+      const dynamicQrUrl = String(dynamicPayload?.qrUrl ?? dynamicPayload?.data?.qrUrl ?? "").trim();
+      if (!dynamicResponse.ok || !dynamicQrUrl) {
+        throw new Error("No fue posible generar el QR dinámico de visita para este ticket.");
+      }
+
+      return dynamicQrUrl;
+    }
+
+    const response = await fetch(new URL("visits/qr/generate", API_BASE_URL).toString(), {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        token,
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        businessId,
+        quantity: 1,
+        ttlMinutes: 60,
+        domain: couponsDomain,
+      }),
+    });
+
+    const payload = (await response.json().catch(() => null)) as
+      | { tokens?: Array<{ token?: string; qrUrl?: string; url?: string }>; data?: { tokens?: Array<{ token?: string; qrUrl?: string; url?: string }> } }
+      | null;
+    const firstToken = payload?.tokens?.[0] ?? payload?.data?.tokens?.[0];
+    const qrUrl = String(firstToken?.qrUrl ?? firstToken?.url ?? "").trim();
+    const tokenValue = String(firstToken?.token ?? "").trim();
+    if (!response.ok) {
+      throw new Error("No fue posible generar el QR de visita para este ticket.");
+    }
+    if (qrUrl) return qrUrl;
+    if (tokenValue) return `${couponsDomain}/coupons/visits/redeem?token=${encodeURIComponent(tokenValue)}`;
+    return null;
+  };
+
+  const handlePrintSaleTicket = async (sale: CompletedSale) => {
     if (!hasPrintableSaleData(sale)) {
       setValidationError("La venta no tiene datos suficientes para imprimir ticket (folio, items y total).");
       return;
@@ -1352,6 +1447,23 @@ export const PosV2SalesHomePage = () => {
     const saleDateLabel = safeSaleDate.toLocaleDateString("es-MX");
     const saleTimeLabel = safeSaleDate.toLocaleTimeString("es-MX");
     const printDate = new Date();
+    let visitQrUrl: string | null = null;
+
+    if (hasPosLoyaltyModule(couponsPlan)) {
+      try {
+        visitQrUrl = await resolveVisitQrUrlForTicket();
+      } catch (error) {
+        setUiMessage(error instanceof Error ? error.message : "No se pudo generar el QR de visitas para este ticket.");
+      }
+    }
+
+    const visitQrMarkup = visitQrUrl
+      ? `<section style="margin-top: 3mm; padding-top: 2mm; border-top: 1px dashed #d1d5db; text-align: center;">
+          <p style="font-weight: 700; margin-bottom: 1.5mm;">Escanea para registrar tu visita</p>
+          <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(visitQrUrl)}" alt="QR de visita" width="180" height="180" style="display:block;margin:0 auto 1.4mm;" />
+          <p class="meta" style="word-break: break-all;">${visitQrUrl}</p>
+        </section>`
+      : "";
 
     const html = `<!doctype html>
 <html>
@@ -1392,7 +1504,12 @@ export const PosV2SalesHomePage = () => {
       <p><strong>Método:</strong> ${sale.paymentMethodLabel}</p>
       <p><strong>Cliente:</strong> ${sale.customerName ?? "General"}</p>
       <ul>${printableLines}</ul>
+      <p><strong>Subtotal:</strong> $${sale.subtotal.toFixed(2)}</p>
+      ${sale.discount > 0 ? `<p><strong>Descuento:</strong> -$${sale.discount.toFixed(2)}</p>` : ""}
+      ${sale.taxAmount > 0 ? `<p><strong>Base gravable:</strong> $${sale.taxableBase.toFixed(2)}</p>` : ""}
+      ${sale.taxAmount > 0 ? `<p><strong>${sale.taxDescription || "Impuesto"}:</strong> $${sale.taxAmount.toFixed(2)}</p>` : ""}
       <p class="total">Total: $${sale.total.toFixed(2)}</p>
+      ${visitQrMarkup}
     </section>
   </body>
 </html>`;
@@ -1576,14 +1693,24 @@ export const PosV2SalesHomePage = () => {
               const sellableVariants = product.variants.filter((variant) => variant.stock === null || variant.stock > 0);
               const hasBaseStock = product.stock === null || product.stock > 0;
               const hasBlockedVariants = !hasBaseStock && product.variants.length > 0 && sellableVariants.length === 0;
+              const shouldShowImage = Boolean(product.image) && !imageLoadErrors[product.id];
 
               return (
                 <article
                   key={product.id}
                   className={`pos-v2-sales-home__product-card ${!isGrid ? "is-list-item" : ""}`}
                 >
-                  {product.image ? (
-                    <img src={product.image} alt={product.name} className="pos-v2-sales-home__product-image" />
+                  {shouldShowImage ? (
+                    <img
+                      src={product.image}
+                      alt={product.name}
+                      className="pos-v2-sales-home__product-image"
+                      loading="lazy"
+                      decoding="async"
+                      onError={() => {
+                        setImageLoadErrors((current) => ({ ...current, [product.id]: true }));
+                      }}
+                    />
                   ) : (
                     <div className="pos-v2-sales-home__product-image-placeholder" aria-hidden="true">
                       {product.name.slice(0, 1).toUpperCase()}
@@ -1773,7 +1900,7 @@ export const PosV2SalesHomePage = () => {
 
             <label>
               Mesa
-              <select value={selectedTableId} onChange={(event) => setSelectedTableId(event.target.value)} disabled={loadingTables || !selectedTableZoneId}>
+              <select value={selectedTableId} onChange={(event) => handleSelectTable(event.target.value)} disabled={loadingTables || !selectedTableZoneId}>
                 <option value="">Sin mesa (orden directa)</option>
                 {visibleTables.map((table) => (
                   <option key={table.id} value={table.id}>{table.name}</option>
@@ -2053,7 +2180,7 @@ export const PosV2SalesHomePage = () => {
               <button
                 type="button"
                 className={!selectedTableId ? "is-active" : ""}
-                onClick={() => setSelectedTableId("")}
+                onClick={() => handleSelectTable("")}
               >
                 Sin mesa
               </button>
@@ -2066,7 +2193,7 @@ export const PosV2SalesHomePage = () => {
                     key={table.id}
                     type="button"
                     className={`${isActive ? "is-active" : ""} ${isOccupied ? "is-occupied" : ""}`.trim()}
-                    onClick={() => setSelectedTableId(String(table.id))}
+                    onClick={() => handleSelectTable(String(table.id))}
                   >
                     {table.name}
                   </button>
@@ -2105,7 +2232,7 @@ export const PosV2SalesHomePage = () => {
                     type="button"
                     className={isActive ? "is-active" : ""}
                     onClick={() => {
-                      setSelectedTableId(String(table.id));
+                      handleSelectTable(String(table.id));
                       setIsMobileTablesOpen(false);
                       setMobileStep("catalog");
                     }}
@@ -2119,7 +2246,7 @@ export const PosV2SalesHomePage = () => {
                   type="button"
                   className={!selectedTableId ? "is-active" : ""}
                   onClick={() => {
-                    setSelectedTableId("");
+                    handleSelectTable("");
                     setIsMobileTablesOpen(false);
                     setMobileStep("catalog");
                   }}

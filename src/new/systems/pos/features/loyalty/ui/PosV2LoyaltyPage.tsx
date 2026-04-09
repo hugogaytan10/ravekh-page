@@ -8,6 +8,7 @@ import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import QRCode from "../../../../loyalty/features/coupons/lib/QRCode";
 import QRErrorCorrectLevel from "../../../../loyalty/features/coupons/lib/QRCode/QRErrorCorrectLevel";
 import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
+import { hasPosDynamicVisitsQrModule, hasPosLoyaltyModule, normalizePosCouponsPlan } from "../../../shared/config/posLoyaltyPlan";
 import "./PosV2LoyaltyPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -140,7 +141,7 @@ export const PosV2LoyaltyPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string>("");
   const [coupon, setCoupon] = useState<{ id: number; qr?: string; description: string; maxRedemptions: number; valid?: string } | null>(null);
-  const [businessInfo, setBusinessInfo] = useState<{ name: string; phone: string; address: string; plan: string; chargesEnabled: boolean } | null>(null);
+  const [businessInfo, setBusinessInfo] = useState<{ name: string; phone: string; address: string; plan: string; chargesEnabled: boolean; couponsPlan: 0 | 1 | 2 } | null>(null);
   const [couponDescriptionQuery, setCouponDescriptionQuery] = useState("");
   const [visitQuery, setVisitQuery] = useState("");
   const [isVisitFilterOpen, setIsVisitFilterOpen] = useState(false);
@@ -242,10 +243,15 @@ export const PosV2LoyaltyPage = () => {
           address: String(payload.Address ?? payload.address ?? "No disponible"),
           plan: String(payload.Plan ?? payload.plan ?? "No definido"),
           chargesEnabled: Number(payload.ChargesEnabled ?? payload.chargesEnabled ?? 0) === 1,
+          couponsPlan: normalizePosCouponsPlan(payload.CouponsPlan ?? payload.couponsPlan ?? 0),
         });
       })
       .catch(() => setBusinessInfo(null));
   }, [session.businessId, session.hasSession, session.token]);
+
+  const couponsPlan = businessInfo?.couponsPlan ?? 0;
+  const loyaltyModuleEnabled = hasPosLoyaltyModule(couponsPlan);
+  const dynamicQrModuleEnabled = hasPosDynamicVisitsQrModule(couponsPlan);
 
   const groupedCoupons = useMemo(() => ({
     actives: couponList.filter((entry) => isCouponActive(entry)),
@@ -493,11 +499,12 @@ export const PosV2LoyaltyPage = () => {
     <PosV2Shell title="Fidelidad" subtitle={subtitle}>
       <section className="pos-v2-loyalty">
         {!session.hasSession ? <p className="pos-v2-loyalty__error">No hay sesión activa para usar fidelidad.</p> : null}
+        {session.hasSession && !loyaltyModuleEnabled ? <p className="pos-v2-loyalty__error">Tu plan actual no incluye el módulo de cupones/visitas.</p> : null}
         {error ? <p className="pos-v2-loyalty__error">{error}</p> : null}
         {toast ? <p className="pos-v2-loyalty__toast pos-v2-loyalty__toast-floating">{toast}</p> : null}
 
 
-        {(loyaltyView === "all" || loyaltyView === "coupons") ? <article className="pos-v2-loyalty__card">
+        {loyaltyModuleEnabled && (loyaltyView === "all" || loyaltyView === "coupons") ? <article className="pos-v2-loyalty__card">
           <div className="pos-v2-loyalty__header-actions">
             <h2>Cupones</h2>
             <div className="pos-v2-loyalty__quick-actions">
@@ -511,7 +518,7 @@ export const PosV2LoyaltyPage = () => {
           </div>
         </article> : null}
 
-        {(loyaltyView === "all" || loyaltyView === "coupons") ? <article className="pos-v2-loyalty__card">
+        {loyaltyModuleEnabled && (loyaltyView === "all" || loyaltyView === "coupons") ? <article className="pos-v2-loyalty__card">
           <h2>Crear cupón</h2>
           <form onSubmit={handleCreate} className="pos-v2-loyalty__form">
             <p className="pos-v2-loyalty__hint">Descripción y límite son obligatorios. QR automático.</p>
@@ -531,7 +538,7 @@ export const PosV2LoyaltyPage = () => {
           </form>
         </article> : null}
 
-        {(loyaltyView === "all" || loyaltyView === "coupons") ? <article className="pos-v2-loyalty__card">
+        {loyaltyModuleEnabled && (loyaltyView === "all" || loyaltyView === "coupons") ? <article className="pos-v2-loyalty__card">
           <h2>Detalle actual</h2>
           {!coupon ? <p>No hay cupón seleccionado.</p> : (
             <div className="pos-v2-loyalty__detail">
@@ -560,7 +567,7 @@ export const PosV2LoyaltyPage = () => {
 
        
 
-        {(loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
+        {loyaltyModuleEnabled && (loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
           <h2>Resumen de visitas</h2>
           <div className="pos-v2-loyalty__kpis">
             <p><strong>{visitsSummary.totalVisits}</strong><span>Visitas registradas</span></p>
@@ -569,7 +576,7 @@ export const PosV2LoyaltyPage = () => {
           </div>
         </article> : null}
 
-        {(loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
+        {loyaltyModuleEnabled && (loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
           <div className="pos-v2-loyalty__header-actions">
             <h2>Generación QR visitas</h2>
             <div className="pos-v2-loyalty__tabs" aria-label="Formato de impresión">
@@ -614,7 +621,7 @@ export const PosV2LoyaltyPage = () => {
           </div>
         </article> : null}
 
-        {(loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
+        {loyaltyModuleEnabled && dynamicQrModuleEnabled && (loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
           <h2>QR dinámico</h2>
           <div className="pos-v2-loyalty__quick-actions">
             <button type="button" onClick={handleGenerateDynamicQr} disabled={dynamicQrLoading}>
@@ -646,7 +653,7 @@ export const PosV2LoyaltyPage = () => {
           </div>
         </article> : null}
 
-        {(loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
+        {loyaltyModuleEnabled && (loyaltyView === "all" || loyaltyView === "visits") ? <article className="pos-v2-loyalty__card">
           <h2>Top clientes fieles</h2>
           <div className="pos-v2-loyalty__header-actions">
             <p className="pos-v2-loyalty__caption">Aquí podrás ver el top de tus clientes fieles.</p>
@@ -682,7 +689,7 @@ export const PosV2LoyaltyPage = () => {
           </div>
         </article> : null}   
       
-        {isCouponsModalOpen ? (
+        {loyaltyModuleEnabled && isCouponsModalOpen ? (
           <section className="pos-v2-loyalty__modal" role="dialog" aria-modal="true" aria-label="Mis coupons">
             <div className="pos-v2-loyalty__modal-card pos-v2-loyalty__modal-card--wide">
               <div className="pos-v2-loyalty__modal-head">

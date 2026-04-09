@@ -17,6 +17,7 @@ import {
   readPosStringList,
   writePosStringList,
 } from "../../../shared/config/posSession";
+import { hasPosLoyaltyModule, normalizePosCouponsPlan } from "../../../shared/config/posLoyaltyPlan";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { buildPosPublicCatalogUrl } from "../../../shared/config/posExternalLinks";
 import "./PosV2MorePage.css";
@@ -39,6 +40,7 @@ export const PosV2MorePage = () => {
   );
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [actionMessage, setActionMessage] = useState<string>("");
+  const [couponsPlan, setCouponsPlan] = useState<0 | 1 | 2>(0);
 
   const modulePage = useMemo(
     () => new MoreModulePage(new MoreModuleService(API_BASE_URL)),
@@ -53,9 +55,18 @@ export const PosV2MorePage = () => {
   );
   const allItems = useMemo(() => {
     const items = MORE_MODULE_SECTIONS.flatMap((section) => section.items);
-    if (!isSalesOnlyUser) return items;
-    return items.filter((item) => allowedModuleIdsForSalesOnly.has(item.id));
-  }, [allowedModuleIdsForSalesOnly, isSalesOnlyUser]);
+    const loyaltyEnabled = hasPosLoyaltyModule(couponsPlan);
+    const filteredByPlan = items.filter((item) => {
+      if (item.id === "coupons" || item.id === "visits" || item.id === "loyalty") {
+        return loyaltyEnabled;
+      }
+
+      return true;
+    });
+
+    if (!isSalesOnlyUser) return filteredByPlan;
+    return filteredByPlan.filter((item) => allowedModuleIdsForSalesOnly.has(item.id));
+  }, [allowedModuleIdsForSalesOnly, couponsPlan, isSalesOnlyUser]);
   const isReadyModule = (item: MoreModuleLink): boolean =>
     item.status === "available" ||
     (item.actionType === "beta-action" &&
@@ -98,6 +109,23 @@ export const PosV2MorePage = () => {
       return { ...section, items };
     }).filter((section) => section.items.length > 0);
   }, [allowedModuleIdsForSalesOnly, isSalesOnlyUser, normalizedQuery, modulePage]);
+
+  useEffect(() => {
+    if (!sessionSnapshot.token || !sessionSnapshot.businessId) return;
+
+    fetch(new URL(`business/${sessionSnapshot.businessId}`, API_BASE_URL).toString(), {
+      headers: {
+        "Content-Type": "application/json",
+        token: sessionSnapshot.token,
+        Authorization: `Bearer ${sessionSnapshot.token}`,
+      },
+    })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((payload: { CouponsPlan?: number; couponsPlan?: number } | null) => {
+        setCouponsPlan(normalizePosCouponsPlan(payload?.CouponsPlan ?? payload?.couponsPlan ?? 0));
+      })
+      .catch(() => setCouponsPlan(0));
+  }, [sessionSnapshot.businessId, sessionSnapshot.token]);
 
   useEffect(() => {
     writePosStringList(FAVORITES_KEY, favorites);
