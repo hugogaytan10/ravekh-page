@@ -3,6 +3,7 @@ import { StorefrontBusiness, StorefrontProduct } from "../model/CatalogStorefron
 import { CatalogOrderPayload } from "../model/CatalogStorefrontModels";
 
 export interface ICatalogStorefrontRepository {
+  registerBusinessVisit(businessId: string): Promise<boolean>;
   getBusinessById(businessId: string): Promise<StorefrontBusiness | null>;
   getCategoriesByBusiness(businessId: string): Promise<StorefrontCategory[]>;
   getProductsByBusinessPage(businessId: string, page: number, planLimit?: string): Promise<StorefrontProductsPage>;

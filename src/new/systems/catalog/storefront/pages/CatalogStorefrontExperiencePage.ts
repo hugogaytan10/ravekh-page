@@ -3,6 +3,10 @@ import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 export class CatalogStorefrontExperiencePage {
   constructor(private readonly service: CatalogStorefrontService) {}
 
+  registerVisit(businessId: string) {
+    return this.service.registerBusinessVisit(businessId);
+  }
+
   loadBusinessContext(businessId: string) {
     return Promise.all([this.service.getBusiness(businessId), this.service.getCategories(businessId)]);
   }
