@@ -64,6 +64,11 @@ export const CatalogStorefrontPage = () => {
   }, [businessId]);
 
   useEffect(() => {
+    if (!businessId) return;
+    void pageLogic.registerVisit(businessId);
+  }, [businessId, pageLogic]);
+
+  useEffect(() => {
     const run = async () => {
       if (!businessId) {
         setError("No encontramos el negocio solicitado.");

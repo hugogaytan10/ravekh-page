@@ -3,6 +3,10 @@ import { ICatalogStorefrontRepository } from "../interface/ICatalogStorefrontRep
 export class CatalogStorefrontService {
   constructor(private readonly repository: ICatalogStorefrontRepository) {}
 
+  registerBusinessVisit(businessId: string) {
+    return this.repository.registerBusinessVisit(businessId);
+  }
+
   getBusiness(businessId: string) {
     return this.repository.getBusinessById(businessId);
   }

@@ -97,7 +97,28 @@ const parseNumber = (value: unknown, fallback = 0) => {
   return Number.isFinite(next) ? next : fallback;
 };
 
-const visitTrackerByBusiness = new Set<string>();
+const VISIT_COOKIE_PREFIX = "catalog-v2-visit";
+const VISIT_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
+
+const getVisitCookieName = (businessId: string) => `${VISIT_COOKIE_PREFIX}-${String(businessId).trim()}`;
+
+const readCookie = (name: string): string | null => {
+  if (typeof document === "undefined") return null;
+  const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const match = document.cookie.match(new RegExp(`(?:^|; )${escapedName}=([^;]*)`));
+  if (!match) return null;
+  return decodeURIComponent(match[1] ?? "");
+};
+
+const writeCookie = (name: string, value: string, maxAgeSeconds: number) => {
+  if (typeof document === "undefined") return;
+  document.cookie = `${name}=${encodeURIComponent(value)}; Path=/; Max-Age=${maxAgeSeconds}; SameSite=Lax`;
+};
+
+const getVisitValue = (businessId: string): 1 | 2 => {
+  const cookieName = getVisitCookieName(businessId);
+  return readCookie(cookieName) === "1" ? 2 : 1;
+};
 
 const normalizeImage = (rawImage: unknown, rawImages: unknown) => {
   const images = normalizeImages(rawImage, rawImages);
@@ -204,9 +225,7 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
   }
 
   async getProductsByBusinessPage(businessId: string, page = 1, planLimit?: string): Promise<StorefrontProductsPage> {
-    const businessKey = String(businessId).trim();
-    const visit = visitTrackerByBusiness.has(businessKey) ? 2 : 1;
-    visitTrackerByBusiness.add(businessKey);
+    const visit = getVisitValue(businessId);
 
     const response = await fetch(`${normalizeBase(this.baseUrl)}products/showstore/stockgtzero/${businessId}/1?page=${page}&visit=${visit}`, {
       method: "POST",
@@ -226,6 +245,26 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
       | ProductResponse[];
 
     return normalizeProductsPage(raw, page, businessId);
+  }
+
+  async registerBusinessVisit(businessId: string): Promise<boolean> {
+    const normalizedBusinessId = parseNumber(businessId);
+    if (normalizedBusinessId <= 0) return false;
+
+    const cookieName = getVisitCookieName(normalizedBusinessId.toString());
+    if (readCookie(cookieName) === "1") return false;
+    writeCookie(cookieName, "1", VISIT_COOKIE_MAX_AGE_SECONDS);
+
+    try {
+      const response = await fetch(`${normalizeBase(this.baseUrl)}logs`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ Business_Id: normalizedBusinessId }),
+      });
+      return response.ok;
+    } catch {
+      return false;
+    }
   }
 
   async getProductsByCategoryPage(categoryId: number, page = 1, planLimit?: string): Promise<StorefrontProductsPage> {
