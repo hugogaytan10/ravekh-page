@@ -97,6 +97,22 @@ const parseNumber = (value: unknown, fallback = 0) => {
   return Number.isFinite(next) ? next : fallback;
 };
 
+const isCatalogDebugEnabled = () => {
+  if (typeof window === "undefined") return false;
+  try {
+    const byStorage = window.localStorage.getItem("catalog-v2-debug") === "1";
+    const byQuery = new URLSearchParams(window.location.search).get("catalogDebug") === "1";
+    return byStorage || byQuery;
+  } catch {
+    return false;
+  }
+};
+
+const logCatalogDebug = (scope: string, payload: Record<string, unknown>) => {
+  if (!isCatalogDebugEnabled()) return;
+  console.info(`[catalog-v2][${scope}]`, payload);
+};
+
 const VISIT_COOKIE_PREFIX = "catalog-v2-visit";
 const VISIT_COOKIE_MAX_AGE_SECONDS = 60 * 60 * 24 * 30;
 
@@ -201,9 +217,12 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
   constructor(private readonly baseUrl: string) {}
 
   async getBusinessById(businessId: string): Promise<StorefrontBusiness | null> {
+    logCatalogDebug("business:request", { businessId });
     const response = await fetch(`${normalizeBase(this.baseUrl)}business/${businessId}`);
+    logCatalogDebug("business:response", { businessId, ok: response.ok, status: response.status });
     if (!response.ok) return null;
     const data = (await response.json()) as BusinessResponse;
+    logCatalogDebug("business:data", { businessId, plan: data.Plan ?? data.plan ?? null, name: data.Name ?? null });
 
     return {
       id: Number(data.Id ?? 0),
@@ -214,24 +233,32 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
   }
 
   async getCategoriesByBusiness(businessId: string): Promise<StorefrontCategory[]> {
+    logCatalogDebug("categories:request", { businessId });
     const response = await fetch(`${normalizeBase(this.baseUrl)}categories/business/${businessId}`);
+    logCatalogDebug("categories:response", { businessId, ok: response.ok, status: response.status });
     if (!response.ok) return [];
     const raw = (await response.json()) as CategoryResponse[];
     if (!Array.isArray(raw)) return [];
 
-    return raw
+    const categories = raw
       .map((item) => ({ id: parseNumber(item.Id ?? item.id), name: (item.Name ?? item.name ?? "").toString().trim() }))
       .filter((item) => item.id > 0 && item.name.length > 0);
+    logCatalogDebug("categories:data", { businessId, count: categories.length });
+    return categories;
   }
 
   async getProductsByBusinessPage(businessId: string, page = 1, planLimit?: string): Promise<StorefrontProductsPage> {
     const visit = getVisitValue(businessId);
+    const limit = String(planLimit ?? "30");
+    const url = `${normalizeBase(this.baseUrl)}products/showstore/stockgtzero/${businessId}/1?page=${page}&visit=${visit}`;
+    logCatalogDebug("products-by-business:request", { businessId, page, visit, limit, url });
 
-    const response = await fetch(`${normalizeBase(this.baseUrl)}products/showstore/stockgtzero/${businessId}/1?page=${page}&visit=${visit}`, {
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ Limit: String(planLimit ?? "30") }),
+      body: JSON.stringify({ Limit: limit }),
     });
+    logCatalogDebug("products-by-business:response", { businessId, page, ok: response.ok, status: response.status });
 
     if (!response.ok) {
       return {
@@ -244,7 +271,14 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
       | { data?: ProductResponse[]; products?: ProductResponse[]; pagination?: { currentPage?: number; totalPages?: number; hasNext?: boolean; hasPrev?: boolean } }
       | ProductResponse[];
 
-    return normalizeProductsPage(raw, page, businessId);
+    const normalized = normalizeProductsPage(raw, page, businessId);
+    logCatalogDebug("products-by-business:data", {
+      businessId,
+      page,
+      count: normalized.products.length,
+      totalPages: normalized.pagination.totalPages,
+    });
+    return normalized;
   }
 
   async registerBusinessVisit(businessId: string): Promise<boolean> {
@@ -268,11 +302,16 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
   }
 
   async getProductsByCategoryPage(categoryId: number, page = 1, planLimit?: string): Promise<StorefrontProductsPage> {
-    const response = await fetch(`${normalizeBase(this.baseUrl)}products/category/availablegtzero/${categoryId}?page=${page}`, {
+    const limit = String(planLimit ?? "30");
+    const url = `${normalizeBase(this.baseUrl)}products/category/availablegtzero/${categoryId}?page=${page}`;
+    logCatalogDebug("products-by-category:request", { categoryId, page, limit, url });
+
+    const response = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ Limit: String(planLimit ?? "30") }),
+      body: JSON.stringify({ Limit: limit }),
     });
+    logCatalogDebug("products-by-category:response", { categoryId, page, ok: response.ok, status: response.status });
 
     if (!response.ok) {
       return {
@@ -285,7 +324,14 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
       | { data?: ProductResponse[]; products?: ProductResponse[]; pagination?: { currentPage?: number; totalPages?: number; hasNext?: boolean; hasPrev?: boolean } }
       | ProductResponse[];
 
-    return normalizeProductsPage(raw, page, String(categoryId));
+    const normalized = normalizeProductsPage(raw, page, String(categoryId));
+    logCatalogDebug("products-by-category:data", {
+      categoryId,
+      page,
+      count: normalized.products.length,
+      totalPages: normalized.pagination.totalPages,
+    });
+    return normalized;
   }
 
 
