@@ -7,8 +7,16 @@ export class CatalogStorefrontExperiencePage {
     return this.service.registerBusinessVisit(businessId);
   }
 
-  loadBusinessContext(businessId: string) {
-    return Promise.all([this.service.getBusiness(businessId), this.service.getCategories(businessId)]);
+  async loadBusinessContext(businessId: string) {
+    const [businessResult, categoriesResult] = await Promise.allSettled([
+      this.service.getBusiness(businessId),
+      this.service.getCategories(businessId),
+    ]);
+
+    const business = businessResult.status === "fulfilled" ? businessResult.value : null;
+    const categories = categoriesResult.status === "fulfilled" ? categoriesResult.value : [];
+
+    return [business, categories] as const;
   }
 
   loadProducts(businessId: string, page: number, categoryId?: number | null, planLimit?: string) {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { FiSearch, FiShoppingCart, FiSliders, FiX } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
@@ -13,6 +13,7 @@ import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
+const DEFAULT_PRICE_MAX_BOUND = 999;
 
 const SkeletonGrid = () => (
   <div className="catalog-v2-grid" aria-hidden="true">
@@ -22,11 +23,23 @@ const SkeletonGrid = () => (
   </div>
 );
 
+const isCatalogDebugEnabled = () => {
+  if (typeof window === "undefined") return false;
+  return window.localStorage.getItem("catalog-v2-debug") === "1" || new URLSearchParams(window.location.search).get("catalogDebug") === "1";
+};
+
+const logCatalogDebug = (scope: string, payload: Record<string, unknown>) => {
+  if (!isCatalogDebugEnabled()) return;
+  console.info(`[catalog-v2][${scope}]`, payload);
+};
+
 export const CatalogStorefrontPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
   const { businessId = "" } = useParams<{ businessId: string }>();
   const [store, setStore] = useState<StorefrontBusiness | null>(null);
+  const [planLimit, setPlanLimit] = useState<string | undefined>(undefined);
+  const [businessContextLoaded, setBusinessContextLoaded] = useState(false);
   const [categories, setCategories] = useState<StorefrontCategory[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
@@ -41,15 +54,16 @@ export const CatalogStorefrontPage = () => {
   const [showFilters, setShowFilters] = useState(false);
   const [sortMode, setSortMode] = useState<"none" | "asc" | "desc">("none");
   const minBound = 0;
-  const maxBound = 999;
+  const [priceCeiling, setPriceCeiling] = useState(DEFAULT_PRICE_MAX_BOUND);
   const [priceMin, setPriceMin] = useState(minBound);
-  const [priceMax, setPriceMax] = useState(maxBound);
+  const [priceMax, setPriceMax] = useState(DEFAULT_PRICE_MAX_BOUND);
   const [variantModalOpen, setVariantModalOpen] = useState(false);
   const [variantProduct, setVariantProduct] = useState<StorefrontProduct | null>(null);
   const [variantOptions, setVariantOptions] = useState<StorefrontVariant[]>([]);
   const [colorOptions, setColorOptions] = useState<StorefrontProductExtra[]>([]);
   const [sizeOptions, setSizeOptions] = useState<StorefrontProductExtra[]>([]);
   const [cartReady, setCartReady] = useState(false);
+  const businessContextRequestRef = useRef(0);
 
   const pageLogic = useMemo(() => {
     const repository = new CatalogStorefrontApi(getPosApiBaseUrl());
@@ -61,7 +75,20 @@ export const CatalogStorefrontPage = () => {
     setPage(1);
     setPageInput("1");
     setSelectedCategoryId(null);
+    setPriceMin(minBound);
+    setPriceMax(DEFAULT_PRICE_MAX_BOUND);
+    setPriceCeiling(DEFAULT_PRICE_MAX_BOUND);
   }, [businessId]);
+
+  useEffect(() => {
+    const highestPrice = products.reduce((maxValue, product) => {
+      const productPrice = product.promotionPrice && product.promotionPrice > 0 ? product.promotionPrice : product.price;
+      return Math.max(maxValue, productPrice);
+    }, 0);
+    const nextCeiling = Math.max(DEFAULT_PRICE_MAX_BOUND, Math.ceil(highestPrice));
+    setPriceCeiling(nextCeiling);
+    setPriceMax((current) => (current >= priceCeiling || current === DEFAULT_PRICE_MAX_BOUND ? nextCeiling : current));
+  }, [priceCeiling, products]);
 
   useEffect(() => {
     if (!businessId) return;
@@ -69,21 +96,41 @@ export const CatalogStorefrontPage = () => {
   }, [businessId, pageLogic]);
 
   useEffect(() => {
+    businessContextRequestRef.current += 1;
+
     const run = async () => {
       if (!businessId) {
         setError("No encontramos el negocio solicitado.");
         return;
       }
 
+      const requestId = businessContextRequestRef.current;
+
       try {
         const [business, categoriesResponse] = await pageLogic.loadBusinessContext(businessId);
+
+        if (requestId !== businessContextRequestRef.current) return;
+
+        logCatalogDebug("business-context:resolved", {
+          businessId,
+          requestId,
+          hasBusiness: Boolean(business),
+          plan: business?.plan ?? null,
+          categoriesCount: categoriesResponse.length,
+        });
+
         setStore(business);
         setCategories(categoriesResponse);
+        setPlanLimit(business?.plan?.trim() || undefined);
         window.localStorage.setItem("catalog-v2-store-name", business?.name ?? "Catálogo");
         window.localStorage.setItem("idBusiness", businessId);
         window.localStorage.setItem("telefono", business?.phone ?? "");
       } catch {
+        if (requestId !== businessContextRequestRef.current) return;
         setError("No fue posible cargar la información del negocio.");
+      } finally {
+        if (requestId !== businessContextRequestRef.current) return;
+        setBusinessContextLoaded(true);
       }
     };
 
@@ -91,24 +138,43 @@ export const CatalogStorefrontPage = () => {
   }, [businessId, pageLogic]);
 
   useEffect(() => {
-    const run = async () => {
-      if (!businessId) return;
+    if (!businessContextLoaded || !businessId) return;
 
+    let cancelled = false;
+
+    const run = async () => {
       setLoading(true);
       setError(null);
       try {
-        const productsPage = await pageLogic.loadProducts(businessId, page, selectedCategoryId, store?.plan ?? undefined);
+        logCatalogDebug("products:load:start", { businessId, page, selectedCategoryId, planLimit: planLimit ?? null });
+        const productsPage = await pageLogic.loadProducts(businessId, page, selectedCategoryId, planLimit);
+        if (cancelled) return;
         setProducts(productsPage.products);
         setTotalPages(productsPage.pagination.totalPages);
+        logCatalogDebug("products:load:success", {
+          businessId,
+          page,
+          selectedCategoryId,
+          planLimit: planLimit ?? null,
+          productCount: productsPage.products.length,
+          totalPages: productsPage.pagination.totalPages,
+        });
       } catch {
+        if (cancelled) return;
         setError("No fue posible cargar el catálogo digital.");
+        logCatalogDebug("products:load:error", { businessId, page, selectedCategoryId, planLimit: planLimit ?? null });
       } finally {
+        if (cancelled) return;
         setLoading(false);
       }
     };
 
     void run();
-  }, [businessId, page, pageLogic, selectedCategoryId, store?.plan]);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [businessContextLoaded, businessId, page, pageLogic, selectedCategoryId, planLimit]);
 
   useEffect(() => {
     if (!businessId) return;
@@ -451,21 +517,21 @@ export const CatalogStorefrontPage = () => {
               <p className="text-xl font-bold">Rango de precios</p>
               <div className="flex items-center justify-between text-xs text-[var(--text-muted)]">
                 <span>${minBound}</span>
-                <span>${maxBound}</span>
+                <span>${priceCeiling}</span>
               </div>
               <div className="grid grid-cols-2 gap-2 max-sm:grid-cols-1">
                 <label className="grid min-w-0 gap-1 text-xs font-medium text-[var(--text-secondary)]">Mínimo
                   <input className="h-11 w-full min-w-0 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20" type="number" value={priceMin} onChange={(e) => setPriceMin(Math.max(minBound, Math.min(Number(e.target.value || minBound), priceMax)))} />
                 </label>
                 <label className="grid min-w-0 gap-1 text-xs font-medium text-[var(--text-secondary)]">Máximo
-                  <input className="h-11 w-full min-w-0 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20" type="number" value={priceMax} onChange={(e) => setPriceMax(Math.min(maxBound, Math.max(Number(e.target.value || maxBound), priceMin)))} />
+                  <input className="h-11 w-full min-w-0 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20" type="number" value={priceMax} onChange={(e) => setPriceMax(Math.min(priceCeiling, Math.max(Number(e.target.value || priceCeiling), priceMin)))} />
                 </label>
               </div>
-              <input className="w-full accent-[var(--text-primary)]" type="range" min={minBound} max={maxBound} value={priceMin} onChange={(e) => setPriceMin(Math.min(Number(e.target.value), priceMax))} aria-label="Precio mínimo" />
-              <input className="w-full accent-[var(--text-primary)]" type="range" min={minBound} max={maxBound} value={priceMax} onChange={(e) => setPriceMax(Math.max(Number(e.target.value), priceMin))} aria-label="Precio máximo" />
+              <input className="w-full accent-[var(--text-primary)]" type="range" min={minBound} max={priceCeiling} value={priceMin} onChange={(e) => setPriceMin(Math.min(Number(e.target.value), priceMax))} aria-label="Precio mínimo" />
+              <input className="w-full accent-[var(--text-primary)]" type="range" min={minBound} max={priceCeiling} value={priceMax} onChange={(e) => setPriceMax(Math.max(Number(e.target.value), priceMin))} aria-label="Precio máximo" />
             </div>
             <div className="mt-2 grid grid-cols-2 gap-2 max-sm:grid-cols-1">
-              <button className="min-h-11 rounded-full border border-[var(--border-default)] bg-[var(--bg-subtle)] text-sm font-semibold text-[var(--text-primary)]" type="button" onClick={() => { setSortMode("none"); setPriceMin(minBound); setPriceMax(maxBound); }}>Limpiar</button>
+              <button className="min-h-11 rounded-full border border-[var(--border-default)] bg-[var(--bg-subtle)] text-sm font-semibold text-[var(--text-primary)]" type="button" onClick={() => { setSortMode("none"); setPriceMin(minBound); setPriceMax(priceCeiling); }}>Limpiar</button>
               <button className="min-h-11 rounded-full bg-[var(--text-primary)] text-sm font-semibold text-[var(--text-inverse)]" type="button" onClick={() => setShowFilters(false)}>Aplicar</button>
             </div>
           </aside>
