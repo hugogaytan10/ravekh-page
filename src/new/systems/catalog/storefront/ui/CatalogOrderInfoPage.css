@@ -29,14 +29,6 @@
   .catalog-v2-order-info .submit { min-height: 52px; }
 }
 
-@media (prefers-color-scheme: dark) {
-  .catalog-v2-order-info { background: #0f172a; color: #e2e8f0; }
-  .catalog-v2-order-info__header button, .catalog-v2-order-info .card { background: #111827; border-color: #334155; color: #e2e8f0; }
-  .catalog-v2-order-info input, .catalog-v2-order-info select { background: #1f2937; border-color: #334155; color: #e2e8f0; }
-  .catalog-v2-order-info .card label { color: #cbd5e1; }
-  .catalog-v2-order-info .submit { background: #1d4ed8; }
-}
-
 :root[data-theme="dark"] .catalog-v2-order-info { background: #0f172a; color: #e2e8f0; }
 :root[data-theme="dark"] .catalog-v2-order-info__header button,
 :root[data-theme="dark"] .catalog-v2-order-info .card { background: #111827; border-color: #334155; color: #e2e8f0; }
