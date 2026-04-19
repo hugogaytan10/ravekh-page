@@ -55,22 +55,6 @@
   .catalog-v2-cart-page .cart-modal { padding: 1rem; }
 }
 
-@media (prefers-color-scheme: dark) {
-  .catalog-v2-cart-page { background: #0f172a; color: #e2e8f0; }
-  .catalog-v2-cart-page__header button,
-  .catalog-v2-cart-page .qty-controls button,
-  .catalog-v2-cart-page .remove-btn,
-  .catalog-v2-cart-page aside .summary,
-  .catalog-v2-cart-page .cart-modal { background: #111827; border-color: #334155; color: #e2e8f0; }
-  .catalog-v2-cart-page li { border-color: #334155; }
-  .catalog-v2-cart-page li p,
-  .catalog-v2-cart-page li strong { color: #f9fafb; }
-  .catalog-v2-cart-page li .placeholder,
-  .catalog-v2-cart-page .qty-controls input { background: #1f2937; border-color: #334155; color: #e2e8f0; }
-  .catalog-v2-cart-page aside .secondary,
-  .catalog-v2-cart-page .cart-modal__actions .secondary { background: #334155; color: #e2e8f0; }
-}
-
 :root[data-theme="dark"] .catalog-v2-cart-page { background: #0f172a; color: #e2e8f0; }
 :root[data-theme="dark"] .catalog-v2-cart-page__header button,
 :root[data-theme="dark"] .catalog-v2-cart-page .qty-controls button,

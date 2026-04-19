@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { FiChevronDown, FiPlus, FiMinus, FiX } from "react-icons/fi";
+import { FiPlus, FiMinus, FiX } from "react-icons/fi";
 import { StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
 
 type Props = {
@@ -80,15 +80,12 @@ export const VariantSelectionModalV2 = ({
             <h3 className="text-2xl font-bold leading-tight text-[var(--text-primary)] md:text-3xl">{productName}</h3>
             <p className="text-3xl font-extrabold leading-none text-[var(--text-primary)] md:text-4xl">{formatPrice(selectedPrice)}</p>
 
-            <button type="button" className="flex min-h-14 w-full items-center justify-between rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 py-2 text-left" aria-label="Seleccionar variante">
-              <span>
-                <strong className="text-xl font-bold leading-tight text-[var(--text-primary)]">Variantes</strong>
-                <small className="block text-sm text-[var(--text-muted)]">
-                  {isBaseSelected ? productName : selectedVariant ? selectedVariant.description : "Selecciona una opción"}
-                </small>
-              </span>
-              <FiChevronDown />
-            </button>
+            <div className="grid gap-1">
+              <strong className="text-xl font-bold leading-tight text-[var(--text-primary)]">Variantes</strong>
+              <small className="text-sm text-[var(--text-muted)]">
+                {isBaseSelected ? productName : selectedVariant ? selectedVariant.description : "Selecciona una opción"}
+              </small>
+            </div>
 
             <div className="flex flex-wrap gap-2">
               {variants.length > 0 ? (

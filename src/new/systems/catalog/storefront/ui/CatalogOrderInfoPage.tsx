@@ -308,7 +308,8 @@ export const CatalogOrderInfoPage = () => {
         throw new Error("No encontramos el teléfono de la tienda para enviar el pedido por WhatsApp.");
       }
 
-      window.open(`https://wa.me/${storePhone}?text=${encodeURIComponent(message)}`, "_blank");
+      const whatsappUrl = `https://wa.me/${storePhone}?text=${encodeURIComponent(message)}`;
+      window.location.href = whatsappUrl;
       window.localStorage.removeItem(`catalog-v2-cart:${businessId}`);
       navigate(`/v2/catalogo/${businessId}`);
     } catch (e: any) {
