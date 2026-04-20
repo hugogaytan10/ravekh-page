@@ -44,13 +44,14 @@ export class PosExportReportApi implements IExportReportRepository {
     period: ReportPeriod,
     token: string,
   ): Promise<ExportReport> {
-    const response = await this.httpClient.request<RawReportItem[]>({
+    const response = await this.httpClient.request<RawReportItem[] | RawReportItem | null>({
       method: "GET",
       path: `report/${this.mapScope(scope)}/${period}/${businessId}`,
       token,
     });
 
-    const items = response.map((item) => this.toItem(item));
+    const normalized = Array.isArray(response) ? response : response ? [response] : [];
+    const items = normalized.map((item) => this.toItem(item));
     return new ExportReport(businessId, scope, period, items);
   }
 

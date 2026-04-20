@@ -228,8 +228,23 @@
 }
 
 @media screen and (max-width: 767px) {
+  .pos-v2-auth-page {
+    align-items: stretch;
+    padding: 0.75rem;
+  }
+
+  .pos-v2-auth-container {
+    min-height: calc(100dvh - 1.5rem);
+    border-radius: 12px;
+  }
+
   .pos-v2-form {
     padding: 0 1.25rem;
+    justify-content: flex-start;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding-top: 1rem;
+    padding-bottom: calc(2rem + env(safe-area-inset-bottom));
   }
 
   .pos-v2-hidden-mobile {
@@ -249,6 +264,18 @@
 
   .pos-v2-auth-container.right-panel-active .pos-v2-sign-in-container {
     display: none;
+  }
+
+  .pos-v2-input {
+    font-size: 16px;
+  }
+
+  .pos-v2-file-name {
+    font-size: 0.875rem;
+  }
+
+  .pos-v2-field:focus-within {
+    scroll-margin-bottom: 8rem;
   }
 }
 
@@ -322,4 +349,3 @@
 :root[data-theme="dark"] .pos-v2-file-name {
   color: #cbd5e1;
 }
-

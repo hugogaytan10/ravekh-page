@@ -54,7 +54,7 @@ export class ProductsManagementPage {
     await this.service.deleteCategory(categoryId, token);
   }
 
-  async importProducts(businessId: number, file: File, token: string): Promise<{ imported: number; message: string }> {
+  async importProducts(businessId: number, file: File, token: string): Promise<{ imported: number; message: string; errors?: string[] }> {
     return this.service.importProducts(businessId, file, token);
   }
 }

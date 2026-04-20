@@ -20,6 +20,7 @@ import {
 import { hasPosLoyaltyModule, normalizePosCouponsPlan } from "../../../shared/config/posLoyaltyPlan";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { buildPosPublicCatalogUrl } from "../../../shared/config/posExternalLinks";
+import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
 import "./PosV2MorePage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -113,18 +114,27 @@ export const PosV2MorePage = () => {
   useEffect(() => {
     if (!sessionSnapshot.token || !sessionSnapshot.businessId) return;
 
-    fetch(new URL(`business/${sessionSnapshot.businessId}`, API_BASE_URL).toString(), {
-      headers: {
-        "Content-Type": "application/json",
-        token: sessionSnapshot.token,
-        Authorization: `Bearer ${sessionSnapshot.token}`,
-      },
-    })
-      .then((response) => (response.ok ? response.json() : null))
-      .then((payload: { CouponsPlan?: number; couponsPlan?: number } | null) => {
-        setCouponsPlan(normalizePosCouponsPlan(payload?.CouponsPlan ?? payload?.couponsPlan ?? 0));
+    const loadBusinessState = () => {
+      fetch(new URL(`business/${sessionSnapshot.businessId}`, API_BASE_URL).toString(), {
+        headers: {
+          "Content-Type": "application/json",
+          token: sessionSnapshot.token,
+          Authorization: `Bearer ${sessionSnapshot.token}`,
+        },
       })
-      .catch(() => setCouponsPlan(0));
+        .then((response) => (response.ok ? response.json() : null))
+        .then((payload: { CouponsPlan?: number; couponsPlan?: number } | null) => {
+          setCouponsPlan(normalizePosCouponsPlan(payload?.CouponsPlan ?? payload?.couponsPlan ?? 0));
+        })
+        .catch(() => setCouponsPlan(0));
+    };
+
+    loadBusinessState();
+
+    return onPosBusinessUpdated((detail) => {
+      if (detail.businessId !== sessionSnapshot.businessId) return;
+      loadBusinessState();
+    });
   }, [sessionSnapshot.businessId, sessionSnapshot.token]);
 
   useEffect(() => {

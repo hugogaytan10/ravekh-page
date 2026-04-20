@@ -350,15 +350,25 @@ export class PosProductsApi implements IProductsRepository {
     });
   }
 
-  async importProducts(businessId: number, file: File, token: string): Promise<{ imported: number; message: string }> {
-    const formData = new FormData();
-    formData.append("file", file);
+  async importProducts(businessId: number, file: File, token: string): Promise<{ imported: number; message: string; errors?: string[] }> {
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    if (extension !== "csv") {
+      throw new Error("Por ahora la importación soporta archivos CSV. Guarda tu Excel como .csv e inténtalo de nuevo.");
+    }
 
-    const response = await this.httpClient.request<{ imported?: number; message?: string; total?: number; created?: number; updated?: number }>({
+    const csvText = await file.text();
+    const rows = this.parseCsvRows(csvText);
+    if (rows.length === 0) {
+      throw new Error("El archivo no contiene registros válidos para importar.");
+    }
+
+    await this.ensureImportCategories(businessId, rows, token);
+
+    const response = await this.httpClient.request<{ imported?: number; message?: string; total?: number; created?: number; updated?: number; errors?: string[] }>({
       method: "POST",
       path: POS_ENDPOINTS.productImport(businessId),
       token,
-      body: formData,
+      body: { rows },
     });
 
     const imported = Number(response?.imported ?? response?.total ?? 0);
@@ -368,7 +378,140 @@ export class PosProductsApi implements IProductsRepository {
     return {
       imported: Number.isFinite(imported) && imported > 0 ? imported : Math.max(created + updated, 0),
       message: response?.message ?? "Importación completada.",
+      errors: Array.isArray(response?.errors) ? response.errors : [],
     };
+  }
+
+  private parseCsvRows(csvText: string): Record<string, string>[] {
+    const normalized = csvText.replace(/^\uFEFF/, "").replace(/\r\n/g, "\n").replace(/\r/g, "\n").trim();
+    if (!normalized) return [];
+
+    const lines = this.parseCsvLineArray(normalized);
+    if (lines.length < 2) return [];
+
+    const headers = lines[0].map((header) => String(header ?? "").trim());
+    const rows: Record<string, string>[] = [];
+
+    for (let index = 1; index < lines.length; index += 1) {
+      const values = lines[index];
+      const row: Record<string, string> = {};
+      let hasContent = false;
+
+      headers.forEach((header, headerIndex) => {
+        if (!header) return;
+        const value = String(values[headerIndex] ?? "").trim();
+        row[header] = value;
+        if (value.length > 0) hasContent = true;
+      });
+
+      if (hasContent) {
+        rows.push(row);
+      }
+    }
+
+    return rows;
+  }
+
+  private async ensureImportCategories(businessId: number, rows: Record<string, string>[], token: string): Promise<void> {
+    const existingCategories = await this.listCategoriesByBusiness(businessId, token);
+    const byParentAndName = new Map<string, ProductCategory>();
+
+    existingCategories.forEach((category) => {
+      if (!category.id) return;
+      byParentAndName.set(this.buildCategoryKey(category.name, category.parentId ?? null), category);
+    });
+
+    for (const row of rows) {
+      const parentName = this.normalizeImportCell(row.Category);
+      if (!parentName) continue;
+
+      const parentColor = this.normalizeImportCell(row.CategoryColor) || "#6D01D1";
+      let parentCategory = byParentAndName.get(this.buildCategoryKey(parentName, null));
+
+      if (!parentCategory) {
+        parentCategory = await this.createCategory(
+          {
+            businessId,
+            parentId: null,
+            name: parentName,
+            color: parentColor,
+          },
+          token,
+        );
+        byParentAndName.set(this.buildCategoryKey(parentName, null), parentCategory);
+      }
+
+      const subcategoryName = this.normalizeImportCell(row.Subcategory);
+      if (!subcategoryName || !parentCategory.id) continue;
+
+      const subcategoryColor = this.normalizeImportCell(row.SubcategoryColor) || parentCategory.color || "#6D01D1";
+      const subcategoryKey = this.buildCategoryKey(subcategoryName, parentCategory.id);
+      if (byParentAndName.has(subcategoryKey)) continue;
+
+      const createdSubcategory = await this.createCategory(
+        {
+          businessId,
+          parentId: parentCategory.id,
+          name: subcategoryName,
+          color: subcategoryColor,
+        },
+        token,
+      );
+
+      byParentAndName.set(subcategoryKey, createdSubcategory);
+    }
+  }
+
+  private buildCategoryKey(name: string, parentId: number | null): string {
+    return `${(parentId ?? 0).toString()}::${name.trim().toLowerCase()}`;
+  }
+
+  private normalizeImportCell(value: unknown): string {
+    if (typeof value !== "string") return "";
+    return value.trim();
+  }
+
+  private parseCsvLineArray(input: string): string[][] {
+    const rows: string[][] = [];
+    let currentRow: string[] = [];
+    let currentCell = "";
+    let inQuotes = false;
+
+    for (let index = 0; index < input.length; index += 1) {
+      const char = input[index];
+      const nextChar = input[index + 1];
+
+      if (char === "\"") {
+        if (inQuotes && nextChar === "\"") {
+          currentCell += "\"";
+          index += 1;
+          continue;
+        }
+        inQuotes = !inQuotes;
+        continue;
+      }
+
+      if (!inQuotes && char === ",") {
+        currentRow.push(currentCell);
+        currentCell = "";
+        continue;
+      }
+
+      if (!inQuotes && char === "\n") {
+        currentRow.push(currentCell);
+        rows.push(currentRow);
+        currentRow = [];
+        currentCell = "";
+        continue;
+      }
+
+      currentCell += char;
+    }
+
+    currentRow.push(currentCell);
+    rows.push(currentRow);
+
+    return rows;
   }
 
   private toDomain(product: ProductResponse, extras: ProductExtra[] = [], forcedVariants?: ProductVariant[]): ManagedProduct {

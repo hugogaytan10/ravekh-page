@@ -721,7 +721,15 @@ export const ProductsV2PosPage = () => {
     setImporting(true);
     try {
       const result = await service.importProducts(businessId, file, token);
-      setToast({ type: "success", message: `${result.message} (${result.imported} productos procesados)` });
+      const failed = Array.isArray(result.errors) ? result.errors.length : 0;
+      if (failed > 0) {
+        setToast({
+          type: "info",
+          message: `${result.message} (${result.imported} importados, ${failed} con error).`,
+        });
+      } else {
+        setToast({ type: "success", message: `${result.message} (${result.imported} productos importados).` });
+      }
       await loadProducts(currentPage);
     } catch (cause) {
       setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo importar el archivo." });
@@ -761,7 +769,7 @@ export const ProductsV2PosPage = () => {
             <button type="button" className="pos-v2-products__secondary" onClick={openCreateModal}>+ Nuevo</button>
             <button type="button" className="pos-v2-products__secondary" onClick={() => setShowCategoryManager(true)}>Categorías</button>
             <button type="button" className="pos-v2-products__secondary" onClick={() => excelInputRef.current?.click()} disabled={importing || !token || !businessId}>
-              {importing ? "Importando..." : "Importar Excel"}
+              {importing ? "Importando..." : "Importar CSV"}
             </button>
             <button type="button" className="pos-v2-products__refresh" onClick={() => loadProducts(currentPage)} disabled={loading || !token || !businessId}>
               {loading ? "Actualizando..." : "Actualizar"}
@@ -770,7 +778,7 @@ export const ProductsV2PosPage = () => {
           <input
             ref={excelInputRef}
             type="file"
-            accept=".xlsx,.xls,.csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-excel,text/csv"
+            accept=".csv,text/csv"
             className="pos-v2-products__hidden-input"
             onChange={handleImportProducts}
           />
