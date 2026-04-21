@@ -40,7 +40,7 @@ export class ProductsService {
     return this.repository.deleteCategory(categoryId, token);
   }
 
-  async importProducts(businessId: number, file: File, token: string): Promise<{ imported: number; message: string }> {
+  async importProducts(businessId: number, file: File, token: string): Promise<{ imported: number; message: string; errors?: string[] }> {
     return this.repository.importProducts(businessId, file, token);
   }
 }

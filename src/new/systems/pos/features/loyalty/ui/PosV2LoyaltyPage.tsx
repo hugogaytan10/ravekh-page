@@ -9,6 +9,7 @@ import QRCode from "../../../../loyalty/features/coupons/lib/QRCode";
 import QRErrorCorrectLevel from "../../../../loyalty/features/coupons/lib/QRCode/QRErrorCorrectLevel";
 import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
 import { hasPosDynamicVisitsQrModule, hasPosLoyaltyModule, normalizePosCouponsPlan } from "../../../shared/config/posLoyaltyPlan";
+import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
 import "./PosV2LoyaltyPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -228,25 +229,34 @@ export const PosV2LoyaltyPage = () => {
   useEffect(() => {
     if (!session.hasSession) return;
 
-    fetch(new URL(`business/${session.businessId}`, API_BASE_URL).toString(), {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${session.token}`,
-      },
-    })
-      .then(async (response) => {
-        if (!response.ok) return null;
-        const payload = await response.json() as Record<string, unknown>;
-        setBusinessInfo({
-          name: String(payload.Name ?? payload.name ?? `Negocio #${session.businessId}`),
-          phone: String(payload.PhoneNumber ?? payload.phoneNumber ?? "No disponible"),
-          address: String(payload.Address ?? payload.address ?? "No disponible"),
-          plan: String(payload.Plan ?? payload.plan ?? "No definido"),
-          chargesEnabled: Number(payload.ChargesEnabled ?? payload.chargesEnabled ?? 0) === 1,
-          couponsPlan: normalizePosCouponsPlan(payload.CouponsPlan ?? payload.couponsPlan ?? 0),
-        });
+    const loadBusinessInfo = () => {
+      fetch(new URL(`business/${session.businessId}`, API_BASE_URL).toString(), {
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session.token}`,
+        },
       })
-      .catch(() => setBusinessInfo(null));
+        .then(async (response) => {
+          if (!response.ok) return null;
+          const payload = await response.json() as Record<string, unknown>;
+          setBusinessInfo({
+            name: String(payload.Name ?? payload.name ?? `Negocio #${session.businessId}`),
+            phone: String(payload.PhoneNumber ?? payload.phoneNumber ?? "No disponible"),
+            address: String(payload.Address ?? payload.address ?? "No disponible"),
+            plan: String(payload.Plan ?? payload.plan ?? "No definido"),
+            chargesEnabled: Number(payload.ChargesEnabled ?? payload.chargesEnabled ?? 0) === 1,
+            couponsPlan: normalizePosCouponsPlan(payload.CouponsPlan ?? payload.couponsPlan ?? 0),
+          });
+        })
+        .catch(() => setBusinessInfo(null));
+    };
+
+    loadBusinessInfo();
+
+    return onPosBusinessUpdated((detail) => {
+      if (detail.businessId !== session.businessId) return;
+      loadBusinessInfo();
+    });
   }, [session.businessId, session.hasSession, session.token]);
 
   const couponsPlan = businessInfo?.couponsPlan ?? 0;

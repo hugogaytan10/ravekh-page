@@ -3,6 +3,7 @@ import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
+import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
 import type { OnlineOrderCardViewModel, OnlineOrderStatus, OnlineOrderStatusFilter } from "../pages/OnlineOrderTrackingPage";
 import "./PosV2OnlineOrdersPage.css";
 
@@ -94,6 +95,10 @@ export const PosV2OnlineOrdersPage = () => {
     };
 
     loadBranding();
+    return onPosBusinessUpdated((detail) => {
+      if (detail.businessId !== businessId) return;
+      loadBranding();
+    });
   }, [brandingPage, businessId, token]);
 
   const filteredOrders = useMemo(() => {

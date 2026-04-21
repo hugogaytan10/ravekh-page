@@ -9,6 +9,7 @@ import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
+import { emitPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
 import "./PosV2ModulePreviewPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -328,23 +329,43 @@ export const PosV2ModulePreviewPage = () => {
       .replaceAll("\"", "&quot;")
       .replaceAll("'", "&#39;");
 
-  const exportAsCsv = () => {
-    if (exportRows.length === 0) {
-      setExportError("No hay datos para exportar en CSV con los filtros actuales.");
-      return;
+  const getExportHeaders = () => {
+    if (exportScope === "products") {
+      return ["ID", "Producto", "Cantidad", "Precio", "Total ventas", "Ganancia"];
     }
-    setExportError("");
-    const headers = ["ID", "Etiqueta", "Cantidad/Pedidos", "Total ventas", "Precio", "Ganancia", "CoinId", "Actividad"];
-    const rows = exportRows.map((row) => [
+
+    if (exportScope === "employees") {
+      return ["ID", "Empleado", "Órdenes", "Total ventas", "CoinId"];
+    }
+
+    return ["ID", "Cliente", "Órdenes", "Total ventas", "CoinId"];
+  };
+
+  const getExportRowsForScope = () => {
+    if (exportScope === "products") {
+      return exportRows.map((row) => [
+        row.id,
+        row.label,
+        row.quantity,
+        row.price.toFixed(2),
+        row.total.toFixed(2),
+        row.earnings.toFixed(2),
+      ]);
+    }
+
+    return exportRows.map((row) => [
       row.id,
       row.label,
       row.quantity,
       row.total.toFixed(2),
-      row.price.toFixed(2),
-      row.earnings.toFixed(2),
       row.coinId ?? "N/A",
-      row.hasActivity ? "Con actividad" : "Sin actividad",
     ]);
+  };
+
+  const exportAsCsv = () => {
+    setExportError("");
+    const headers = getExportHeaders();
+    const rows = getExportRowsForScope();
     const csvContent = [headers, ...rows].map((line) => line.map(escapeCsvCell).join(",")).join("\n");
     try {
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -360,28 +381,25 @@ export const PosV2ModulePreviewPage = () => {
   };
 
   const exportAsPdf = () => {
-    if (exportRows.length === 0) {
-      setExportError("No hay datos para exportar en PDF con los filtros actuales.");
-      return;
-    }
-    const printWindow = window.open("", "_blank", "noopener,noreferrer,width=1024,height=720");
+    const printWindow = window.open("", "_blank", "width=1024,height=720");
     if (!printWindow) {
       setExportError("No fue posible abrir la ventana de impresión. Revisa el bloqueador de ventanas.");
       return;
     }
+    const headers = getExportHeaders();
+    const rows = getExportRowsForScope();
     const rowsMarkup = exportRows
-      .map(
-        (row) =>
-          `<tr>
-            <td>${escapeHtml(row.id)}</td>
-            <td>${escapeHtml(row.label)}</td>
-            <td style="text-align:right;">${row.quantity}</td>
-            <td style="text-align:right;">$${row.total.toFixed(2)}</td>
-            <td style="text-align:right;">$${row.price.toFixed(2)}</td>
-            <td style="text-align:right;">$${row.earnings.toFixed(2)}</td>
-            <td style="text-align:center;">${escapeHtml(row.coinId ?? "N/A")}</td>
-          </tr>`,
-      )
+      .map((_, index) => {
+        const row = rows[index];
+        const cells = row.map((cell, cellIndex) => {
+          const isNumeric = typeof cell === "number" || (typeof cell === "string" && /^-?\d+(\.\d+)?$/.test(cell));
+          const align = isNumeric ? "right" : "left";
+          const isCurrencyColumn = ["Precio", "Total ventas", "Ganancia"].includes(headers[cellIndex]);
+          const value = isNumeric && isCurrencyColumn ? `$${escapeHtml(cell)}` : escapeHtml(cell);
+          return `<td style="text-align:${align};">${value}</td>`;
+        }).join("");
+        return `<tr>${cells}</tr>`;
+      })
       .join("");
     const html = `
       <html>
@@ -408,16 +426,22 @@ export const PosV2ModulePreviewPage = () => {
             <p>Total monto: $${exportTotalAmount.toFixed(2)}</p>
           </div>
           <table>
-            <thead><tr><th>ID</th><th>Etiqueta</th><th>Cant/Pedidos</th><th>Total</th><th>Precio</th><th>Ganancia</th><th>Coin</th></tr></thead>
-            <tbody>${rowsMarkup}</tbody>
+            <thead><tr>${headers.map((header) => `<th>${header}</th>`).join("")}</tr></thead>
+            <tbody>${rowsMarkup || `<tr><td colspan="${headers.length}" style="text-align:center;">Sin datos para el filtro seleccionado.</td></tr>`}</tbody>
           </table>
+          <script>
+            window.addEventListener('load', function() {
+              setTimeout(function() {
+                window.print();
+              }, 200);
+            });
+          </script>
         </body>
       </html>
     `;
     printWindow.document.write(html);
     printWindow.document.close();
     printWindow.focus();
-    printWindow.print();
   };
 
   const saveTax = async (event: FormEvent<HTMLFormElement>) => {
@@ -460,6 +484,7 @@ export const PosV2ModulePreviewPage = () => {
       });
       if (!response.ok) throw new Error("No fue posible actualizar estado de tarjeta.");
       setBusinessStatus((current) => (current ? { ...current, chargesEnabled: enabled } : current));
+      emitPosBusinessUpdated({ businessId, source: "payment-methods" });
     } catch (cause) {
       setPaymentError(cause instanceof Error ? cause.message : "No fue posible actualizar método tarjeta.");
     }
@@ -499,6 +524,13 @@ export const PosV2ModulePreviewPage = () => {
         references: saved.references,
       });
       setBrandingSuccess("Branding guardado correctamente.");
+      setBusinessStatus((current) => (current ? {
+        ...current,
+        name: saved.name,
+        phone: saved.phoneNumber,
+        address: saved.address,
+      } : current));
+      emitPosBusinessUpdated({ businessId, source: "business-branding" });
     } catch (cause) {
       setBrandingSuccess("");
       setBrandingError(cause instanceof Error ? cause.message : "No fue posible guardar la información del negocio.");
@@ -738,7 +770,7 @@ export const PosV2ModulePreviewPage = () => {
               <button type="button" onClick={exportAsCsv} disabled={exportLoading || exportRows.length === 0}>
                 <FiFileText aria-hidden="true" /> Exportar CSV
               </button>
-              <button type="button" onClick={exportAsPdf} disabled={exportLoading || exportRows.length === 0}>
+              <button type="button" onClick={exportAsPdf} disabled={exportLoading}>
                 <FiPrinter aria-hidden="true" /> Exportar PDF
               </button>
             </div>
@@ -752,11 +784,11 @@ export const PosV2ModulePreviewPage = () => {
                   <article key={`${row.label}-${index}`} className="pos-v2-module-preview__row is-inline">
                     <strong>{row.label} </strong>
                     <small>
-                      Pedidos/Cant: {row.quantity} · Ventas: ${row.total.toFixed(2)} · Ganancia: ${row.earnings.toFixed(2)}
+                      {exportScope === "products"
+                        ? `Cantidad: ${row.quantity} · Precio: $${row.price.toFixed(2)} · Ventas: $${row.total.toFixed(2)} · Ganancia: $${row.earnings.toFixed(2)}`
+                        : `Órdenes: ${row.quantity} · Ventas: $${row.total.toFixed(2)} · CoinId: ${row.coinId ?? "N/A"}`}
                     </small>
-                    <small>
-                      Precio: ${row.price.toFixed(2)} · CoinId: {row.coinId ?? "N/A"} · {row.hasActivity ? "Con actividad" : "Sin actividad"}
-                    </small>
+                    {exportScope === "products" ? <small>CoinId: {row.coinId ?? "N/A"} · {row.hasActivity ? "Con actividad" : "Sin actividad"}</small> : null}
                   </article>
                 ))}
               </div>

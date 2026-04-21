@@ -60,7 +60,6 @@ export const PosV2LoginPage = () => {
   const [signUpPhoneNumber, setSignUpPhoneNumber] = useState("");
   const [signUpAddress, setSignUpAddress] = useState("");
   const [signUpReferences, setSignUpReferences] = useState("");
-  const [signUpDescription, setSignUpDescription] = useState("");
   const [signUpColor, setSignUpColor] = useState("#6D01D1");
   const [signUpLogoFile, setSignUpLogoFile] = useState<File | null>(null);
 
@@ -145,7 +144,7 @@ export const PosV2LoginPage = () => {
           phoneNumber: signUpPhoneNumber.trim(),
           logo: logoUrl,
           color: signUpColor,
-          references: `${signUpReferences.trim()}${signUpDescription.trim() ? ` | ${signUpDescription.trim()}` : ""}`,
+          references: signUpReferences.trim(),
         },
         employee: {
           name: signUpOwnerName.trim(),
@@ -192,7 +191,6 @@ export const PosV2LoginPage = () => {
               <FormField id="signup-phone" label="Teléfono del negocio" type="tel" placeholder="10 dígitos" value={signUpPhoneNumber} autoComplete="tel" onChange={setSignUpPhoneNumber} />
               <FormField id="signup-address" label="Dirección" type="text" placeholder="Calle y número" value={signUpAddress} autoComplete="street-address" onChange={setSignUpAddress} />
               <FormField id="signup-references" label="Referencias" type="text" placeholder="Entre calles, colonia, etc." value={signUpReferences} onChange={setSignUpReferences} />
-              <FormField id="signup-description" label="Descripción del negocio" type="text" placeholder="Ej: Café de especialidad" value={signUpDescription} onChange={setSignUpDescription} required={false} />
               <div className="pos-v2-field">
                 <label htmlFor="signup-color" className="pos-v2-label">
                   Color principal
