@@ -43,6 +43,14 @@
 
 .pos-v2-products__catalog { border: 1px solid var(--product-border); border-radius: 14px; background: var(--product-bg); padding: .95rem; display: grid; gap: .8rem; }
 .pos-v2-products__catalog-header, .pos-v2-products__controls { display: grid; gap: .55rem; }
+.pos-v2-products__sort {
+  display: grid;
+  gap: .25rem;
+  font-size: .84rem;
+  color: var(--product-muted);
+  font-weight: 700;
+  width: min(280px, 100%);
+}
 
 .pos-v2-products__switch,
 .pos-v2-products__toggle-card {

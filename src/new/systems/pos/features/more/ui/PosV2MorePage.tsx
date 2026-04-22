@@ -318,6 +318,7 @@ export const PosV2MorePage = () => {
                   "visits",
                   "customers",
                   "employees",
+                  "catalog-settings",
                   "exports",
                   "cash-closing",
                   "online-store",

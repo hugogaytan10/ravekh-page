@@ -22,6 +22,7 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
       { id: "tables", title: "Mesas y zonas", description: "Gestión de mesas para consumo en salón.", path: POS_V2_PATHS.tableZones, status: "available", actionType: "route" },
       { id: "business", title: "Información del negocio", description: "Datos fiscales/comerciales del negocio.", path: previewPath("business"), status: "available", actionType: "route" },
       { id: "sales-tax", title: "Impuesto de venta", description: "Ajustes de impuestos aplicados en ventas.", path: previewPath("sales-tax"), status: "available", actionType: "route" },
+      { id: "catalog-settings", title: "Checkout público", description: "Configura qué campos solicita el formulario de pedido del catálogo.", path: POS_V2_PATHS.catalog, status: "available", actionType: "route" },
       { id: "payment-methods", title: "Métodos de pago", description: "Configura efectivo, tarjeta y pagos en línea.", path: previewPath("payment-methods"), status: "available", actionType: "route" },
       { id: "stripe-connect", title: "Stripe Connect", description: "Conecta tu cuenta Stripe para cobros con tarjeta.", path: previewPath("stripe-connect"), status: "available", actionType: "route" },
       { id: "exports", title: "Exportar reportes", description: "Descarga reportes para contabilidad.", path: previewPath("exports"), status: "available", actionType: "route" },

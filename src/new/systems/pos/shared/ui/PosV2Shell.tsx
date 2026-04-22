@@ -1,5 +1,5 @@
 import { ReactNode, useEffect, useMemo, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { FiBarChart2, FiBox, FiDollarSign, FiMoreHorizontal, FiShoppingCart } from "react-icons/fi";
 import { isSalesOnlyOperator, readPosSessionSnapshot } from "../config/posSession";
 import { POS_V2_PATHS } from "../../routing/PosV2Paths";
@@ -25,6 +25,7 @@ const NAV_ITEMS = [
 
 export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [theme, setTheme] = useState<UiTheme>(() => {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
     if (stored === "light" || stored === "dark") {
@@ -48,6 +49,10 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
     if (!token || !isSalesOnlyOperator(token)) return NAV_ITEMS;
     return NAV_ITEMS.filter((item) => item.to === POS_V2_PATHS.sales || item.to === POS_V2_PATHS.more);
   }, []);
+
+  const shouldShowBottomNav = useMemo(() => {
+    return navItems.some((item) => item.to === location.pathname);
+  }, [location.pathname, navItems]);
 
   return (
     <div className="pos-v2-shell">
@@ -75,22 +80,24 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
 
       <main className="pos-v2-shell__content">{children}</main>
 
-      <nav className="pos-v2-shell__bottom-nav" aria-label="Navegación principal POS v2">
-        {navItems.map(({ to, label, Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            className={({ isActive }) => `pos-v2-shell__nav-item ${isActive ? "is-active" : ""}`}
-          >
-            {({ isActive }) => (
-              <>
-                <Icon size={21} aria-hidden="true" />
-                <span>{label}</span>
-              </>
-            )}
-          </NavLink>
-        ))}
-      </nav>
+      {shouldShowBottomNav ? (
+        <nav className="pos-v2-shell__bottom-nav" aria-label="Navegación principal POS v2">
+          {navItems.map(({ to, label, Icon }) => (
+            <NavLink
+              key={to}
+              to={to}
+              className={({ isActive }) => `pos-v2-shell__nav-item ${isActive ? "is-active" : ""}`}
+            >
+              {({ isActive }) => (
+                <>
+                  <Icon size={21} aria-hidden="true" />
+                  <span>{label}</span>
+                </>
+              )}
+            </NavLink>
+          ))}
+        </nav>
+      ) : null}
     </div>
   );
 };
