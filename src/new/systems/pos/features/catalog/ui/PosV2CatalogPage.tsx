@@ -1,8 +1,4 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
-import { CatalogApi } from "../../../../catalog/product-publishing/api/CatalogApi";
-import { CatalogPublishingPage } from "../../../../catalog/product-publishing/pages/CatalogPublishingPage";
-import { CatalogService } from "../../../../catalog/product-publishing/services/CatalogService";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
@@ -10,129 +6,183 @@ import "./PosV2CatalogPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
 
-type CatalogProductView = {
-  id: number;
-  title: string;
-  description: string;
+type ShippingOptionsConfig = {
+  ContactInformation: boolean;
+  ShippingMetod: boolean;
+  Street: boolean;
+  ZipCode: boolean;
+  City: boolean;
+  State: boolean;
+  References: boolean;
+  PaymentMetod: boolean;
 };
 
+const DEFAULT_SHIPPING_OPTIONS: ShippingOptionsConfig = {
+  ContactInformation: true,
+  ShippingMetod: true,
+  Street: true,
+  ZipCode: true,
+  City: true,
+  State: true,
+  References: true,
+  PaymentMetod: true,
+};
+
+const SHIPPING_OPTION_FIELDS: Array<{ key: keyof ShippingOptionsConfig; label: string; helper: string }> = [
+  { key: "ContactInformation", label: "Información de contacto", helper: "Nombre y teléfono del cliente" },
+  { key: "ShippingMetod", label: "Método de envío", helper: "Entrega a domicilio o recoger en tienda" },
+  { key: "Street", label: "Calle", helper: "Nombre de la calle" },
+  { key: "ZipCode", label: "Código postal", helper: "CP de entrega" },
+  { key: "City", label: "Municipio / ciudad", helper: "Ciudad o municipio" },
+  { key: "State", label: "Estado", helper: "Estado o provincia" },
+  { key: "References", label: "Referencias", helper: "Indicaciones extra para ubicar el domicilio" },
+  { key: "PaymentMetod", label: "Método de pago", helper: "Cómo pagará el cliente" },
+];
+
 export const PosV2CatalogPage = () => {
-  const [session] = useState(() => {
+  const session = useMemo(() => {
     const snapshot = readPosSessionSnapshot();
     return {
       ...snapshot,
       hasSession: snapshot.token.length > 0 && Number.isFinite(snapshot.businessId) && snapshot.businessId > 0,
     };
-  });
-
-  const [products, setProducts] = useState<CatalogProductView[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [error, setError] = useState<string | null>(null);
-  const [toast, setToast] = useState("");
-
-  const page = useMemo(() => {
-    const httpClient = new FetchHttpClient(API_BASE_URL);
-    const catalogApi = new CatalogApi(httpClient);
-    const catalogService = new CatalogService(catalogApi);
-    return new CatalogPublishingPage(catalogService);
   }, []);
 
-  const reload = async () => {
+  const [error, setError] = useState<string | null>(null);
+  const [toast, setToast] = useState("");
+  const [shippingLoading, setShippingLoading] = useState(false);
+  const [shippingSaving, setShippingSaving] = useState(false);
+  const [shippingOptions, setShippingOptions] = useState<ShippingOptionsConfig>(DEFAULT_SHIPPING_OPTIONS);
+
+  const loadShippingOptions = async () => {
     if (!session.hasSession) {
-      setProducts([]);
+      setShippingOptions(DEFAULT_SHIPPING_OPTIONS);
       return;
     }
 
-    setLoading(true);
+    setShippingLoading(true);
     setError(null);
     try {
-      const entries = await page.loadPublishedProducts(session.businessId, session.token);
-      setProducts(entries);
-    } catch {
-      setError("No fue posible cargar el catálogo publicado.");
-      setProducts([]);
+      const response = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/shippingoptions/business/${session.businessId}`, {
+        headers: {
+          "Content-Type": "application/json",
+          token: session.token,
+          Authorization: `Bearer ${session.token}`,
+        },
+      });
+      if (!response.ok) {
+        throw new Error("No fue posible cargar la configuración del checkout público.");
+      }
+
+      const payload = await response.json();
+      const row = Array.isArray(payload) ? payload[0] : payload;
+      if (!row || typeof row !== "object") {
+        setShippingOptions(DEFAULT_SHIPPING_OPTIONS);
+        return;
+      }
+
+      setShippingOptions({
+        ContactInformation: Number(row.ContactInformation) === 1,
+        ShippingMetod: Number(row.ShippingMetod) === 1,
+        Street: Number(row.Street) === 1,
+        ZipCode: Number(row.ZipCode) === 1,
+        City: Number(row.City) === 1,
+        State: Number(row.State) === 1,
+        References: Number(row.References) === 1,
+        PaymentMetod: Number(row.PaymentMetod) === 1,
+      });
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No fue posible cargar la configuración del checkout público.");
+      setShippingOptions(DEFAULT_SHIPPING_OPTIONS);
     } finally {
-      setLoading(false);
+      setShippingLoading(false);
     }
   };
 
   useEffect(() => {
-    void reload();
-  }, [page, session.businessId, session.hasSession, session.token]);
+    void loadShippingOptions();
+  }, [session.businessId, session.hasSession, session.token]);
 
-  const handlePublish = async (event: FormEvent) => {
+  const toggleShippingOption = (key: keyof ShippingOptionsConfig) => {
+    setShippingOptions((current) => ({ ...current, [key]: !current[key] }));
+  };
+
+  const handleSaveShippingOptions = async (event: FormEvent) => {
     event.preventDefault();
-
     if (!session.hasSession) {
-      setError("No hay sesión activa para publicar productos.");
+      setError("No hay sesión activa para guardar la configuración del checkout.");
       return;
     }
 
-    const cleanTitle = title.trim();
-    const cleanDescription = description.trim();
-
-    if (cleanTitle.length < 3 || cleanDescription.length < 6) {
-      setError("Agrega un título (mín. 3) y una descripción (mín. 6). ");
-      return;
-    }
-
-    setSaving(true);
+    setShippingSaving(true);
     setError(null);
     setToast("");
-
     try {
-      const created = await page.publishProduct(session.businessId, {
-        title: cleanTitle,
-        description: cleanDescription,
-      }, session.token);
-      setProducts((current) => [created, ...current]);
-      setToast("Producto publicado en catálogo correctamente.");
-      setTitle("");
-      setDescription("");
-    } catch {
-      setError("No pudimos publicar el producto en catálogo.");
+      const response = await fetch(`${API_BASE_URL.replace(/\/$/, "")}/shippingoptions/${session.businessId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          token: session.token,
+          Authorization: `Bearer ${session.token}`,
+        },
+        body: JSON.stringify({
+          ContactInformation: shippingOptions.ContactInformation ? 1 : 0,
+          ShippingMetod: shippingOptions.ShippingMetod ? 1 : 0,
+          Street: shippingOptions.Street ? 1 : 0,
+          ZipCode: shippingOptions.ZipCode ? 1 : 0,
+          City: shippingOptions.City ? 1 : 0,
+          State: shippingOptions.State ? 1 : 0,
+          References: shippingOptions.References ? 1 : 0,
+          PaymentMetod: shippingOptions.PaymentMetod ? 1 : 0,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error("No fue posible guardar la configuración del checkout público.");
+      }
+
+      setToast("Configuración del checkout público actualizada.");
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : "No fue posible guardar la configuración del checkout público.");
     } finally {
-      setSaving(false);
+      setShippingSaving(false);
     }
   };
 
   return (
-    <PosV2Shell title="Catálogo" subtitle="Publicación desacoplada para catálogo web con arquitectura moderna.">
-      <section className="pos-v2-catalog" aria-label="Catálogo web v2">
-        {!session.hasSession ? <p className="pos-v2-catalog__error">No hay sesión activa para gestionar catálogo.</p> : null}
+    <PosV2Shell title="Configuración de catálogo" subtitle="Define qué datos debe llenar el cliente al confirmar un pedido en tu catálogo público.">
+      <section className="pos-v2-catalog" aria-label="Configuración de catálogo">
+        {!session.hasSession ? <p className="pos-v2-catalog__error">No hay sesión activa para gestionar el checkout público.</p> : null}
         {error ? <p className="pos-v2-catalog__error">{error}</p> : null}
         {toast ? <p className="pos-v2-catalog__toast">{toast}</p> : null}
 
         <article className="pos-v2-catalog__card">
           <header>
-            <h2>Publicar producto</h2>
-            <p>Flujo rápido para mantener catálogo online sin depender de pantallas legacy.</p>
+            <h2>Checkout público</h2>
+            <p>Activa o desactiva los campos que se mostrarán al cliente en el formulario de pedido.</p>
           </header>
-          <form className="pos-v2-catalog__form" onSubmit={handlePublish}>
-            <input value={title} onChange={(event) => setTitle(event.target.value)} placeholder="Título del producto" />
-            <textarea value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Descripción para catálogo público" rows={3} />
-            <button type="submit" disabled={saving}>{saving ? "Publicando..." : "Publicar"}</button>
+          <form className="pos-v2-catalog__shipping-form" onSubmit={handleSaveShippingOptions}>
+            {shippingLoading ? <p>Cargando configuración...</p> : null}
+            <div className="pos-v2-catalog__shipping-grid">
+              {SHIPPING_OPTION_FIELDS.map((field) => (
+                <label key={field.key} className="pos-v2-catalog__switch-card">
+                  <input
+                    type="checkbox"
+                    checked={shippingOptions[field.key]}
+                    onChange={() => toggleShippingOption(field.key)}
+                  />
+                  <span className="pos-v2-catalog__switch-ui" aria-hidden="true" />
+                  <span className="pos-v2-catalog__switch-copy">
+                    <strong>{field.label}</strong>
+                    <small>{field.helper}</small>
+                  </span>
+                </label>
+              ))}
+            </div>
+            <button type="submit" disabled={shippingSaving || shippingLoading}>
+              {shippingSaving ? "Guardando..." : "Guardar configuración"}
+            </button>
           </form>
-        </article>
-
-        <article className="pos-v2-catalog__card">
-          <header>
-            <h2>Productos publicados</h2>
-            <p>{loading ? "Cargando catálogo..." : `${products.length} producto(s) publicados`}</p>
-          </header>
-          <div className="pos-v2-catalog__list">
-            {products.map((product) => (
-              <article key={product.id} className="pos-v2-catalog__item">
-                <h3>{product.title}</h3>
-                <p>{product.description}</p>
-                <small>ID: {product.id}</small>
-              </article>
-            ))}
-            {!loading && products.length === 0 ? <p>Aún no hay productos publicados.</p> : null}
-          </div>
         </article>
       </section>
     </PosV2Shell>

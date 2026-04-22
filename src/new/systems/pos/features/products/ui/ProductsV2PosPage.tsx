@@ -56,11 +56,25 @@ type VariantFormVm = {
 };
 
 type ViewMode = "grid" | "list";
+type SortOption = "name-asc" | "name-desc" | "price-asc" | "price-desc";
 type ToastState = { type: "success" | "error" | "info"; message: string } | null;
 type ArchiveDialogState = { id: number; name: string } | null;
 type ProductCategoryVm = { id: number; name: string; color: string };
 type SaveResultState = { type: "success" | "error"; message: string } | null;
 type CategoryFormErrors = { name?: string; color?: string };
+
+const compareByNameAsc = (a: ProductItemVm, b: ProductItemVm) => a.name.localeCompare(b.name, "es", { sensitivity: "base" });
+const compareByNameDesc = (a: ProductItemVm, b: ProductItemVm) => compareByNameAsc(b, a);
+const compareByPriceAsc = (a: ProductItemVm, b: ProductItemVm) => {
+  const priceA = a.price ?? Number.POSITIVE_INFINITY;
+  const priceB = b.price ?? Number.POSITIVE_INFINITY;
+  return priceA - priceB;
+};
+const compareByPriceDesc = (a: ProductItemVm, b: ProductItemVm) => {
+  const priceA = a.price ?? Number.NEGATIVE_INFINITY;
+  const priceB = b.price ?? Number.NEGATIVE_INFINITY;
+  return priceB - priceA;
+};
 
 const toImageUrl = (image?: string | null): string | null => {
   if (!image) return null;
@@ -117,6 +131,7 @@ export const ProductsV2PosPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>("name-asc");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -298,6 +313,12 @@ export const ProductsV2PosPage = () => {
 
   const visibleProducts = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
+    const comparators: Record<SortOption, (a: ProductItemVm, b: ProductItemVm) => number> = {
+      "name-asc": compareByNameAsc,
+      "name-desc": compareByNameDesc,
+      "price-asc": compareByPriceAsc,
+      "price-desc": compareByPriceDesc,
+    };
 
     return products
       .filter((product) => (showArchived ? true : product.available))
@@ -305,8 +326,9 @@ export const ProductsV2PosPage = () => {
         if (!normalizedSearch) return true;
 
         return product.name.toLowerCase().includes(normalizedSearch) || product.description.toLowerCase().includes(normalizedSearch);
-      });
-  }, [products, search, showArchived]);
+      })
+      .sort(comparators[sortBy]);
+  }, [products, search, showArchived, sortBy]);
 
   const stats = useMemo(() => {
     const active = products.filter((product) => product.available).length;
@@ -755,6 +777,129 @@ export const ProductsV2PosPage = () => {
     void loadProducts(boundedPage);
   };
 
+  const isVipPlan = useMemo(() => productsLimit.trim().toUpperCase().includes("VIP"), [productsLimit]);
+
+  const handleExportProducts = async () => {
+    if (!businessId || !token) {
+      setToast({ type: "error", message: "Conecta tu sesión para exportar productos." });
+      return;
+    }
+    if (!isVipPlan) {
+      setToast({ type: "info", message: "La exportación de productos está disponible solo para el plan VIP." });
+      return;
+    }
+
+    const csvHeaders = [
+      "Código de barras",
+      "Nombre de producto",
+      "Variante de",
+      "Descripción",
+      "Costo de adquisición",
+      "Precio de venta",
+      "Inventario actual",
+      "Inventario mínimo",
+      "Inventario óptimo",
+      "Categoría",
+      "Fecha de caducidad",
+      "A la venta",
+      "Disponible",
+      "Se muestra en tienda",
+      "Precio de promoción",
+      "Tiene precio de promoción",
+      "Imágenes",
+    ];
+    const toCsvValue = (value: string | number | boolean | null | undefined) => {
+      if (value == null) return "";
+      const text = String(value).replace(/"/g, "\"\"");
+      return `"${text}"`;
+    };
+    const yesNo = (value: boolean) => (value ? "Sí" : "No");
+    const serializeNumber = (value: number | null) => (value == null ? "" : String(value));
+    const formatDate = (rawDate: string | null) => (rawDate ? rawDate.slice(0, 10) : "");
+
+    const allProducts: ProductItemVm[] = [];
+    let page = 1;
+    let lastPage = 1;
+
+    try {
+      do {
+        const response = await service.listProductsPaginated(businessId, token, page, productsLimit);
+        const rows = Array.isArray(response.products) ? response.products : [];
+        allProducts.push(
+          ...rows.map((product) => ({
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            categoryId: product.categoryId,
+            categoryName: product.categoryName,
+            color: product.color,
+            available: product.available,
+            forSale: product.forSale,
+            showInStore: product.showInStore,
+            volume: product.volume,
+            price: product.price,
+            costPerItem: product.costPerItem,
+            promotionPrice: product.promotionPrice,
+            stock: product.stock,
+            expDate: product.expDate,
+            minStock: product.minStock,
+            optStock: product.optStock,
+            quantity: product.quantity,
+            image: product.image,
+            images: product.images,
+            variants: product.variants,
+            extras: product.extras,
+          })),
+        );
+        lastPage = Math.max(response.pagination.totalPages ?? 1, 1);
+        page += 1;
+      } while (page <= lastPage);
+
+      const lines = [
+        csvHeaders.map(toCsvValue).join(","),
+        ...allProducts.map((product) => {
+          const barcode = product.variants.find((variant) => variant.barcode)?.barcode ?? "";
+          const imageList = [product.image, ...product.images].filter(Boolean).join(" | ");
+          const row = [
+            barcode,
+            product.name,
+            "",
+            product.description,
+            serializeNumber(product.costPerItem),
+            serializeNumber(product.price),
+            serializeNumber(product.stock),
+            serializeNumber(product.minStock),
+            serializeNumber(product.optStock),
+            product.categoryName ?? "",
+            formatDate(product.expDate),
+            yesNo(product.forSale),
+            yesNo(product.available),
+            yesNo(product.showInStore),
+            serializeNumber(product.promotionPrice),
+            yesNo((product.promotionPrice ?? 0) > 0),
+            imageList,
+          ];
+          return row.map(toCsvValue).join(",");
+        }),
+      ];
+
+      const csvContent = `\uFEFF${lines.join("\n")}`;
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const objectUrl = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const dateChunk = new Date().toISOString().slice(0, 10);
+      link.href = objectUrl;
+      link.download = `productos-${dateChunk}.csv`;
+      document.body.append(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(objectUrl);
+      setToast({ type: "success", message: `Exportación completada (${allProducts.length} productos).` });
+    } catch (cause) {
+      setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo exportar productos." });
+    }
+  };
+
   return (
     <PosV2Shell title="Productos" subtitle="Catálogo moderno para operar tu POS de forma rápida.">
       <section className="pos-v2-products">
@@ -770,6 +915,9 @@ export const ProductsV2PosPage = () => {
             <button type="button" className="pos-v2-products__secondary" onClick={() => setShowCategoryManager(true)}>Categorías</button>
             <button type="button" className="pos-v2-products__secondary" onClick={() => excelInputRef.current?.click()} disabled={importing || !token || !businessId}>
               {importing ? "Importando..." : "Importar CSV"}
+            </button>
+            <button type="button" className="pos-v2-products__secondary" onClick={handleExportProducts} disabled={!isVipPlan || !token || !businessId}>
+              Exportar productos {isVipPlan ? "" : "(VIP)"}
             </button>
             <button type="button" className="pos-v2-products__refresh" onClick={() => loadProducts(currentPage)} disabled={loading || !token || !businessId}>
               {loading ? "Actualizando..." : "Actualizar"}
@@ -794,6 +942,15 @@ export const ProductsV2PosPage = () => {
 
             <div className="pos-v2-products__controls">
               <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nombre o descripción" aria-label="Buscar productos" />
+              <label className="pos-v2-products__sort">
+                Ordenar
+                <select value={sortBy} onChange={(event) => setSortBy(event.target.value as SortOption)} aria-label="Ordenar productos">
+                  <option value="name-asc">Nombre A-Z</option>
+                  <option value="name-desc">Nombre Z-A</option>
+                  <option value="price-desc">Precio mayor a menor</option>
+                  <option value="price-asc">Precio menor a mayor</option>
+                </select>
+              </label>
 
               <div className="pos-v2-products__view-toggle" role="group" aria-label="Cambiar vista">
                 <button type="button" className={viewMode === "grid" ? "is-active" : ""} onClick={() => setViewMode("grid")}>Cuadrícula</button>
