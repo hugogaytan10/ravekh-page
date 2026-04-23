@@ -16,6 +16,7 @@ type SaleItemVm = {
   name: string;
   price: number;
   stock: number | null;
+  categoryId: number | null;
   category: string;
   color: string | null;
   image?: string;
@@ -249,9 +250,11 @@ export const PosV2SalesHomePage = () => {
   const [categoryKey, setCategoryKey] = useState("all");
   const [isGrid, setIsGrid] = useState(true);
   const [products, setProducts] = useState<SaleItemVm[]>([]);
+  const [globalSearchProducts, setGlobalSearchProducts] = useState<SaleItemVm[]>([]);
   const [categories, setCategories] = useState<CategoryVm[]>([]);
   const [availableCategoryIds, setAvailableCategoryIds] = useState<number[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
+  const [searchingGlobalCatalog, setSearchingGlobalCatalog] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [cart, setCart] = useState<Record<string, CartItemVm>>({});
   const [discountPercent, setDiscountPercent] = useState("0");
@@ -310,6 +313,52 @@ export const PosV2SalesHomePage = () => {
     }
   };
 
+  const toSaleItemVm = (
+    item: {
+      id: number;
+      name: string;
+      price: number;
+      stock: number | null;
+      categoryId: number | null;
+      categoryName: string | null;
+      color: string | null;
+      image: string | null;
+      images: string[];
+      variants: Array<{
+        id: number | null;
+        description: string;
+        color: string | null;
+        size: string | null;
+        price: number | null;
+        promotionPrice: number | null;
+        stock: number | null;
+      }>;
+    },
+  ): SaleItemVm => ({
+    id: item.id,
+    name: item.name,
+    price: item.price,
+    stock: item.stock,
+    categoryId: item.categoryId,
+    category: item.categoryName?.trim() || "General",
+    color: item.color?.trim() || null,
+    image: toAbsoluteImageUrl(item.image || item.images?.find(Boolean)),
+    variants: item.variants.map((variant) => {
+      const variantPrice = typeof variant.promotionPrice === "number" && variant.promotionPrice > 0
+        ? variant.promotionPrice
+        : variant.price ?? item.price;
+
+      return {
+        id: variant.id,
+        description: variant.description.trim(),
+        color: variant.color,
+        size: variant.size,
+        price: variantPrice,
+        stock: variant.stock,
+      };
+    }),
+  });
+
   const getCurrentSession = () => readPosSessionSnapshot();
   const handleSelectTable = (nextTableId: string) => {
     const normalized = String(nextTableId ?? "").trim();
@@ -345,29 +394,7 @@ export const PosV2SalesHomePage = () => {
     productService
       .getSellableProductsPaginated(businessId, token, planLimit, currentPage, Number.isFinite(categoryId) ? categoryId : null)
       .then((response) => {
-        const mapped: SaleItemVm[] = response.products.map((item) => ({
-          id: item.id,
-          name: item.name,
-          price: item.price,
-          stock: item.stock,
-          category: item.categoryName?.trim() || "General",
-          color: item.color?.trim() || null,
-          image: toAbsoluteImageUrl(item.image || item.images?.find(Boolean)),
-          variants: item.variants.map((variant) => {
-            const variantPrice = typeof variant.promotionPrice === "number" && variant.promotionPrice > 0
-              ? variant.promotionPrice
-              : variant.price ?? item.price;
-
-            return {
-              id: variant.id,
-              description: variant.description.trim(),
-              color: variant.color,
-              size: variant.size,
-              price: variantPrice,
-              stock: variant.stock,
-            };
-          }),
-        }));
+        const mapped: SaleItemVm[] = response.products.map((item) => toSaleItemVm(item));
 
         setProducts(mapped);
         setCurrentPage(response.pagination.page);
@@ -381,6 +408,7 @@ export const PosV2SalesHomePage = () => {
       })
       .catch((error) => {
         setProducts([]);
+        setGlobalSearchProducts([]);
         setProductsError(error instanceof Error ? error.message : "No pudimos cargar tus productos.");
       })
       .finally(() => setLoadingProducts(false));
@@ -683,13 +711,60 @@ export const PosV2SalesHomePage = () => {
     }
   }, [categoryOptions, categoryKey]);
 
+  const debouncedSearch = useMemo(() => search.trim().toLowerCase(), [search]);
+
+  useEffect(() => {
+    if (debouncedSearch.length < 2) {
+      setSearchingGlobalCatalog(false);
+      setGlobalSearchProducts([]);
+      return;
+    }
+
+    const { token, businessId } = getCurrentSession();
+    const categoryId = categoryKey === "all" ? null : Number(categoryKey);
+    if (!token || !businessId) {
+      setSearchingGlobalCatalog(false);
+      setGlobalSearchProducts([]);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      const factory = new ModernSystemsFactory(API_BASE_URL);
+      const productService = factory.createPosProductService();
+      setSearchingGlobalCatalog(true);
+
+      productService
+        .getSellableProductsForSearch(businessId, token, planLimit)
+        .then((rows) => {
+          const mapped = rows.map((item) => toSaleItemVm(item));
+          const normalizedCategory = Number.isFinite(categoryId) ? Number(categoryId) : null;
+          const filtered = mapped.filter((product) => {
+            const matchesSearch = product.name.toLowerCase().includes(debouncedSearch);
+            const matchesCategory = normalizedCategory === null || product.categoryId === normalizedCategory;
+            return matchesSearch && matchesCategory;
+          });
+          setGlobalSearchProducts(filtered);
+        })
+        .catch(() => {
+          setGlobalSearchProducts([]);
+        })
+        .finally(() => {
+          setSearchingGlobalCatalog(false);
+        });
+    }, 320);
+
+    return () => window.clearTimeout(timeout);
+  }, [debouncedSearch, categoryKey, planLimit]);
+
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => product.name.toLowerCase().includes(search.toLowerCase()));
-  }, [products, search]);
+    const normalized = search.trim().toLowerCase();
+    const source = normalized.length >= 2 ? globalSearchProducts : products;
+    return source.filter((product) => product.name.toLowerCase().includes(normalized));
+  }, [globalSearchProducts, products, search]);
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [categoryKey, search]);
+  }, [categoryKey]);
 
   useEffect(() => {
     setPageInput(String(currentPage));
@@ -1687,6 +1762,9 @@ export const PosV2SalesHomePage = () => {
           </div>
 
           {loadingProducts ? <p className="pos-v2-sales-home__empty">Cargando productos…</p> : null}
+          {!loadingProducts && searchingGlobalCatalog ? (
+            <p className="pos-v2-sales-home__empty">Buscando en todo el catálogo…</p>
+          ) : null}
           {productsError ? <p className="pos-v2-sales-home__error">{productsError}</p> : null}
           <div className={`pos-v2-sales-home__products ${isGrid ? "is-grid" : "is-list"}`}>
             {filteredProducts.map((product) => {
@@ -1740,7 +1818,7 @@ export const PosV2SalesHomePage = () => {
             ) : null}
           </div>
 
-          {!loadingProducts && !productsError && totalPages > 1 ? (
+          {!loadingProducts && !productsError && search.trim().length < 2 && totalPages > 1 ? (
             <nav className="pos-v2-sales-home__pagination" aria-label="Paginación de productos">
               <button
                 type="button"

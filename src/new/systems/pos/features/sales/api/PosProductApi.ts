@@ -98,6 +98,22 @@ export class PosProductApi implements IProductRepository {
     return this.toPaginatedResult(payload, page, 20);
   }
 
+  async listAvailableByBusinessAll(
+    businessId: number,
+    token: string,
+    limit: string,
+  ): Promise<Product[]> {
+    const payload = await this.httpClient.request<SalesProductsPayload>({
+      method: "POST",
+      path: POS_ENDPOINTS.productsStockAvailableGtZeroAll(businessId),
+      token,
+      body: { Limit: limit },
+    });
+
+    const rows = Array.isArray(payload) ? payload : payload?.products ?? payload?.data ?? [];
+    return rows.map((item) => this.toDomain(item));
+  }
+
   async listCategoriesByBusiness(businessId: number, token: string): Promise<ProductCategory[]> {
     const categories = await this.httpClient.request<CategoryResponse[] | null>({
       method: "GET",

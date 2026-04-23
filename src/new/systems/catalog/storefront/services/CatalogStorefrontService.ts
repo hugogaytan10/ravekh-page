@@ -23,6 +23,14 @@ export class CatalogStorefrontService {
     return this.repository.getProductsByCategoryPage(categoryId, page, planLimit);
   }
 
+  getAllProductsByBusiness(businessId: string, planLimit?: string) {
+    return this.repository.getAllProductsByBusiness(businessId, planLimit);
+  }
+
+  getAllProductsByCategory(categoryId: number, planLimit?: string) {
+    return this.repository.getAllProductsByCategory(categoryId, planLimit);
+  }
+
   getProduct(productId: string) {
     return this.repository.getProductById(productId);
   }

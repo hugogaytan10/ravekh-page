@@ -33,6 +33,12 @@ const logCatalogDebug = (scope: string, payload: Record<string, unknown>) => {
   console.info(`[catalog-v2][${scope}]`, payload);
 };
 
+const isPaidPlan = (plan?: string | null): boolean => {
+  const normalized = String(plan ?? "").trim().toUpperCase();
+  if (!normalized) return false;
+  return normalized !== "GRATUITO" && normalized !== "PRUEBA";
+};
+
 export const CatalogStorefrontPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
@@ -43,6 +49,8 @@ export const CatalogStorefrontPage = () => {
   const [categories, setCategories] = useState<StorefrontCategory[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
+  const [globalSearchProducts, setGlobalSearchProducts] = useState<StorefrontProduct[]>([]);
+  const [searchingGlobalCatalog, setSearchingGlobalCatalog] = useState(false);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [pageInput, setPageInput] = useState("1");
@@ -261,10 +269,48 @@ export const CatalogStorefrontPage = () => {
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
   const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const normalizedSearch = search.trim().toLowerCase();
+  const paidPlanEnabled = useMemo(() => isPaidPlan(store?.plan), [store?.plan]);
+  const useGlobalSearch = normalizedSearch.length >= 2 && paidPlanEnabled;
+
+  useEffect(() => {
+    if (!businessContextLoaded || !businessId) return;
+    if (!useGlobalSearch) {
+      setGlobalSearchProducts([]);
+      setSearchingGlobalCatalog(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timeout = window.setTimeout(() => {
+      setSearchingGlobalCatalog(true);
+      pageLogic
+        .loadAllProducts(businessId, selectedCategoryId, planLimit)
+        .then((rows) => {
+          if (cancelled) return;
+          setGlobalSearchProducts(rows);
+        })
+        .catch(() => {
+          if (cancelled) return;
+          setGlobalSearchProducts([]);
+        })
+        .finally(() => {
+          if (cancelled) return;
+          setSearchingGlobalCatalog(false);
+        });
+    }, 320);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [businessContextLoaded, businessId, pageLogic, planLimit, selectedCategoryId, useGlobalSearch]);
+
   const filteredProducts = useMemo(() => {
+    const source = useGlobalSearch ? globalSearchProducts : products;
+    const publishable = source.filter((product) => (product.available ?? true) && (product.forSale ?? true) && (product.showInStore ?? true));
     const base = normalizedSearch.length === 0
-      ? products
-      : products.filter((product) => `${product.name} ${product.description}`.toLowerCase().includes(normalizedSearch));
+      ? publishable
+      : publishable.filter((product) => `${product.name} ${product.description}`.toLowerCase().includes(normalizedSearch));
 
     const inRange = base.filter((product) => {
       const price = product.promotionPrice && product.promotionPrice > 0 ? product.promotionPrice : product.price;
@@ -278,7 +324,7 @@ export const CatalogStorefrontPage = () => {
       const bPrice = b.promotionPrice && b.promotionPrice > 0 ? b.promotionPrice : b.price;
       return sortMode === "asc" ? aPrice - bPrice : bPrice - aPrice;
     });
-  }, [normalizedSearch, products, priceMax, priceMin, sortMode]);
+  }, [globalSearchProducts, normalizedSearch, priceMax, priceMin, products, sortMode, useGlobalSearch]);
 
   const handleQuickView = async (product: StorefrontProduct) => {
     const [variants, extras] = await Promise.all([pageLogic.loadVariants(product.id), pageLogic.loadExtras(product.id)]);
@@ -423,6 +469,10 @@ export const CatalogStorefrontPage = () => {
 
       {error ? <p className="catalog-v2__error">{error}</p> : null}
       {toast ? <p className="catalog-v2__toast">{toast}</p> : null}
+      {!loading && searchingGlobalCatalog ? <p className="catalog-v2__toast">Buscando en todo el catálogo…</p> : null}
+      {!loading && normalizedSearch.length >= 2 && !paidPlanEnabled ? (
+        <p className="catalog-v2__empty">La búsqueda global está disponible para planes de paga.</p>
+      ) : null}
 
       <section aria-label="Productos del catálogo">
         {loading ? (
@@ -445,7 +495,7 @@ export const CatalogStorefrontPage = () => {
         ) : null}
       </section>
 
-      {!loading && totalPages > 1 ? (
+      {!loading && !useGlobalSearch && totalPages > 1 ? (
         <nav
           className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface)] p-2"
           aria-label="Paginación de catálogo"

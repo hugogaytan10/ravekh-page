@@ -116,6 +116,7 @@ export const ProductsV2PosPage = () => {
   });
   const [token] = useState(() => window.localStorage.getItem(TOKEN_KEY) ?? "");
   const [products, setProducts] = useState<ProductItemVm[]>([]);
+  const [searchCatalogProducts, setSearchCatalogProducts] = useState<ProductItemVm[]>([]);
   const [categories, setCategories] = useState<ProductCategoryVm[]>([]);
   const [categoryNameInput, setCategoryNameInput] = useState("");
   const [categoryColorInput, setCategoryColorInput] = useState("#4F46E5");
@@ -124,6 +125,7 @@ export const ProductsV2PosPage = () => {
   const [categoryFormErrors, setCategoryFormErrors] = useState<CategoryFormErrors>({});
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [searchingCatalog, setSearchingCatalog] = useState(false);
   const [saving, setSaving] = useState(false);
   const [archivingId, setArchivingId] = useState<number | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
@@ -267,6 +269,7 @@ export const ProductsV2PosPage = () => {
           extras: product.extras,
         })),
       );
+      setSearchCatalogProducts([]);
       setCurrentPage(response.pagination.page);
       setTotalPages(response.pagination.totalPages);
       setTotalItems(response.pagination.total);
@@ -320,7 +323,9 @@ export const ProductsV2PosPage = () => {
       "price-desc": compareByPriceDesc,
     };
 
-    return products
+    const source = normalizedSearch.length >= 2 ? searchCatalogProducts : products;
+
+    return source
       .filter((product) => (showArchived ? true : product.available))
       .filter((product) => {
         if (!normalizedSearch) return true;
@@ -328,7 +333,73 @@ export const ProductsV2PosPage = () => {
         return product.name.toLowerCase().includes(normalizedSearch) || product.description.toLowerCase().includes(normalizedSearch);
       })
       .sort(comparators[sortBy]);
-  }, [products, search, showArchived, sortBy]);
+  }, [products, searchCatalogProducts, search, showArchived, sortBy]);
+
+  useEffect(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+    if (normalizedSearch.length < 2) {
+      setSearchCatalogProducts([]);
+      setSearchingCatalog(false);
+      return;
+    }
+
+    if (!businessId || !token) {
+      setSearchCatalogProducts([]);
+      setSearchingCatalog(false);
+      return;
+    }
+
+    const timeout = window.setTimeout(() => {
+      setSearchingCatalog(true);
+      (async () => {
+        try {
+          const allRows = [];
+          let currentPage = 1;
+          let totalPagesForSearch = 1;
+
+          do {
+            const response = await service.listProductsPaginated(businessId, token, currentPage, productsLimit);
+            allRows.push(...response.products);
+            totalPagesForSearch = Math.max(response.pagination.totalPages ?? 1, 1);
+            currentPage += 1;
+          } while (currentPage <= totalPagesForSearch);
+
+          const mapped = allRows.map((product) => ({
+            id: product.id,
+            name: product.name,
+            description: product.description,
+            categoryId: product.categoryId,
+            categoryName: product.categoryName,
+            color: product.color,
+            available: product.available,
+            forSale: product.forSale,
+            showInStore: product.showInStore,
+            volume: product.volume,
+            price: product.price,
+            costPerItem: product.costPerItem,
+            promotionPrice: product.promotionPrice,
+            stock: product.stock,
+            expDate: product.expDate,
+            minStock: product.minStock,
+            optStock: product.optStock,
+            quantity: product.quantity,
+            image: product.image,
+            images: product.images,
+            variants: product.variants,
+            extras: product.extras,
+          }));
+
+          setSearchCatalogProducts(mapped);
+        } catch {
+          setSearchCatalogProducts([]);
+        } finally {
+          setSearchingCatalog(false);
+        }
+      })();
+    }, 320);
+
+    return () => window.clearTimeout(timeout);
+  }, [search, businessId, token, service, productsLimit]);
 
   const stats = useMemo(() => {
     const active = products.filter((product) => product.available).length;
@@ -971,6 +1042,7 @@ export const ProductsV2PosPage = () => {
             </div>
           ) : null}
 
+          {!loading && searchingCatalog ? <p className="pos-v2-products__empty">Buscando en todo el catálogo…</p> : null}
           {!loading && visibleProducts.length === 0 ? <p className="pos-v2-products__empty">No hay productos para mostrar con los filtros actuales.</p> : null}
 
           {!loading ? (
@@ -1039,7 +1111,7 @@ export const ProductsV2PosPage = () => {
             </div>
           ) : null}
 
-          {!loading && visibleProducts.length > 0 ? (
+          {!loading && visibleProducts.length > 0 && search.trim().length < 2 ? (
             <nav className="pos-v2-products__pagination" aria-label="Paginación de productos">
               <button type="button" onClick={() => loadProducts(Math.max(1, currentPage - 1))} disabled={currentPage <= 1}>Anterior</button>
               <span>Página {currentPage} de {totalPages} · {totalItems} productos</span>

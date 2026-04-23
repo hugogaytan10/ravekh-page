@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
@@ -14,6 +14,8 @@ import "./PosV2LoyaltyPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
 const QR_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+const DYNAMIC_QR_ROTATION_SECONDS = 40;
+const DYNAMIC_QR_ROTATION_MS = DYNAMIC_QR_ROTATION_SECONDS * 1000;
 const randomChunk = (length: number): string => Array.from({ length }, () => QR_ALPHABET[Math.floor(Math.random() * QR_ALPHABET.length)]).join("");
 const buildCouponQrCode = (): string => `QR-${randomChunk(5)}-${randomChunk(4)}`;
 const pad = (value: number): string => String(value).padStart(2, "0");
@@ -159,6 +161,7 @@ export const PosV2LoyaltyPage = () => {
   const [printerFormat, setPrinterFormat] = useState<"58" | "80">("80");
   const [couponEditing, setCouponEditing] = useState<{ id: number; qr: string; description: string; maxRedemptions: string; validDateTime: string } | null>(null);
   const [deletingCouponId, setDeletingCouponId] = useState<number | null>(null);
+  const dynamicQrRequestInFlightRef = useRef(false);
 
   const page = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
@@ -485,24 +488,49 @@ export const PosV2LoyaltyPage = () => {
     }
   };
 
-  const handleGenerateDynamicQr = async () => {
-    if (!session.hasSession) {
-      setError("No hay sesión activa para generar QR dinámico.");
-      return;
+  const refreshDynamicQr = useCallback(async (silent = false) => {
+    if (!session.hasSession || dynamicQrRequestInFlightRef.current) return;
+
+    dynamicQrRequestInFlightRef.current = true;
+    if (!silent) {
+      setDynamicQrLoading(true);
+      setError(null);
     }
 
-    setDynamicQrLoading(true);
-    setError(null);
     try {
       const nextQr = await page.generateDynamicVisitQr(session.businessId, defaultDomain, session.token);
-      setDynamicQr(nextQr);
-      setToast("QR dinámico actualizado correctamente.");
+      setDynamicQr({
+        ...nextQr,
+        refreshAfterSeconds: DYNAMIC_QR_ROTATION_SECONDS,
+      });
+      if (!silent) setToast("QR dinámico actualizado correctamente.");
     } catch {
-      setDynamicQr(null);
-      setError("No se pudo generar el QR dinámico.");
+      if (!silent) {
+        setDynamicQr(null);
+        setError("No se pudo generar el QR dinámico.");
+      }
     } finally {
-      setDynamicQrLoading(false);
+      dynamicQrRequestInFlightRef.current = false;
+      if (!silent) setDynamicQrLoading(false);
     }
+  }, [defaultDomain, page, session.businessId, session.hasSession, session.token]);
+
+  useEffect(() => {
+    const shouldAutoRotate = session.hasSession
+      && dynamicQrModuleEnabled
+      && (loyaltyView === "all" || loyaltyView === "visits");
+    if (!shouldAutoRotate) return;
+
+    void refreshDynamicQr(true);
+    const intervalId = window.setInterval(() => {
+      void refreshDynamicQr(true);
+    }, DYNAMIC_QR_ROTATION_MS);
+
+    return () => window.clearInterval(intervalId);
+  }, [dynamicQrModuleEnabled, loyaltyView, refreshDynamicQr, session.hasSession]);
+
+  const handleGenerateDynamicQr = async () => {
+    await refreshDynamicQr(false);
   };
 
   return (

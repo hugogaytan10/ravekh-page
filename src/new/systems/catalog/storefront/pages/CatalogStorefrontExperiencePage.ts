@@ -27,6 +27,14 @@ export class CatalogStorefrontExperiencePage {
     return this.service.getProductsByBusiness(businessId, page, planLimit);
   }
 
+  loadAllProducts(businessId: string, categoryId?: number | null, planLimit?: string) {
+    if (categoryId != null) {
+      return this.service.getAllProductsByCategory(categoryId, planLimit);
+    }
+
+    return this.service.getAllProductsByBusiness(businessId, planLimit);
+  }
+
   loadProductDetail(productId: string) {
     return this.service.getProduct(productId);
   }
