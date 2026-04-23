@@ -8,6 +8,9 @@ export type StorefrontProduct = {
   price: number;
   promotionPrice?: number | null;
   variantsCount?: number;
+  forSale?: boolean;
+  available?: boolean;
+  showInStore?: boolean;
 };
 
 export type StorefrontBusiness = {

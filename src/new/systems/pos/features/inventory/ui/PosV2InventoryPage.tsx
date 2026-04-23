@@ -23,6 +23,8 @@ const getSafeSession = (): SessionState => {
 export const PosV2InventoryPage = () => {
   const [session] = useState(getSafeSession);
   const [cards, setCards] = useState<InventoryCard[]>([]);
+  const [globalSearchCards, setGlobalSearchCards] = useState<InventoryCard[]>([]);
+  const [searchingGlobalCatalog, setSearchingGlobalCatalog] = useState(false);
   const [query, setQuery] = useState("");
   const [threshold, setThreshold] = useState("8");
   const [loading, setLoading] = useState(false);
@@ -41,8 +43,9 @@ export const PosV2InventoryPage = () => {
 
   const filteredCards = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    return cards.filter((card) => (normalized ? card.name.toLowerCase().includes(normalized) : true));
-  }, [cards, query]);
+    const source = normalized.length >= 2 ? globalSearchCards : cards;
+    return source.filter((card) => (normalized ? card.name.toLowerCase().includes(normalized) : true));
+  }, [cards, globalSearchCards, query]);
 
   const summary = useMemo(() => {
     const lowStockCount = cards.filter((card) => card.status === "low").length;
@@ -82,6 +85,49 @@ export const PosV2InventoryPage = () => {
     const timeout = window.setTimeout(() => setToast(""), 2200);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => {
+    if (!session.hasSession) return;
+    const normalized = query.trim().toLowerCase();
+    if (normalized.length < 2) {
+      setGlobalSearchCards([]);
+      setSearchingGlobalCatalog(false);
+      return;
+    }
+
+    let cancelled = false;
+    const timeout = window.setTimeout(() => {
+      setSearchingGlobalCatalog(true);
+      (async () => {
+        try {
+          const allCards: InventoryCard[] = [];
+          let currentPage = 1;
+          let totalPages = 1;
+
+          do {
+            const response = await page.getInventoryCardsPaginated(session.businessId, session.token, safeThreshold, currentPage, 60);
+            allCards.push(...response.cards);
+            totalPages = Math.max(response.pagination.totalPages, 1);
+            currentPage += 1;
+          } while (currentPage <= totalPages);
+
+          if (cancelled) return;
+          setGlobalSearchCards(allCards);
+        } catch {
+          if (cancelled) return;
+          setGlobalSearchCards([]);
+        } finally {
+          if (cancelled) return;
+          setSearchingGlobalCatalog(false);
+        }
+      })();
+    }, 320);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [page, query, safeThreshold, session.businessId, session.hasSession, session.token]);
 
   const openEditStock = (card: InventoryCard) => {
     setEditingCard(card);
@@ -147,6 +193,7 @@ export const PosV2InventoryPage = () => {
 
         <ul className="pos-v2-inventory__list">
           {loading ? <li className="is-empty">Cargando inventario...</li> : null}
+          {!loading && searchingGlobalCatalog ? <li className="is-empty">Buscando en todo el inventario...</li> : null}
           {!loading && filteredCards.map((card) => (
             <li key={card.id}>
               <div>

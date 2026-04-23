@@ -23,6 +23,11 @@ export interface IProductRepository {
     limit: string,
     page: number,
   ): Promise<SalesProductsPaginatedResult>;
+  listAvailableByBusinessAll(
+    businessId: number,
+    token: string,
+    limit: string,
+  ): Promise<Product[]>;
   listByCategoryPaginated(
     categoryId: number,
     token: string,

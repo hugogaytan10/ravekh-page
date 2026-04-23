@@ -52,6 +52,15 @@ export class ProductService {
     };
   }
 
+  async getSellableProductsForSearch(
+    businessId: number,
+    token: string,
+    limit: string,
+  ): Promise<Product[]> {
+    const products = await this.repository.listAvailableByBusinessAll(businessId, token, limit);
+    return products.filter((product) => product.hasStock() && product.canBeSold());
+  }
+
 
   async getBusinessCategories(businessId: number, token: string) {
     return this.repository.listCategoriesByBusiness(businessId, token);

@@ -22,6 +22,12 @@ type ProductResponse = {
   images?: unknown;
   VariantsCount?: number | string;
   variantsCount?: number | string;
+  ForSale?: boolean | number | string | null;
+  forSale?: boolean | number | string | null;
+  Available?: boolean | number | string | null;
+  available?: boolean | number | string | null;
+  ShowInStore?: boolean | number | string | null;
+  showInStore?: boolean | number | string | null;
 };
 
 type ProductsPagination = {
@@ -95,6 +101,17 @@ const normalizeBase = (value: string) => (value.endsWith("/") ? value : `${value
 const parseNumber = (value: unknown, fallback = 0) => {
   const next = Number(value);
   return Number.isFinite(next) ? next : fallback;
+};
+
+const toBoolean = (value: unknown, fallback = true) => {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") return value === 1;
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (normalized === "1" || normalized === "true") return true;
+    if (normalized === "0" || normalized === "false") return false;
+  }
+  return fallback;
 };
 
 const isCatalogDebugEnabled = () => {
@@ -187,6 +204,9 @@ const normalizeProducts = (items: ProductResponse[], businessId: string) =>
       price: parseNumber(item.Price ?? item.price),
       promotionPrice: item.PromotionPrice ?? item.promotionPrice ?? null,
       variantsCount: parseNumber(item.VariantsCount ?? item.variantsCount),
+      forSale: toBoolean(item.ForSale ?? item.forSale, true),
+      available: toBoolean(item.Available ?? item.available, true),
+      showInStore: toBoolean(item.ShowInStore ?? item.showInStore, true),
     }))
     .map((item) => ({
       ...item,
@@ -334,6 +354,36 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
     return normalized;
   }
 
+  async getAllProductsByBusiness(businessId: string, planLimit?: string): Promise<StorefrontProduct[]> {
+    const collected: StorefrontProduct[] = [];
+    let currentPage = 1;
+    let totalPages = 1;
+
+    do {
+      const page = await this.getProductsByBusinessPage(businessId, currentPage, planLimit);
+      collected.push(...page.products);
+      totalPages = Math.max(page.pagination.totalPages, 1);
+      currentPage += 1;
+    } while (currentPage <= totalPages);
+
+    return collected;
+  }
+
+  async getAllProductsByCategory(categoryId: number, planLimit?: string): Promise<StorefrontProduct[]> {
+    const collected: StorefrontProduct[] = [];
+    let currentPage = 1;
+    let totalPages = 1;
+
+    do {
+      const page = await this.getProductsByCategoryPage(categoryId, currentPage, planLimit);
+      collected.push(...page.products);
+      totalPages = Math.max(page.pagination.totalPages, 1);
+      currentPage += 1;
+    } while (currentPage <= totalPages);
+
+    return collected;
+  }
+
 
   async getBusinessCheckoutConfig(businessId: string): Promise<StorefrontBusinessCheckoutConfig | null> {
     const response = await fetch(`${normalizeBase(this.baseUrl)}business/${businessId}`);
@@ -437,6 +487,9 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
           ? parseNumber(item.PromotionPrice ?? item.promotionPrice)
           : null,
       variantsCount: parseNumber(item.VariantsCount ?? item.variantsCount),
+      forSale: toBoolean(item.ForSale ?? item.forSale, true),
+      available: toBoolean(item.Available ?? item.available, true),
+      showInStore: toBoolean(item.ShowInStore ?? item.showInStore, true),
     };
   }
 }
