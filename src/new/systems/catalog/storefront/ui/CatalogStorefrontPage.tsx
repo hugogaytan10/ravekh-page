@@ -100,7 +100,7 @@ export const CatalogStorefrontPage = () => {
 
   useEffect(() => {
     if (!businessId) return;
-    void pageLogic.registerVisit(businessId);
+    void pageLogic.registerVisit(businessId, "always");
   }, [businessId, pageLogic]);
 
   useEffect(() => {

@@ -29,6 +29,12 @@ const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 
 const moneyFormatter = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 });
 const dateFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
+const BRAND_PURPLE = "#6d01d1";
+const BRAND_VIOLET = "#7c3aed";
+const BRAND_ORCHID = "#9333ea";
+const BRAND_LAVENDER = "#a78bfa";
+const BRAND_SOFT = "#c4b5fd";
+const BRAND_INDIGO = "#4c1d95";
 
 const RANGE_OPTIONS: Array<{ value: ReportRange; label: string }> = [
   { value: "DAY", label: "Hoy" },
@@ -129,7 +135,7 @@ export const PosV2ReportingPage = () => {
   const [topCustomers, setTopCustomers] = useState<TopChartItem[]>([]);
   const [tableRange, setTableRange] = useState<ReportRange>("DAY");
   const [salesQuery, setSalesQuery] = useState("");
-  const [salesStatus, setSalesStatus] = useState<"TODOS" | "PENDIENTE" | "ENTREGADO">("TODOS");
+  const [salesStatus, setSalesStatus] = useState<"TODOS" | "PEDIDO" | "ENTREGADO" | "CANCELADO">("TODOS");
   const reportRequestRef = useRef(0);
   const salesRequestRef = useRef(0);
   const topChartsRequestRef = useRef(0);
@@ -295,8 +301,8 @@ export const PosV2ReportingPage = () => {
       {
         label: "Ingresos",
         data: trendData.map((point) => Number(point.amount) || 0),
-        borderColor: "#7c3aed",
-        backgroundColor: "rgba(124, 58, 237, 0.16)",
+        borderColor: BRAND_VIOLET,
+        backgroundColor: "rgba(109, 1, 209, 0.16)",
         tension: 0.35,
         pointRadius: 3,
         pointHoverRadius: 5,
@@ -310,7 +316,7 @@ export const PosV2ReportingPage = () => {
     datasets: [
       {
         data: [derivedKpis.cashRatio || 0, derivedKpis.cardRatio || 0],
-        backgroundColor: ["#8b5cf6", "#06b6d4"],
+        backgroundColor: [BRAND_VIOLET, BRAND_SOFT],
         borderWidth: 0,
       },
     ],
@@ -381,7 +387,7 @@ export const PosV2ReportingPage = () => {
         data: displayTopProducts.map((item) => item.quantity),
         borderRadius: 8,
         borderSkipped: false,
-        backgroundColor: ["#3b82f6", "#60a5fa", "#93c5fd", "#38bdf8", "#0ea5e9"],
+        backgroundColor: [BRAND_PURPLE, BRAND_VIOLET, BRAND_ORCHID, BRAND_LAVENDER, BRAND_SOFT],
       },
     ],
   }), [displayTopProducts]);
@@ -392,7 +398,7 @@ export const PosV2ReportingPage = () => {
       {
         label: "Ventas por empleado",
         data: topEmployees.map((item) => item.quantity),
-        backgroundColor: ["#06b6d4", "#22d3ee", "#67e8f9", "#0ea5e9", "#0284c7"],
+        backgroundColor: [BRAND_INDIGO, BRAND_PURPLE, BRAND_VIOLET, BRAND_ORCHID, BRAND_LAVENDER],
         borderWidth: 0,
       },
     ],
@@ -406,7 +412,7 @@ export const PosV2ReportingPage = () => {
         data: topCustomers.map((item) => item.quantity),
         borderRadius: 8,
         borderSkipped: false,
-        backgroundColor: ["#f97316", "#fb923c", "#fdba74", "#fed7aa", "#ffedd5"],
+        backgroundColor: [BRAND_ORCHID, BRAND_VIOLET, BRAND_PURPLE, BRAND_LAVENDER, BRAND_SOFT],
       },
     ],
   }), [topCustomers]);
@@ -416,7 +422,7 @@ export const PosV2ReportingPage = () => {
     datasets: [
       {
         data: [summary.income, summary.earnings, summary.averageSale],
-        backgroundColor: ["#7c3aed", "#10b981", "#f59e0b"],
+        backgroundColor: [BRAND_VIOLET, BRAND_PURPLE, BRAND_LAVENDER],
         borderWidth: 0,
       },
     ],
@@ -426,12 +432,8 @@ export const PosV2ReportingPage = () => {
     const query = salesQuery.trim().toLowerCase();
 
     return sales.filter((sale) => {
-      const matchesStatus =
-        salesStatus === "TODOS"
-          ? true
-          : salesStatus === "PENDIENTE"
-            ? sale.status.toLowerCase().includes("pend")
-            : !sale.status.toLowerCase().includes("pend");
+      const normalizedStatus = sale.status.toUpperCase().trim();
+      const matchesStatus = salesStatus === "TODOS" ? true : normalizedStatus === salesStatus;
 
       if (!matchesStatus) return false;
       if (!query) return true;
@@ -445,6 +447,23 @@ export const PosV2ReportingPage = () => {
     totalRows: filteredSales.length,
     totalAmount: filteredSales.reduce((acc, sale) => acc + (Number(sale.total) || 0), 0),
   }), [filteredSales]);
+
+  const salesStatusChartData = useMemo(() => {
+    const order = filteredSales.filter((sale) => sale.status.toUpperCase().trim() === "PEDIDO").length;
+    const delivered = filteredSales.filter((sale) => sale.status.toUpperCase().trim() === "ENTREGADO").length;
+    const canceled = filteredSales.filter((sale) => sale.status.toUpperCase().trim() === "CANCELADO").length;
+    return {
+      labels: ["Pedido", "Entregado", "Cancelado"],
+      datasets: [
+        {
+          label: "Estado de pedidos",
+          data: [order, delivered, canceled],
+          backgroundColor: [BRAND_ORCHID, BRAND_PURPLE, "#ef4444"],
+          borderWidth: 0,
+        },
+      ],
+    };
+  }, [filteredSales]);
 
   const exportSalesCsv = () => {
     if (filteredSales.length === 0) {
@@ -565,6 +584,16 @@ export const PosV2ReportingPage = () => {
             {!topChartsLoading && topCustomers.length > 0 ? <div className="pos-v2-reporting__mini-line"><Bar data={topCustomersChartData} options={quantityBarOptions} /></div> : null}
           </article>
 
+          <article className="pos-v2-reporting__card">
+            <header>
+              <h3>Estado de pedidos</h3>
+              <HiMiniCube aria-hidden="true" />
+            </header>
+            {salesLoading ? <div className="pos-v2-reporting__chart-skeleton" aria-hidden="true" /> : null}
+            {!salesLoading && filteredSales.length === 0 ? <p className="is-empty">Sin pedidos para mostrar estatus.</p> : null}
+            {!salesLoading && filteredSales.length > 0 ? <div className="pos-v2-reporting__doughnut"><Doughnut data={salesStatusChartData} options={doughnutOptions} /></div> : null}
+          </article>
+
           <article className="pos-v2-reporting__card is-full">
             <header className="pos-v2-reporting__sales-header">
               <h3>Reporte pedidos</h3>
@@ -599,10 +628,11 @@ export const PosV2ReportingPage = () => {
                 </label>
                 <label>
                   Estado
-                  <select value={salesStatus} onChange={(event) => setSalesStatus(event.target.value as "TODOS" | "PENDIENTE" | "ENTREGADO")}>
+                  <select value={salesStatus} onChange={(event) => setSalesStatus(event.target.value as "TODOS" | "PEDIDO" | "ENTREGADO" | "CANCELADO")}>
                     <option value="TODOS">Todos</option>
-                    <option value="PENDIENTE">Pendientes</option>
+                    <option value="PEDIDO">Pedido</option>
                     <option value="ENTREGADO">Entregados</option>
+                    <option value="CANCELADO">Cancelados</option>
                   </select>
                 </label>
                 <button type="button" onClick={exportSalesCsv} disabled={salesLoading || !hasToken || filteredSales.length === 0}>
@@ -642,7 +672,15 @@ export const PosV2ReportingPage = () => {
                         <td>{sale.quantity}</td>
                         <td>{moneyFormatter.format(sale.total)}</td>
                         <td>
-                          <span className={`status ${sale.status.toLowerCase().includes("pend") ? "is-pending" : "is-success"}`}>
+                          <span
+                            className={`status ${
+                              sale.status.toUpperCase().includes("CANCEL")
+                                ? "is-cancelled"
+                                : sale.status.toUpperCase().includes("ENTREG")
+                                  ? "is-success"
+                                  : "is-pending"
+                            }`}
+                          >
                             {sale.status}
                           </span>
                         </td>

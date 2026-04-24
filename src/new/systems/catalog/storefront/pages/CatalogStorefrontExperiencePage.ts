@@ -3,8 +3,8 @@ import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 export class CatalogStorefrontExperiencePage {
   constructor(private readonly service: CatalogStorefrontService) {}
 
-  registerVisit(businessId: string) {
-    return this.service.registerBusinessVisit(businessId);
+  registerVisit(businessId: string, mode: "unique" | "always" = "unique") {
+    return this.service.registerBusinessVisit(businessId, mode);
   }
 
   async loadBusinessContext(businessId: string) {

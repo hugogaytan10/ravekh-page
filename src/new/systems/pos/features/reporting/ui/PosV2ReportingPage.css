@@ -558,6 +558,11 @@
   background: #dcfce7;
 }
 
+.pos-v2-reporting__table .status.is-cancelled {
+  color: #991b1b;
+  background: #fee2e2;
+}
+
 .pos-v2-reporting__module-grid {
   display: grid;
   gap: 0.65rem;
