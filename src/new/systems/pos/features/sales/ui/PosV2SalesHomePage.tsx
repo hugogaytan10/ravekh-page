@@ -288,7 +288,8 @@ export const PosV2SalesHomePage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPrevPage, setHasPrevPage] = useState(false);
-  const [planLimit, setPlanLimit] = useState(() => (window.localStorage.getItem("plan") ?? "").trim() || DEFAULT_SALES_LIMIT);
+  const [planLimit, setPlanLimit] = useState("");
+  const [isPlanLimitReady, setIsPlanLimitReady] = useState(false);
   const [couponsPlan, setCouponsPlan] = useState<0 | 1 | 2>(0);
   const [variantSelection, setVariantSelection] = useState<{
     product: SaleItemVm;
@@ -386,6 +387,11 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
+    if (!isPlanLimitReady) {
+      setLoadingProducts(true);
+      return;
+    }
+
     const factory = new ModernSystemsFactory(API_BASE_URL);
     const productService = factory.createPosProductService();
 
@@ -412,7 +418,7 @@ export const PosV2SalesHomePage = () => {
         setProductsError(error instanceof Error ? error.message : "No pudimos cargar tus productos.");
       })
       .finally(() => setLoadingProducts(false));
-  }, [categoryKey, currentPage, planLimit]);
+  }, [categoryKey, currentPage, isPlanLimitReady, planLimit]);
 
   useEffect(() => {
     const { token, businessId } = getCurrentSession();
@@ -428,11 +434,17 @@ export const PosV2SalesHomePage = () => {
       .getSettings(businessId, token)
       .then((settings) => {
         const normalizedPlan = (settings.plan ?? "").trim();
-        if (!normalizedPlan) return;
-        setPlanLimit(normalizedPlan);
-        window.localStorage.setItem("plan", normalizedPlan);
+        const storedPlan = (window.localStorage.getItem("plan") ?? "").trim();
+        const resolvedPlan = normalizedPlan || storedPlan || DEFAULT_SALES_LIMIT;
+
+        setPlanLimit(resolvedPlan);
+        window.localStorage.setItem("plan", resolvedPlan);
       })
-      .catch(() => undefined);
+      .catch(() => {
+        const fallbackPlan = (window.localStorage.getItem("plan") ?? "").trim() || DEFAULT_SALES_LIMIT;
+        setPlanLimit(fallbackPlan);
+      })
+      .finally(() => setIsPlanLimitReady(true));
   }, []);
 
   useEffect(() => {
@@ -714,7 +726,7 @@ export const PosV2SalesHomePage = () => {
   const debouncedSearch = useMemo(() => search.trim().toLowerCase(), [search]);
 
   useEffect(() => {
-    if (debouncedSearch.length < 2) {
+    if (!isPlanLimitReady || debouncedSearch.length < 2) {
       setSearchingGlobalCatalog(false);
       setGlobalSearchProducts([]);
       return;
@@ -754,7 +766,7 @@ export const PosV2SalesHomePage = () => {
     }, 320);
 
     return () => window.clearTimeout(timeout);
-  }, [debouncedSearch, categoryKey, planLimit]);
+  }, [debouncedSearch, categoryKey, isPlanLimitReady, planLimit]);
 
   const filteredProducts = useMemo(() => {
     const normalized = search.trim().toLowerCase();
