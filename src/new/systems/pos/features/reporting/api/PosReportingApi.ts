@@ -91,6 +91,25 @@ type LegacySalesResponse = {
   commands?: LegacySalesItem[];
 };
 
+type CatalogDetailProductResponse = {
+  detailId?: NullableNumber;
+  name?: NullableText;
+  quantity?: NullableNumber;
+  price?: NullableNumber;
+  amount?: NullableNumber;
+  detailAmount?: NullableNumber;
+};
+
+type CatalogDetailOrderResponse = {
+  id?: NullableNumber;
+  idType?: NullableText;
+  type?: NullableText;
+  address?: NullableText;
+  date?: NullableText;
+  status?: NullableText;
+  products?: CatalogDetailProductResponse[];
+};
+
 type BackendCustomerItem = {
   CustomerId?: NullableNumber;
   CustomerName?: NullableText;
@@ -166,6 +185,11 @@ const mapRangeToSuffix = (range: ReportRange): "today" | "month" | "year" => {
   return "year";
 };
 
+const mapRangeToCatalogDetailsSuffix = (range: ReportRange): "today" | "month" => {
+  if (range === "DAY") return "today";
+  return "month";
+};
+
 const unwrapPayload = <T>(payload: T | LegacyDataWrapper<T>): T => {
   if (payload && typeof payload === "object") {
     const wrappedPayload = payload as LegacyDataWrapper<T>;
@@ -224,25 +248,20 @@ export class PosReportingApi implements IReportingRepository {
     payment: "TODOS" | "EFECTIVO" | "TARJETA",
     token: string,
   ): Promise<ReportSale[]> {
-    const payload = await this.httpClient.request<LegacySalesResponse | LegacyDataWrapper<LegacySalesResponse>>({
-      method: "POST",
-      path: "sales/payment",
+    void payment;
+
+    const suffix = mapRangeToCatalogDetailsSuffix(range);
+    const payload = await this.httpClient.request<CatalogDetailOrderResponse[] | LegacyDataWrapper<CatalogDetailOrderResponse[]>>({
+      method: "GET",
+      path: `report2/catalog-details-${suffix}/${businessId}`,
       token,
-      body: {
-        business_Id: businessId,
-        date: mapRangeToLegacyDate(range),
-        payment,
-      },
     });
 
-    const unwrappedPayload = unwrapPayload(payload);
-    const orders = unwrappedPayload.Orders ?? unwrappedPayload.orders ?? [];
-    const commands = unwrappedPayload.Commands ?? unwrappedPayload.commands ?? [];
+    const rows = unwrapPayload(payload);
+    if (!Array.isArray(rows)) return [];
 
-    return [
-      ...orders.map((item) => this.toSale(item, "ORDER")),
-      ...commands.map((item) => this.toSale(item, "COMMAND")),
-    ]
+    return rows
+      .flatMap((row) => this.toCatalogSales(row))
       .filter((sale) => sale.id !== "0")
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
   }
@@ -353,5 +372,32 @@ export class PosReportingApi implements IReportingRepository {
       Math.max(1, Math.round(toNumber(row.Quantity ?? row.quantity) || 1)),
       toText(row.Status ?? row.status, "Pendiente"),
     );
+  }
+
+  private toCatalogSales(row: CatalogDetailOrderResponse): ReportSale[] {
+    const baseId = String(row.id ?? "0");
+    const createdAt = toText(row.date, new Date().toISOString());
+    const address = toText(row.address, "Sin dirección");
+    const status = toText(row.status, "Pendiente");
+    const products = Array.isArray(row.products) ? row.products : [];
+
+    return products.map((product, index) => {
+      const productId = String(product.detailId ?? `${baseId}-${index}`);
+      const quantity = Math.max(1, Math.round(toNumber(product.quantity) || 1));
+      const total = toNumber(product.detailAmount) || (toNumber(product.amount) * quantity);
+
+      return new ReportSale(
+        `${baseId}-${productId}`,
+        "ORDER",
+        createdAt,
+        "N/A",
+        "MXN",
+        total,
+        toText(product.name, "Sin detalle"),
+        address,
+        quantity,
+        status,
+      );
+    });
   }
 }

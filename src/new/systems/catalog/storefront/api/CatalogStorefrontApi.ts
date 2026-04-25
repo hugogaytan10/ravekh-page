@@ -301,13 +301,15 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
     return normalized;
   }
 
-  async registerBusinessVisit(businessId: string): Promise<boolean> {
+  async registerBusinessVisit(businessId: string, mode: "unique" | "always" = "unique"): Promise<boolean> {
     const normalizedBusinessId = parseNumber(businessId);
     if (normalizedBusinessId <= 0) return false;
 
-    const cookieName = getVisitCookieName(normalizedBusinessId.toString());
-    if (readCookie(cookieName) === "1") return false;
-    writeCookie(cookieName, "1", VISIT_COOKIE_MAX_AGE_SECONDS);
+    if (mode === "unique") {
+      const cookieName = getVisitCookieName(normalizedBusinessId.toString());
+      if (readCookie(cookieName) === "1") return false;
+      writeCookie(cookieName, "1", VISIT_COOKIE_MAX_AGE_SECONDS);
+    }
 
     try {
       const response = await fetch(`${normalizeBase(this.baseUrl)}logs`, {

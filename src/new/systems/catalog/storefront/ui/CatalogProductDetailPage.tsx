@@ -42,6 +42,7 @@ export const CatalogProductDetailPage = () => {
         if (response) {
           window.localStorage.setItem("idBusiness", String(response.businessId));
           window.localStorage.setItem("telefono", phone);
+          void pageLogic.registerVisit(String(response.businessId), "always");
           const [variantResponse, extrasResponse] = await Promise.all([
             pageLogic.loadVariants(response.id),
             pageLogic.loadExtras(response.id),

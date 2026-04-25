@@ -57,7 +57,7 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
   return (
     <div className="pos-v2-shell">
       <header className="pos-v2-shell__header">
-        <div>
+        <div className="pos-v2-shell__title-row">
           <button type="button" className="pos-v2-shell__back" onClick={() => navigate(-1)}>← Regresar</button>
           <h1 className="pos-v2-shell__title">{title}</h1>
         </div>
