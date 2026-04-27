@@ -263,10 +263,10 @@ export const CatalogOrderInfoPage = () => {
             },
             quantity: item.quantity,
           })),
+          ui_mode: "embedded",
           return_url: `${window.location.origin}/v2/catalogo/${businessId}`,
           connectedAccountId: businessConfig.stripeAccountId,
           businessId,
-          ui_mode: "hosted",
           customer_email: email || undefined,
           metadata: {
             deliveryMethod,
