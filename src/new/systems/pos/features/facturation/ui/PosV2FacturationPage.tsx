@@ -4,9 +4,11 @@ import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
 import { FacturationInvoice, TaxIssuerStatus } from "../model/Facturation";
+import { REGIMEN_FISCAL_OPTIONS, REGIMEN_TO_USO_CFDI, USO_CFDI_OPTIONS } from "../config/fiscalCatalogs";
 import "./PosV2FacturationPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
+const MISSING_ISSUER_MESSAGE = "Este negocio todavía no tiene emisor fiscal configurado.";
 
 const STATUS_LABELS: Record<TaxIssuerStatus, string> = {
   draft: "Borrador",
@@ -67,7 +69,7 @@ export const PosV2FacturationPage = () => {
   const [receiverName, setReceiverName] = useState("");
   const [receiverEmail, setReceiverEmail] = useState("");
   const [receiverFiscalRegime, setReceiverFiscalRegime] = useState("");
-  const [receiverCfdiUse, setReceiverCfdiUse] = useState("G03");
+  const [receiverCfdiUse, setReceiverCfdiUse] = useState("");
   const [receiverTaxZipCode, setReceiverTaxZipCode] = useState("");
 
   const [invoiceLookupId, setInvoiceLookupId] = useState("");
@@ -76,6 +78,11 @@ export const PosV2FacturationPage = () => {
   const [sendEmailValue, setSendEmailValue] = useState("");
   const [cancelMotive, setCancelMotive] = useState("02");
   const [uuidReplacement, setUuidReplacement] = useState("");
+
+  const availableCfdiUseOptions = useMemo(() => {
+    const allowedCodes = REGIMEN_TO_USO_CFDI[receiverFiscalRegime] ?? [];
+    return USO_CFDI_OPTIONS.filter((option) => allowedCodes.includes(option.code));
+  }, [receiverFiscalRegime]);
 
   const loadIssuer = async () => {
     if (!token || !businessId) {
@@ -90,7 +97,13 @@ export const PosV2FacturationPage = () => {
       if (!issuer) {
         setIssuerId("");
         setIssuerStatus("draft");
-        setSuccess("Este negocio todavía no tiene emisor fiscal configurado.");
+        setIssuerRfc("");
+        setIssuerLegalName("");
+        setIssuerFiscalRegime("");
+        setIssuerFiscalZipCode("");
+        setIssuerEmail("");
+        setIssuerPhone("");
+        setSuccess(MISSING_ISSUER_MESSAGE);
         return;
       }
 
@@ -112,6 +125,14 @@ export const PosV2FacturationPage = () => {
   useEffect(() => {
     loadIssuer();
   }, []);
+
+  useEffect(() => {
+    const firstAllowedCfdiUse = availableCfdiUseOptions[0]?.code ?? "";
+    const currentCfdiUseIsAllowed = availableCfdiUseOptions.some((option) => option.code === receiverCfdiUse);
+    if (!currentCfdiUseIsAllowed) {
+      setReceiverCfdiUse(firstAllowedCfdiUse);
+    }
+  }, [availableCfdiUseOptions, receiverCfdiUse]);
 
   const clearMessages = () => {
     setError(null);
@@ -318,6 +339,15 @@ export const PosV2FacturationPage = () => {
   };
 
   const isIssuerActive = issuerStatus === "active";
+  const isIssuerProfileComplete = Boolean(
+    issuerId.trim() &&
+    issuerRfc.trim() &&
+    issuerLegalName.trim() &&
+    issuerFiscalRegime.trim() &&
+    issuerFiscalZipCode.trim() &&
+    issuerEmail.trim() &&
+    issuerPhone.trim(),
+  );
 
   return (
     <PosV2Shell title="Facturación" subtitle="Gestión integral de emisor fiscal y CFDI">
@@ -341,7 +371,8 @@ export const PosV2FacturationPage = () => {
         </article>
 
         <form className="pos-v2-facturation__card" onSubmit={handleIssuerSubmit}>
-          <h3>Configuración fiscal</h3>
+          <h3>{isIssuerProfileComplete ? "Configuración fiscal" : "Crea tu emisor fiscal"}</h3>
+          {!isIssuerProfileComplete ? <p>Antes de continuar con facturación, captura y guarda los datos fiscales del emisor.</p> : null}
           <div className="pos-v2-facturation__form-grid">
             <input value={issuerRfc} onChange={(event) => setIssuerRfc(event.target.value)} placeholder="RFC" required />
             <input value={issuerLegalName} onChange={(event) => setIssuerLegalName(event.target.value)} placeholder="Razón social" required />
@@ -352,6 +383,15 @@ export const PosV2FacturationPage = () => {
           </div>
           <button type="submit" className="is-primary" disabled={savingIssuer}>{savingIssuer ? "Guardando..." : "Guardar emisor"}</button>
         </form>
+
+        {!isIssuerProfileComplete ? (
+          <article className="pos-v2-facturation__card">
+            <h3>Siguiente paso</h3>
+            <p className="pos-v2-facturation__warning">
+              Completa y guarda los datos del emisor para habilitar la carga de CSD, activación y el resto de módulos de facturación.
+            </p>
+          </article>
+        ) : null}
 
         <form className="pos-v2-facturation__card" onSubmit={handleUploadCsd}>
           <h3>Carga de certificados CSD</h3>
@@ -366,12 +406,12 @@ export const PosV2FacturationPage = () => {
             </label>
             <input value={privateKeyPassword} onChange={(event) => setPrivateKeyPassword(event.target.value)} type="password" placeholder="Contraseña llave privada" />
           </div>
-          <button type="submit" disabled={!issuerId || uploadingCsd}>{uploadingCsd ? "Subiendo..." : "Subir CSD"}</button>
+          <button type="submit" disabled={!isIssuerProfileComplete || uploadingCsd}>{uploadingCsd ? "Subiendo..." : "Subir CSD"}</button>
         </form>
 
         <article className="pos-v2-facturation__card">
           <h3>Activación</h3>
-          <button type="button" className="is-primary" disabled={!issuerId || activating} onClick={handleActivateIssuer}>
+          <button type="button" className="is-primary" disabled={!isIssuerProfileComplete || activating} onClick={handleActivateIssuer}>
             {activating ? "Activando..." : "Activar emisor"}
           </button>
         </article>
@@ -379,7 +419,7 @@ export const PosV2FacturationPage = () => {
         <form className="pos-v2-facturation__card" onSubmit={handleCreateInvoice}>
           <h3>Facturación</h3>
           <div className="pos-v2-facturation__actions-row">
-            <button type="button" onClick={handleValidateRfc} disabled={!receiverRfc || workingInvoice || !isIssuerActive}>Validar RFC receptor</button>
+            <button type="button" onClick={handleValidateRfc} disabled={!receiverRfc || workingInvoice || !isIssuerActive || !isIssuerProfileComplete}>Validar RFC receptor</button>
           </div>
 
           <div className="pos-v2-facturation__form-grid">
@@ -391,13 +431,30 @@ export const PosV2FacturationPage = () => {
             <input value={receiverRfc} onChange={(event) => setReceiverRfc(event.target.value)} placeholder="receiver.rfc" required />
             <input value={receiverName} onChange={(event) => setReceiverName(event.target.value)} placeholder="receiver.name" required />
             <input value={receiverEmail} onChange={(event) => setReceiverEmail(event.target.value)} placeholder="receiver.email" type="email" required />
-            <input value={receiverFiscalRegime} onChange={(event) => setReceiverFiscalRegime(event.target.value)} placeholder="receiver.fiscalRegime" required />
-            <input value={receiverCfdiUse} onChange={(event) => setReceiverCfdiUse(event.target.value)} placeholder="receiver.cfdiUse" required />
+            <label>
+              Régimen fiscal receptor
+              <select value={receiverFiscalRegime} onChange={(event) => setReceiverFiscalRegime(event.target.value)} required>
+                <option value="" disabled>Selecciona régimen fiscal</option>
+                {REGIMEN_FISCAL_OPTIONS.map((option) => (
+                  <option key={option.code} value={option.code}>{option.label}</option>
+                ))}
+              </select>
+            </label>
+            <label>
+              Uso CFDI
+              <select value={receiverCfdiUse} onChange={(event) => setReceiverCfdiUse(event.target.value)} required disabled={!receiverFiscalRegime}>
+                {!receiverFiscalRegime ? <option value="">Selecciona primero un régimen fiscal</option> : null}
+                {availableCfdiUseOptions.map((option) => (
+                  <option key={option.code} value={option.code}>{option.label}</option>
+                ))}
+              </select>
+            </label>
             <input value={receiverTaxZipCode} onChange={(event) => setReceiverTaxZipCode(event.target.value)} placeholder="receiver.taxZipCode" required />
           </div>
 
-          <button type="submit" className="is-primary" disabled={workingInvoice || !isIssuerActive}>{workingInvoice ? "Procesando..." : "Crear factura"}</button>
-          {!isIssuerActive ? <small className="pos-v2-facturation__warning">Debes tener un emisor activo para facturar.</small> : null}
+          <button type="submit" className="is-primary" disabled={workingInvoice || !isIssuerActive || !isIssuerProfileComplete}>{workingInvoice ? "Procesando..." : "Crear factura"}</button>
+          {!isIssuerProfileComplete ? <small className="pos-v2-facturation__warning">Primero completa el alta del emisor fiscal.</small> : null}
+          {isIssuerProfileComplete && !isIssuerActive ? <small className="pos-v2-facturation__warning">Debes tener un emisor activo para facturar.</small> : null}
         </form>
 
         <article className="pos-v2-facturation__card">

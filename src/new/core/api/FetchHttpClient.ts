@@ -1,5 +1,38 @@
 import { HttpClient, HttpRequest } from "./HttpClient";
 
+const extractApiMessage = (payload: unknown): string | null => {
+  if (!payload) return null;
+  if (typeof payload === "string") return payload;
+
+  if (Array.isArray(payload)) {
+    const arrayMessage = payload.map((item) => extractApiMessage(item)).filter(Boolean).join(" | ");
+    return arrayMessage || null;
+  }
+
+  if (typeof payload === "object") {
+    const data = payload as Record<string, unknown>;
+    const primary =
+      extractApiMessage(data.message) ??
+      extractApiMessage(data.error) ??
+      extractApiMessage(data.details) ??
+      extractApiMessage(data.errors);
+
+    if (primary) return primary;
+
+    const objectMessage = Object.entries(data)
+      .map(([key, value]) => {
+        const message = extractApiMessage(value);
+        return message ? `${key}: ${message}` : null;
+      })
+      .filter(Boolean)
+      .join(" | ");
+
+    return objectMessage || null;
+  }
+
+  return null;
+};
+
 export class FetchHttpClient implements HttpClient {
   constructor(private readonly baseUrl: string) {}
 
@@ -31,7 +64,8 @@ export class FetchHttpClient implements HttpClient {
     const responseData = (await response.json().catch(() => null)) as TResponse | { message?: string } | null;
 
     if (!response.ok) {
-      const error = new Error((responseData as { message?: string } | null)?.message ?? `Request failed: ${response.status}`) as Error & {
+      const serverMessage = extractApiMessage(responseData);
+      const error = new Error(serverMessage ?? `Request failed: ${response.status}`) as Error & {
         status?: number;
         payload?: unknown;
       };

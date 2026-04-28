@@ -34,6 +34,19 @@
   padding: 10px 12px;
 }
 
+.pos-v2-facturation input,
+.pos-v2-facturation select {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.pos-v2-facturation__form-grid label {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  font-size: 0.92rem;
+}
+
 .pos-v2-facturation__actions-row,
 .pos-v2-facturation__inline-form {
   display: flex;

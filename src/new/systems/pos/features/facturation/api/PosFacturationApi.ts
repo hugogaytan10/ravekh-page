@@ -22,6 +22,7 @@ type TaxIssuerApi = {
   email?: string;
   phone?: string;
   status?: TaxIssuerStatus;
+  message?: string | null;
 };
 
 type InvoiceApi = {
@@ -69,6 +70,10 @@ export class PosFacturationApi implements IFacturationRepository {
     });
 
     if (!response) return null;
+    const issuerMissingMessage = response.message === null || response.message === "Este negocio todavía no tiene emisor fiscal configurado.";
+    const hasIssuerIdentity = Boolean(response.id ?? response._id ?? response.issuerId);
+    if (issuerMissingMessage || !hasIssuerIdentity) return null;
+
     return this.toTaxIssuer(response, businessId);
   }
 
