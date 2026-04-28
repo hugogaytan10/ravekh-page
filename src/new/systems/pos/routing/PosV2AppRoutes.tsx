@@ -16,6 +16,7 @@ import { PosV2CashClosingPage } from "../features/cash-closing/ui/PosV2CashClosi
 import { PosV2InventoryPage } from "../features/inventory/ui/PosV2InventoryPage";
 import { PosV2LoyaltyPage } from "../features/loyalty/ui/PosV2LoyaltyPage";
 import { PosV2CatalogPage } from "../features/catalog/ui/PosV2CatalogPage";
+import { PosV2FacturationPage } from "../features/facturation/ui/PosV2FacturationPage";
 import { PosV2RequireAuth } from "./PosV2RequireAuth";
 import { POS_V2_PATHS } from "./PosV2Paths";
 
@@ -29,6 +30,7 @@ export const POS_V2_APP_ROUTES = (
     <Route path={POS_V2_PATHS.finances} element={withAuth(<PosV2FinancePage />)} />
     <Route path={POS_V2_PATHS.reports} element={withAuth(<PosV2ReportingPage />)} />
     <Route path={POS_V2_PATHS.more} element={withAuth(<PosV2MorePage />)} />
+    <Route path={POS_V2_PATHS.facturation} element={withAuth(<PosV2FacturationPage />)} />
     <Route path={POS_V2_PATHS.morePreview()} element={withAuth(<PosV2ModulePreviewPage />)} />
     <Route path={POS_V2_PATHS.tableZones} element={withAuth(<PosV2TableZonesPage />)} />
     <Route path={POS_V2_PATHS.printers} element={withAuth(<PosV2PrintersPage />)} />

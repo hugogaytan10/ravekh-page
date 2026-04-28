@@ -19,6 +19,7 @@ import { PosV2CashClosingPage } from "../features/cash-closing/ui/PosV2CashClosi
 import { PosV2InventoryPage } from "../features/inventory/ui/PosV2InventoryPage";
 import { PosV2LoyaltyPage } from "../features/loyalty/ui/PosV2LoyaltyPage";
 import { PosV2CatalogPage } from "../features/catalog/ui/PosV2CatalogPage";
+import { PosV2FacturationPage } from "../features/facturation/ui/PosV2FacturationPage";
 import { PosV2RequireAuth } from "./PosV2RequireAuth";
 import { POS_V2_LEGACY_PATHS, POS_V2_PATHS } from "./PosV2Paths";
 
@@ -32,6 +33,7 @@ export const POS_V2_PRIMARY_ROUTES = [
   { path: POS_V2_PATHS.finances, element: withAuth(<PosV2FinancePage />) },
   { path: POS_V2_PATHS.reports, element: withAuth(<PosV2ReportingPage />) },
   { path: POS_V2_PATHS.more, element: withAuth(<PosV2MorePage />) },
+  { path: POS_V2_PATHS.facturation, element: withAuth(<PosV2FacturationPage />) },
   { path: POS_V2_PATHS.morePreview(), element: withAuth(<PosV2ModulePreviewPage />) },
   { path: POS_V2_PATHS.customers, element: withAuth(<PosV2CustomersPage />) },
   { path: POS_V2_PATHS.employees, element: withAuth(<PosV2EmployeesPage />) },
@@ -51,6 +53,7 @@ export const POS_V2_PRIMARY_ROUTES = [
   { path: POS_V2_LEGACY_PATHS.finances, element: <Navigate to={POS_V2_PATHS.finances} replace /> },
   { path: POS_V2_LEGACY_PATHS.reports, element: <Navigate to={POS_V2_PATHS.reports} replace /> },
   { path: POS_V2_LEGACY_PATHS.more, element: <Navigate to={POS_V2_PATHS.more} replace /> },
+  { path: POS_V2_LEGACY_PATHS.facturation, element: <Navigate to={POS_V2_PATHS.facturation} replace /> },
   { path: POS_V2_LEGACY_PATHS.customers, element: <Navigate to={POS_V2_PATHS.customers} replace /> },
   { path: POS_V2_LEGACY_PATHS.employees, element: <Navigate to={POS_V2_PATHS.employees} replace /> },
   { path: POS_V2_LEGACY_PATHS.cashClosing, element: <Navigate to={POS_V2_PATHS.cashClosing} replace /> },
@@ -69,6 +72,7 @@ export const POS_V2_PRIMARY_ROUTES = [
   { path: POS_V2_LEGACY_PATHS.posFinancesAlias, element: <Navigate to={POS_V2_PATHS.finances} replace /> },
   { path: POS_V2_LEGACY_PATHS.posReportsAlias, element: <Navigate to={POS_V2_PATHS.reports} replace /> },
   { path: POS_V2_LEGACY_PATHS.posMoreAlias, element: <Navigate to={POS_V2_PATHS.more} replace /> },
+  { path: POS_V2_LEGACY_PATHS.posFacturationAlias, element: <Navigate to={POS_V2_PATHS.facturation} replace /> },
   { path: POS_V2_LEGACY_PATHS.posTablesAlias, element: <Navigate to={POS_V2_PATHS.tableZones} replace /> },
   { path: POS_V2_LEGACY_PATHS.posPrintersAlias, element: <Navigate to={POS_V2_PATHS.printers} replace /> },
   { path: POS_V2_LEGACY_PATHS.posCouponsAlias, element: <Navigate to={POS_V2_PATHS.coupons} replace /> },

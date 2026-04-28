@@ -21,6 +21,7 @@ import { PosPaymentMethodApi } from "./systems/pos/features/settings/payment-met
 import { PosBrandingApi } from "./systems/pos/features/settings/branding/api/PosBrandingApi";
 import { PosStripeConnectApi } from "./systems/pos/features/settings/stripe-connect/api/PosStripeConnectApi";
 import { PosHealthApi } from "./systems/pos/features/health/api/PosHealthApi";
+import { PosFacturationApi } from "./systems/pos/features/facturation/api/PosFacturationApi";
 import {
   AuthOnboardingPage,
   AuthOnboardingService,
@@ -62,6 +63,8 @@ import {
   StripeConnectService,
   HealthPage,
   HealthService,
+  FacturationManagementPage,
+  FacturationService,
 } from "./systems/pos";
 import { CatalogPublishingPage, CatalogService } from "./systems/catalog";
 import { RewardsManagementPage, RewardService } from "./systems/loyalty";
@@ -232,6 +235,14 @@ export class ModernSystemsFactory {
 
   createPosHealthPage(): HealthPage {
     return new HealthPage(this.createPosHealthService());
+  }
+
+  createPosFacturationService(): FacturationService {
+    return new FacturationService(new PosFacturationApi(this.httpClient));
+  }
+
+  createPosFacturationPage(): FacturationManagementPage {
+    return new FacturationManagementPage(this.createPosFacturationService());
   }
 
   createCatalogService(): CatalogService {

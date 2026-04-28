@@ -1,0 +1,78 @@
+.pos-v2-facturation {
+  display: grid;
+  gap: 16px;
+}
+
+.pos-v2-facturation__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.pos-v2-facturation__card {
+  background: var(--surface, #fff);
+  border: 1px solid var(--border, #e6e9ef);
+  border-radius: 14px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.pos-v2-facturation__grid,
+.pos-v2-facturation__form-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.pos-v2-facturation input,
+.pos-v2-facturation select,
+.pos-v2-facturation button {
+  border-radius: 10px;
+  border: 1px solid var(--border, #d7dde7);
+  padding: 10px 12px;
+}
+
+.pos-v2-facturation__actions-row,
+.pos-v2-facturation__inline-form {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.pos-v2-facturation__error {
+  color: #b42318;
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.pos-v2-facturation__success {
+  color: #065f46;
+  background: #ecfdf3;
+  border: 1px solid #a6f4c5;
+  border-radius: 10px;
+  padding: 10px;
+}
+
+.pos-v2-facturation__warning {
+  color: #b54708;
+}
+
+.pos-v2-facturation__empty {
+  opacity: 0.8;
+}
+
+.pos-v2-facturation__invoice {
+  display: grid;
+  gap: 4px;
+}
+
+@media (max-width: 720px) {
+  .pos-v2-facturation__head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

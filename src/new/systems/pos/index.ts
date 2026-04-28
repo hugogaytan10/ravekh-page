@@ -24,6 +24,8 @@ export * from "./features/online-orders/pages/OnlineOrderTrackingPage";
 export * from "./features/online-orders/services/OnlineOrderService";
 export * from "./features/cash-closing/pages/CashClosingPage";
 export * from "./features/cash-closing/services/CashClosingService";
+export * from "./features/facturation/pages/FacturationManagementPage";
+export * from "./features/facturation/services/FacturationService";
 
 export * from "./features/settings/business/pages/BusinessSettingsPage";
 export * from "./features/settings/business/services/BusinessSettingsService";

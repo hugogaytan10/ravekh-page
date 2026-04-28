@@ -12,6 +12,7 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
       { id: "products", title: "Productos", description: "Catálogo y edición de artículos.", path: POS_V2_PATHS.products, status: "available", actionType: "route" },
       { id: "finances", title: "Finanzas", description: "Registro operativo de ingresos/egresos y flujo diario.", path: POS_V2_PATHS.finances, status: "available", actionType: "route" },
       { id: "reports", title: "Reportes", description: "Analítica ejecutiva, tendencias y gráficas de desempeño.", path: POS_V2_PATHS.reports, status: "available", actionType: "route" },
+      { id: "facturation", title: "Facturación", description: "Emisor fiscal, timbrado CFDI y acciones administrativas.", path: POS_V2_PATHS.facturation, status: "available", actionType: "route" },
       { id: "online-store", title: "Tienda en línea", description: "Consulta pedidos online, revisa detalle y genera impresión PDF.", path: POS_V2_PATHS.onlineStore, status: "available", actionType: "route" },
     ],
   },

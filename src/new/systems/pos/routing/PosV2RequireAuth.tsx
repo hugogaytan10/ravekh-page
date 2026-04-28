@@ -16,7 +16,7 @@ export const PosV2RequireAuth = ({ children }: PosV2RequireAuthProps) => {
   }
 
   if (isSalesOnlyOperator(token)) {
-    const allowedPaths = new Set([POS_V2_PATHS.sales, POS_V2_PATHS.more, POS_V2_PATHS.printers]);
+    const allowedPaths = new Set([POS_V2_PATHS.sales, POS_V2_PATHS.more, POS_V2_PATHS.printers, POS_V2_PATHS.facturation]);
     if (!allowedPaths.has(location.pathname)) {
       return <Navigate to={POS_V2_PATHS.sales} replace />;
     }
