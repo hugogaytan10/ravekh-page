@@ -19,6 +19,7 @@ import { PosV2CashClosingPage } from "../features/cash-closing/ui/PosV2CashClosi
 import { PosV2InventoryPage } from "../features/inventory/ui/PosV2InventoryPage";
 import { PosV2LoyaltyPage } from "../features/loyalty/ui/PosV2LoyaltyPage";
 import { PosV2CatalogPage } from "../features/catalog/ui/PosV2CatalogPage";
+import { FacturaElectronicaPage } from "../features/factura-electronica/ui/FacturaElectronicaPage";
 import { PosV2RequireAuth } from "./PosV2RequireAuth";
 import { POS_V2_LEGACY_PATHS, POS_V2_PATHS } from "./PosV2Paths";
 
@@ -33,6 +34,7 @@ export const POS_V2_PRIMARY_ROUTES = [
   { path: POS_V2_PATHS.reports, element: withAuth(<PosV2ReportingPage />) },
   { path: POS_V2_PATHS.more, element: withAuth(<PosV2MorePage />) },
   { path: POS_V2_PATHS.morePreview(), element: withAuth(<PosV2ModulePreviewPage />) },
+  { path: POS_V2_PATHS.facturaElectronica, element: withAuth(<FacturaElectronicaPage />) },
   { path: POS_V2_PATHS.customers, element: withAuth(<PosV2CustomersPage />) },
   { path: POS_V2_PATHS.employees, element: withAuth(<PosV2EmployeesPage />) },
   { path: POS_V2_PATHS.tableZones, element: withAuth(<PosV2TableZonesPage />) },
