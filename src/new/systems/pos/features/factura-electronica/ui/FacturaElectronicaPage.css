@@ -205,3 +205,64 @@
 :root[data-theme="dark"] .factura-electronica__result {
   background: #0f172a;
 }
+
+.factura-electronica__tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.factura-electronica__tab {
+  background: #e2e8f0 !important;
+  color: #0f172a !important;
+}
+
+.factura-electronica__tab--active {
+  background: #111827 !important;
+  color: #ffffff !important;
+}
+
+.factura-electronica__notice--success {
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.factura-electronica__field select,
+.factura-electronica__field input[readonly] {
+  border: 1px solid rgba(15, 23, 42, 0.14);
+  border-radius: 12px;
+  padding: 10px 12px;
+  color: #0f172a;
+  background: #ffffff;
+}
+
+.factura-electronica__field input[readonly] {
+  background: #f8fafc;
+}
+
+.factura-electronica__checkbox {
+  align-content: end;
+  grid-template-columns: auto 1fr;
+  gap: 10px;
+  min-height: 66px;
+}
+
+.factura-electronica__checkbox input {
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  padding: 0;
+}
+
+:root[data-theme="dark"] .factura-electronica__notice--success {
+  background: rgba(6, 95, 70, 0.22);
+  color: #86efac;
+}
+
+:root[data-theme="dark"] .factura-electronica__field input,
+:root[data-theme="dark"] .factura-electronica__field select,
+:root[data-theme="dark"] .factura-electronica__field input[readonly] {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.24);
+  color: #f8fafc;
+}

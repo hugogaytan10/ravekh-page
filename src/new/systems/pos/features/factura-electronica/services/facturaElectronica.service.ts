@@ -1,15 +1,19 @@
 import { FacturaElectronicaHttpClient } from "../api/FacturaElectronicaHttpClient";
 import { getFacturaElectronicaApiBaseUrl } from "../config/facturaElectronicaEnv";
 import {
+  ApiMaybeExistingResponse,
   ApiResponse,
+  BusinessAccount,
   BusinessAccountSyncRequest,
   CreateInvoiceRequestPayload,
   ExpeditionPlaceCreateRequest,
+  FacturationStatusResponse,
   InvoiceFileDownload,
   InvoiceFileFormat,
   InvoiceSeriesCreateRequest,
   IssueInvoiceRequestPayload,
   IssuedInvoiceResponse,
+  TaxIssuer,
   TaxIssuerCreateRequest,
   UploadCsdRequest,
 } from "../model/facturaElectronica.types";
@@ -19,14 +23,30 @@ const encode = (value: string | number): string => encodeURIComponent(String(val
 
 export const facturaElectronicaService = {
   syncBusinessAccount(payload: BusinessAccountSyncRequest) {
-    return client.request<ApiResponse<unknown>>("/api/business-accounts/sync", {
+    return client.request<ApiMaybeExistingResponse<BusinessAccount>>("/api/business-accounts/sync", {
       method: "POST",
       body: payload as unknown as Record<string, unknown>,
     });
   },
 
+  getBusinessAccountBySource(sourceSystem: string, externalBusinessId: string) {
+    return client.request<ApiResponse<BusinessAccount>>(
+      `/api/business-accounts/by-source/${encode(sourceSystem)}/${encode(externalBusinessId)}`,
+    );
+  },
+
+  getFacturationStatus(businessAccountId: number) {
+    return client.request<ApiResponse<FacturationStatusResponse>>(
+      `/api/business-accounts/${encode(businessAccountId)}/facturation-status`,
+    );
+  },
+
+  getTaxIssuersByBusinessAccount(businessAccountId: number) {
+    return client.request<ApiResponse<TaxIssuer[]>>(`/api/tax-issuers/business/${encode(businessAccountId)}`);
+  },
+
   createTaxIssuer(payload: TaxIssuerCreateRequest) {
-    return client.request<ApiResponse<unknown>>("/api/tax-issuers", {
+    return client.request<ApiMaybeExistingResponse<TaxIssuer>>("/api/tax-issuers", {
       method: "POST",
       body: payload as unknown as Record<string, unknown>,
     });
@@ -45,14 +65,14 @@ export const facturaElectronicaService = {
   },
 
   createExpeditionPlace(taxIssuerId: number, payload: ExpeditionPlaceCreateRequest) {
-    return client.request<ApiResponse<unknown>>(`/api/tax-issuers/${encode(taxIssuerId)}/expedition-places`, {
+    return client.request<ApiMaybeExistingResponse<unknown>>(`/api/tax-issuers/${encode(taxIssuerId)}/expedition-places`, {
       method: "POST",
       body: payload as unknown as Record<string, unknown>,
     });
   },
 
   createInvoiceSeries(taxIssuerId: number, payload: InvoiceSeriesCreateRequest) {
-    return client.request<ApiResponse<unknown>>(`/api/tax-issuers/${encode(taxIssuerId)}/series`, {
+    return client.request<ApiMaybeExistingResponse<unknown>>(`/api/tax-issuers/${encode(taxIssuerId)}/series`, {
       method: "POST",
       body: payload as unknown as Record<string, unknown>,
     });

@@ -4,28 +4,51 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-export interface BusinessAccountSyncRequest {
-  sourceSystem: string;
+export interface ApiMaybeExistingResponse<T> extends ApiResponse<T> {
+  wasExisting?: boolean;
+}
+
+export type BillingSetupState = {
+  businessAccountId?: number;
+  taxIssuerId?: number;
+  issuerRfc?: string;
+  issuerName?: string;
+  fiscalRegime?: string;
+  taxZipCode?: string;
+  expeditionPlace?: string;
+  serie?: string;
+  readyToInvoice: boolean;
+  missingSteps: string[];
+};
+
+export type InvoiceFlowState = {
+  invoiceRequestId?: number;
+  issuedInvoiceId?: number;
+  facturamaId?: string;
+  uuid?: string;
+  serie?: string;
+  folio?: string;
+  status?: string;
+};
+
+export type BusinessDraft = {
   externalBusinessId: string;
   businessName: string;
   tradeName: string;
   contactEmail: string;
   contactPhone: string;
   defaultCurrency: string;
-}
+};
 
-
-export interface BusinessAccountDraft {
+export interface BusinessAccountSyncRequest extends BusinessDraft {
   sourceSystem: string;
-  externalBusinessId: string;
-  businessName: string;
-  tradeName: string;
-  contactEmail: string;
-  contactPhone: string;
-  defaultCurrency: string;
 }
 
-export interface IssuerFiscalDraft {
+export type BusinessAccountDraft = BusinessDraft & {
+  sourceSystem: string;
+};
+
+export type IssuerFiscalDraft = {
   rfc: string;
   legalName: string;
   tradeName: string;
@@ -33,23 +56,96 @@ export interface IssuerFiscalDraft {
   taxZipCode: string;
   email: string;
   phone: string;
-}
+};
 
-export interface InvoiceReceiverDraft {
+export type ReceiverDraft = {
   rfc: string;
   name: string;
   fiscalRegime: string;
   taxZipCode: string;
   cfdiUse: string;
-}
+};
+
+export type InvoiceReceiverDraft = ReceiverDraft;
+
+export type InvoiceDraft = {
+  externalDocumentId: string;
+  externalUserId?: string;
+  paymentForm: string;
+  paymentMethod: string;
+  currency: string;
+  expeditionPlace: string;
+  exportation: string;
+  serie: string;
+};
+
+export type InvoiceConceptDraft = {
+  description: string;
+  productServiceCode: string;
+  unitCode: string;
+  unitName: string;
+  quantity: number;
+  unitPrice: number;
+  taxObject: string;
+  iva16: boolean;
+};
 
 export interface BuildInvoiceRequestPayloadInput {
   businessPayload: BusinessAccountSyncRequest;
-  issuerRfc: string;
-  issuerTaxZipCode: string;
-  receiverDraft: InvoiceReceiverDraft;
-  externalDocumentId: string;
-  externalUserId: string;
+  selectedIssuer: TaxIssuer;
+  receiverDraft: ReceiverDraft;
+  invoiceDraft: InvoiceDraft;
+  conceptDraft: InvoiceConceptDraft;
+}
+
+export interface BusinessAccount {
+  id?: number;
+  businessAccountId?: number;
+  sourceSystem?: string;
+  externalBusinessId?: string;
+  businessName?: string;
+  tradeName?: string;
+  contactEmail?: string;
+  contactPhone?: string;
+  defaultCurrency?: string;
+}
+
+export interface FacturationStatusResponse {
+  businessAccountId?: number;
+  taxIssuerId?: number;
+  issuerRfc?: string;
+  issuerName?: string;
+  fiscalRegime?: string;
+  taxZipCode?: string;
+  expeditionPlace?: string;
+  serie?: string;
+  readyToInvoice?: boolean;
+  missingSteps?: string[];
+}
+
+export interface TaxIssuer {
+  id?: number;
+  taxIssuerId?: number;
+  rfc: string;
+  legalName?: string;
+  tradeName?: string;
+  fiscalRegime?: string;
+  taxZipCode?: string;
+  email?: string;
+  phone?: string;
+  status?: string;
+  isDefault?: boolean;
+  facturamaCsdUploaded?: boolean;
+
+  // Compatibilidad si backend manda nombres estilo SQL
+  Id?: number;
+  Rfc?: string;
+  Legal_Name?: string;
+  Trade_Name?: string;
+  Fiscal_Regime?: string;
+  Tax_Zip_Code?: string;
+  Email?: string;
+  Phone?: string;
 }
 
 export interface TaxIssuerCreateRequest {
@@ -88,7 +184,7 @@ export interface CreateInvoiceRequestPayload {
   sourceSystem: string;
   sourceDocumentType: string;
   externalDocumentId: string;
-  externalUserId: string;
+  externalUserId?: string;
   business: BusinessAccountSyncRequest;
   issuer: {
     rfc: string;
@@ -154,11 +250,11 @@ export interface IssueInvoiceRequestPayload {
 export interface IssuedInvoiceResponse {
   invoiceRequestId: number;
   issuedInvoiceId: number;
-  facturamaId: string;
-  uuid: string;
-  serie: string;
-  folio: string;
-  status: string;
+  facturamaId?: string;
+  uuid?: string;
+  serie?: string;
+  folio?: string;
+  status?: string;
 }
 
 export type InvoiceFileFormat = "pdf" | "xml" | "html";
