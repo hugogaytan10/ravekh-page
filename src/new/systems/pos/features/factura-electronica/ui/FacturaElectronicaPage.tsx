@@ -199,7 +199,11 @@ const buildInvoiceRequestPayload = (
   invoiceDraft: InvoiceDraft,
   conceptLines: InvoiceConceptLine[],
 ): CreateInvoiceRequestPayload => {
-s
+  const billableConcepts = conceptLines.filter(isBillableConceptLine);
+
+  if (billableConcepts.length === 0) {
+    throw new Error("Agrega al menos un concepto con descripción, cantidad y precio mayor a cero.");
+  }
 
   const totals = calculateTotals(billableConcepts);
   const cfdiPeriod = getCurrentCfdiPeriod();
