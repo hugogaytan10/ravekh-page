@@ -34,6 +34,119 @@ const DEFAULT_PAYMENT_METHOD = "PUE";
 const DEFAULT_SERIE = "A";
 const GENERIC_PUBLIC_RFC = "XAXX010101000";
 
+type CatalogOption = {
+  code: string;
+  label: string;
+};
+
+type ReceiverFiscalRegimeOption = CatalogOption & {
+  cfdiUses: string[];
+};
+
+const CFDI_USE_OPTIONS: CatalogOption[] = [
+  { code: "G01", label: "G01 · Adquisición de mercancías" },
+  { code: "G02", label: "G02 · Devoluciones, descuentos o bonificaciones" },
+  { code: "G03", label: "G03 · Gastos en general" },
+  { code: "I01", label: "I01 · Construcciones" },
+  { code: "I02", label: "I02 · Mobiliario y equipo de oficina por inversiones" },
+  { code: "I03", label: "I03 · Equipo de transporte" },
+  { code: "I04", label: "I04 · Equipo de cómputo y accesorios" },
+  { code: "I05", label: "I05 · Dados, troqueles, moldes, matrices y herramental" },
+  { code: "I06", label: "I06 · Comunicaciones telefónicas" },
+  { code: "I07", label: "I07 · Comunicaciones satelitales" },
+  { code: "I08", label: "I08 · Otra maquinaria y equipo" },
+  { code: "D01", label: "D01 · Honorarios médicos, dentales y gastos hospitalarios" },
+  { code: "D02", label: "D02 · Gastos médicos por incapacidad o discapacidad" },
+  { code: "D03", label: "D03 · Gastos funerales" },
+  { code: "D04", label: "D04 · Donativos" },
+  { code: "D05", label: "D05 · Intereses reales por créditos hipotecarios" },
+  { code: "D06", label: "D06 · Aportaciones voluntarias al SAR" },
+  { code: "D07", label: "D07 · Primas por seguros de gastos médicos" },
+  { code: "D08", label: "D08 · Gastos de transportación escolar obligatoria" },
+  { code: "D09", label: "D09 · Depósitos en cuentas para el ahorro" },
+  { code: "D10", label: "D10 · Pagos por servicios educativos" },
+  { code: "S01", label: "S01 · Sin efectos fiscales" },
+  { code: "CP01", label: "CP01 · Pagos" },
+  { code: "CN01", label: "CN01 · Nómina" },
+];
+
+const BUSINESS_CFDI_USE_CODES = [
+  "G01",
+  "G02",
+  "G03",
+  "I01",
+  "I02",
+  "I03",
+  "I04",
+  "I05",
+  "I06",
+  "I07",
+  "I08",
+  "S01",
+  "CP01",
+  "CN01",
+];
+const INDIVIDUAL_CFDI_USE_CODES = [
+  "G01",
+  "G02",
+  "G03",
+  "I01",
+  "I02",
+  "I03",
+  "I04",
+  "I05",
+  "I06",
+  "I07",
+  "I08",
+  "D01",
+  "D02",
+  "D03",
+  "D04",
+  "D05",
+  "D06",
+  "D07",
+  "D08",
+  "D09",
+  "D10",
+  "S01",
+  "CP01",
+  "CN01",
+];
+
+const RECEIVER_FISCAL_REGIME_OPTIONS: ReceiverFiscalRegimeOption[] = [
+  { code: "601", label: "601 · General de Ley Personas Morales", cfdiUses: BUSINESS_CFDI_USE_CODES },
+  { code: "603", label: "603 · Personas Morales con Fines no Lucrativos", cfdiUses: BUSINESS_CFDI_USE_CODES },
+  {
+    code: "605",
+    label: "605 · Sueldos y Salarios e Ingresos Asimilados a Salarios",
+    cfdiUses: ["D01", "D02", "D03", "D04", "D05", "D06", "D07", "D08", "D09", "D10", "S01", "CN01"],
+  },
+  { code: "606", label: "606 · Arrendamiento", cfdiUses: INDIVIDUAL_CFDI_USE_CODES },
+  { code: "607", label: "607 · Régimen de Enajenación o Adquisición de Bienes", cfdiUses: INDIVIDUAL_CFDI_USE_CODES },
+  { code: "608", label: "608 · Demás ingresos", cfdiUses: INDIVIDUAL_CFDI_USE_CODES },
+  { code: "610", label: "610 · Residentes en el Extranjero sin Establecimiento Permanente en México", cfdiUses: BUSINESS_CFDI_USE_CODES },
+  { code: "611", label: "611 · Ingresos por Dividendos", cfdiUses: INDIVIDUAL_CFDI_USE_CODES },
+  { code: "612", label: "612 · Personas Físicas con Actividades Empresariales y Profesionales", cfdiUses: INDIVIDUAL_CFDI_USE_CODES },
+  { code: "614", label: "614 · Ingresos por intereses", cfdiUses: INDIVIDUAL_CFDI_USE_CODES },
+  { code: "615", label: "615 · Obtención de premios", cfdiUses: INDIVIDUAL_CFDI_USE_CODES },
+  { code: "616", label: "616 · Sin obligaciones fiscales", cfdiUses: ["S01"] },
+  { code: "620", label: "620 · Sociedades Cooperativas de Producción", cfdiUses: BUSINESS_CFDI_USE_CODES },
+  { code: "621", label: "621 · Incorporación Fiscal", cfdiUses: INDIVIDUAL_CFDI_USE_CODES },
+  { code: "622", label: "622 · Actividades Agrícolas, Ganaderas, Silvícolas y Pesqueras", cfdiUses: BUSINESS_CFDI_USE_CODES },
+  { code: "623", label: "623 · Opcional para Grupos de Sociedades", cfdiUses: BUSINESS_CFDI_USE_CODES },
+  { code: "624", label: "624 · Coordinados", cfdiUses: BUSINESS_CFDI_USE_CODES },
+  { code: "625", label: "625 · Plataformas Tecnológicas", cfdiUses: INDIVIDUAL_CFDI_USE_CODES },
+  { code: "626", label: "626 · Régimen Simplificado de Confianza", cfdiUses: INDIVIDUAL_CFDI_USE_CODES },
+];
+
+const getCfdiUseLabel = (code: string): string => CFDI_USE_OPTIONS.find((option) => option.code === code)?.label ?? code;
+const getCfdiUseOptionsByFiscalRegime = (fiscalRegime: string): CatalogOption[] => {
+  const selectedRegime = RECEIVER_FISCAL_REGIME_OPTIONS.find((option) => option.code === normalizeText(fiscalRegime));
+  if (!selectedRegime) return [];
+
+  return selectedRegime.cfdiUses.map((code) => ({ code, label: getCfdiUseLabel(code) }));
+};
+
 const normalizeText = (value: string | undefined): string => (value ?? "").trim();
 const normalizeRfc = (value: string | undefined): string => normalizeText(value).toUpperCase();
 const toNumber = (value: unknown): number | undefined => {
@@ -467,9 +580,11 @@ export const FacturaElectronicaPage = () => {
   const [certificate, setCertificate] = useState<File | null>(null);
   const [privateKey, setPrivateKey] = useState<File | null>(null);
   const [privateKeyPassword, setPrivateKeyPassword] = useState("");
+  const [showNewInvoiceModal, setShowNewInvoiceModal] = useState(false);
 
   const businessPayload = useMemo(() => buildBusinessPayload(businessDraft), [businessDraft]);
   const selectedIssuer = issuers.find((issuer) => getIssuerId(issuer) === selectedIssuerId) ?? issuers[0];
+  const receiverCfdiUseOptions = useMemo(() => getCfdiUseOptionsByFiscalRegime(receiverDraft.fiscalRegime), [receiverDraft.fiscalRegime]);
   const totals = useMemo(() => calculateTotals(conceptLines), [conceptLines]);
   const filteredPosProductOptions = useMemo(() => {
     const normalized = normalizeText(productSearch).toLowerCase();
@@ -504,6 +619,19 @@ export const FacturaElectronicaPage = () => {
   const updateBusinessDraft = (field: keyof BusinessAccountDraft, value: string) => setBusinessDraft((current) => ({ ...current, [field]: value }));
   const updateIssuerDraft = (field: keyof IssuerFiscalDraft, value: string) => setIssuerDraft((current) => ({ ...current, [field]: field === "rfc" ? value.toUpperCase() : value }));
   const updateReceiverDraft = (field: keyof ReceiverDraft, value: string) => setReceiverDraft((current) => ({ ...current, [field]: field === "rfc" ? value.toUpperCase() : value }));
+  const updateReceiverFiscalRegime = (value: string) => {
+    setReceiverDraft((current) => {
+      const fiscalRegime = normalizeText(value);
+      const cfdiUseOptions = getCfdiUseOptionsByFiscalRegime(fiscalRegime);
+      const shouldKeepSelectedCfdiUse = cfdiUseOptions.some((option) => option.code === current.cfdiUse);
+
+      return {
+        ...current,
+        fiscalRegime,
+        cfdiUse: shouldKeepSelectedCfdiUse ? current.cfdiUse : cfdiUseOptions[0]?.code ?? "",
+      };
+    });
+  };
   const updateInvoiceDraft = (field: keyof InvoiceDraft, value: string) => setInvoiceDraft((current) => ({ ...current, [field]: field === "currency" || field === "serie" ? value.toUpperCase() : value }));
   const updateConceptLine = (id: string, field: keyof InvoiceConceptLine, value: string | number | boolean) => {
     setConceptLines((current) => current.map((line) => (line.id === id ? { ...line, [field]: value } : line)));
@@ -528,9 +656,12 @@ export const FacturaElectronicaPage = () => {
   const validateReceiverDraft = () => {
     requireValue(receiverDraft.rfc, "Captura el RFC del receptor.");
     requireValue(receiverDraft.name, "Captura el nombre o razón social del receptor.");
-    requireValue(receiverDraft.fiscalRegime, "Captura el régimen fiscal del receptor.");
+    requireValue(receiverDraft.fiscalRegime, "Selecciona el régimen fiscal del receptor.");
     requireValue(receiverDraft.taxZipCode, "Captura el código postal fiscal del receptor.");
-    requireValue(receiverDraft.cfdiUse, "Captura el uso CFDI del receptor.");
+    requireValue(receiverDraft.cfdiUse, "Selecciona el uso CFDI del receptor.");
+
+    const isAllowedCfdiUse = getCfdiUseOptionsByFiscalRegime(receiverDraft.fiscalRegime).some((option) => option.code === receiverDraft.cfdiUse);
+    if (!isAllowedCfdiUse) throw new Error("Selecciona un uso CFDI válido para el régimen fiscal del receptor.");
   };
 
   const applyBusinessAccount = (account: BusinessAccount) => {
@@ -874,6 +1005,36 @@ export const FacturaElectronicaPage = () => {
       setActionMessage("files", `${format.toUpperCase()} descargado desde el backend de facturación (${file.contentType}).`);
     });
 
+  const resetInvoiceCapture = (options: { keepReceiver: boolean }) => {
+    setInvoiceDraft((current) => ({
+      ...createInitialInvoiceDraft(sessionSnapshot.employeeId),
+      expeditionPlace: current.expeditionPlace,
+      serie: current.serie,
+      currency: current.currency,
+    }));
+    setConceptLines([createManualConceptLine()]);
+    setProductSearch("");
+    setProductImageErrors({});
+    setInvoiceFlow({ serie: invoiceDraft.serie || DEFAULT_SERIE });
+    setMessages((current) => ({
+      ...current,
+      invoiceRequest: "",
+      issue: "",
+      viewInvoice: "",
+      files: "",
+    }));
+    setErrors((current) => ({
+      ...current,
+      invoiceRequest: "",
+      issue: "",
+      viewInvoice: "",
+      files: "",
+    }));
+    if (!options.keepReceiver) setReceiverDraft(createEmptyReceiverDraft());
+    setShowNewInvoiceModal(false);
+    setActiveSection("invoice");
+  };
+
   const setupNotice = setup.readyToInvoice ? "Este negocio ya está listo para facturar." : "Completa la configuración fiscal antes de emitir facturas.";
 
   return (
@@ -994,12 +1155,28 @@ export const FacturaElectronicaPage = () => {
 
             <article className="factura-electronica__step">
               <StepHeader number="C" title="Receptor" description="Captura los datos fiscales del receptor para esta factura." />
-              <div className="factura-electronica__form-grid">
+              <div className="factura-electronica__form-grid factura-electronica__form-grid--receiver">
                 <label className="factura-electronica__field">RFC<input type="text" value={receiverDraft.rfc} onChange={(event) => updateReceiverDraft("rfc", event.target.value)} /></label>
                 <label className="factura-electronica__field">Nombre<input type="text" value={receiverDraft.name} onChange={(event) => updateReceiverDraft("name", event.target.value)} /></label>
-                <label className="factura-electronica__field">Régimen fiscal<input type="text" value={receiverDraft.fiscalRegime} onChange={(event) => updateReceiverDraft("fiscalRegime", event.target.value)} /></label>
+                <label className="factura-electronica__field">
+                  Régimen fiscal
+                  <select value={receiverDraft.fiscalRegime} onChange={(event) => updateReceiverFiscalRegime(event.target.value)}>
+                    <option value="">Selecciona un régimen fiscal</option>
+                    {RECEIVER_FISCAL_REGIME_OPTIONS.map((option) => (
+                      <option key={option.code} value={option.code}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
                 <label className="factura-electronica__field">CP fiscal<input type="text" value={receiverDraft.taxZipCode} onChange={(event) => updateReceiverDraft("taxZipCode", event.target.value)} /></label>
-                <label className="factura-electronica__field">Uso CFDI<input type="text" value={receiverDraft.cfdiUse} onChange={(event) => updateReceiverDraft("cfdiUse", event.target.value)} /></label>
+                <label className="factura-electronica__field">
+                  Uso CFDI
+                  <select value={receiverDraft.cfdiUse} onChange={(event) => updateReceiverDraft("cfdiUse", event.target.value)} disabled={!receiverDraft.fiscalRegime}>
+                    <option value="">{receiverDraft.fiscalRegime ? "Selecciona el uso CFDI" : "Selecciona primero un régimen fiscal"}</option>
+                    {receiverCfdiUseOptions.map((option) => (
+                      <option key={option.code} value={option.code}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
               </div>
             </article>
 
@@ -1103,13 +1280,22 @@ export const FacturaElectronicaPage = () => {
 
             <article className="factura-electronica__step">
               <StepHeader number="F" title="Acciones" description="Crea la solicitud, timbra y descarga archivos de la factura emitida." />
-              <div className="factura-electronica__actions">
-                <button type="button" onClick={createInvoiceRequest} disabled={loadingAction === "invoiceRequest"}>{loadingAction === "invoiceRequest" ? "Procesando..." : "Crear solicitud de factura"}</button>
-                <button type="button" onClick={issueInvoice} disabled={loadingAction === "issue" || !invoiceFlow.invoiceRequestId}>{loadingAction === "issue" ? "Procesando..." : "Timbrar factura"}</button>
-                <button type="button" className="factura-electronica__secondary" onClick={viewInvoice} disabled={loadingAction === "viewInvoice" || !invoiceFlow.issuedInvoiceId}>Consultar factura</button>
-                <button type="button" onClick={() => downloadFile("pdf")} disabled={loadingAction === "files" || !invoiceFlow.issuedInvoiceId}>Descargar PDF</button>
-                <button type="button" onClick={() => downloadFile("xml")} disabled={loadingAction === "files" || !invoiceFlow.issuedInvoiceId}>Descargar XML</button>
-                <button type="button" className="factura-electronica__secondary" onClick={() => downloadFile("html")} disabled={loadingAction === "files" || !invoiceFlow.issuedInvoiceId}>Descargar HTML</button>
+              <div className="factura-electronica__final-actions">
+                <div className="factura-electronica__actions">
+                  <button type="button" onClick={createInvoiceRequest} disabled={loadingAction === "invoiceRequest"}>{loadingAction === "invoiceRequest" ? "Procesando..." : "Crear solicitud de factura"}</button>
+                  <button type="button" onClick={issueInvoice} disabled={loadingAction === "issue" || !invoiceFlow.invoiceRequestId}>{loadingAction === "issue" ? "Procesando..." : "Timbrar factura"}</button>
+                  <button type="button" className="factura-electronica__secondary" onClick={viewInvoice} disabled={loadingAction === "viewInvoice" || !invoiceFlow.issuedInvoiceId}>Consultar factura</button>
+                  <button type="button" onClick={() => downloadFile("pdf")} disabled={loadingAction === "files" || !invoiceFlow.issuedInvoiceId}>Descargar PDF</button>
+                  <button type="button" onClick={() => downloadFile("xml")} disabled={loadingAction === "files" || !invoiceFlow.issuedInvoiceId}>Descargar XML</button>
+                  <button type="button" className="factura-electronica__secondary" onClick={() => downloadFile("html")} disabled={loadingAction === "files" || !invoiceFlow.issuedInvoiceId}>Descargar HTML</button>
+                </div>
+                <aside className="factura-electronica__new-invoice-panel" aria-label="Generar nueva factura">
+                  <div>
+                    <strong>Generar nueva factura</strong>
+                    <p>Inicia otra emisión conservando la configuración fiscal actual.</p>
+                  </div>
+                  <button type="button" className="factura-electronica__secondary" onClick={() => setShowNewInvoiceModal(true)}>Generar nueva factura</button>
+                </aside>
               </div>
               {errors.invoiceRequest ? <div className="factura-electronica__error">{errors.invoiceRequest}</div> : null}
               {messages.invoiceRequest ? <div className="factura-electronica__result">{messages.invoiceRequest}</div> : null}
@@ -1123,6 +1309,28 @@ export const FacturaElectronicaPage = () => {
           </section>
         )}
       </section>
+
+      {showNewInvoiceModal ? (
+        <div className="factura-electronica__modal-backdrop" role="presentation" onClick={() => setShowNewInvoiceModal(false)}>
+          <section
+            className="factura-electronica__modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="factura-electronica-new-invoice-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div>
+              <h3 id="factura-electronica-new-invoice-title">Generar nueva factura</h3>
+              <p>¿Quieres crear una nueva factura para el mismo receptor o capturar los datos de uno nuevo?</p>
+            </div>
+            <div className="factura-electronica__modal-actions">
+              <button type="button" onClick={() => resetInvoiceCapture({ keepReceiver: true })}>Mismo receptor</button>
+              <button type="button" onClick={() => resetInvoiceCapture({ keepReceiver: false })}>Receptor nuevo</button>
+              <button type="button" className="factura-electronica__secondary" onClick={() => setShowNewInvoiceModal(false)}>Cancelar</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </PosV2Shell>
   );
 };

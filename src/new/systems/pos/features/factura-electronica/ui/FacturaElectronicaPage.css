@@ -117,33 +117,86 @@
 .factura-electronica__form-grid,
 .factura-electronica__files {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr));
+  gap: 12px;
+  min-width: 0;
+}
+
+.factura-electronica__form-grid--receiver {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
 }
 
 .factura-electronica__field {
   display: grid;
   gap: 8px;
+  min-width: 0;
   color: #334155;
   font-size: 0.9rem;
   font-weight: 700;
 }
 
-.factura-electronica__field input {
+.factura-electronica__field input,
+.factura-electronica__field select {
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  box-sizing: border-box;
   border: 1px solid rgba(15, 23, 42, 0.14);
   border-radius: 12px;
   padding: 10px 12px;
   color: #0f172a;
   background: #ffffff;
+  font: inherit;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.factura-electronica__field select {
+  padding-right: 34px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.factura-electronica__final-actions {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(min(100%, 260px), 320px);
+  gap: 14px;
+  align-items: stretch;
 }
 
 .factura-electronica__actions {
   display: flex;
   flex-wrap: wrap;
+  align-content: flex-start;
   gap: 10px;
 }
 
-.factura-electronica button {
+.factura-electronica__new-invoice-panel {
+  display: grid;
+  align-content: space-between;
+  gap: 12px;
+  min-width: 0;
+  border: 1px solid rgba(15, 23, 42, 0.1);
+  border-radius: 18px;
+  padding: 14px;
+  background: #f8fafc;
+}
+
+.factura-electronica__new-invoice-panel strong,
+.factura-electronica__modal h3 {
+  color: #0f172a;
+}
+
+.factura-electronica__new-invoice-panel p,
+.factura-electronica__modal p {
+  margin: 6px 0 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+.factura-electronica button,
+.factura-electronica__modal button {
   border: 0;
   border-radius: 999px;
   background: #111827;
@@ -155,11 +208,14 @@
 }
 
 .factura-electronica button:hover:not(:disabled),
-.factura-electronica button:focus-visible:not(:disabled) {
+.factura-electronica button:focus-visible:not(:disabled),
+.factura-electronica__modal button:hover:not(:disabled),
+.factura-electronica__modal button:focus-visible:not(:disabled) {
   transform: translateY(-1px);
 }
 
-.factura-electronica button:disabled {
+.factura-electronica button:disabled,
+.factura-electronica__modal button:disabled {
   cursor: not-allowed;
   opacity: 0.48;
 }
@@ -167,6 +223,38 @@
 .factura-electronica__secondary {
   background: #e2e8f0 !important;
   color: #0f172a !important;
+}
+
+.factura-electronica__modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(15, 23, 42, 0.54);
+}
+
+.factura-electronica__modal {
+  display: grid;
+  gap: 18px;
+  width: min(100%, 520px);
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  border-radius: 24px;
+  padding: 22px;
+  background: #ffffff;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+}
+
+.factura-electronica__modal h3 {
+  margin: 0;
+  font-size: 1.25rem;
+}
+
+.factura-electronica__modal-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .factura-electronica__result,
@@ -197,13 +285,43 @@
 :root[data-theme="dark"] .factura-electronica__step h3,
 :root[data-theme="dark"] .factura-electronica__summary h3,
 :root[data-theme="dark"] .factura-electronica__summary-grid strong,
-:root[data-theme="dark"] .factura-electronica__field {
+:root[data-theme="dark"] .factura-electronica__field,
+:root[data-theme="dark"] .factura-electronica__new-invoice-panel strong,
+:root[data-theme="dark"] .factura-electronica__modal h3 {
   color: #f8fafc;
 }
 
 :root[data-theme="dark"] .factura-electronica__summary-grid div,
-:root[data-theme="dark"] .factura-electronica__result {
+:root[data-theme="dark"] .factura-electronica__result,
+:root[data-theme="dark"] .factura-electronica__new-invoice-panel {
   background: #0f172a;
+}
+
+:root[data-theme="dark"] .factura-electronica__field input,
+:root[data-theme="dark"] .factura-electronica__field select {
+  border-color: rgba(148, 163, 184, 0.28);
+  color: #f8fafc;
+  background: #0f172a;
+}
+
+:root[data-theme="dark"] .factura-electronica__new-invoice-panel,
+:root[data-theme="dark"] .factura-electronica__modal {
+  border-color: rgba(148, 163, 184, 0.24);
+}
+
+:root[data-theme="dark"] .factura-electronica__modal {
+  background: #111827;
+}
+
+:root[data-theme="dark"] .factura-electronica__new-invoice-panel p,
+:root[data-theme="dark"] .factura-electronica__modal p {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .factura-electronica__field input[readonly],
+:root[data-theme="dark"] .factura-electronica__field select:disabled {
+  background: #1e293b;
+  color: #94a3b8;
 }
 
 .factura-electronica__tabs {
@@ -227,17 +345,14 @@
   color: #047857;
 }
 
-.factura-electronica__field select,
-.factura-electronica__field input[readonly] {
-  border: 1px solid rgba(15, 23, 42, 0.14);
-  border-radius: 12px;
-  padding: 10px 12px;
-  color: #0f172a;
-  background: #ffffff;
-}
-
 .factura-electronica__field input[readonly] {
   background: #f8fafc;
+}
+
+.factura-electronica__field select:disabled {
+  cursor: not-allowed;
+  background: #f8fafc;
+  color: #94a3b8;
 }
 
 .factura-electronica__checkbox {
@@ -444,4 +559,17 @@
 :root[data-theme="dark"] .factura-electronica__product-content h4,
 :root[data-theme="dark"] .factura-electronica__product-side strong {
   color: #f8fafc;
+}
+
+
+@media (max-width: 760px) {
+  .factura-electronica__final-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .factura-electronica__modal-actions,
+  .factura-electronica__modal-actions button,
+  .factura-electronica__new-invoice-panel button {
+    width: 100%;
+  }
 }
