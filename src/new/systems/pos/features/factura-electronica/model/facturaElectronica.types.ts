@@ -90,12 +90,20 @@ export type InvoiceConceptDraft = {
   iva16: boolean;
 };
 
+export type InvoiceConceptLine = InvoiceConceptDraft & {
+  id: string;
+  externalItemId: string;
+  sku: string;
+  source: "manual" | "pos";
+  sourceLabel: string;
+};
+
 export interface BuildInvoiceRequestPayloadInput {
   businessPayload: BusinessAccountSyncRequest;
   selectedIssuer: TaxIssuer;
   receiverDraft: ReceiverDraft;
   invoiceDraft: InvoiceDraft;
-  conceptDraft: InvoiceConceptDraft;
+  conceptLines: InvoiceConceptLine[];
 }
 
 export interface BusinessAccount {
@@ -126,8 +134,10 @@ export interface FacturationStatusResponse {
 export interface TaxIssuer {
   id?: number;
   taxIssuerId?: number;
-  rfc: string;
+  businessAccountId?: number;
+  rfc?: string;
   legalName?: string;
+  name?: string;
   tradeName?: string;
   fiscalRegime?: string;
   taxZipCode?: string;
@@ -135,17 +145,6 @@ export interface TaxIssuer {
   phone?: string;
   status?: string;
   isDefault?: boolean;
-  facturamaCsdUploaded?: boolean;
-
-  // Compatibilidad si backend manda nombres estilo SQL
-  Id?: number;
-  Rfc?: string;
-  Legal_Name?: string;
-  Trade_Name?: string;
-  Fiscal_Regime?: string;
-  Tax_Zip_Code?: string;
-  Email?: string;
-  Phone?: string;
 }
 
 export interface TaxIssuerCreateRequest {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
+import { ModernSystemsFactory } from "../../../../../index";
 import { getFacturaElectronicaApiBaseUrl, getFacturaElectronicaEnvHelp } from "../config/facturaElectronicaEnv";
 import { facturaElectronicaService } from "../services/facturaElectronica.service";
 import {
@@ -11,7 +12,7 @@ import {
   BusinessAccountSyncRequest,
   CreateInvoiceRequestPayload,
   FacturationStatusResponse,
-  InvoiceConceptDraft,
+  InvoiceConceptLine,
   InvoiceDraft,
   InvoiceFileFormat,
   InvoiceFlowState,
@@ -66,7 +67,37 @@ const createInitialInvoiceDraft = (employeeId: number): InvoiceDraft => ({
   exportation: DEFAULT_EXPORTATION,
   serie: DEFAULT_SERIE,
 });
-const createInitialConceptDraft = (): InvoiceConceptDraft => ({
+type PosInvoiceProductOption = {
+  key: string;
+  productId: number;
+  variantId?: number | null;
+  name: string;
+  description: string;
+  price: number;
+  stock: number | null;
+  category: string;
+  image?: string;
+  sourceLabel: string;
+};
+
+const toAbsolutePosImageUrl = (image?: string | null): string | undefined => {
+  const candidate = normalizeText(image ?? undefined);
+  if (!candidate) return undefined;
+  if (/^https?:\/\//i.test(candidate) || candidate.startsWith("data:")) return candidate;
+
+  try {
+    return new URL(candidate.startsWith("/") ? candidate.slice(1) : candidate, getPosApiBaseUrl()).toString();
+  } catch {
+    return undefined;
+  }
+};
+
+const createManualConceptLine = (): InvoiceConceptLine => ({
+  id: `manual-${Date.now()}`,
+  externalItemId: "manual-1",
+  sku: "VENTA-MOSTRADOR",
+  source: "manual",
+  sourceLabel: "Captura manual",
   description: "Venta de mostrador",
   productServiceCode: "01010101",
   unitCode: "H87",
@@ -97,6 +128,14 @@ const unwrapArray = <T,>(payload: T[] | { items?: T[]; rows?: T[]; data?: T[] } 
   return [];
 };
 
+const readResponseData = <T,>(response: { data?: T } | T): T => {
+  if (response && typeof response === "object" && "data" in response && (response as { data?: T }).data !== undefined) {
+    return (response as { data: T }).data;
+  }
+
+  return response as T;
+};
+
 const buildBusinessPayload = (draft: BusinessAccountDraft): BusinessAccountSyncRequest => ({
   sourceSystem: normalizeText(draft.sourceSystem) || DEFAULT_SOURCE_SYSTEM,
   externalBusinessId: normalizeText(draft.externalBusinessId),
@@ -125,7 +164,7 @@ const getCurrentCfdiPeriod = (): { months: string; year: string } => {
   return { months: String(today.getMonth() + 1).padStart(2, "0"), year: String(today.getFullYear()) };
 };
 
-const calculateTotals = (concept: InvoiceConceptDraft): { subtotal: number; taxesTotal: number; total: number } => {
+const calculateConceptTotals = (concept: InvoiceConceptLine): { subtotal: number; taxesTotal: number; total: number } => {
   const quantity = Number.isFinite(concept.quantity) ? concept.quantity : 0;
   const unitPrice = Number.isFinite(concept.unitPrice) ? concept.unitPrice : 0;
   const subtotal = Number((quantity * unitPrice).toFixed(2));
@@ -133,45 +172,80 @@ const calculateTotals = (concept: InvoiceConceptDraft): { subtotal: number; taxe
   return { subtotal, taxesTotal, total: Number((subtotal + taxesTotal).toFixed(2)) };
 };
 
+const calculateTotals = (concepts: InvoiceConceptLine[]): { subtotal: number; taxesTotal: number; total: number } => {
+  const accumulator = concepts.reduce(
+    (current, concept) => {
+      const conceptTotals = calculateConceptTotals(concept);
+      return {
+        subtotal: current.subtotal + conceptTotals.subtotal,
+        taxesTotal: current.taxesTotal + conceptTotals.taxesTotal,
+        total: current.total + conceptTotals.total,
+      };
+    },
+    { subtotal: 0, taxesTotal: 0, total: 0 },
+  );
+
+  return {
+    subtotal: Number(accumulator.subtotal.toFixed(2)),
+    taxesTotal: Number(accumulator.taxesTotal.toFixed(2)),
+    total: Number(accumulator.total.toFixed(2)),
+  };
+};
+
 const buildInvoiceRequestPayload = (
   businessPayload: BusinessAccountSyncRequest,
   selectedIssuer: TaxIssuer,
   receiverDraft: ReceiverDraft,
   invoiceDraft: InvoiceDraft,
-  conceptDraft: InvoiceConceptDraft,
+  conceptLines: InvoiceConceptLine[],
 ): CreateInvoiceRequestPayload => {
-  const totals = calculateTotals(conceptDraft);
+s
+
+  const totals = calculateTotals(billableConcepts);
   const cfdiPeriod = getCurrentCfdiPeriod();
   const receiverRfc = normalizeRfc(receiverDraft.rfc);
   const receiverName = normalizeText(receiverDraft.name).toUpperCase();
+  const issuerRfc = getIssuerRfc(selectedIssuer);
+
+  if (!issuerRfc) {
+    throw new Error("El emisor seleccionado no tiene RFC válido.");
+  }
 
   const shouldAddGlobalInformation =
     receiverRfc === GENERIC_PUBLIC_RFC ||
     receiverName === "PUBLICO EN GENERAL" ||
     receiverName === "PÚBLICO EN GENERAL";
 
-  const issuerEmail = normalizeText(selectedIssuer.email ?? selectedIssuer.Email);
-  const issuerPhone = normalizeText(selectedIssuer.phone ?? selectedIssuer.Phone);
+  const externalUserId = normalizeText(invoiceDraft.externalUserId) || "frontend";
 
+  const businessName = normalizeText(businessPayload.businessName);
   const businessSnapshot: BusinessAccountSyncRequest = {
-    ...businessPayload,
+    sourceSystem: normalizeText(businessPayload.sourceSystem) || DEFAULT_SOURCE_SYSTEM,
+    externalBusinessId: normalizeText(businessPayload.externalBusinessId),
+    businessName,
+    tradeName: normalizeText(businessPayload.tradeName) || businessName,
     contactEmail:
       normalizeText(businessPayload.contactEmail) ||
-      issuerEmail ||
+      getIssuerEmail(selectedIssuer) ||
       "contacto@ravekh.com",
     contactPhone:
       normalizeText(businessPayload.contactPhone) ||
-      issuerPhone ||
+      getIssuerPhone(selectedIssuer) ||
       "0000000000",
+    defaultCurrency: normalizeText(businessPayload.defaultCurrency) || DEFAULT_CURRENCY,
   };
 
   return {
     sourceSystem: DEFAULT_SOURCE_SYSTEM,
     sourceDocumentType: "order",
     externalDocumentId: normalizeText(invoiceDraft.externalDocumentId),
-    externalUserId: normalizeText(invoiceDraft.externalUserId),
+    externalUserId,
+
     business: businessSnapshot,
-    issuer: { rfc: normalizeRfc(selectedIssuer.rfc) },
+
+    issuer: {
+      rfc: issuerRfc,
+    },
 
     receiver: {
       rfc: receiverRfc,
@@ -185,10 +259,10 @@ const buildInvoiceRequestPayload = (
       type: "I",
       paymentForm: normalizeText(invoiceDraft.paymentForm),
       paymentMethod: normalizeText(invoiceDraft.paymentMethod),
-      currency: normalizeText(invoiceDraft.currency),
+      currency: normalizeText(invoiceDraft.currency) || DEFAULT_CURRENCY,
       exchangeRate: null,
       expeditionPlace: normalizeText(invoiceDraft.expeditionPlace),
-      exportation: normalizeText(invoiceDraft.exportation),
+      exportation: normalizeText(invoiceDraft.exportation) || DEFAULT_EXPORTATION,
       ...(shouldAddGlobalInformation
         ? {
           globalInformation: {
@@ -207,36 +281,45 @@ const buildInvoiceRequestPayload = (
       total: totals.total,
     },
 
-    concepts: [
-      {
-        externalItemId: "1",
-        productServiceCode: normalizeText(conceptDraft.productServiceCode),
-        sku: "VENTA-MOSTRADOR",
-        description: normalizeText(conceptDraft.description),
-        unitCode: normalizeText(conceptDraft.unitCode),
-        unitName: normalizeText(conceptDraft.unitName),
-        quantity: conceptDraft.quantity,
-        unitPrice: conceptDraft.unitPrice,
+    concepts: billableConcepts.map((concept, index) => {
+      const conceptTotals = calculateConceptTotals(concept);
+      const taxObject = normalizeText(concept.taxObject) || "02";
+      const shouldApplyIva = taxObject === "02" && concept.iva16 && conceptTotals.subtotal > 0;
+
+      return {
+        externalItemId: normalizeText(concept.externalItemId) || String(index + 1),
+        productServiceCode: normalizeText(concept.productServiceCode) || "01010101",
+        sku: normalizeText(concept.sku) || `CONCEPTO-${index + 1}`,
+        description: normalizeText(concept.description),
+        unitCode: normalizeText(concept.unitCode) || "H87",
+        unitName: normalizeText(concept.unitName) || "Pieza",
+        quantity: Number(concept.quantity),
+        unitPrice: Number(concept.unitPrice),
         discount: 0,
-        subtotal: totals.subtotal,
-        taxObject: normalizeText(conceptDraft.taxObject),
-        total: totals.total,
-        taxes: conceptDraft.iva16
+        subtotal: conceptTotals.subtotal,
+        taxObject,
+        total: conceptTotals.total,
+        taxes: shouldApplyIva
           ? [
             {
               taxCode: "002",
               taxName: "IVA",
               factorType: "Tasa",
               rate: 0.16,
-              base: totals.subtotal,
-              amount: totals.taxesTotal,
+              base: conceptTotals.subtotal,
+              amount: conceptTotals.taxesTotal,
               isRetention: false,
             },
           ]
           : [],
-        metadata: { source: "frontend" },
-      },
-    ],
+        metadata: {
+          source: "frontend",
+          conceptSource: concept.source,
+          sourceLabel: concept.sourceLabel,
+          sourceExternalItemId: concept.externalItemId,
+        },
+      };
+    }),
   };
 };
 
@@ -270,9 +353,89 @@ const triggerBrowserDownload = (blob: Blob, filename: string): void => {
   document.body.removeChild(link);
   window.URL.revokeObjectURL(url);
 };
+const getIssuerId = (issuer: TaxIssuer | undefined): number | undefined => {
+  if (!issuer) return undefined;
 
-const getIssuerId = (issuer: TaxIssuer | undefined): number | undefined => issuer?.taxIssuerId ?? issuer?.id;
-const getIssuerName = (issuer: TaxIssuer | undefined): string => issuer?.legalName ?? issuer?.name ?? issuer?.tradeName ?? "";
+  const raw = issuer as TaxIssuer & {
+    Id?: number;
+    Tax_Issuer_Id?: number;
+  };
+
+  return issuer.taxIssuerId ?? issuer.id ?? raw.Tax_Issuer_Id ?? raw.Id;
+};
+
+const getIssuerName = (issuer: TaxIssuer | undefined): string => {
+  if (!issuer) return "";
+
+  const raw = issuer as TaxIssuer & {
+    Legal_Name?: string;
+    Trade_Name?: string;
+    Name?: string;
+  };
+
+  return (
+    normalizeText(issuer.legalName) ||
+    normalizeText(issuer.name) ||
+    normalizeText(issuer.tradeName) ||
+    normalizeText(raw.Legal_Name) ||
+    normalizeText(raw.Name) ||
+    normalizeText(raw.Trade_Name)
+  );
+};
+
+const getIssuerRfc = (issuer: TaxIssuer | undefined): string => {
+  if (!issuer) return "";
+
+  const raw = issuer as TaxIssuer & {
+    Rfc?: string;
+  };
+
+  return normalizeRfc(issuer.rfc || raw.Rfc);
+};
+
+const getIssuerEmail = (issuer: TaxIssuer | undefined): string => {
+  if (!issuer) return "";
+
+  const raw = issuer as TaxIssuer & {
+    Email?: string;
+    Contact_Email?: string;
+  };
+
+  return (
+    normalizeText(issuer.email) ||
+    normalizeText(raw.Email) ||
+    normalizeText(raw.Contact_Email)
+  );
+};
+
+const getIssuerPhone = (issuer: TaxIssuer | undefined): string => {
+  if (!issuer) return "";
+
+  const raw = issuer as TaxIssuer & {
+    Phone?: string;
+    Contact_Phone?: string;
+  };
+
+  return (
+    normalizeText(issuer.phone) ||
+    normalizeText(raw.Phone) ||
+    normalizeText(raw.Contact_Phone)
+  );
+};
+
+const isBillableConceptLine = (concept: InvoiceConceptLine): boolean => {
+  const description = normalizeText(concept.description);
+  const quantity = Number(concept.quantity);
+  const unitPrice = Number(concept.unitPrice);
+
+  return (
+    Boolean(description) &&
+    Number.isFinite(quantity) &&
+    quantity > 0 &&
+    Number.isFinite(unitPrice) &&
+    unitPrice > 0
+  );
+};
 
 export const FacturaElectronicaPage = () => {
   const apiBaseUrl = useMemo(() => getFacturaElectronicaApiBaseUrl(), []);
@@ -282,7 +445,12 @@ export const FacturaElectronicaPage = () => {
   const [issuerDraft, setIssuerDraft] = useState<IssuerFiscalDraft>(() => createEmptyIssuerDraft());
   const [receiverDraft, setReceiverDraft] = useState<ReceiverDraft>(() => createEmptyReceiverDraft());
   const [invoiceDraft, setInvoiceDraft] = useState<InvoiceDraft>(() => createInitialInvoiceDraft(sessionSnapshot.employeeId));
-  const [conceptDraft, setConceptDraft] = useState<InvoiceConceptDraft>(() => createInitialConceptDraft());
+  const [conceptLines, setConceptLines] = useState<InvoiceConceptLine[]>(() => [createManualConceptLine()]);
+  const [posProductOptions, setPosProductOptions] = useState<PosInvoiceProductOption[]>([]);
+  const [productSearch, setProductSearch] = useState("");
+  const [productImageErrors, setProductImageErrors] = useState<Record<string, true>>({});
+  const [loadingPosProducts, setLoadingPosProducts] = useState(false);
+  const [posProductsError, setPosProductsError] = useState<string | null>(null);
   const [expeditionDraft, setExpeditionDraft] = useState({ zipCode: "", description: "Sucursal principal" });
   const [seriesDraft, setSeriesDraft] = useState({ serie: DEFAULT_SERIE, nextFolio: 1 });
   const [setup, setSetup] = useState<BillingSetupState>({ readyToInvoice: false, missingSteps: [] });
@@ -298,7 +466,14 @@ export const FacturaElectronicaPage = () => {
 
   const businessPayload = useMemo(() => buildBusinessPayload(businessDraft), [businessDraft]);
   const selectedIssuer = issuers.find((issuer) => getIssuerId(issuer) === selectedIssuerId) ?? issuers[0];
-  const totals = useMemo(() => calculateTotals(conceptDraft), [conceptDraft]);
+  const totals = useMemo(() => calculateTotals(conceptLines), [conceptLines]);
+  const filteredPosProductOptions = useMemo(() => {
+    const normalized = normalizeText(productSearch).toLowerCase();
+    if (!normalized) return posProductOptions.slice(0, 80);
+    return posProductOptions
+      .filter((option) => `${option.name} ${option.description} ${option.category} ${option.sourceLabel}`.toLowerCase().includes(normalized))
+      .slice(0, 80);
+  }, [posProductOptions, productSearch]);
 
   const setActionMessage = (action: ActionId, message: string) => {
     setMessages((current) => ({ ...current, [action]: message }));
@@ -326,7 +501,15 @@ export const FacturaElectronicaPage = () => {
   const updateIssuerDraft = (field: keyof IssuerFiscalDraft, value: string) => setIssuerDraft((current) => ({ ...current, [field]: field === "rfc" ? value.toUpperCase() : value }));
   const updateReceiverDraft = (field: keyof ReceiverDraft, value: string) => setReceiverDraft((current) => ({ ...current, [field]: field === "rfc" ? value.toUpperCase() : value }));
   const updateInvoiceDraft = (field: keyof InvoiceDraft, value: string) => setInvoiceDraft((current) => ({ ...current, [field]: field === "currency" || field === "serie" ? value.toUpperCase() : value }));
-  const updateConceptDraft = (field: keyof InvoiceConceptDraft, value: string | number | boolean) => setConceptDraft((current) => ({ ...current, [field]: value }));
+  const updateConceptLine = (id: string, field: keyof InvoiceConceptLine, value: string | number | boolean) => {
+    setConceptLines((current) => current.map((line) => (line.id === id ? { ...line, [field]: value } : line)));
+  };
+  const removeConceptLine = (id: string) => {
+    setConceptLines((current) => (current.length > 1 ? current.filter((line) => line.id !== id) : current));
+  };
+  const addManualConceptLine = () => {
+    setConceptLines((current) => [...current, createManualConceptLine()]);
+  };
 
   const validateBusinessDraft = () => {
     requireValue(businessPayload.externalBusinessId, "Captura el ID externo del negocio.");
@@ -364,7 +547,7 @@ export const FacturaElectronicaPage = () => {
 
   const loadIssuers = async (businessAccountId: number): Promise<TaxIssuer[]> => {
     const response = await facturaElectronicaService.getTaxIssuersByBusinessAccount(businessAccountId);
-    const loadedIssuers = unwrapArray(response.data);
+    const loadedIssuers = unwrapArray(readResponseData(response));
     setIssuers(loadedIssuers);
     const defaultIssuer = loadedIssuers.find((issuer) => issuer.isDefault) ?? loadedIssuers[0];
     const defaultIssuerId = getIssuerId(defaultIssuer);
@@ -385,16 +568,17 @@ export const FacturaElectronicaPage = () => {
 
   const refreshFacturationStatus = async (businessAccountId: number) => {
     const response = await facturaElectronicaService.getFacturationStatus(businessAccountId);
-    setSetup((current) => mapStatusToSetup(response.data, current));
-    setActiveSection(response.data.readyToInvoice ? "invoice" : "setup");
+    const status = readResponseData<FacturationStatusResponse>(response);
+    setSetup((current) => mapStatusToSetup(status, current));
+    setActiveSection(status.readyToInvoice ? "invoice" : "setup");
     setInvoiceDraft((current) => ({
       ...current,
-      expeditionPlace: current.expeditionPlace || response.data.expeditionPlace || response.data.taxZipCode || "",
-      serie: current.serie || response.data.serie || DEFAULT_SERIE,
+      expeditionPlace: current.expeditionPlace || status.expeditionPlace || status.taxZipCode || "",
+      serie: current.serie || status.serie || DEFAULT_SERIE,
     }));
-    setExpeditionDraft((current) => ({ ...current, zipCode: current.zipCode || response.data.expeditionPlace || response.data.taxZipCode || "" }));
-    setSeriesDraft((current) => ({ ...current, serie: current.serie || response.data.serie || DEFAULT_SERIE }));
-    return response.data;
+    setExpeditionDraft((current) => ({ ...current, zipCode: current.zipCode || status.expeditionPlace || status.taxZipCode || "" }));
+    setSeriesDraft((current) => ({ ...current, serie: current.serie || status.serie || DEFAULT_SERIE }));
+    return status;
   };
 
   useEffect(() => {
@@ -425,6 +609,76 @@ export const FacturaElectronicaPage = () => {
     };
   }, [sessionSnapshot.businessId, sessionSnapshot.token]);
 
+
+  useEffect(() => {
+    if (!sessionSnapshot.token || !sessionSnapshot.businessId) {
+      setPosProductOptions([]);
+      setPosProductsError("No encontramos sesión activa del POS para cargar productos de MainSales.");
+      return;
+    }
+
+    let cancelled = false;
+    const loadPosProducts = async () => {
+      setLoadingPosProducts(true);
+      setPosProductsError(null);
+      try {
+        const factory = new ModernSystemsFactory(getPosApiBaseUrl());
+        const productService = factory.createPosProductService();
+        const products = await productService.getSellableProducts(sessionSnapshot.businessId, sessionSnapshot.token);
+        if (cancelled) return;
+
+        const options = products.flatMap<PosInvoiceProductOption>((product) => {
+          const baseOption: PosInvoiceProductOption = {
+            key: `${product.id}:base`,
+            productId: product.id,
+            variantId: null,
+            name: product.name,
+            description: product.name,
+            price: product.price,
+            stock: product.stock,
+            category: product.categoryName || "General",
+            image: toAbsolutePosImageUrl(product.getPrimaryImage()),
+            sourceLabel: `Producto POS #${product.id}`,
+          };
+          const variantOptions = product.variants
+            .filter((variant) => variant.stock === null || variant.stock > 0)
+            .map((variant): PosInvoiceProductOption => {
+              const variantPrice = typeof variant.promotionPrice === "number" && variant.promotionPrice > 0 ? variant.promotionPrice : variant.price ?? product.price;
+              const variantDescription = [product.name, variant.description, variant.color, variant.size].filter(Boolean).join(" · ");
+              return {
+                key: `${product.id}:${variant.id ?? "variant"}`,
+                productId: product.id,
+                variantId: variant.id,
+                name: product.name,
+                description: variantDescription,
+                price: variantPrice,
+                stock: variant.stock,
+                category: product.categoryName || "General",
+                image: toAbsolutePosImageUrl(product.getPrimaryImage()),
+                sourceLabel: `Producto POS #${product.id}${variant.id ? ` · Variante #${variant.id}` : ""}`,
+              };
+            });
+
+          return [baseOption, ...variantOptions];
+        });
+
+        setPosProductOptions(options);
+      } catch (cause) {
+        if (!cancelled) {
+          setPosProductOptions([]);
+          setPosProductsError(getErrorMessage(cause));
+        }
+      } finally {
+        if (!cancelled) setLoadingPosProducts(false);
+      }
+    };
+
+    loadPosProducts();
+    return () => {
+      cancelled = true;
+    };
+  }, [sessionSnapshot.businessId, sessionSnapshot.token]);
+
   useEffect(() => {
     if (!apiBaseUrl || !businessPayload.externalBusinessId) return;
 
@@ -434,7 +688,7 @@ export const FacturaElectronicaPage = () => {
       try {
         const businessResponse = await facturaElectronicaService.getBusinessAccountBySource(businessPayload.sourceSystem, businessPayload.externalBusinessId);
         if (cancelled) return;
-        const businessAccountId = applyBusinessAccount(businessResponse.data);
+        const businessAccountId = applyBusinessAccount(readResponseData(businessResponse));
         if (!businessAccountId) return;
         await loadIssuers(businessAccountId);
         const status = await refreshFacturationStatus(businessAccountId);
@@ -456,7 +710,7 @@ export const FacturaElectronicaPage = () => {
     runAction("business", async () => {
       validateBusinessDraft();
       const response = await facturaElectronicaService.syncBusinessAccount(businessPayload);
-      const id = applyBusinessAccount(response.data) ?? getEntityId(response, ["businessAccountId", "id", "accountId"]);
+      const id = applyBusinessAccount(readResponseData(response)) ?? getEntityId(response, ["businessAccountId", "id", "accountId"]);
       if (!id) throw new Error("El backend no devolvió businessAccountId.");
       setSetup((current) => ({ ...current, businessAccountId: id }));
       await loadIssuers(id);
@@ -523,19 +777,58 @@ export const FacturaElectronicaPage = () => {
       setActionMessage("status", status.readyToInvoice ? "Este negocio ya está listo para facturar." : `Completa la configuración fiscal antes de emitir facturas.${status.missingSteps?.length ? ` Faltan: ${status.missingSteps.join(", ")}.` : ""}`);
     });
 
+
+  const addPosProductAsConcept = (option: PosInvoiceProductOption) => {
+    setConceptLines((current) => [
+      ...current,
+      {
+        id: `pos-${option.key}-${Date.now()}`,
+        externalItemId: option.variantId ? `pos-product-${option.productId}-variant-${option.variantId}` : `pos-product-${option.productId}`,
+        sku: option.variantId ? `POS-${option.productId}-${option.variantId}` : `POS-${option.productId}`,
+        source: "pos",
+        sourceLabel: option.sourceLabel,
+        description: option.description,
+        productServiceCode: "01010101",
+        unitCode: "H87",
+        unitName: "Pieza",
+        quantity: 1,
+        unitPrice: option.price,
+        taxObject: "02",
+        iva16: true,
+      },
+    ]);
+    setPosProductsError(null);
+  };
+
   const createInvoiceRequest = () =>
     runAction("invoiceRequest", async () => {
-      if (!setup.readyToInvoice) throw new Error("Completa la configuración fiscal antes de emitir facturas.");
       if (!setup.businessAccountId) throw new Error("No se puede crear invoice_request sin businessAccountId.");
+      let readyToInvoice = setup.readyToInvoice;
+      if (!readyToInvoice) {
+        const status = await refreshFacturationStatus(setup.businessAccountId);
+        readyToInvoice = Boolean(status.readyToInvoice);
+      }
+      if (!readyToInvoice) throw new Error("Completa la configuración fiscal antes de emitir facturas.");
       if (!selectedIssuer) throw new Error("Selecciona un emisor fiscal configurado.");
       if (!normalizeRfc(selectedIssuer.rfc)) throw new Error("El emisor seleccionado no tiene RFC.");
       requireValue(invoiceDraft.externalDocumentId, "Captura el externalDocumentId de la venta.");
       requireValue(invoiceDraft.expeditionPlace, "Captura el lugar de expedición para el CFDI.");
       requireValue(invoiceDraft.serie, "Captura la serie para el CFDI.");
+      conceptLines.forEach((concept, index) => {
+        requireValue(concept.description, `Captura la descripción del concepto ${index + 1}.`);
+        requireValue(concept.productServiceCode, `Captura la clave producto/servicio del concepto ${index + 1}.`);
+        requireValue(concept.unitCode, `Captura la clave unidad del concepto ${index + 1}.`);
+        requireValue(concept.unitName, `Captura la unidad del concepto ${index + 1}.`);
+        requireValue(concept.taxObject, `Captura el objeto impuesto del concepto ${index + 1}.`);
+        if (!Number.isFinite(concept.quantity) || concept.quantity <= 0) throw new Error(`Captura una cantidad mayor a cero para el concepto ${index + 1}.`);
+        if (!Number.isFinite(concept.unitPrice) || concept.unitPrice <= 0) {
+          throw new Error(`Captura un precio unitario mayor a cero para el concepto ${index + 1}.`);
+        }
+      });
       validateBusinessDraft();
       validateReceiverDraft();
 
-      const payload = buildInvoiceRequestPayload(businessPayload, selectedIssuer, receiverDraft, invoiceDraft, conceptDraft);
+      const payload = buildInvoiceRequestPayload(businessPayload, selectedIssuer, receiverDraft, invoiceDraft, conceptLines);
       console.log("Payload para createInvoiceRequest:", payload);
       const response = await facturaElectronicaService.createInvoiceRequest(payload);
       const id = getEntityId(response, ["invoiceRequestId", "id", "requestId"]);
@@ -719,17 +1012,84 @@ export const FacturaElectronicaPage = () => {
             </article>
 
             <article className="factura-electronica__step">
-              <StepHeader number="E" title="Concepto de prueba editable" description="Por ahora se emite un solo concepto editable con cálculo automático de subtotal, IVA y total." />
-              <div className="factura-electronica__form-grid">
-                <label className="factura-electronica__field">Descripción<input type="text" value={conceptDraft.description} onChange={(event) => updateConceptDraft("description", event.target.value)} /></label>
-                <label className="factura-electronica__field">Clave producto/servicio<input type="text" value={conceptDraft.productServiceCode} onChange={(event) => updateConceptDraft("productServiceCode", event.target.value)} /></label>
-                <label className="factura-electronica__field">Clave unidad<input type="text" value={conceptDraft.unitCode} onChange={(event) => updateConceptDraft("unitCode", event.target.value)} /></label>
-                <label className="factura-electronica__field">Unidad<input type="text" value={conceptDraft.unitName} onChange={(event) => updateConceptDraft("unitName", event.target.value)} /></label>
-                <label className="factura-electronica__field">Cantidad<input type="number" min="0" step="0.01" value={conceptDraft.quantity} onChange={(event) => updateConceptDraft("quantity", Number(event.target.value))} /></label>
-                <label className="factura-electronica__field">Precio unitario<input type="number" min="0" step="0.01" value={conceptDraft.unitPrice} onChange={(event) => updateConceptDraft("unitPrice", Number(event.target.value))} /></label>
-                <label className="factura-electronica__field">Objeto impuesto<input type="text" value={conceptDraft.taxObject} onChange={(event) => updateConceptDraft("taxObject", event.target.value)} /></label>
-                <label className="factura-electronica__field factura-electronica__checkbox"><input type="checkbox" checked={conceptDraft.iva16} onChange={(event) => updateConceptDraft("iva16", event.target.checked)} /> IVA 16%</label>
+              <StepHeader number="E" title="Conceptos editables" description="Captura conceptos manualmente o agrega productos/servicios de MainSales; los datos del POS se adaptan al contexto CFDI y siguen siendo editables." />
+              <div className="factura-electronica__catalog-picker">
+                <div className="factura-electronica__catalog-toolbar">
+                  <label className="factura-electronica__field">Buscar producto o servicio de MainSales<input type="search" value={productSearch} onChange={(event) => setProductSearch(event.target.value)} placeholder="Nombre, categoría, variante o ID" /></label>
+                  <button type="button" className="factura-electronica__secondary" onClick={addManualConceptLine}>Agregar concepto manual</button>
+                </div>
+
+                {loadingPosProducts ? <p className="factura-electronica__empty">Cargando productos de MainSales...</p> : null}
+                {posProductsError ? <div className="factura-electronica__error">{posProductsError}</div> : null}
+                {!loadingPosProducts && !posProductsError && filteredPosProductOptions.length === 0 ? (
+                  <p className="factura-electronica__empty">No encontramos productos o servicios para facturar con esa búsqueda.</p>
+                ) : null}
+
+                <div className="factura-electronica__product-grid" aria-label="Productos y servicios de MainSales">
+                  {filteredPosProductOptions.map((option) => {
+                    const shouldShowImage = Boolean(option.image) && !productImageErrors[option.key];
+
+                    return (
+                      <article className="factura-electronica__product-card" key={option.key}>
+                        {shouldShowImage ? (
+                          <img
+                            src={option.image}
+                            alt={option.description}
+                            className="factura-electronica__product-image"
+                            loading="lazy"
+                            decoding="async"
+                            onError={() => setProductImageErrors((current) => ({ ...current, [option.key]: true }))}
+                          />
+                        ) : (
+                          <div className="factura-electronica__product-image-placeholder" aria-hidden="true">
+                            {option.name.slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <div className="factura-electronica__product-content">
+                          <p>{option.category}</p>
+                          <h4>{option.description}</h4>
+                          <small>{option.sourceLabel}{option.stock !== null ? ` · Stock ${option.stock}` : ""}</small>
+                        </div>
+                        <div className="factura-electronica__product-side">
+                          <strong>${option.price.toFixed(2)}</strong>
+                          <button type="button" onClick={() => addPosProductAsConcept(option)}>Agregar</button>
+                        </div>
+                      </article>
+                    );
+                  })}
+                </div>
               </div>
+
+              <div className="factura-electronica__concept-lines" aria-label="Conceptos de la factura">
+                {conceptLines.map((concept, index) => {
+                  const conceptTotals = calculateConceptTotals(concept);
+                  return (
+                    <div className="factura-electronica__concept-line" key={concept.id}>
+                      <div className="factura-electronica__concept-line-header">
+                        <strong>Concepto {index + 1}</strong>
+                        <span>{concept.sourceLabel}</span>
+                        <button type="button" className="factura-electronica__secondary" onClick={() => removeConceptLine(concept.id)} disabled={conceptLines.length === 1}>Quitar</button>
+                      </div>
+                      <div className="factura-electronica__form-grid">
+                        <label className="factura-electronica__field">Descripción<input type="text" value={concept.description} onChange={(event) => updateConceptLine(concept.id, "description", event.target.value)} /></label>
+                        <label className="factura-electronica__field">Clave producto/servicio<input type="text" value={concept.productServiceCode} onChange={(event) => updateConceptLine(concept.id, "productServiceCode", event.target.value)} /></label>
+                        <label className="factura-electronica__field">Clave unidad<input type="text" value={concept.unitCode} onChange={(event) => updateConceptLine(concept.id, "unitCode", event.target.value)} /></label>
+                        <label className="factura-electronica__field">Unidad<input type="text" value={concept.unitName} onChange={(event) => updateConceptLine(concept.id, "unitName", event.target.value)} /></label>
+                        <label className="factura-electronica__field">Cantidad<input type="number" min="0" step="0.01" value={concept.quantity} onChange={(event) => updateConceptLine(concept.id, "quantity", Number(event.target.value))} /></label>
+                        <label className="factura-electronica__field">Precio unitario<input type="number" min="0" step="0.01" value={concept.unitPrice} onChange={(event) => updateConceptLine(concept.id, "unitPrice", Number(event.target.value))} /></label>
+                        <label className="factura-electronica__field">Objeto impuesto<input type="text" value={concept.taxObject} onChange={(event) => updateConceptLine(concept.id, "taxObject", event.target.value)} /></label>
+                        <label className="factura-electronica__field factura-electronica__checkbox"><input type="checkbox" checked={concept.iva16} onChange={(event) => updateConceptLine(concept.id, "iva16", event.target.checked)} /> IVA 16%</label>
+                      </div>
+                      <div className="factura-electronica__concept-totals">
+                        <span>Subtotal: <strong>${conceptTotals.subtotal.toFixed(2)}</strong></span>
+                        <span>IVA: <strong>${conceptTotals.taxesTotal.toFixed(2)}</strong></span>
+                        <span>Total: <strong>${conceptTotals.total.toFixed(2)}</strong></span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
               <div className="factura-electronica__summary-grid">
                 <div><span>Subtotal</span><strong>${totals.subtotal.toFixed(2)}</strong></div>
                 <div><span>IVA</span><strong>${totals.taxesTotal.toFixed(2)}</strong></div>
@@ -740,7 +1100,7 @@ export const FacturaElectronicaPage = () => {
             <article className="factura-electronica__step">
               <StepHeader number="F" title="Acciones" description="Crea la solicitud, timbra y descarga archivos de la factura emitida." />
               <div className="factura-electronica__actions">
-                <button type="button" onClick={createInvoiceRequest} disabled={loadingAction === "invoiceRequest" || !setup.readyToInvoice}>{loadingAction === "invoiceRequest" ? "Procesando..." : "Crear solicitud de factura"}</button>
+                <button type="button" onClick={createInvoiceRequest} disabled={loadingAction === "invoiceRequest"}>{loadingAction === "invoiceRequest" ? "Procesando..." : "Crear solicitud de factura"}</button>
                 <button type="button" onClick={issueInvoice} disabled={loadingAction === "issue" || !invoiceFlow.invoiceRequestId}>{loadingAction === "issue" ? "Procesando..." : "Timbrar factura"}</button>
                 <button type="button" className="factura-electronica__secondary" onClick={viewInvoice} disabled={loadingAction === "viewInvoice" || !invoiceFlow.issuedInvoiceId}>Consultar factura</button>
                 <button type="button" onClick={() => downloadFile("pdf")} disabled={loadingAction === "files" || !invoiceFlow.issuedInvoiceId}>Descargar PDF</button>
