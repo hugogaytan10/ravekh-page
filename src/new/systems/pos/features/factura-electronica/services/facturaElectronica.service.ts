@@ -5,14 +5,19 @@ import {
   ApiResponse,
   BusinessAccount,
   BusinessAccountSyncRequest,
+  CancelInvoicePayload,
+  CancelInvoiceResult,
   CreateInvoiceRequestPayload,
   ExpeditionPlaceCreateRequest,
   FacturationStatusResponse,
+  InvoiceCancellationDto,
   InvoiceFileDownload,
   InvoiceFileFormat,
   InvoiceSeriesCreateRequest,
   IssueInvoiceRequestPayload,
   IssuedInvoiceResponse,
+  ListIssuedInvoicesFilters,
+  ListIssuedInvoicesResponse,
   TaxIssuer,
   TaxIssuerCreateRequest,
   UploadCsdRequest,
@@ -20,6 +25,16 @@ import {
 
 const client = new FacturaElectronicaHttpClient(getFacturaElectronicaApiBaseUrl());
 const encode = (value: string | number): string => encodeURIComponent(String(value));
+const buildQuery = (filters?: ListIssuedInvoicesFilters): Record<string, string | number | boolean | undefined> => {
+  const query: Record<string, string | number | boolean | undefined> = {};
+
+  Object.entries(filters ?? {}).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === "") return;
+    query[key] = value;
+  });
+
+  return query;
+};
 
 export const facturaElectronicaService = {
   syncBusinessAccount(payload: BusinessAccountSyncRequest) {
@@ -94,6 +109,25 @@ export const facturaElectronicaService = {
 
   getInvoiceById(id: number) {
     return client.request<ApiResponse<unknown>>(`/api/invoices/${encode(id)}`);
+  },
+
+  listInvoicesByBusinessAccount(businessAccountId: number, filters?: ListIssuedInvoicesFilters) {
+    return client.request<ApiResponse<ListIssuedInvoicesResponse>>(
+      `/api/business-accounts/${encode(businessAccountId)}/invoices`,
+      { query: buildQuery(filters) },
+    );
+  },
+
+  cancelInvoice(invoiceId: number, payload: CancelInvoicePayload) {
+    console.log("Canceling invoice with payload:", payload);
+    return client.request<ApiResponse<CancelInvoiceResult>>(`/api/invoices/${encode(invoiceId)}/cancel`, {
+      method: "POST",
+      body: payload as unknown as Record<string, unknown>,
+    });
+  },
+
+  getInvoiceCancellations(invoiceId: number) {
+    return client.request<ApiResponse<InvoiceCancellationDto[]>>(`/api/invoices/${encode(invoiceId)}/cancellations`);
   },
 
   getInvoiceBySource(sourceSystem: string, documentType: string, externalDocumentId: string) {

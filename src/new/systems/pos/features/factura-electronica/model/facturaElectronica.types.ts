@@ -256,7 +256,101 @@ export interface IssuedInvoiceResponse {
   status?: string;
 }
 
+export type InvoiceStatus =
+  | "issued"
+  | "active"
+  | "cancel_requested"
+  | "cancelled"
+  | "cancel_error"
+  | string;
+
 export type InvoiceFileFormat = "pdf" | "xml" | "html";
+
+export interface ListIssuedInvoicesFilters {
+  status?: string;
+  taxIssuerId?: number;
+  receiverRfc?: string;
+  uuid?: string;
+  folio?: string;
+  serie?: string;
+  externalDocumentId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface IssuedInvoiceListItem {
+  id: number;
+  invoiceRequestId: number | null;
+  businessAccountId: number;
+  taxIssuerId: number;
+  sourceSystem: string;
+  sourceDocumentType: string;
+  externalDocumentId: string;
+  facturamaId: string | null;
+  uuid: string | null;
+  serie: string | null;
+  folio: string;
+  cfdiType: string;
+  status: InvoiceStatus;
+  issuerRfc: string;
+  issuerName: string;
+  receiverRfc: string;
+  receiverName: string;
+  subtotal: number;
+  transferredTaxesTotal: number;
+  retainedTaxesTotal: number;
+  total: number;
+  currency: string;
+  paymentForm: string;
+  paymentMethod: string;
+  issuedAt: string | null;
+  cancelledAt: string | null;
+  hasPdf: boolean;
+  hasXml: boolean;
+  hasHtml: boolean;
+}
+
+export interface ListIssuedInvoicesResponse {
+  items: IssuedInvoiceListItem[];
+  pagination: {
+    page: number;
+    limit: number;
+    total: number;
+    totalPages: number;
+  };
+}
+
+export type CancelMotive = "01" | "02" | "03" | "04";
+
+export interface CancelInvoicePayload {
+  motive: CancelMotive;
+  replacementUuid?: string | null;
+}
+
+export interface CancelInvoiceResult {
+  invoiceId: number;
+  uuid: string;
+  facturamaId: string;
+  status: string;
+  motive: CancelMotive;
+  replacementUuid: string | null;
+  cancelledAt: string | null;
+}
+
+export interface InvoiceCancellationDto {
+  id: number;
+  issuedInvoiceId: number;
+  uuid: string;
+  motive: CancelMotive;
+  replacementUuid: string | null;
+  status: string;
+  providerStatus: string | null;
+  errorMessage: string | null;
+  requestedAt: string;
+  cancelledAt: string | null;
+}
 
 export interface InvoiceFileDownload {
   blob: Blob;

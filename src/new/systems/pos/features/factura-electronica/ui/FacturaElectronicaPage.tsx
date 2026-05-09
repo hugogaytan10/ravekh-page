@@ -10,12 +10,17 @@ import {
   BusinessAccount,
   BusinessAccountDraft,
   BusinessAccountSyncRequest,
+  CancelMotive,
   CreateInvoiceRequestPayload,
   FacturationStatusResponse,
+  InvoiceCancellationDto,
   InvoiceConceptLine,
   InvoiceDraft,
   InvoiceFileFormat,
   InvoiceFlowState,
+  IssuedInvoiceListItem,
+  ListIssuedInvoicesFilters,
+  ListIssuedInvoicesResponse,
   IssuerFiscalDraft,
   ReceiverDraft,
   TaxIssuer,
@@ -23,7 +28,7 @@ import {
 } from "../model/facturaElectronica.types";
 import "./FacturaElectronicaPage.css";
 
-type SectionId = "setup" | "invoice";
+type SectionId = "setup" | "invoice" | "issued";
 type ActionId = "bootstrap" | "business" | "issuer" | "csd" | "expeditionPlace" | "series" | "status" | "invoiceRequest" | "issue" | "viewInvoice" | "files";
 
 const DEFAULT_SOURCE_SYSTEM = "ravekh-pos";
@@ -33,6 +38,20 @@ const DEFAULT_PAYMENT_FORM = "01";
 const DEFAULT_PAYMENT_METHOD = "PUE";
 const DEFAULT_SERIE = "A";
 const GENERIC_PUBLIC_RFC = "XAXX010101000";
+
+const CANCEL_MOTIVE_OPTIONS: Array<{ value: CancelMotive; label: string }> = [
+  { value: "01", label: "01 - Comprobante emitido con errores con relación" },
+  { value: "02", label: "02 - Comprobante emitido con errores sin relación" },
+  { value: "03", label: "03 - No se llevó a cabo la operación" },
+  { value: "04", label: "04 - Operación nominativa relacionada en factura global" },
+];
+
+const DEFAULT_INVOICE_LIST_PAGINATION: ListIssuedInvoicesResponse["pagination"] = {
+  page: 1,
+  limit: 20,
+  total: 0,
+  totalPages: 0,
+};
 
 type CatalogOption = {
   code: string;
@@ -454,7 +473,13 @@ const mapStatusToSetup = (status: FacturationStatusResponse, current: BillingSet
   missingSteps: status.missingSteps ?? [],
 });
 
-const getErrorMessage = (cause: unknown): string => (cause instanceof Error ? cause.message : "Ocurrió un error inesperado en Facturación Electrónica.");
+const getErrorMessage = (cause: unknown): string => {
+  const baseMessage = cause instanceof Error ? cause.message : "Ocurrió un error inesperado en Facturación Electrónica.";
+  const payload = (cause as { payload?: { details?: { providerMessage?: string }; providerMessage?: string } } | null)?.payload;
+  const providerMessage = payload?.details?.providerMessage ?? payload?.providerMessage;
+  return providerMessage ? `${baseMessage}
+${providerMessage}` : baseMessage;
+};
 const isExpectedFile = (file: File | null, extension: ".cer" | ".key"): boolean => file instanceof File && file.name.toLowerCase().endsWith(extension);
 const requireValue = (value: string | undefined, message: string): void => {
   if (!normalizeText(value)) throw new Error(message);
@@ -470,6 +495,39 @@ const triggerBrowserDownload = (blob: Blob, filename: string): void => {
   document.body.removeChild(link);
   window.URL.revokeObjectURL(url);
 };
+
+const formatCurrency = (value: number, currency = DEFAULT_CURRENCY): string =>
+  new Intl.NumberFormat("es-MX", { style: "currency", currency: currency || DEFAULT_CURRENCY }).format(Number(value) || 0);
+
+const formatDateTime = (value: string | null | undefined): string => {
+  if (!value) return "Pendiente";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" }).format(date);
+};
+
+const getInvoiceDisplayFolio = (invoice: IssuedInvoiceListItem): string => [invoice.serie, invoice.folio].filter(Boolean).join("-") || `#${invoice.id}`;
+
+const getInvoiceStatusLabel = (status: string): string => {
+  const labels: Record<string, string> = {
+    issued: "Emitida",
+    active: "Activa",
+    cancel_requested: "Cancelación en proceso",
+    cancelled: "Cancelada",
+    cancel_error: "Error al cancelar",
+  };
+
+  return labels[status] ?? status;
+};
+
+const getInvoiceStatusClass = (status: string): string => {
+  if (status === "cancelled") return "factura-electronica__badge factura-electronica__badge--cancelled";
+  if (status === "cancel_requested") return "factura-electronica__badge factura-electronica__badge--pending";
+  if (status === "cancel_error") return "factura-electronica__badge factura-electronica__badge--error";
+  return "factura-electronica__badge";
+};
+
+const canCancelInvoice = (invoice: IssuedInvoiceListItem): boolean => invoice.status === "issued";
 const getIssuerId = (issuer: TaxIssuer | undefined): number | undefined => {
   if (!issuer) return undefined;
 
@@ -581,6 +639,20 @@ export const FacturaElectronicaPage = () => {
   const [privateKey, setPrivateKey] = useState<File | null>(null);
   const [privateKeyPassword, setPrivateKeyPassword] = useState("");
   const [showNewInvoiceModal, setShowNewInvoiceModal] = useState(false);
+  const [invoiceList, setInvoiceList] = useState<IssuedInvoiceListItem[]>([]);
+  const [invoiceListPagination, setInvoiceListPagination] = useState<ListIssuedInvoicesResponse["pagination"]>(DEFAULT_INVOICE_LIST_PAGINATION);
+  const [invoiceFilters, setInvoiceFilters] = useState<ListIssuedInvoicesFilters>({ page: 1, limit: 20 });
+  const [isLoadingInvoices, setIsLoadingInvoices] = useState(false);
+  const [invoiceListError, setInvoiceListError] = useState<string | null>(null);
+  const [invoiceListMessage, setInvoiceListMessage] = useState<string | null>(null);
+  const [selectedInvoiceToCancel, setSelectedInvoiceToCancel] = useState<IssuedInvoiceListItem | null>(null);
+  const [cancelMotive, setCancelMotive] = useState<CancelMotive>("02");
+  const [replacementUuid, setReplacementUuid] = useState("");
+  const [isCancellingInvoice, setIsCancellingInvoice] = useState(false);
+  const [selectedInvoiceForCancellations, setSelectedInvoiceForCancellations] = useState<IssuedInvoiceListItem | null>(null);
+  const [selectedInvoiceCancellations, setSelectedInvoiceCancellations] = useState<InvoiceCancellationDto[]>([]);
+  const [isLoadingCancellations, setIsLoadingCancellations] = useState(false);
+  const [cancellationsError, setCancellationsError] = useState<string | null>(null);
 
   const businessPayload = useMemo(() => buildBusinessPayload(businessDraft), [businessDraft]);
   const selectedIssuer = issuers.find((issuer) => getIssuerId(issuer) === selectedIssuerId) ?? issuers[0];
@@ -1005,6 +1077,112 @@ export const FacturaElectronicaPage = () => {
       setActionMessage("files", `${format.toUpperCase()} descargado desde el backend de facturación (${file.contentType}).`);
     });
 
+  const updateInvoiceFilter = (field: keyof ListIssuedInvoicesFilters, value: string | number | undefined) => {
+    setInvoiceFilters((current) => ({ ...current, [field]: value, page: field === "page" ? Number(value) || 1 : 1 }));
+  };
+
+  const loadIssuedInvoices = async (filtersOverride?: ListIssuedInvoicesFilters) => {
+    if (!apiBaseUrl) {
+      setInvoiceListError(getFacturaElectronicaEnvHelp());
+      return;
+    }
+    if (!setup.businessAccountId) {
+      setInvoiceList([]);
+      setInvoiceListPagination(DEFAULT_INVOICE_LIST_PAGINATION);
+      setInvoiceListError("Sincroniza el negocio antes de consultar facturas emitidas.");
+      return;
+    }
+
+    const filtersToUse = { ...invoiceFilters, ...filtersOverride };
+    setIsLoadingInvoices(true);
+    setInvoiceListError(null);
+    setInvoiceListMessage(null);
+    try {
+      const response = await facturaElectronicaService.listInvoicesByBusinessAccount(setup.businessAccountId, filtersToUse);
+      const data = readResponseData(response);
+      setInvoiceList(data.items ?? []);
+      setInvoiceListPagination(data.pagination ?? DEFAULT_INVOICE_LIST_PAGINATION);
+      setInvoiceFilters((current) => ({ ...current, page: data.pagination?.page ?? filtersToUse.page, limit: data.pagination?.limit ?? filtersToUse.limit }));
+      setInvoiceListMessage(`Se cargaron ${data.items?.length ?? 0} factura(s) emitidas.`);
+    } catch (cause) {
+      setInvoiceListError(getErrorMessage(cause));
+    } finally {
+      setIsLoadingInvoices(false);
+    }
+  };
+
+  const handleDownloadInvoiceFile = async (invoice: IssuedInvoiceListItem, format: InvoiceFileFormat) => {
+    setInvoiceListError(null);
+    setInvoiceListMessage(null);
+    try {
+      const file = await facturaElectronicaService.downloadInvoiceFile(invoice.id, format);
+      const filename = `factura-${invoice.serie || "sin-serie"}-${invoice.folio || invoice.id}.${format}`;
+      triggerBrowserDownload(file.blob, filename);
+      setInvoiceListMessage(`${format.toUpperCase()} descargado para la factura ${getInvoiceDisplayFolio(invoice)}.`);
+    } catch (cause) {
+      setInvoiceListError(getErrorMessage(cause));
+    }
+  };
+
+  const openCancelInvoiceModal = (invoice: IssuedInvoiceListItem) => {
+    setSelectedInvoiceToCancel(invoice);
+    setCancelMotive("02");
+    setReplacementUuid("");
+    setInvoiceListError(null);
+  };
+
+  const cancelSelectedInvoice = async () => {
+    if (!selectedInvoiceToCancel) return;
+    const normalizedReplacementUuid = normalizeText(replacementUuid);
+    if (cancelMotive === "01" && !normalizedReplacementUuid) {
+      setInvoiceListError("Captura el UUID de sustitución para el motivo 01.");
+      return;
+    }
+
+    setIsCancellingInvoice(true);
+    setInvoiceListError(null);
+    setInvoiceListMessage(null);
+    try {
+      const response = await facturaElectronicaService.cancelInvoice(selectedInvoiceToCancel.id, {
+        motive: cancelMotive,
+        replacementUuid: cancelMotive === "01" ? normalizedReplacementUuid : null,
+      });
+      const successMessage = response.message || "Factura cancelada correctamente";
+      setSelectedInvoiceToCancel(null);
+      setReplacementUuid("");
+      await loadIssuedInvoices();
+      setInvoiceListMessage(successMessage);
+      await loadInvoiceCancellations(selectedInvoiceToCancel.id, selectedInvoiceToCancel, false);
+    } catch (cause) {
+      setInvoiceListError(getErrorMessage(cause));
+    } finally {
+      setIsCancellingInvoice(false);
+    }
+  };
+
+  const loadInvoiceCancellations = async (invoiceId: number, invoice?: IssuedInvoiceListItem, openModal = true) => {
+    setIsLoadingCancellations(true);
+    setCancellationsError(null);
+    if (openModal) {
+      setSelectedInvoiceForCancellations(invoice ?? invoiceList.find((item) => item.id === invoiceId) ?? null);
+      setSelectedInvoiceCancellations([]);
+    }
+    try {
+      const response = await facturaElectronicaService.getInvoiceCancellations(invoiceId);
+      setSelectedInvoiceCancellations(readResponseData(response) ?? []);
+    } catch (cause) {
+      setCancellationsError(getErrorMessage(cause));
+    } finally {
+      setIsLoadingCancellations(false);
+    }
+  };
+
+  const goToInvoicePage = (page: number) => {
+    const nextPage = Math.max(1, page);
+    setInvoiceFilters((current) => ({ ...current, page: nextPage }));
+    void loadIssuedInvoices({ page: nextPage });
+  };
+
   const resetInvoiceCapture = (options: { keepReceiver: boolean }) => {
     setInvoiceDraft((current) => ({
       ...createInitialInvoiceDraft(sessionSnapshot.employeeId),
@@ -1052,6 +1230,7 @@ export const FacturaElectronicaPage = () => {
         <nav className="factura-electronica__tabs" aria-label="Secciones de facturación electrónica">
           <button type="button" className={activeSection === "setup" ? "factura-electronica__tab factura-electronica__tab--active" : "factura-electronica__tab"} onClick={() => setActiveSection("setup")}>Configuración fiscal</button>
           <button type="button" className={activeSection === "invoice" ? "factura-electronica__tab factura-electronica__tab--active" : "factura-electronica__tab"} onClick={() => setActiveSection("invoice")}>Emitir factura</button>
+          <button type="button" className={activeSection === "issued" ? "factura-electronica__tab factura-electronica__tab--active" : "factura-electronica__tab"} onClick={() => setActiveSection("issued")}>Facturas emitidas</button>
         </nav>
 
         <section className="factura-electronica__summary" aria-label="Estado de facturación">
@@ -1130,7 +1309,9 @@ export const FacturaElectronicaPage = () => {
               <ActionFooter action="status" label="Verificar configuración fiscal" loadingAction={loadingAction} onAction={verifyConfiguration} messages={messages} errors={errors} />
             </article>
           </section>
-        ) : (
+        ) : null}
+
+        {activeSection === "invoice" ? (
           <section className="factura-electronica__steps" aria-label="Emitir factura">
             {!setup.readyToInvoice ? <div className="factura-electronica__error">Completa la configuración fiscal antes de emitir facturas.</div> : null}
 
@@ -1307,7 +1488,92 @@ export const FacturaElectronicaPage = () => {
               {messages.files ? <div className="factura-electronica__result">{messages.files}</div> : null}
             </article>
           </section>
-        )}
+        ) : null}
+
+        {activeSection === "issued" ? (
+          <section className="factura-electronica__steps" aria-label="Facturas emitidas">
+            <article className="factura-electronica__step">
+              <StepHeader number="A" title="Facturas emitidas" description="Consulta el historial de facturas emitidas del negocio actual, descarga archivos y revisa cancelaciones." />
+              {!setup.businessAccountId ? <div className="factura-electronica__notice">Sincroniza el negocio antes de consultar facturas emitidas.</div> : null}
+              <div className="factura-electronica__form-grid factura-electronica__form-grid--issued-filters">
+                <label className="factura-electronica__field">Estado
+                  <select value={invoiceFilters.status ?? ""} onChange={(event) => updateInvoiceFilter("status", event.target.value || undefined)}>
+                    <option value="">Todos</option>
+                    <option value="issued">Emitida</option>
+                    <option value="active">Activa</option>
+                    <option value="cancel_requested">Cancelación en proceso</option>
+                    <option value="cancelled">Cancelada</option>
+                    <option value="cancel_error">Error al cancelar</option>
+                  </select>
+                </label>
+                <label className="factura-electronica__field">RFC receptor<input type="text" value={invoiceFilters.receiverRfc ?? ""} onChange={(event) => updateInvoiceFilter("receiverRfc", event.target.value.toUpperCase())} /></label>
+                <label className="factura-electronica__field">Folio<input type="text" value={invoiceFilters.folio ?? ""} onChange={(event) => updateInvoiceFilter("folio", event.target.value)} /></label>
+                <label className="factura-electronica__field">Serie<input type="text" value={invoiceFilters.serie ?? ""} onChange={(event) => updateInvoiceFilter("serie", event.target.value.toUpperCase())} /></label>
+                <label className="factura-electronica__field">UUID<input type="text" value={invoiceFilters.uuid ?? ""} onChange={(event) => updateInvoiceFilter("uuid", event.target.value)} /></label>
+                <label className="factura-electronica__field">Documento externo<input type="text" value={invoiceFilters.externalDocumentId ?? ""} onChange={(event) => updateInvoiceFilter("externalDocumentId", event.target.value)} /></label>
+                <label className="factura-electronica__field">Fecha desde<input type="date" value={invoiceFilters.dateFrom ?? ""} onChange={(event) => updateInvoiceFilter("dateFrom", event.target.value || undefined)} /></label>
+                <label className="factura-electronica__field">Fecha hasta<input type="date" value={invoiceFilters.dateTo ?? ""} onChange={(event) => updateInvoiceFilter("dateTo", event.target.value || undefined)} /></label>
+                <label className="factura-electronica__field">Límite por página<input type="number" min="1" max="100" value={invoiceFilters.limit ?? 20} onChange={(event) => updateInvoiceFilter("limit", Number(event.target.value) || 20)} /></label>
+              </div>
+              <div className="factura-electronica__actions">
+                <button type="button" onClick={() => loadIssuedInvoices()} disabled={isLoadingInvoices || !setup.businessAccountId}>{isLoadingInvoices ? "Cargando..." : "Actualizar facturas"}</button>
+              </div>
+              {invoiceListError ? <div className="factura-electronica__error">{invoiceListError}</div> : null}
+              {invoiceListMessage ? <div className="factura-electronica__result">{invoiceListMessage}</div> : null}
+            </article>
+
+            <article className="factura-electronica__step">
+              <StepHeader number="B" title="Listado" description="Las banderas PDF/XML/HTML no bloquean descargas; el backend puede obtener y cachear el archivo al solicitarlo." />
+              <div className="factura-electronica__table-wrap">
+                <table className="factura-electronica__table">
+                  <thead>
+                    <tr>
+                      <th>Folio</th>
+                      <th>UUID</th>
+                      <th>Cliente</th>
+                      <th>RFC</th>
+                      <th>Total</th>
+                      <th>Estado</th>
+                      <th>Fecha</th>
+                      <th>Documento externo</th>
+                      <th>Acciones</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {invoiceList.length === 0 ? (
+                      <tr><td colSpan={9}>No hay facturas cargadas. Usa “Actualizar facturas”.</td></tr>
+                    ) : invoiceList.map((invoice) => (
+                      <tr key={invoice.id}>
+                        <td>{getInvoiceDisplayFolio(invoice)}</td>
+                        <td className="factura-electronica__mono">{invoice.uuid ?? "Pendiente"}</td>
+                        <td>{invoice.receiverName}</td>
+                        <td className="factura-electronica__mono">{invoice.receiverRfc}</td>
+                        <td>{formatCurrency(invoice.total, invoice.currency)}</td>
+                        <td><span className={getInvoiceStatusClass(invoice.status)}>{getInvoiceStatusLabel(invoice.status)}</span></td>
+                        <td>{formatDateTime(invoice.issuedAt)}</td>
+                        <td>{invoice.externalDocumentId || "-"}</td>
+                        <td>
+                          <div className="factura-electronica__row-actions">
+                            <button type="button" className="factura-electronica__secondary" onClick={() => handleDownloadInvoiceFile(invoice, "pdf")}>PDF</button>
+                            <button type="button" className="factura-electronica__secondary" onClick={() => handleDownloadInvoiceFile(invoice, "xml")}>XML</button>
+                            <button type="button" className="factura-electronica__secondary" onClick={() => handleDownloadInvoiceFile(invoice, "html")}>HTML</button>
+                            <button type="button" className="factura-electronica__secondary" onClick={() => loadInvoiceCancellations(invoice.id, invoice)}>Ver cancelaciones</button>
+                            {canCancelInvoice(invoice) ? <button type="button" onClick={() => openCancelInvoiceModal(invoice)}>Cancelar factura</button> : null}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+              <div className="factura-electronica__pagination">
+                <span>Página {invoiceListPagination.page} de {invoiceListPagination.totalPages || 1} · Total: {invoiceListPagination.total}</span>
+                <button type="button" className="factura-electronica__secondary" onClick={() => goToInvoicePage(invoiceListPagination.page - 1)} disabled={isLoadingInvoices || invoiceListPagination.page <= 1}>Anterior</button>
+                <button type="button" className="factura-electronica__secondary" onClick={() => goToInvoicePage(invoiceListPagination.page + 1)} disabled={isLoadingInvoices || invoiceListPagination.page >= (invoiceListPagination.totalPages || 1)}>Siguiente</button>
+              </div>
+            </article>
+          </section>
+        ) : null}
       </section>
 
       {showNewInvoiceModal ? (
@@ -1327,6 +1593,84 @@ export const FacturaElectronicaPage = () => {
               <button type="button" onClick={() => resetInvoiceCapture({ keepReceiver: true })}>Mismo receptor</button>
               <button type="button" onClick={() => resetInvoiceCapture({ keepReceiver: false })}>Receptor nuevo</button>
               <button type="button" className="factura-electronica__secondary" onClick={() => setShowNewInvoiceModal(false)}>Cancelar</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {selectedInvoiceToCancel ? (
+        <div className="factura-electronica__modal-backdrop" role="presentation" onClick={() => setSelectedInvoiceToCancel(null)}>
+          <section className="factura-electronica__modal" role="dialog" aria-modal="true" aria-labelledby="factura-electronica-cancel-title" onClick={(event) => event.stopPropagation()}>
+            <div>
+              <h3 id="factura-electronica-cancel-title">Cancelar factura</h3>
+              <p>Esta acción cancelará fiscalmente la factura. No se eliminará de la base de datos.</p>
+            </div>
+            <div className="factura-electronica__summary-grid">
+              <div><span>Serie/Folio</span><strong>{getInvoiceDisplayFolio(selectedInvoiceToCancel)}</strong></div>
+              <div><span>UUID</span><strong>{selectedInvoiceToCancel.uuid ?? "Pendiente"}</strong></div>
+              <div><span>Receptor</span><strong>{selectedInvoiceToCancel.receiverName}</strong></div>
+              <div><span>Total</span><strong>{formatCurrency(selectedInvoiceToCancel.total, selectedInvoiceToCancel.currency)}</strong></div>
+              <div><span>Fecha</span><strong>{formatDateTime(selectedInvoiceToCancel.issuedAt)}</strong></div>
+            </div>
+            <label className="factura-electronica__field">Motivo de cancelación
+              <select value={cancelMotive} onChange={(event) => setCancelMotive(event.target.value as CancelMotive)}>
+                {CANCEL_MOTIVE_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+              </select>
+            </label>
+            {cancelMotive === "01" ? (
+              <label className="factura-electronica__field">UUID de sustitución<input type="text" value={replacementUuid} onChange={(event) => setReplacementUuid(event.target.value)} /></label>
+            ) : null}
+            <div className="factura-electronica__modal-actions">
+              <button type="button" onClick={cancelSelectedInvoice} disabled={isCancellingInvoice}>{isCancellingInvoice ? "Cancelando..." : "Confirmar cancelación"}</button>
+              <button type="button" className="factura-electronica__secondary" onClick={() => setSelectedInvoiceToCancel(null)} disabled={isCancellingInvoice}>Cerrar</button>
+            </div>
+          </section>
+        </div>
+      ) : null}
+
+      {selectedInvoiceForCancellations ? (
+        <div className="factura-electronica__modal-backdrop" role="presentation" onClick={() => setSelectedInvoiceForCancellations(null)}>
+          <section className="factura-electronica__modal factura-electronica__modal--wide" role="dialog" aria-modal="true" aria-labelledby="factura-electronica-cancellations-title" onClick={(event) => event.stopPropagation()}>
+            <div>
+              <h3 id="factura-electronica-cancellations-title">Historial de cancelaciones</h3>
+              <p>Factura {getInvoiceDisplayFolio(selectedInvoiceForCancellations)} · UUID {selectedInvoiceForCancellations.uuid ?? "Pendiente"}</p>
+            </div>
+            {isLoadingCancellations ? <p className="factura-electronica__empty">Cargando cancelaciones...</p> : null}
+            {cancellationsError ? <div className="factura-electronica__error">{cancellationsError}</div> : null}
+            {!isLoadingCancellations && !cancellationsError && selectedInvoiceCancellations.length === 0 ? <p className="factura-electronica__empty">No hay cancelaciones registradas para esta factura.</p> : null}
+            {selectedInvoiceCancellations.length > 0 ? (
+              <div className="factura-electronica__table-wrap">
+                <table className="factura-electronica__table">
+                  <thead>
+                    <tr>
+                      <th>Motivo</th>
+                      <th>UUID sustitución</th>
+                      <th>Estado</th>
+                      <th>Provider status</th>
+                      <th>Error</th>
+                      <th>Fecha solicitud</th>
+                      <th>Fecha cancelación</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {selectedInvoiceCancellations.map((cancellation) => (
+                      <tr key={cancellation.id}>
+                        <td>{cancellation.motive}</td>
+                        <td className="factura-electronica__mono">{cancellation.replacementUuid ?? "-"}</td>
+                        <td>{cancellation.status}</td>
+                        <td>{cancellation.providerStatus ?? "-"}</td>
+                        <td>{cancellation.errorMessage ?? "-"}</td>
+                        <td>{formatDateTime(cancellation.requestedAt)}</td>
+                        <td>{formatDateTime(cancellation.cancelledAt)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : null}
+            <div className="factura-electronica__modal-actions">
+              <button type="button" className="factura-electronica__secondary" onClick={() => selectedInvoiceForCancellations && loadInvoiceCancellations(selectedInvoiceForCancellations.id, selectedInvoiceForCancellations)}>Actualizar historial</button>
+              <button type="button" onClick={() => setSelectedInvoiceForCancellations(null)}>Cerrar</button>
             </div>
           </section>
         </div>
