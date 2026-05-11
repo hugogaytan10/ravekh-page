@@ -2,6 +2,7 @@ import { Route } from "react-router-dom";
 import { ProductsV2PosPage } from "../features/products/ui/ProductsV2PosPage";
 import { PosHealthV2Screen } from "../features/health/ui/PosHealthV2Screen";
 import { PosV2LoginPage } from "../features/auth/ui/PosV2LoginPage";
+import { PosV2PasswordRecoveryPage } from "../features/auth/ui/PosV2PasswordRecoveryPage";
 import { PosV2FinancePage } from "../features/finance/ui/PosV2FinancePage";
 import { PosV2SalesHomePage } from "../features/sales/ui/PosV2SalesHomePage";
 import { PosV2ReportingPage } from "../features/reporting/ui/PosV2ReportingPage";
@@ -24,6 +25,7 @@ const withAuth = (element: JSX.Element) => <PosV2RequireAuth>{element}</PosV2Req
 export const POS_V2_APP_ROUTES = (
   <>
     <Route path={POS_V2_PATHS.login} element={<PosV2LoginPage />} />
+    <Route path={POS_V2_PATHS.passwordRecovery} element={<PosV2PasswordRecoveryPage />} />
     <Route path={POS_V2_PATHS.sales} element={withAuth(<PosV2SalesHomePage />)} />
     <Route path={POS_V2_PATHS.products} element={withAuth(<ProductsV2PosPage />)} />
     <Route path={POS_V2_PATHS.finances} element={withAuth(<PosV2FinancePage />)} />

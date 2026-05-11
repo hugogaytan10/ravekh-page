@@ -113,9 +113,16 @@
 
 .pos-v2-forgot-link {
   align-self: flex-end;
+  border: none;
+  background: transparent;
+  color: #4b5563;
   font-size: 0.75rem;
   margin-top: 0.5rem;
-  color: #4b5563;
+  cursor: pointer;
+}
+
+.pos-v2-forgot-link:hover {
+  text-decoration: underline;
 }
 
 .pos-v2-mobile-switch {

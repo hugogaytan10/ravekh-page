@@ -1,4 +1,10 @@
-import { LoginCredentials, SignUpPayload } from "../model/AuthSession";
+import {
+  CompareSecurityQuestionPayload,
+  LoginCredentials,
+  ResetPasswordPayload,
+  SecurityQuestion,
+  SignUpPayload,
+} from "../model/AuthSession";
 import { AuthOnboardingService } from "../services/AuthOnboardingService";
 
 type AuthSessionViewModel = {
@@ -7,6 +13,11 @@ type AuthSessionViewModel = {
   employeeName: string;
   email: string;
   token: string;
+};
+
+type SecurityQuestionViewModel = {
+  id: unknown;
+  text: string;
 };
 
 export class AuthOnboardingPage {
@@ -22,6 +33,22 @@ export class AuthOnboardingPage {
     return this.toViewModel(session);
   }
 
+  async getPasswordRecoveryQuestions(): Promise<SecurityQuestionViewModel[]> {
+    const questions = await this.authOnboardingService.getPasswordRecoveryQuestions();
+    return questions.map((question) => this.toSecurityQuestionViewModel(question));
+  }
+
+  async comparePasswordRecoveryAnswers(
+    payload: CompareSecurityQuestionPayload,
+    user: string,
+  ): Promise<Record<string, unknown>> {
+    return this.authOnboardingService.comparePasswordRecoveryAnswers(payload, user);
+  }
+
+  async resetPassword(payload: ResetPasswordPayload, user: string): Promise<number> {
+    return this.authOnboardingService.resetPassword(payload, user);
+  }
+
   private toViewModel(session: {
     employeeId: number;
     businessId: number;
@@ -35,6 +62,13 @@ export class AuthOnboardingPage {
       employeeName: session.employeeName,
       email: session.email,
       token: session.token,
+    };
+  }
+
+  private toSecurityQuestionViewModel(question: SecurityQuestion): SecurityQuestionViewModel {
+    return {
+      id: question.id,
+      text: question.text,
     };
   }
 }

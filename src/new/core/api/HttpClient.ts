@@ -8,4 +8,5 @@ export interface HttpRequest {
 
 export interface HttpClient {
   request<TResponse>(request: HttpRequest): Promise<TResponse>;
+  requestStatus?(request: HttpRequest): Promise<number>;
 }
