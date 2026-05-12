@@ -21,6 +21,7 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
     items: [
       { id: "tables", title: "Mesas y zonas", description: "Gestión de mesas para consumo en salón.", path: POS_V2_PATHS.tableZones, status: "available", actionType: "route" },
       { id: "business", title: "Información del negocio", description: "Datos fiscales/comerciales del negocio.", path: previewPath("business"), status: "available", actionType: "route" },
+      { id: "social-networks", title: "Redes sociales", description: "Configura los enlaces públicos de Facebook, Instagram y TikTok.", path: previewPath("social-networks"), status: "available", actionType: "route" },
       { id: "sales-tax", title: "Impuesto de venta", description: "Ajustes de impuestos aplicados en ventas.", path: previewPath("sales-tax"), status: "available", actionType: "route" },
       { id: "catalog-settings", title: "Checkout público", description: "Configura qué campos solicita el formulario de pedido del catálogo.", path: POS_V2_PATHS.catalog, status: "available", actionType: "route" },
       { id: "payment-methods", title: "Métodos de pago", description: "Configura efectivo, tarjeta y pagos en línea.", path: previewPath("payment-methods"), status: "available", actionType: "route" },

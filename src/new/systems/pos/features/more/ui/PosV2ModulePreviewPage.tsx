@@ -51,6 +51,11 @@ const PREVIEW_MODULES: Record<string, PreviewData> = {
     eta: "Sprint configuración v2",
     warning: "Los cambios impactan facturación y catálogos públicos; valida antes de guardar.",
   },
+  "social-networks": {
+    title: "Redes sociales",
+    description: "Configura los perfiles públicos del negocio para catálogo y comunicación con clientes.",
+    eta: "Disponible en POS moderno",
+  },
   "payment-methods": {
     title: "Métodos de pago",
     description: "Configura qué métodos estarán disponibles para cobrar en POS v2.",
@@ -73,6 +78,15 @@ export const PosV2ModulePreviewPage = () => {
   const [taxSaving, setTaxSaving] = useState(false);
   const [taxError, setTaxError] = useState("");
   const [taxSuccess, setTaxSuccess] = useState("");
+  const [socialNetworksLoading, setSocialNetworksLoading] = useState(false);
+  const [socialNetworksSaving, setSocialNetworksSaving] = useState(false);
+  const [socialNetworksError, setSocialNetworksError] = useState("");
+  const [socialNetworksSuccess, setSocialNetworksSuccess] = useState("");
+  const [socialNetworksForm, setSocialNetworksForm] = useState({
+    facebook: "",
+    instagram: "",
+    tikTok: "",
+  });
   const [exportLoading, setExportLoading] = useState(false);
   const [exportError, setExportError] = useState("");
   const [exportRows, setExportRows] = useState<Array<{
@@ -200,6 +214,25 @@ export const PosV2ModulePreviewPage = () => {
       }
     };
 
+    const loadSocialNetworks = async () => {
+      if (moduleId !== "social-networks") return;
+      setSocialNetworksLoading(true);
+      setSocialNetworksError("");
+      setSocialNetworksSuccess("");
+      try {
+        const settings = await factory.createPosSocialNetworksPage().getSocialNetworksSettings(businessId, token);
+        setSocialNetworksForm({
+          facebook: settings.facebook,
+          instagram: settings.instagram,
+          tikTok: settings.tikTok,
+        });
+      } catch (cause) {
+        setSocialNetworksError(cause instanceof Error ? cause.message : "No fue posible cargar redes sociales.");
+      } finally {
+        setSocialNetworksLoading(false);
+      }
+    };
+
     const loadExportPreview = async () => {
       if (moduleId !== "exports") return;
       setExportLoading(true);
@@ -299,6 +332,7 @@ export const PosV2ModulePreviewPage = () => {
     };
 
     loadTax();
+    loadSocialNetworks();
     loadExportPreview();
     loadCashClosing();
     loadBranding();
@@ -468,6 +502,34 @@ export const PosV2ModulePreviewPage = () => {
       setTaxError(cause instanceof Error ? cause.message : "No se pudo guardar la configuración de impuesto.");
     } finally {
       setTaxSaving(false);
+    }
+  };
+
+  const saveSocialNetworks = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const businessId = Number(businessIdInput);
+    setSocialNetworksSaving(true);
+    setSocialNetworksError("");
+    setSocialNetworksSuccess("");
+
+    try {
+      const saved = await factory.createPosSocialNetworksPage().saveSocialNetworksSettings({
+        businessId,
+        facebook: socialNetworksForm.facebook,
+        instagram: socialNetworksForm.instagram,
+        tikTok: socialNetworksForm.tikTok,
+      }, token);
+      setSocialNetworksForm({
+        facebook: saved.facebook,
+        instagram: saved.instagram,
+        tikTok: saved.tikTok,
+      });
+      setSocialNetworksSuccess("Redes sociales guardadas correctamente.");
+      emitPosBusinessUpdated({ businessId, source: "social-networks" });
+    } catch (cause) {
+      setSocialNetworksError(cause instanceof Error ? cause.message : "No se pudo guardar la configuración de redes sociales.");
+    } finally {
+      setSocialNetworksSaving(false);
     }
   };
 
@@ -678,6 +740,52 @@ export const PosV2ModulePreviewPage = () => {
               {brandingError ? <p className="pos-v2-module-preview__error">{brandingError}</p> : null}
               <button type="submit" disabled={brandingSaving}>{brandingSaving ? "Guardando..." : "Guardar información del negocio"}</button>
             </form>
+          </section>
+        ) : null}
+
+        {moduleId === "social-networks" ? (
+          <section className="pos-v2-module-preview__beta">
+            <h3>Redes sociales</h3>
+            <p className="pos-v2-module-preview__subtitle">
+              Captura los usuarios, correos o enlaces que quieras mostrar como canales sociales del negocio.
+            </p>
+            {socialNetworksLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
+            {!socialNetworksLoading ? (
+              <form className="pos-v2-module-preview__form" onSubmit={saveSocialNetworks}>
+                <div className="pos-v2-module-preview__inputs pos-v2-module-preview__inputs--full-row">
+                  <label className="pos-v2-module-preview__floating-field">
+                    <input
+                      value={socialNetworksForm.facebook}
+                      onChange={(event) => setSocialNetworksForm((current) => ({ ...current, facebook: event.target.value }))}
+                      placeholder=" "
+                      autoComplete="url"
+                    />
+                    <span>Facebook</span>
+                  </label>
+                  <label className="pos-v2-module-preview__floating-field">
+                    <input
+                      value={socialNetworksForm.instagram}
+                      onChange={(event) => setSocialNetworksForm((current) => ({ ...current, instagram: event.target.value }))}
+                      placeholder=" "
+                      autoComplete="url"
+                    />
+                    <span>Instagram</span>
+                  </label>
+                  <label className="pos-v2-module-preview__floating-field">
+                    <input
+                      value={socialNetworksForm.tikTok}
+                      onChange={(event) => setSocialNetworksForm((current) => ({ ...current, tikTok: event.target.value }))}
+                      placeholder=" "
+                      autoComplete="url"
+                    />
+                    <span>TikTok</span>
+                  </label>
+                </div>
+                {socialNetworksError ? <p className="pos-v2-module-preview__error">{socialNetworksError}</p> : null}
+                {socialNetworksSuccess ? <p className="pos-v2-module-preview__ok">{socialNetworksSuccess}</p> : null}
+                <button type="submit" disabled={socialNetworksSaving}>{socialNetworksSaving ? "Guardando..." : "Guardar redes sociales"}</button>
+              </form>
+            ) : null}
           </section>
         ) : null}
 

@@ -17,6 +17,7 @@ import { PosProductsApi } from "./systems/pos/features/products/api/PosProductsA
 import { PosAuthOnboardingApi } from "./systems/pos/features/auth/api/PosAuthOnboardingApi";
 import { PosTableZoneApi } from "./systems/pos/features/settings/table-zones/api/PosTableZoneApi";
 import { PosSalesTaxApi } from "./systems/pos/features/settings/tax/api/PosSalesTaxApi";
+import { PosSocialNetworksApi } from "./systems/pos/features/settings/social-networks/api/PosSocialNetworksApi";
 import { PosPaymentMethodApi } from "./systems/pos/features/settings/payment-methods/api/PosPaymentMethodApi";
 import { PosBrandingApi } from "./systems/pos/features/settings/branding/api/PosBrandingApi";
 import { PosStripeConnectApi } from "./systems/pos/features/settings/stripe-connect/api/PosStripeConnectApi";
@@ -54,6 +55,8 @@ import {
   TableZoneService,
   SalesTaxService,
   SalesTaxSettingsPage,
+  SocialNetworksService,
+  SocialNetworksSettingsPage,
   PaymentMethodManagementPage,
   PaymentMethodService,
   BrandingCustomizationPage,
@@ -199,6 +202,14 @@ export class ModernSystemsFactory {
 
   createPosSalesTaxPage(): SalesTaxSettingsPage {
     return new SalesTaxSettingsPage(this.createPosSalesTaxService());
+  }
+
+  createPosSocialNetworksService(): SocialNetworksService {
+    return new SocialNetworksService(new PosSocialNetworksApi(this.httpClient));
+  }
+
+  createPosSocialNetworksPage(): SocialNetworksSettingsPage {
+    return new SocialNetworksSettingsPage(this.createPosSocialNetworksService());
   }
 
   createPosPaymentMethodService(): PaymentMethodService {
