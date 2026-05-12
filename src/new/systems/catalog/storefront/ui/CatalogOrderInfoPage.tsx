@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
 import { CatalogStorefrontApi } from "../api/CatalogStorefrontApi";
 import { getStripe } from "./stripeClient";
+import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import "./CatalogOrderInfoPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
@@ -445,6 +446,7 @@ export const CatalogOrderInfoPage = () => {
           {submitting ? "Procesando..." : "Preparar pedido"}
         </button>
       </section>
+      <CatalogSocialFooter businessId={businessId} />
     </main>
   );
 };

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiMinus, FiPlus, FiTrash2 } from "react-icons/fi";
 import { StorefrontCartItem } from "../model/CatalogStorefrontModels";
+import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import "./CatalogCartPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
@@ -133,6 +134,8 @@ export const CatalogCartPage = () => {
           </aside>
         </div>
       </section>
+
+      <CatalogSocialFooter businessId={businessId} />
 
       {showClearModal ? (
         <div className="cart-modal-overlay">
