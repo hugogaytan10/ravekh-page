@@ -8,6 +8,7 @@ import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontBusiness, StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
 import { StorefrontProductGrid } from "./StorefrontProductGrid";
 import { VariantSelectionModalV2 } from "./VariantSelectionModalV2";
+import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import "./CatalogStorefrontPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
@@ -542,6 +543,8 @@ export const CatalogStorefrontPage = () => {
         </nav>
       ) : null}
 
+
+      <CatalogSocialFooter businessId={businessId} />
 
       {showFilters ? (
         <div className="fixed inset-0 z-40 grid bg-black/55">

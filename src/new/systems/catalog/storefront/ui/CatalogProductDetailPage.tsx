@@ -7,6 +7,7 @@ import { CatalogStorefrontApi, StorefrontProductExtra, StorefrontVariant } from 
 import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExperiencePage";
 import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
+import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
 const money = (value: number) =>

@@ -244,9 +244,13 @@ export const PosV2LoginPage = () => {
               }}
             />
             {error && mode === "signin" ? <span className="pos-v2-error">{error}</span> : null}
-            <a href="#" className="pos-v2-forgot-link">
+            <button
+              type="button"
+              className="pos-v2-forgot-link"
+              onClick={() => navigate(POS_V2_PATHS.passwordRecovery)}
+            >
               Olvidaste tu contraseña?
-            </a>
+            </button>
             <button type="submit" className="pos-v2-btn" disabled={submitting}>
               {submitting ? "Entrando..." : "Iniciar Sesión"}
             </button>

@@ -1,5 +1,13 @@
 import { IAuthOnboardingRepository } from "../interface/IAuthOnboardingRepository";
-import { AuthSession, LoginCredentials, SignUpPayload } from "../model/AuthSession";
+import {
+  AuthSession,
+  CompareSecurityQuestionPayload,
+  CompareSecurityQuestionResult,
+  LoginCredentials,
+  ResetPasswordPayload,
+  SecurityQuestion,
+  SignUpPayload,
+} from "../model/AuthSession";
 
 export class AuthOnboardingService {
   constructor(private readonly repository: IAuthOnboardingRepository) {}
@@ -29,6 +37,27 @@ export class AuthOnboardingService {
     return session;
   }
 
+  async getPasswordRecoveryQuestions(): Promise<SecurityQuestion[]> {
+    return this.repository.getQuestions();
+  }
+
+  async comparePasswordRecoveryAnswers(
+    payload: CompareSecurityQuestionPayload,
+    user: string,
+  ): Promise<CompareSecurityQuestionResult> {
+    this.ensureUser(user);
+    this.ensureComparePayload(payload);
+
+    return this.repository.comparePasswordAnswers(payload, user.trim());
+  }
+
+  async resetPassword(payload: ResetPasswordPayload, user: string): Promise<number> {
+    this.ensureUser(user);
+    this.ensureResetPasswordPayload(payload);
+
+    return this.repository.resetPassword(payload, user.trim());
+  }
+
   private ensureCredentials(credentials: LoginCredentials): void {
     if (!credentials.email.trim() || !credentials.password.trim()) {
       throw new Error("Email and password are required.");
@@ -50,6 +79,28 @@ export class AuthOnboardingService {
 
     if (requiredValues.some((value) => !value.trim())) {
       throw new Error("Business, employee, and device fields are required for sign-up.");
+    }
+  }
+
+  private ensureUser(user: string): void {
+    if (!user.trim()) {
+      throw new Error("User is required for password recovery.");
+    }
+  }
+
+  private ensureComparePayload(payload: CompareSecurityQuestionPayload): void {
+    if (payload.questionId === undefined || payload.questionId === null) {
+      throw new Error("Security question is required for password recovery.");
+    }
+
+    if (!payload.answer.trim() || !payload.password.trim()) {
+      throw new Error("Answer and new password are required for password recovery.");
+    }
+  }
+
+  private ensureResetPasswordPayload(payload: ResetPasswordPayload): void {
+    if (!payload.password.trim()) {
+      throw new Error("New password is required.");
     }
   }
 }

@@ -5,6 +5,7 @@ import { PosModeEntryPage } from "./PosModeEntryPage";
 import { ProductsV2PosPage } from "../features/products/ui/ProductsV2PosPage";
 import { PosHealthV2Screen } from "../features/health/ui/PosHealthV2Screen";
 import { PosV2LoginPage } from "../features/auth/ui/PosV2LoginPage";
+import { PosV2PasswordRecoveryPage } from "../features/auth/ui/PosV2PasswordRecoveryPage";
 import { PosV2SalesHomePage } from "../features/sales/ui/PosV2SalesHomePage";
 import { PosV2FinancePage } from "../features/finance/ui/PosV2FinancePage";
 import { PosV2ReportingPage } from "../features/reporting/ui/PosV2ReportingPage";
@@ -28,6 +29,7 @@ const withAuth = (element: JSX.Element) => <PosV2RequireAuth>{element}</PosV2Req
 export const POS_V2_PRIMARY_ROUTES = [
   { path: "/pos", element: <PosModeEntryPage /> },
   { path: POS_V2_PATHS.login, element: <PosV2LoginPage /> },
+  { path: POS_V2_PATHS.passwordRecovery, element: <PosV2PasswordRecoveryPage /> },
   { path: POS_V2_PATHS.sales, element: withAuth(<PosV2SalesHomePage />) },
   { path: POS_V2_PATHS.products, element: withAuth(<ProductsV2PosPage />) },
   { path: POS_V2_PATHS.finances, element: withAuth(<PosV2FinancePage />) },
@@ -48,6 +50,7 @@ export const POS_V2_PRIMARY_ROUTES = [
   { path: POS_V2_PATHS.onlineStore, element: withAuth(<PosV2OnlineOrdersPage />) },
   { path: POS_V2_PATHS.health, element: withAuth(<PosHealthV2Screen />) },
   { path: POS_V2_LEGACY_PATHS.login, element: <Navigate to={POS_V2_PATHS.login} replace /> },
+  { path: POS_V2_LEGACY_PATHS.passwordRecovery, element: <Navigate to={POS_V2_PATHS.passwordRecovery} replace /> },
   { path: POS_V2_LEGACY_PATHS.sales, element: <Navigate to={POS_V2_PATHS.sales} replace /> },
   { path: POS_V2_LEGACY_PATHS.products, element: <Navigate to={POS_V2_PATHS.products} replace /> },
   { path: POS_V2_LEGACY_PATHS.finances, element: <Navigate to={POS_V2_PATHS.finances} replace /> },

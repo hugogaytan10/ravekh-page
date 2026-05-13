@@ -1,5 +1,6 @@
 export const POS_V2_PATHS = {
   login: "/login-punto-venta",
+  passwordRecovery: "/recuperar-contrasena",
   sales: "/MainSales",
   products: "/main-products/items",
   finances: "/MainFinances",
@@ -40,6 +41,7 @@ export const POS_V2_PATHS = {
 
 export const POS_V2_LEGACY_PATHS = {
   login: "/v2/login-punto-venta",
+  passwordRecovery: "/v2/recuperar-contrasena",
   sales: "/v2/MainSales",
   products: "/v2/main-products/items",
   finances: "/v2/MainFinances",

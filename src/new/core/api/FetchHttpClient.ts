@@ -4,6 +4,26 @@ export class FetchHttpClient implements HttpClient {
   constructor(private readonly baseUrl: string) {}
 
   async request<TResponse>(request: HttpRequest): Promise<TResponse> {
+    const { response, responseData } = await this.execute(request);
+
+    if (!response.ok) {
+      this.throwRequestError(response.status, responseData);
+    }
+
+    return responseData as TResponse;
+  }
+
+  async requestStatus(request: HttpRequest): Promise<number> {
+    const { response, responseData } = await this.execute(request);
+
+    if (!response.ok) {
+      this.throwRequestError(response.status, responseData);
+    }
+
+    return response.status;
+  }
+
+  private async execute(request: HttpRequest): Promise<{ response: Response; responseData: unknown }> {
     const url = new URL(request.path, this.baseUrl);
 
     if (request.query) {
@@ -28,18 +48,20 @@ export class FetchHttpClient implements HttpClient {
       body: request.body ? (isFormData ? request.body : JSON.stringify(request.body)) : null,
     });
 
-    const responseData = (await response.json().catch(() => null)) as TResponse | { message?: string } | null;
+    const responseData = (await response.json().catch(() => null)) as { message?: string } | null;
 
-    if (!response.ok) {
-      const error = new Error((responseData as { message?: string } | null)?.message ?? `Request failed: ${response.status}`) as Error & {
-        status?: number;
-        payload?: unknown;
-      };
-      error.status = response.status;
-      error.payload = responseData;
-      throw error;
-    }
+    return { response, responseData };
+  }
 
-    return responseData as TResponse;
+  private throwRequestError(status: number, responseData: unknown): never {
+    const error = new Error(
+      (responseData as { message?: string } | null)?.message ?? `Request failed: ${status}`,
+    ) as Error & {
+      status?: number;
+      payload?: unknown;
+    };
+    error.status = status;
+    error.payload = responseData;
+    throw error;
   }
 }
