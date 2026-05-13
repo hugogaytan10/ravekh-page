@@ -62,6 +62,233 @@ type ReceiverFiscalRegimeOption = CatalogOption & {
   cfdiUses: string[];
 };
 
+const CURRENCY_OPTIONS: CatalogOption[] = [
+  { code: "AED", label: "AED · Dirham de EAU" },
+  { code: "AFN", label: "AFN · Afghani" },
+  { code: "ALL", label: "ALL · Lek" },
+  { code: "AMD", label: "AMD · Dram armenio" },
+  { code: "ANG", label: "ANG · Florín antillano neerlandés" },
+  { code: "AOA", label: "AOA · Kwanza" },
+  { code: "ARS", label: "ARS · Peso Argentino" },
+  { code: "AUD", label: "AUD · Dólar Australiano" },
+  { code: "AWG", label: "AWG · Aruba Florin" },
+  { code: "AZN", label: "AZN · Azerbaijanian Manat" },
+  { code: "BAM", label: "BAM · Convertibles marca" },
+  { code: "BBD", label: "BBD · Dólar de Barbados" },
+  { code: "BDT", label: "BDT · Taka" },
+  { code: "BGN", label: "BGN · Lev búlgaro" },
+  { code: "BHD", label: "BHD · Dinar de Bahrein" },
+  { code: "BIF", label: "BIF · Burundi Franc" },
+  { code: "BMD", label: "BMD · Dólar de Bermudas" },
+  { code: "BND", label: "BND · Dólar de Brunei" },
+  { code: "BOB", label: "BOB · Boliviano" },
+  { code: "BOV", label: "BOV · Mvdol" },
+  { code: "BRL", label: "BRL · Real brasileño" },
+  { code: "BSD", label: "BSD · Dólar de las Bahamas" },
+  { code: "BTN", label: "BTN · Ngultrum" },
+  { code: "BWP", label: "BWP · Pula" },
+  { code: "BYR", label: "BYR · Rublo bielorruso" },
+  { code: "BZD", label: "BZD · Dólar de Belice" },
+  { code: "CAD", label: "CAD · Dólar Canadiense" },
+  { code: "CDF", label: "CDF · Franco congoleño" },
+  { code: "CHE", label: "CHE · WIR Euro" },
+  { code: "CHF", label: "CHF · Franco Suizo" },
+  { code: "CHW", label: "CHW · Franc WIR" },
+  { code: "CLF", label: "CLF · Unidad de Fomento" },
+  { code: "CLP", label: "CLP · Peso chileno" },
+  { code: "CNH", label: "CNH · Yuan extracontinental (China)" },
+  { code: "CNY", label: "CNY · Yuan Renminbi" },
+  { code: "COP", label: "COP · Peso Colombiano" },
+  { code: "COU", label: "COU · Unidad de Valor real" },
+  { code: "CRC", label: "CRC · Colón costarricense" },
+  { code: "CUC", label: "CUC · Peso Convertible" },
+  { code: "CUP", label: "CUP · Peso Cubano" },
+  { code: "CVE", label: "CVE · Cabo Verde Escudo" },
+  { code: "CZK", label: "CZK · Corona checa" },
+  { code: "DJF", label: "DJF · Franco de Djibouti" },
+  { code: "DKK", label: "DKK · Corona danesa" },
+  { code: "DOP", label: "DOP · Peso Dominicano" },
+  { code: "DZD", label: "DZD · Dinar argelino" },
+  { code: "EGP", label: "EGP · Libra egipcia" },
+  { code: "ERN", label: "ERN · Nakfa" },
+  { code: "ESD", label: "ESD · Dólar de Ecuador" },
+  { code: "ETB", label: "ETB · Birr etíope" },
+  { code: "EUR", label: "EUR · Euro" },
+  { code: "FJD", label: "FJD · Dólar de Fiji" },
+  { code: "FKP", label: "FKP · Libra malvinense" },
+  { code: "GBP", label: "GBP · Libra Esterlina" },
+  { code: "GEL", label: "GEL · Lari" },
+  { code: "GHS", label: "GHS · Cedi de Ghana" },
+  { code: "GIP", label: "GIP · Libra de Gibraltar" },
+  { code: "GMD", label: "GMD · Dalasi" },
+  { code: "GNF", label: "GNF · Franco guineano" },
+  { code: "GTQ", label: "GTQ · Quetzal" },
+  { code: "GYD", label: "GYD · Dólar guyanés" },
+  { code: "HKD", label: "HKD · Dólar De Hong Kong" },
+  { code: "HNL", label: "HNL · Lempira" },
+  { code: "HRK", label: "HRK · Kuna" },
+  { code: "HTG", label: "HTG · Gourde" },
+  { code: "HUF", label: "HUF · Florín" },
+  { code: "IDR", label: "IDR · Rupia" },
+  { code: "ILS", label: "ILS · Nuevo Shekel Israelí" },
+  { code: "INR", label: "INR · Rupia india" },
+  { code: "IQD", label: "IQD · Dinar iraquí" },
+  { code: "IRR", label: "IRR · Rial iraní" },
+  { code: "ISK", label: "ISK · Corona islandesa" },
+  { code: "JMD", label: "JMD · Dólar Jamaiquino" },
+  { code: "JOD", label: "JOD · Dinar jordano" },
+  { code: "JPY", label: "JPY · Yen" },
+  { code: "KES", label: "KES · Chelín keniano" },
+  { code: "KGS", label: "KGS · Som" },
+  { code: "KHR", label: "KHR · Riel" },
+  { code: "KMF", label: "KMF · Franco Comoro" },
+  { code: "KPW", label: "KPW · Corea del Norte ganó" },
+  { code: "KRW", label: "KRW · Won" },
+  { code: "KWD", label: "KWD · Dinar kuwaití" },
+  { code: "KYD", label: "KYD · Dólar de las Islas Caimán" },
+  { code: "KZT", label: "KZT · Tenge" },
+  { code: "LAK", label: "LAK · Kip" },
+  { code: "LBP", label: "LBP · Libra libanesa" },
+  { code: "LKR", label: "LKR · Rupia de Sri Lanka" },
+  { code: "LRD", label: "LRD · Dólar liberiano" },
+  { code: "LSL", label: "LSL · Loti" },
+  { code: "LYD", label: "LYD · Dinar libio" },
+  { code: "MAD", label: "MAD · Dirham marroquí" },
+  { code: "MDL", label: "MDL · Leu moldavo" },
+  { code: "MGA", label: "MGA · Ariary malgache" },
+  { code: "MKD", label: "MKD · Denar" },
+  { code: "MMK", label: "MMK · Kyat" },
+  { code: "MNT", label: "MNT · Tugrik" },
+  { code: "MOP", label: "MOP · Pataca" },
+  { code: "MRO", label: "MRO · Ouguiya" },
+  { code: "MUR", label: "MUR · Rupia de Mauricio" },
+  { code: "MVR", label: "MVR · Rupia" },
+  { code: "MWK", label: "MWK · Kwacha" },
+  { code: "MXN", label: "MXN · Peso Mexicano" },
+  { code: "MXV", label: "MXV · México Unidad de Inversión (UDI)" },
+  { code: "MYR", label: "MYR · Ringgit malayo" },
+  { code: "MZN", label: "MZN · Mozambique Metical" },
+  { code: "NAD", label: "NAD · Dólar de Namibia" },
+  { code: "NGN", label: "NGN · Naira" },
+  { code: "NIC", label: "NIC · Córdoba (Nicaragua)" },
+  { code: "NIO", label: "NIO · Córdoba Oro" },
+  { code: "NOK", label: "NOK · Corona noruega" },
+  { code: "NPR", label: "NPR · Rupia nepalí" },
+  { code: "NZD", label: "NZD · Dólar de Nueva Zelanda" },
+  { code: "OMR", label: "OMR · Rial omaní" },
+  { code: "PAB", label: "PAB · Balboa" },
+  { code: "PEN", label: "PEN · Nuevo Sol" },
+  { code: "PGK", label: "PGK · Kina" },
+  { code: "PHP", label: "PHP · Peso filipino" },
+  { code: "PKR", label: "PKR · Rupia de Pakistán" },
+  { code: "PLN", label: "PLN · Zloty" },
+  { code: "PYG", label: "PYG · Guaraní" },
+  { code: "QAR", label: "QAR · Qatar Rial" },
+  { code: "RON", label: "RON · Leu rumano" },
+  { code: "RSD", label: "RSD · Dinar serbio" },
+  { code: "RUB", label: "RUB · Rublo ruso" },
+  { code: "RWF", label: "RWF · Franco ruandés" },
+  { code: "SAR", label: "SAR · Riyal saudí" },
+  { code: "SBD", label: "SBD · Dólar de las Islas Salomón" },
+  { code: "SCR", label: "SCR · Rupia de Seychelles" },
+  { code: "SDG", label: "SDG · Libra sudanesa" },
+  { code: "SEK", label: "SEK · Corona sueca" },
+  { code: "SGD", label: "SGD · Dólar De Singapur" },
+  { code: "SHP", label: "SHP · Libra de Santa Helena" },
+  { code: "SLL", label: "SLL · Leona" },
+  { code: "SOS", label: "SOS · Chelín somalí" },
+  { code: "SRD", label: "SRD · Dólar de Suriname" },
+  { code: "SSP", label: "SSP · Libra sudanesa Sur" },
+  { code: "STD", label: "STD · Dobra" },
+  { code: "SVC", label: "SVC · Colon El Salvador" },
+  { code: "SYP", label: "SYP · Libra Siria" },
+  { code: "SZL", label: "SZL · Lilangeni" },
+  { code: "THB", label: "THB · Baht" },
+  { code: "TJS", label: "TJS · Somoni" },
+  { code: "TMT", label: "TMT · Turkmenistán nuevo manat" },
+  { code: "TND", label: "TND · Dinar tunecino" },
+  { code: "TOP", label: "TOP · Pa'anga" },
+  { code: "TRY", label: "TRY · Lira turca" },
+  { code: "TTD", label: "TTD · Dólar de Trinidad y Tobago" },
+  { code: "TWD", label: "TWD · Nuevo dólar de Taiwán" },
+  { code: "TZS", label: "TZS · Shilling tanzano" },
+  { code: "UAH", label: "UAH · Hryvnia" },
+  { code: "UGX", label: "UGX · Shilling de Uganda" },
+  { code: "USD", label: "USD · Dólar americano" },
+  { code: "USN", label: "USN · Dólar estadounidense (día siguiente)" },
+  { code: "UYI", label: "UYI · Peso Uruguay en Unidades Indexadas (URUIURUI)" },
+  { code: "UYP", label: "UYP · Uruguay (Peso)" },
+  { code: "UYU", label: "UYU · Peso Uruguayo" },
+  { code: "UZS", label: "UZS · Uzbekistán Sum" },
+  { code: "VEF", label: "VEF · Bolívar" },
+  { code: "VES", label: "VES · Bolívar digital (Venezuela)" },
+  { code: "VND", label: "VND · Dong" },
+  { code: "VUV", label: "VUV · Vatu" },
+  { code: "WST", label: "WST · Tala" },
+  { code: "XAF", label: "XAF · Franco CFA BEAC" },
+  { code: "XAG", label: "XAG · Plata" },
+  { code: "XAU", label: "XAU · Oro" },
+  { code: "XBA", label: "XBA · Unidad de Mercados de Bonos Unidad Europea Composite (EURCO)" },
+  { code: "XBB", label: "XBB · Unidad Monetaria de Bonos de Mercados Unidad Europea (UEM-6)" },
+  { code: "XBC", label: "XBC · Mercados de Bonos Unidad Europea unidad de cuenta a 9 (UCE-9)" },
+  { code: "XBD", label: "XBD · Mercados de Bonos Unidad Europea unidad de cuenta a 17 (UCE-17)" },
+  { code: "XCD", label: "XCD · Dólar del Caribe Oriental" },
+  { code: "XDR", label: "XDR · DEG (Derechos Especiales de Giro)" },
+  { code: "XOF", label: "XOF · Franco CFA BCEAO" },
+  { code: "XPD", label: "XPD · Paladio" },
+  { code: "XPF", label: "XPF · Franco CFP" },
+  { code: "XPT", label: "XPT · Platino" },
+  { code: "XSU", label: "XSU · Sucre" },
+  { code: "XTS", label: "XTS · Códigos reservados específicamente para propósitos de prueba" },
+  { code: "XUA", label: "XUA · Unidad ADB de Cuenta" },
+  { code: "XXX", label: "XXX · Los códigos asignados para las transacciones en que intervenga ninguna moneda" },
+  { code: "YER", label: "YER · Rial yemení" },
+  { code: "ZAR", label: "ZAR · Rand" },
+  { code: "ZMW", label: "ZMW · Kwacha zambiano" },
+  { code: "ZWL", label: "ZWL · Zimbabwe Dólar" },
+];
+
+const PAYMENT_FORM_OPTIONS: CatalogOption[] = [
+  { code: "01", label: "01 · Efectivo" },
+  { code: "02", label: "02 · Cheque nominativo" },
+  { code: "03", label: "03 · Transferencia electrónica de fondos" },
+  { code: "04", label: "04 · Tarjeta de crédito" },
+  { code: "05", label: "05 · Monedero electrónico" },
+  { code: "06", label: "06 · Dinero electrónico" },
+  { code: "08", label: "08 · Vales de despensa" },
+  { code: "12", label: "12 · Dación en pago" },
+  { code: "13", label: "13 · Pago por subrogación" },
+  { code: "14", label: "14 · Pago por consignación" },
+  { code: "15", label: "15 · Condonación" },
+  { code: "17", label: "17 · Compensación" },
+  { code: "23", label: "23 · Novación" },
+  { code: "24", label: "24 · Confusión" },
+  { code: "25", label: "25 · Remisión de deuda" },
+  { code: "26", label: "26 · Prescripción o caducidad" },
+  { code: "27", label: "27 · A satisfacción del acreedor" },
+  { code: "28", label: "28 · Tarjeta de débito" },
+  { code: "29", label: "29 · Tarjeta de servicios" },
+  { code: "30", label: "30 · Aplicación de anticipos" },
+  { code: "31", label: "31 · Intermediario pagos" },
+  { code: "99", label: "99 · Por definir" },
+];
+
+const PAYMENT_METHOD_OPTIONS: CatalogOption[] = [
+  { code: "PUE", label: "PUE · Pago en una sola exhibición" },
+  { code: "PPD", label: "PPD · Pago en parcialidades o diferido" },
+];
+
+const TAX_OBJECT_OPTIONS: CatalogOption[] = [
+  { code: "01", label: "01 · No objeto de impuesto" },
+  { code: "02", label: "02 · Sí objeto de impuesto" },
+  { code: "03", label: "03 · Sí objeto del impuesto y no obligado al desglose" },
+  { code: "04", label: "04 · Sí objeto del impuesto y no causa impuesto" },
+  { code: "05", label: "05 · Sí objeto del impuesto, IVA crédito PODEBI" },
+  { code: "06", label: "06 · Sí objeto del IVA, no traslado IVA" },
+  { code: "07", label: "07 · No traslado del IVA, sí desglose IEPS" },
+  { code: "08", label: "08 · No traslado del IVA, no desglose IEPS" },
+];
+
 const CFDI_USE_OPTIONS: CatalogOption[] = [
   { code: "G01", label: "G01 · Adquisición de mercancías" },
   { code: "G02", label: "G02 · Devoluciones, descuentos o bonificaciones" },
@@ -1364,9 +1591,30 @@ export const FacturaElectronicaPage = () => {
             <article className="factura-electronica__step">
               <StepHeader number="D" title="CFDI" description="Usa la configuración ya guardada para lugar de expedición y serie; puedes ajustar el valor enviado en esta emisión." />
               <div className="factura-electronica__form-grid">
-                <label className="factura-electronica__field">Forma de pago<input type="text" value={invoiceDraft.paymentForm} onChange={(event) => updateInvoiceDraft("paymentForm", event.target.value)} /></label>
-                <label className="factura-electronica__field">Método de pago<input type="text" value={invoiceDraft.paymentMethod} onChange={(event) => updateInvoiceDraft("paymentMethod", event.target.value)} /></label>
-                <label className="factura-electronica__field">Moneda<input type="text" value={invoiceDraft.currency} onChange={(event) => updateInvoiceDraft("currency", event.target.value)} /></label>
+                <label className="factura-electronica__field">
+                  Forma de pago
+                  <select value={invoiceDraft.paymentForm} onChange={(event) => updateInvoiceDraft("paymentForm", event.target.value)}>
+                    {PAYMENT_FORM_OPTIONS.map((option) => (
+                      <option key={option.code} value={option.code}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="factura-electronica__field">
+                  Método de pago
+                  <select value={invoiceDraft.paymentMethod} onChange={(event) => updateInvoiceDraft("paymentMethod", event.target.value)}>
+                    {PAYMENT_METHOD_OPTIONS.map((option) => (
+                      <option key={option.code} value={option.code}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
+                <label className="factura-electronica__field">
+                  Moneda
+                  <select value={invoiceDraft.currency} onChange={(event) => updateInvoiceDraft("currency", event.target.value)}>
+                    {CURRENCY_OPTIONS.map((option) => (
+                      <option key={option.code} value={option.code}>{option.label}</option>
+                    ))}
+                  </select>
+                </label>
                 <label className="factura-electronica__field">Lugar de expedición<input type="text" value={invoiceDraft.expeditionPlace} onChange={(event) => updateInvoiceDraft("expeditionPlace", event.target.value)} /></label>
                 <label className="factura-electronica__field">Exportación<input type="text" value={invoiceDraft.exportation} onChange={(event) => updateInvoiceDraft("exportation", event.target.value)} /></label>
                 <label className="factura-electronica__field">Serie<input type="text" value={invoiceDraft.serie} onChange={(event) => updateInvoiceDraft("serie", event.target.value)} /></label>
@@ -1439,7 +1687,14 @@ export const FacturaElectronicaPage = () => {
                         <label className="factura-electronica__field">Unidad<input type="text" value={concept.unitName} onChange={(event) => updateConceptLine(concept.id, "unitName", event.target.value)} /></label>
                         <label className="factura-electronica__field">Cantidad<input type="number" min="0" step="0.01" value={concept.quantity} onChange={(event) => updateConceptLine(concept.id, "quantity", Number(event.target.value))} /></label>
                         <label className="factura-electronica__field">Precio unitario<input type="number" min="0" step="0.01" value={concept.unitPrice} onChange={(event) => updateConceptLine(concept.id, "unitPrice", Number(event.target.value))} /></label>
-                        <label className="factura-electronica__field">Objeto impuesto<input type="text" value={concept.taxObject} onChange={(event) => updateConceptLine(concept.id, "taxObject", event.target.value)} /></label>
+                        <label className="factura-electronica__field">
+                          Objeto impuesto
+                          <select value={concept.taxObject} onChange={(event) => updateConceptLine(concept.id, "taxObject", event.target.value)}>
+                            {TAX_OBJECT_OPTIONS.map((option) => (
+                              <option key={option.code} value={option.code}>{option.label}</option>
+                            ))}
+                          </select>
+                        </label>
                         <label className="factura-electronica__field factura-electronica__checkbox"><input type="checkbox" checked={concept.iva16} onChange={(event) => updateConceptLine(concept.id, "iva16", event.target.checked)} /> IVA 16%</label>
                       </div>
                       <div className="factura-electronica__concept-totals">
