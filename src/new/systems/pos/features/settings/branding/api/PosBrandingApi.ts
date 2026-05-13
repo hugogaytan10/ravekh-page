@@ -4,12 +4,24 @@ import { BrandingProfile, UpdateBrandingProfileDto } from "../model/BrandingProf
 
 type BusinessResponse = {
   Id?: number;
+  id?: number;
   Name?: string;
+  name?: string;
   Address?: string;
+  address?: string;
   PhoneNumber?: string;
+  phoneNumber?: string;
   Logo?: string;
+  logo?: string;
   Color?: string;
+  color?: string;
   References?: string;
+  references?: string;
+};
+
+type BusinessUpdateResult = {
+  affectedRows?: number;
+  changedRows?: number;
 };
 
 export class PosBrandingApi implements IBrandingRepository {
@@ -26,7 +38,7 @@ export class PosBrandingApi implements IBrandingRepository {
   }
 
   async update(businessId: number, payload: UpdateBrandingProfileDto, token: string): Promise<BrandingProfile> {
-    const updated = await this.httpClient.request<BusinessResponse>({
+    await this.httpClient.request<BusinessUpdateResult>({
       method: "PUT",
       path: `business/${businessId}`,
       token,
@@ -40,18 +52,26 @@ export class PosBrandingApi implements IBrandingRepository {
       },
     });
 
-    return this.toDomain(updated, businessId);
+    return new BrandingProfile(
+      businessId,
+      payload.name,
+      payload.address,
+      payload.phoneNumber,
+      payload.logo,
+      payload.color,
+      payload.references,
+    );
   }
 
   private toDomain(response: BusinessResponse, fallbackBusinessId: number): BrandingProfile {
     return new BrandingProfile(
-      response.Id ?? fallbackBusinessId,
-      response.Name ?? "",
-      response.Address ?? "",
-      response.PhoneNumber ?? "",
-      response.Logo ?? "",
-      response.Color ?? "",
-      response.References ?? "",
+      response.Id ?? response.id ?? fallbackBusinessId,
+      response.Name ?? response.name ?? "",
+      response.Address ?? response.address ?? "",
+      response.PhoneNumber ?? response.phoneNumber ?? "",
+      response.Logo ?? response.logo ?? "",
+      response.Color ?? response.color ?? "",
+      response.References ?? response.references ?? "",
     );
   }
 }
