@@ -27,6 +27,7 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
       { id: "payment-methods", title: "Métodos de pago", description: "Configura efectivo, tarjeta y pagos en línea.", path: previewPath("payment-methods"), status: "available", actionType: "route" },
       { id: "stripe-connect", title: "Stripe Connect", description: "Conecta tu cuenta Stripe para cobros con tarjeta.", path: previewPath("stripe-connect"), status: "available", actionType: "route" },
       { id: "exports", title: "Exportar reportes", description: "Descarga reportes para contabilidad.", path: previewPath("exports"), status: "available", actionType: "route" },
+     // { id: "factura-electronica", title: "Facturación electrónica", description: "Configura y prueba el flujo CFDI con el backend independiente de facturación.", path: POS_V2_PATHS.facturaElectronica, status: "available", actionType: "route" },
       { id: "inventory", title: "Inventario", description: "Módulo de stock desacoplado.", path: POS_V2_PATHS.inventory, status: "available", actionType: "route" },
       { id: "customers", title: "Clientes", description: "Catálogo de clientes y seguimiento.", path: POS_V2_PATHS.customers, status: "available", actionType: "route" },
       { id: "employees", title: "Empleados", description: "Administración de personal y permisos.", path: POS_V2_PATHS.employees, status: "available", actionType: "route" },

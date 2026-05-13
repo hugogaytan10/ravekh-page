@@ -7,6 +7,7 @@ export const POS_V2_PATHS = {
   reports: "/dashboard",
   more: "/more",
   morePreview: (moduleId = ":moduleId") => `/more/preview/${moduleId}`,
+  facturaElectronica: "/more/facturacion-electronica",
   tableZones: "/settings/table-zones",
   printers: "/settings/printers",
   cashClosing: "/cash-closing",
