@@ -415,7 +415,16 @@ export const CatalogStorefrontPage = () => {
   return (
     <main className="catalog-v2">
       <header className="catalog-v2__header">
-        <h1>{store?.name || "Catálogo digital"}</h1>
+        <div className="catalog-v2__brand">
+          <span className="catalog-v2__logo-sphere" aria-hidden={!store?.logo}>
+            {store?.logo ? (
+              <img src={store.logo} alt={`Logo de ${store.name || "catálogo"}`} />
+            ) : (
+              <span>{(store?.name || "Catálogo digital").trim().charAt(0).toUpperCase()}</span>
+            )}
+          </span>
+          <h1>{store?.name || "Catálogo digital"}</h1>
+        </div>
         <Link to="/catalogo/pedido" className="catalog-v2__cart-link" aria-label="Ver carrito">
           <FiShoppingCart />
           {totalItems > 0 ? <span>{totalItems}</span> : null}

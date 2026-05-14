@@ -18,6 +18,7 @@ export type StorefrontBusiness = {
   name: string;
   phone: string | null;
   plan: string | null;
+  logo: string | null;
 };
 
 export type StorefrontCartItem = {
