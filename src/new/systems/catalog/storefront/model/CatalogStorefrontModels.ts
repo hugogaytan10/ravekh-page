@@ -29,7 +29,7 @@ export type StorefrontCartItem = {
   colorName?: string;
   sizeName?: string;
   name: string;
-  price: number;
+  price?: number | null;
   cost?: number;
   quantity: number;
   image: string;
