@@ -33,6 +33,7 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
       { id: "employees", title: "Empleados", description: "Administración de personal y permisos.", path: POS_V2_PATHS.employees, status: "available", actionType: "route" },
       { id: "cash-closing", title: "Corte de caja", description: "Cierres de caja al final de turno.", path: POS_V2_PATHS.cashClosing, status: "available", actionType: "route" },
       { id: "printers", title: "Impresoras", description: "Configura impresión por Wi‑Fi y pruebas de ticket/PDF.", path: POS_V2_PATHS.printers, status: "available", actionType: "route" },
+      { id: "security-questions", title: "Preguntas de seguridad", description: "Crea o valida la pregunta de seguridad para recuperación de contraseña.", path: POS_V2_PATHS.securityQuestions, status: "available", actionType: "route" },
     ],
   },
   {
