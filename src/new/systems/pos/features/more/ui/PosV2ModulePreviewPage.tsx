@@ -10,6 +10,7 @@ import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
 import { emitPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
+import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import "./PosV2ModulePreviewPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -135,6 +136,7 @@ export const PosV2ModulePreviewPage = () => {
   const [stripeAccountId, setStripeAccountId] = useState<string>("");
   const [brandingLoading, setBrandingLoading] = useState(false);
   const [brandingSaving, setBrandingSaving] = useState(false);
+  const [brandingImageUploading, setBrandingImageUploading] = useState(false);
   const [brandingSuccess, setBrandingSuccess] = useState("");
   const [brandingError, setBrandingError] = useState("");
   const [brandingForm, setBrandingForm] = useState({
@@ -575,6 +577,13 @@ export const PosV2ModulePreviewPage = () => {
     setBrandingSaving(true);
     setBrandingSuccess("");
     setBrandingError("");
+
+    if (brandingImageUploading) {
+      setBrandingSaving(false);
+      setBrandingError("Espera a que termine de subir el logo antes de guardar.");
+      return;
+    }
+
     try {
       const saved = await factory.createPosBrandingPage().saveProfile(businessId, brandingForm, token);
       setBrandingForm({
@@ -606,23 +615,24 @@ export const PosV2ModulePreviewPage = () => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setBrandingError("Selecciona un archivo de imagen válido.");
+      event.target.value = "";
       return;
     }
 
-    const encoded = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-      reader.onerror = () => reject(new Error("No fue posible procesar la imagen."));
-      reader.readAsDataURL(file);
-    }).catch(() => "");
-
-    if (!encoded) {
-      setBrandingError("No fue posible cargar la imagen.");
-      return;
-    }
-
+    setBrandingImageUploading(true);
+    setBrandingSuccess("");
     setBrandingError("");
-    setBrandingForm((current) => ({ ...current, logo: encoded }));
+
+    try {
+      const logoUrl = await uploadImageToCloudinary(file);
+      setBrandingForm((current) => ({ ...current, logo: logoUrl }));
+      setBrandingSuccess("Logo subido a Cloudinary. Guarda la información del negocio para aplicar el cambio.");
+    } catch (cause) {
+      setBrandingError(cause instanceof Error ? cause.message : "No fue posible subir la imagen a Cloudinary.");
+      event.target.value = "";
+    } finally {
+      setBrandingImageUploading(false);
+    }
   };
 
   const createStripeAccount = async () => {
@@ -727,9 +737,9 @@ export const PosV2ModulePreviewPage = () => {
                   <span>Dirección</span>
                 </label>
                 <label className="pos-v2-module-preview__color-field">
-                  <span>Logo del negocio</span>
+                  <span>{brandingImageUploading ? "Subiendo logo..." : "Logo del negocio"}</span>
                   <div className="pos-v2-module-preview__logo-upload">
-                    <input type="file" accept="image/*" onChange={onBrandingImageSelected} />
+                    <input type="file" accept="image/*" onChange={onBrandingImageSelected} disabled={brandingImageUploading || brandingSaving} />
                   </div>
                 </label>
               </div>
@@ -738,7 +748,7 @@ export const PosV2ModulePreviewPage = () => {
               </div>
               {brandingSuccess ? <p className="pos-v2-module-preview__ok">{brandingSuccess}</p> : null}
               {brandingError ? <p className="pos-v2-module-preview__error">{brandingError}</p> : null}
-              <button type="submit" disabled={brandingSaving}>{brandingSaving ? "Guardando..." : "Guardar información del negocio"}</button>
+              <button type="submit" disabled={brandingSaving || brandingImageUploading}>{brandingSaving ? "Guardando..." : brandingImageUploading ? "Subiendo logo..." : "Guardar información del negocio"}</button>
             </form>
           </section>
         ) : null}
