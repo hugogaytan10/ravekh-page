@@ -8,6 +8,7 @@ import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExper
 import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
+import { formatCatalogPrice, getCatalogPriceValue, getEffectiveCatalogPrice } from "./catalogPrice";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
 const money = (value: number) =>
@@ -169,8 +170,8 @@ export const CatalogProductDetailPage = () => {
       selectedSize?.description ? `Talla: ${selectedSize.description}` : "",
     ].filter(Boolean).join(" · ");
     const priceToStore = selectedVariant
-      ? (selectedVariant.promotionPrice && selectedVariant.promotionPrice > 0 ? selectedVariant.promotionPrice : selectedVariant.price)
-      : (product.promotionPrice && product.promotionPrice > 0 ? product.promotionPrice : product.price);
+      ? getEffectiveCatalogPrice(selectedVariant.price, selectedVariant.promotionPrice)
+      : getEffectiveCatalogPrice(product.price, product.promotionPrice);
     const costToStore = selectedVariant?.costPerItem ?? undefined;
 
     const key = `catalog-v2-cart:${product.businessId}`;
@@ -216,7 +217,7 @@ export const CatalogProductDetailPage = () => {
       setDetailError("Selecciona una opción antes de continuar.");
       return;
     }
-    navigate("/v2/catalogo/pedido");
+    navigate("/catalogo/pedido");
   };
 
   if (loading) return <main className="mx-auto grid max-w-5xl gap-4 p-4"><p className="text-[var(--text-secondary)]">Cargando producto...</p></main>;
@@ -226,8 +227,8 @@ export const CatalogProductDetailPage = () => {
   const isBaseSelected = selectedVariantId === "base";
   const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? null;
   const effectivePrice = selectedVariant
-    ? (selectedVariant.promotionPrice && selectedVariant.promotionPrice > 0 ? selectedVariant.promotionPrice : selectedVariant.price)
-    : (product.promotionPrice && product.promotionPrice > 0 ? product.promotionPrice : product.price);
+    ? getEffectiveCatalogPrice(selectedVariant.price, selectedVariant.promotionPrice)
+    : getEffectiveCatalogPrice(product.price, product.promotionPrice);
 
   return (
     <main className="mx-auto grid max-w-5xl gap-4 p-4">
@@ -319,13 +320,13 @@ export const CatalogProductDetailPage = () => {
             <p className="text-sm text-[var(--text-secondary)]">{product.description || "Sin descripción."}</p>
           </header>
           <div className="flex items-center gap-2">
-            {product.promotionPrice && product.promotionPrice > 0 && !selectedVariant ? (
+            {getCatalogPriceValue(product.promotionPrice) && !selectedVariant ? (
               <>
-                <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{money(product.promotionPrice)}</strong>
-                <small className="text-sm text-[var(--text-muted)] line-through">{money(product.price)}</small>
+                <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{formatCatalogPrice(product.promotionPrice, money)}</strong>
+                {getCatalogPriceValue(product.price) ? <small className="text-sm text-[var(--text-muted)] line-through">{formatCatalogPrice(product.price, money)}</small> : null}
               </>
             ) : (
-              <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{money(effectivePrice)}</strong>
+              <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{formatCatalogPrice(effectivePrice, money)}</strong>
             )}
           </div>
           {variants.length > 0 ? (

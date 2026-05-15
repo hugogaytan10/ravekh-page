@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { FiPlus, FiMinus, FiX } from "react-icons/fi";
 import { StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
+import { formatCatalogPrice, getEffectiveCatalogPrice } from "./catalogPrice";
 
 type Props = {
   open: boolean;
@@ -49,10 +50,8 @@ export const VariantSelectionModalV2 = ({
 
   const isBaseSelected = selectedVariantId === "base";
   const selectedPrice = selectedVariant
-    ? selectedVariant.promotionPrice && selectedVariant.promotionPrice > 0
-      ? selectedVariant.promotionPrice
-      : selectedVariant.price
-    : productBasePrice ?? 0;
+    ? getEffectiveCatalogPrice(selectedVariant.price, selectedVariant.promotionPrice)
+    : getEffectiveCatalogPrice(productBasePrice);
 
   const hasVariantSelection = variants.length === 0 || isBaseSelected || Boolean(selectedVariant);
   const hasAnyOptionSelected = hasVariantSelection || Boolean(selectedColor) || Boolean(selectedSize);
@@ -78,7 +77,7 @@ export const VariantSelectionModalV2 = ({
 
           <div className="grid gap-4 pt-1">
             <h3 className="text-2xl font-bold leading-tight text-[var(--text-primary)] md:text-3xl">{productName}</h3>
-            <p className="text-3xl font-extrabold leading-none text-[var(--text-primary)] md:text-4xl">{formatPrice(selectedPrice)}</p>
+            <p className="text-3xl font-extrabold leading-none text-[var(--text-primary)] md:text-4xl">{formatCatalogPrice(selectedPrice, formatPrice)}</p>
 
             <div className="grid gap-1">
               <strong className="text-xl font-bold leading-tight text-[var(--text-primary)]">Variantes</strong>

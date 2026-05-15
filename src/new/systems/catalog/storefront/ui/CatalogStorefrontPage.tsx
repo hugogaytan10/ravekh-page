@@ -8,6 +8,7 @@ import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontBusiness, StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
 import { StorefrontProductGrid } from "./StorefrontProductGrid";
 import { VariantSelectionModalV2 } from "./VariantSelectionModalV2";
+import { formatCatalogTotal, getEffectiveCatalogPrice } from "./catalogPrice";
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import "./CatalogStorefrontPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
@@ -43,7 +44,8 @@ const isPaidPlan = (plan?: string | null): boolean => {
 export const CatalogStorefrontPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
-  const { businessId = "" } = useParams<{ businessId: string }>();
+  const params = useParams<{ businessId?: string; Id?: string }>();
+  const businessId = params.businessId ?? params.Id ?? "";
   const [store, setStore] = useState<StorefrontBusiness | null>(null);
   const [planLimit, setPlanLimit] = useState<string | undefined>(undefined);
   const [businessContextLoaded, setBusinessContextLoaded] = useState(false);
@@ -91,7 +93,7 @@ export const CatalogStorefrontPage = () => {
 
   useEffect(() => {
     const highestPrice = products.reduce((maxValue, product) => {
-      const productPrice = product.promotionPrice && product.promotionPrice > 0 ? product.promotionPrice : product.price;
+      const productPrice = getEffectiveCatalogPrice(product.price, product.promotionPrice) ?? 0;
       return Math.max(maxValue, productPrice);
     }, 0);
     const nextCeiling = Math.max(DEFAULT_PRICE_MAX_BOUND, Math.ceil(highestPrice));
@@ -268,7 +270,7 @@ export const CatalogStorefrontPage = () => {
   );
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalLabel = formatCatalogTotal(cart, money);
   const normalizedSearch = search.trim().toLowerCase();
   const paidPlanEnabled = useMemo(() => isPaidPlan(store?.plan), [store?.plan]);
   const useGlobalSearch = normalizedSearch.length >= 2 && paidPlanEnabled;
@@ -314,15 +316,15 @@ export const CatalogStorefrontPage = () => {
       : publishable.filter((product) => `${product.name} ${product.description}`.toLowerCase().includes(normalizedSearch));
 
     const inRange = base.filter((product) => {
-      const price = product.promotionPrice && product.promotionPrice > 0 ? product.promotionPrice : product.price;
-      return price >= priceMin && price <= priceMax;
+      const price = getEffectiveCatalogPrice(product.price, product.promotionPrice);
+      return !price || (price >= priceMin && price <= priceMax);
     });
 
     if (sortMode === "none") return inRange;
 
     return [...inRange].sort((a, b) => {
-      const aPrice = a.promotionPrice && a.promotionPrice > 0 ? a.promotionPrice : a.price;
-      const bPrice = b.promotionPrice && b.promotionPrice > 0 ? b.promotionPrice : b.price;
+      const aPrice = getEffectiveCatalogPrice(a.price, a.promotionPrice) ?? Number.POSITIVE_INFINITY;
+      const bPrice = getEffectiveCatalogPrice(b.price, b.promotionPrice) ?? Number.POSITIVE_INFINITY;
       return sortMode === "asc" ? aPrice - bPrice : bPrice - aPrice;
     });
   }, [globalSearchProducts, normalizedSearch, priceMax, priceMin, products, sortMode, useGlobalSearch]);
@@ -344,8 +346,8 @@ export const CatalogStorefrontPage = () => {
     const cartKey = [variantProduct.id, variant?.id ?? "base", color?.id ?? "nc", size?.id ?? "ns"].join("-");
     const productIdToStore = variantProduct.id;
     const selectedPrice = isBaseProduct
-      ? (variantProduct.promotionPrice && variantProduct.promotionPrice > 0 ? variantProduct.promotionPrice : variantProduct.price)
-      : (variant.promotionPrice && variant.promotionPrice > 0 ? variant.promotionPrice : variant.price);
+      ? getEffectiveCatalogPrice(variantProduct.price, variantProduct.promotionPrice)
+      : getEffectiveCatalogPrice(variant.price, variant.promotionPrice);
     const selectedCost = variant?.costPerItem ?? undefined;
     const selectedName = [
       isBaseProduct ? variantProduct.name : `${variantProduct.name} · ${variant.description}`,
@@ -389,7 +391,7 @@ export const CatalogStorefrontPage = () => {
     setToast("Variante agregada al carrito");
 
     if (buyNow) {
-      navigate("/v2/catalogo/pedido");
+      navigate("/catalogo/pedido");
     }
   };
 
@@ -413,8 +415,17 @@ export const CatalogStorefrontPage = () => {
   return (
     <main className="catalog-v2">
       <header className="catalog-v2__header">
-        <h1>{store?.name || "Catálogo digital"}</h1>
-        <Link to="/v2/catalogo/pedido" className="catalog-v2__cart-link" aria-label="Ver carrito">
+        <div className="catalog-v2__brand">
+          <span className="catalog-v2__logo-sphere" aria-hidden={!store?.logo}>
+            {store?.logo ? (
+              <img src={store.logo} alt={`Logo de ${store.name || "catálogo"}`} />
+            ) : (
+              <span>{(store?.name || "Catálogo digital").trim().charAt(0).toUpperCase()}</span>
+            )}
+          </span>
+          <h1>{store?.name || "Catálogo digital"}</h1>
+        </div>
+        <Link to="/catalogo/pedido" className="catalog-v2__cart-link" aria-label="Ver carrito">
           <FiShoppingCart />
           {totalItems > 0 ? <span>{totalItems}</span> : null}
         </Link>
@@ -611,8 +622,8 @@ export const CatalogStorefrontPage = () => {
       />
 
       {totalItems > 0 ? (
-        <Link to="/v2/catalogo/pedido" className="catalog-v2__cart-fab">
-          Ver carrito ({totalItems}) · {money(total)}
+        <Link to="/catalogo/pedido" className="catalog-v2__cart-fab">
+          Ver carrito ({totalItems}) · {totalLabel}
         </Link>
       ) : null}
     </main>

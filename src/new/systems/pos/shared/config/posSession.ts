@@ -2,6 +2,7 @@ export const POS_SESSION_STORAGE_KEYS = {
   token: "pos-v2-token",
   businessId: "pos-v2-business-id",
   employeeId: "pos-v2-employee-id",
+  email: "pos-v2-email",
   moreFavorites: "pos-v2-more-favorites",
 } as const;
 
@@ -9,6 +10,7 @@ export type PosSessionSnapshot = {
   token: string;
   businessId: number;
   employeeId: number;
+  email: string;
 };
 
 const safeGet = (key: string): string => {
@@ -23,11 +25,17 @@ export const readPosSessionSnapshot = (): PosSessionSnapshot => {
   const token = safeGet(POS_SESSION_STORAGE_KEYS.token);
   const businessId = Number(safeGet(POS_SESSION_STORAGE_KEYS.businessId));
   const employeeId = Number(safeGet(POS_SESSION_STORAGE_KEYS.employeeId));
+  const storedEmail = safeGet(POS_SESSION_STORAGE_KEYS.email);
+  const tokenPayload = decodeJwtPayload(token);
+  const tokenEmail = tokenPayload
+    ? String(tokenPayload.email ?? tokenPayload.Email ?? tokenPayload.user ?? tokenPayload.User ?? "").trim()
+    : "";
 
   return {
     token,
     businessId: Number.isFinite(businessId) ? businessId : 0,
     employeeId: Number.isFinite(employeeId) ? employeeId : 0,
+    email: storedEmail || tokenEmail,
   };
 };
 
@@ -88,6 +96,7 @@ export const clearPosSessionSnapshot = (): void => {
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.token);
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.businessId);
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.employeeId);
+    window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.email);
   } catch {
     // ignore localStorage failures in constrained environments
   }

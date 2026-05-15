@@ -10,6 +10,7 @@ import { PosV2MorePage } from "../features/more/ui/PosV2MorePage";
 import { PosV2ModulePreviewPage } from "../features/more/ui/PosV2ModulePreviewPage";
 import { PosV2TableZonesPage } from "../features/settings/table-zones/ui/PosV2TableZonesPage";
 import { PosV2PrintersPage } from "../features/settings/printers/ui/PosV2PrintersPage";
+import { PosV2SecurityQuestionsPage } from "../features/settings/security-questions/ui/PosV2SecurityQuestionsPage";
 import { PosV2CustomersPage } from "../features/customers/ui/PosV2CustomersPage";
 import { PosV2EmployeesPage } from "../features/employees/ui/PosV2EmployeesPage";
 import { PosV2OnlineOrdersPage } from "../features/online-orders/ui/PosV2OnlineOrdersPage";
@@ -36,6 +37,7 @@ export const POS_V2_APP_ROUTES = (
     <Route path={POS_V2_PATHS.facturaElectronica} element={withAuth(<FacturaElectronicaPage />)} />
     <Route path={POS_V2_PATHS.tableZones} element={withAuth(<PosV2TableZonesPage />)} />
     <Route path={POS_V2_PATHS.printers} element={withAuth(<PosV2PrintersPage />)} />
+    <Route path={POS_V2_PATHS.securityQuestions} element={withAuth(<PosV2SecurityQuestionsPage />)} />
     <Route path={POS_V2_PATHS.cashClosing} element={withAuth(<PosV2CashClosingPage />)} />
     <Route path={POS_V2_PATHS.inventory} element={withAuth(<PosV2InventoryPage />)} />
     <Route path={POS_V2_PATHS.loyalty} element={withAuth(<PosV2LoyaltyPage />)} />
