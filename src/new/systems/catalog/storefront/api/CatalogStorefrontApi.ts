@@ -1,7 +1,15 @@
 import { ICatalogStorefrontRepository } from "../interface/ICatalogStorefrontRepository";
 import { CatalogOrderPayload, StorefrontBusiness, StorefrontProduct } from "../model/CatalogStorefrontModels";
 
-type BusinessResponse = { Id?: number; Name?: string; PhoneNumber?: string | null; Plan?: string | null; plan?: string | null };
+type BusinessResponse = {
+  Id?: number;
+  Name?: string;
+  PhoneNumber?: string | null;
+  Plan?: string | null;
+  plan?: string | null;
+  Logo?: string | null;
+  logo?: string | null;
+};
 type CategoryResponse = { Id?: number; id?: number; Name?: string; name?: string };
 type ProductResponse = {
   Id?: number;
@@ -249,6 +257,7 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
       name: data.Name?.trim() || "Tienda",
       phone: data.PhoneNumber ?? null,
       plan: String(data.Plan ?? data.plan ?? "").trim() || null,
+      logo: String(data.Logo ?? data.logo ?? "").trim() || null,
     };
   }
 

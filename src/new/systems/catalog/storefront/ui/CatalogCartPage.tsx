@@ -4,6 +4,7 @@ import { FiArrowLeft, FiMinus, FiPlus, FiTrash2 } from "react-icons/fi";
 import { StorefrontCartItem } from "../model/CatalogStorefrontModels";
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import "./CatalogCartPage.css";
+import { CATALOG_QUOTABLE_LABEL, formatCatalogPrice, formatCatalogTotal, getCatalogPriceValue } from "./catalogPrice";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
 const money = (value: number) =>
@@ -82,7 +83,7 @@ export const CatalogCartPage = () => {
   };
 
   const totalItems = useMemo(() => cart.reduce((sum, item) => sum + item.quantity, 0), [cart]);
-  const total = useMemo(() => cart.reduce((sum, item) => sum + item.price * item.quantity, 0), [cart]);
+  const totalLabel = useMemo(() => formatCatalogTotal(cart, money), [cart]);
 
   return (
     <main className="catalog-v2-cart-page">
@@ -102,8 +103,8 @@ export const CatalogCartPage = () => {
                   {item.image ? <img src={item.image} alt={item.name} /> : <div className="placeholder" />}
                   <div>
                     <p>{item.name}</p>
-                    <strong>{money(item.price)}</strong>
-                    <small>Total: {money(item.price * item.quantity)}</small>
+                    <strong>{formatCatalogPrice(item.price, money)}</strong>
+                    <small>Total: {getCatalogPriceValue(item.price) ? money((getCatalogPriceValue(item.price) ?? 0) * item.quantity) : CATALOG_QUOTABLE_LABEL}</small>
                     <div className="qty-controls">
                       <button type="button" onClick={() => decrement(item.productId)}><FiMinus /></button>
                       <input
@@ -126,9 +127,9 @@ export const CatalogCartPage = () => {
           <aside>
             <div className="summary">
               <p><span>Total de artículos</span><strong>{totalItems}</strong></p>
-              <p><span>Total</span><strong>{money(total)}</strong></p>
+              <p><span>Total</span><strong>{totalLabel}</strong></p>
             </div>
-            <button type="button" className="primary" onClick={() => navigate("/v2/catalogo/pedido-info")} disabled={cart.length === 0}>Pagar</button>
+            <button type="button" className="primary" onClick={() => navigate("/catalogo/pedido-info")} disabled={cart.length === 0}>Pagar</button>
             <button type="button" className="secondary" onClick={() => navigate(`/v2/catalogo/${businessId}`)}>Seguir comprando</button>
             {cart.length > 0 ? <button type="button" className="ghost" onClick={() => setShowClearModal(true)}>Limpiar carrito</button> : null}
           </aside>
