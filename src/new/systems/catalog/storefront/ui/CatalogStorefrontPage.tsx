@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { FiSearch, FiShoppingCart, FiSliders, FiX } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
 import { CatalogStorefrontApi, StorefrontCategory, StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
@@ -16,6 +17,17 @@ import { useCatalogThemeSync } from "./useCatalogThemeSync";
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
 const DEFAULT_PRICE_MAX_BOUND = 999;
+
+const buildAbsoluteCatalogUrl = (value?: string | null): string => {
+  const fallback = typeof window !== "undefined" ? `${window.location.origin}/ravekh.png` : "/ravekh.png";
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return fallback;
+
+  if (/^https?:\/\//i.test(normalized)) return normalized;
+  if (typeof window === "undefined") return normalized;
+
+  return new URL(normalized.startsWith("/") ? normalized : `/${normalized}`, window.location.origin).toString();
+};
 
 const SkeletonGrid = () => (
   <div className="catalog-v2-grid" aria-hidden="true">
@@ -75,6 +87,12 @@ export const CatalogStorefrontPage = () => {
   const [sizeOptions, setSizeOptions] = useState<StorefrontProductExtra[]>([]);
   const [cartReady, setCartReady] = useState(false);
   const businessContextRequestRef = useRef(0);
+  const catalogTitle = store?.name ? `${store.name} | Catálogo digital` : "Catálogo digital | Ravekh";
+  const catalogDescription = store?.name
+    ? `Explora productos y realiza pedidos en el catálogo digital de ${store.name}.`
+    : "Explora productos, revisa detalles y realiza pedidos desde el catálogo digital de Ravekh.";
+  const catalogUrl = typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}` : `/v2/catalogo/${businessId}`;
+  const catalogImage = buildAbsoluteCatalogUrl(store?.logo);
 
   const pageLogic = useMemo(() => {
     const repository = new CatalogStorefrontApi(getPosApiBaseUrl());
@@ -414,6 +432,23 @@ export const CatalogStorefrontPage = () => {
 
   return (
     <main className="catalog-v2">
+      <Helmet>
+        <title>{catalogTitle}</title>
+        <meta name="description" content={catalogDescription} />
+        <link rel="canonical" href={catalogUrl} />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content={store?.name || "Ravekh"} />
+        <meta property="og:title" content={catalogTitle} />
+        <meta property="og:description" content={catalogDescription} />
+        <meta property="og:url" content={catalogUrl} />
+        <meta property="og:image" content={catalogImage} />
+        <meta property="og:image:alt" content={store?.name ? `Logo de ${store.name}` : "Ravekh"} />
+        <meta property="og:locale" content="es_MX" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={catalogTitle} />
+        <meta name="twitter:description" content={catalogDescription} />
+        <meta name="twitter:image" content={catalogImage} />
+      </Helmet>
       <header className="catalog-v2__header">
         <div className="catalog-v2__brand">
           <span className="catalog-v2__logo-sphere" aria-hidden={!store?.logo}>
