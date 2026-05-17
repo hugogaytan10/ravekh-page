@@ -17,16 +17,30 @@ import { useCatalogThemeSync } from "./useCatalogThemeSync";
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
 const DEFAULT_PRICE_MAX_BOUND = 999;
+const SOCIAL_IMAGE_WIDTH = "1200";
+const SOCIAL_IMAGE_HEIGHT = "630";
+const CLOUDINARY_FACEBOOK_TRANSFORM = "c_pad,b_white,g_center,w_1200,h_630,f_jpg,q_auto";
+
+const addCloudinaryFacebookTransform = (imageUrl: string): string => {
+  const parsedUrl = new URL(imageUrl);
+  if (!parsedUrl.hostname.includes("cloudinary.com") || !parsedUrl.pathname.includes("/upload/")) return imageUrl;
+
+  parsedUrl.pathname = parsedUrl.pathname.replace("/upload/", `/upload/${CLOUDINARY_FACEBOOK_TRANSFORM}/`);
+  return parsedUrl.toString();
+};
 
 const buildAbsoluteCatalogUrl = (value?: string | null): string => {
   const fallback = typeof window !== "undefined" ? `${window.location.origin}/ravekh.png` : "/ravekh.png";
   const normalized = String(value ?? "").trim();
   if (!normalized) return fallback;
 
-  if (/^https?:\/\//i.test(normalized)) return normalized;
   if (typeof window === "undefined") return normalized;
 
-  return new URL(normalized.startsWith("/") ? normalized : `/${normalized}`, window.location.origin).toString();
+  const absoluteUrl = /^https?:\/\//i.test(normalized)
+    ? normalized
+    : new URL(normalized.startsWith("/") ? normalized : `/${normalized}`, window.location.origin).toString();
+
+  return addCloudinaryFacebookTransform(absoluteUrl);
 };
 
 const SkeletonGrid = () => (
@@ -442,6 +456,10 @@ export const CatalogStorefrontPage = () => {
         <meta property="og:description" content={catalogDescription} />
         <meta property="og:url" content={catalogUrl} />
         <meta property="og:image" content={catalogImage} />
+        <meta property="og:image:secure_url" content={catalogImage} />
+        <meta property="og:image:type" content="image/jpeg" />
+        <meta property="og:image:width" content={SOCIAL_IMAGE_WIDTH} />
+        <meta property="og:image:height" content={SOCIAL_IMAGE_HEIGHT} />
         <meta property="og:image:alt" content={store?.name ? `Logo de ${store.name}` : "Ravekh"} />
         <meta property="og:locale" content="es_MX" />
         <meta name="twitter:card" content="summary_large_image" />

@@ -2,6 +2,9 @@ const DEFAULT_SITE_NAME = "Ravekh";
 const DEFAULT_TITLE = "Catálogo digital | Ravekh";
 const DEFAULT_DESCRIPTION = "Explora productos, revisa detalles y realiza pedidos desde el catálogo digital de Ravekh.";
 const DEFAULT_IMAGE_PATH = "/ravekh.png";
+const SOCIAL_IMAGE_WIDTH = "1200";
+const SOCIAL_IMAGE_HEIGHT = "630";
+const CLOUDINARY_FACEBOOK_TRANSFORM = "c_pad,b_white,g_center,w_1200,h_630,f_jpg,q_auto";
 
 const escapeHtml = (value) =>
   String(value ?? "")
@@ -30,11 +33,23 @@ const getBusinessId = (url) => {
   return match ? decodeURIComponent(match[1]) : "";
 };
 
+const addCloudinaryFacebookTransform = (imageUrl) => {
+  const parsedUrl = new URL(imageUrl);
+  if (!parsedUrl.hostname.includes("cloudinary.com") || !parsedUrl.pathname.includes("/upload/")) return imageUrl;
+
+  parsedUrl.pathname = parsedUrl.pathname.replace("/upload/", `/upload/${CLOUDINARY_FACEBOOK_TRANSFORM}/`);
+  return parsedUrl.toString();
+};
+
 const toAbsoluteUrl = (value, origin) => {
   const normalized = String(value ?? "").trim();
-  if (!normalized) return `${origin}${DEFAULT_IMAGE_PATH}`;
-  if (/^https?:\/\//i.test(normalized)) return normalized;
-  return new URL(normalized.startsWith("/") ? normalized : `/${normalized}`, origin).toString();
+  const absoluteUrl = !normalized
+    ? `${origin}${DEFAULT_IMAGE_PATH}`
+    : /^https?:\/\//i.test(normalized)
+      ? normalized
+      : new URL(normalized.startsWith("/") ? normalized : `/${normalized}`, origin).toString();
+
+  return addCloudinaryFacebookTransform(absoluteUrl);
 };
 
 const fetchBusiness = async (businessId) => {
@@ -72,6 +87,9 @@ const renderMetaTags = ({ title, description, image, url, siteName }) => `
   <meta property="og:url" content="${escapeHtml(url)}">
   <meta property="og:image" content="${escapeHtml(image)}">
   <meta property="og:image:secure_url" content="${escapeHtml(image)}">
+  <meta property="og:image:type" content="image/jpeg">
+  <meta property="og:image:width" content="${SOCIAL_IMAGE_WIDTH}">
+  <meta property="og:image:height" content="${SOCIAL_IMAGE_HEIGHT}">
   <meta property="og:image:alt" content="${escapeHtml(siteName)}">
   <meta property="og:locale" content="es_MX">
   <meta name="twitter:card" content="summary_large_image">
@@ -106,6 +124,7 @@ export default async (request, context) => {
 
   const headers = new Headers(response.headers);
   headers.delete("content-length");
+  headers.set("cache-control", "public, max-age=0, must-revalidate");
 
   return new Response(enrichedHtml, {
     status: response.status,
