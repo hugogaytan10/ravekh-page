@@ -1,0 +1,7 @@
+[functions]
+  included_files = ["dist/index.html", "index.html"]
+
+[[headers]]
+  for = "/.well-known/apple-app-site-association"
+  [headers.values]
+    Content-Type = "application/json"

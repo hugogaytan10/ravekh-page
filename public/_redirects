@@ -1,2 +1,4 @@
 /.well-known/apple-app-site-association  /.well-known/apple-app-site-association  200
+/v2/catalogo/:id  /.netlify/functions/catalog-meta?id=:id  200
+/catalogo/:id  /.netlify/functions/catalog-meta?id=:id  200
 /*  /index.html  200

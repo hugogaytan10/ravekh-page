@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { Helmet } from "react-helmet-async";
 import { FiSearch, FiShoppingCart, FiSliders, FiX } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
 import { CatalogStorefrontApi, StorefrontCategory, StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
@@ -412,8 +413,40 @@ export const CatalogStorefrontPage = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const catalogSeo = useMemo(() => {
+    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const canonicalUrl = typeof window !== "undefined" ? `${origin}/v2/catalogo/${businessId ?? ""}` : `/v2/catalogo/${businessId ?? ""}`;
+    const storeName = store?.name?.trim() || "Catálogo digital";
+    const title = store?.name ? `${storeName} | Catálogo digital` : "Catálogo digital | Ravekh";
+    const description = store?.phone
+      ? `Explora el catálogo digital de ${storeName} y realiza tu pedido. Teléfono: ${store.phone}.`
+      : `Explora el catálogo digital de ${storeName} y realiza tu pedido en línea.`;
+    const image = store?.logo
+      ? (store.logo.startsWith("http") ? store.logo : `${origin}${store.logo.startsWith("/") ? store.logo : `/${store.logo}`}`)
+      : `${origin}/ravekh.png`;
+
+    return { canonicalUrl, description, image, title };
+  }, [businessId, store]);
+
   return (
-    <main className="catalog-v2">
+    <>
+      <Helmet>
+        <title>{catalogSeo.title}</title>
+        <meta name="description" content={catalogSeo.description} />
+        <link rel="canonical" href={catalogSeo.canonicalUrl} />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="Ravekh" />
+        <meta property="og:title" content={catalogSeo.title} />
+        <meta property="og:description" content={catalogSeo.description} />
+        <meta property="og:url" content={catalogSeo.canonicalUrl} />
+        <meta property="og:image" content={catalogSeo.image} />
+        <meta property="og:image:secure_url" content={catalogSeo.image} />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={catalogSeo.title} />
+        <meta name="twitter:description" content={catalogSeo.description} />
+        <meta name="twitter:image" content={catalogSeo.image} />
+      </Helmet>
+      <main className="catalog-v2">
       <header className="catalog-v2__header">
         <div className="catalog-v2__brand">
           <span className="catalog-v2__logo-sphere" aria-hidden={!store?.logo}>
@@ -626,6 +659,7 @@ export const CatalogStorefrontPage = () => {
           Ver carrito ({totalItems}) · {totalLabel}
         </Link>
       ) : null}
-    </main>
+      </main>
+    </>
   );
 };
