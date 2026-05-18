@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import { FiSearch, FiShoppingCart, FiSliders, FiX } from "react-icons/fi";
+import { FiMessageCircle, FiSearch, FiShoppingCart, FiSliders, FiX } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
 import { CatalogStorefrontApi, StorefrontCategory, StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
 import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExperiencePage";
@@ -61,10 +61,21 @@ const logCatalogDebug = (scope: string, payload: Record<string, unknown>) => {
   console.info(`[catalog-v2][${scope}]`, payload);
 };
 
+const normalizePlan = (plan?: string | null) => String(plan ?? "").trim().toUpperCase();
+
+const isOfflinePlan = (plan?: string | null): boolean => normalizePlan(plan) === "OFFLINE";
+
 const isPaidPlan = (plan?: string | null): boolean => {
-  const normalized = String(plan ?? "").trim().toUpperCase();
-  if (!normalized) return false;
+  const normalized = normalizePlan(plan);
+  if (!normalized || normalized === "OFFLINE") return false;
   return normalized !== "GRATUITO" && normalized !== "PRUEBA";
+};
+
+const buildWhatsAppUrl = (phone?: string | null) => {
+  const digits = String(phone ?? "").replace(/\D/g, "");
+  if (!digits) return null;
+
+  return `https://wa.me/${digits}`;
 };
 
 export const CatalogStorefrontPage = () => {
@@ -113,6 +124,8 @@ export const CatalogStorefrontPage = () => {
     const service = new CatalogStorefrontService(repository);
     return new CatalogStorefrontExperiencePage(service);
   }, []);
+  const catalogOffline = useMemo(() => isOfflinePlan(store?.plan), [store?.plan]);
+  const whatsappUrl = useMemo(() => buildWhatsAppUrl(store?.phone), [store?.phone]);
 
   useEffect(() => {
     setPage(1);
@@ -183,6 +196,15 @@ export const CatalogStorefrontPage = () => {
   useEffect(() => {
     if (!businessContextLoaded || !businessId) return;
 
+    if (catalogOffline) {
+      setProducts([]);
+      setGlobalSearchProducts([]);
+      setTotalPages(1);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     const run = async () => {
@@ -217,7 +239,7 @@ export const CatalogStorefrontPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [businessContextLoaded, businessId, page, pageLogic, selectedCategoryId, planLimit]);
+  }, [businessContextLoaded, businessId, page, pageLogic, selectedCategoryId, planLimit, catalogOffline]);
 
   useEffect(() => {
     if (!businessId) return;
@@ -478,12 +500,39 @@ export const CatalogStorefrontPage = () => {
           </span>
           <h1>{store?.name || "Catálogo digital"}</h1>
         </div>
-        <Link to="/catalogo/pedido" className="catalog-v2__cart-link" aria-label="Ver carrito">
-          <FiShoppingCart />
-          {totalItems > 0 ? <span>{totalItems}</span> : null}
-        </Link>
+        {!catalogOffline ? (
+          <Link to="/catalogo/pedido" className="catalog-v2__cart-link" aria-label="Ver carrito">
+            <FiShoppingCart />
+            {totalItems > 0 ? <span>{totalItems}</span> : null}
+          </Link>
+        ) : null}
       </header>
 
+
+      {catalogOffline ? (
+        <>
+          <section className="catalog-v2__offline" aria-live="polite">
+            <div>
+              <p className="catalog-v2__offline-eyebrow">Catálogo no disponible</p>
+              <h2>Este catálogo no esta disponible, por favor contacta al dueño del negocio</h2>
+            </div>
+            {whatsappUrl ? (
+              <a className="catalog-v2__offline-whatsapp" href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                <FiMessageCircle />
+                Contactar por WhatsApp
+              </a>
+            ) : (
+              <button className="catalog-v2__offline-whatsapp" type="button" disabled>
+                <FiMessageCircle />
+                WhatsApp no disponible
+              </button>
+            )}
+          </section>
+
+          <CatalogSocialFooter businessId={businessId} />
+        </>
+      ) : (
+        <>
       <section className="flex gap-2" aria-label="Búsqueda de productos">
         <div className="relative flex-1">
           <input
@@ -609,8 +658,10 @@ export const CatalogStorefrontPage = () => {
 
 
       <CatalogSocialFooter businessId={businessId} />
+        </>
+      )}
 
-      {showFilters ? (
+      {!catalogOffline && showFilters ? (
         <div className="fixed inset-0 z-40 grid bg-black/55">
           <aside className="ml-auto grid h-full w-full max-w-[390px] content-start gap-4 overflow-y-auto border-l border-[var(--border-default)] bg-[var(--bg-surface)] p-4 text-[var(--text-primary)] sm:max-w-[420px] max-sm:mt-auto max-sm:h-auto max-sm:max-w-full max-sm:rounded-t-2xl max-sm:border-l-0 max-sm:border-t">
             <button
@@ -674,7 +725,7 @@ export const CatalogStorefrontPage = () => {
         onConfirm={addVariantToCart}
       />
 
-      {totalItems > 0 ? (
+      {!catalogOffline && totalItems > 0 ? (
         <Link to="/catalogo/pedido" className="catalog-v2__cart-fab">
           Ver carrito ({totalItems}) · {totalLabel}
         </Link>
