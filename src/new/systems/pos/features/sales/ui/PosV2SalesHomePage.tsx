@@ -11,6 +11,8 @@ import { getDefaultPosPrinter, readPosPrinters } from "../../../shared/config/po
 import { hasPosDynamicVisitsQrModule, hasPosLoyaltyModule, normalizePosCouponsPlan } from "../../../shared/config/posLoyaltyPlan";
 import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
 
+const ALL_PRODUCTS_SEARCH_DEBOUNCE_MS = 450;
+
 type SaleItemVm = {
   id: number;
   name: string;
@@ -255,6 +257,7 @@ export const PosV2SalesHomePage = () => {
   const [availableCategoryIds, setAvailableCategoryIds] = useState<number[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [searchingGlobalCatalog, setSearchingGlobalCatalog] = useState(false);
+  const globalSearchRequestRef = useRef(0);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [cart, setCart] = useState<Record<string, CartItemVm>>({});
   const [discountPercent, setDiscountPercent] = useState("0");
@@ -740,6 +743,9 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
+    const requestId = globalSearchRequestRef.current + 1;
+    globalSearchRequestRef.current = requestId;
+
     const timeout = window.setTimeout(() => {
       const factory = new ModernSystemsFactory(API_BASE_URL);
       const productService = factory.createPosProductService();
@@ -748,6 +754,7 @@ export const PosV2SalesHomePage = () => {
       productService
         .getSellableProductsForSearch(businessId, token, planLimit)
         .then((rows) => {
+          if (requestId !== globalSearchRequestRef.current) return;
           const mapped = rows.map((item) => toSaleItemVm(item));
           const normalizedCategory = Number.isFinite(categoryId) ? Number(categoryId) : null;
           const filtered = mapped.filter((product) => {
@@ -758,12 +765,14 @@ export const PosV2SalesHomePage = () => {
           setGlobalSearchProducts(filtered);
         })
         .catch(() => {
+          if (requestId !== globalSearchRequestRef.current) return;
           setGlobalSearchProducts([]);
         })
         .finally(() => {
+          if (requestId !== globalSearchRequestRef.current) return;
           setSearchingGlobalCatalog(false);
         });
-    }, 320);
+    }, ALL_PRODUCTS_SEARCH_DEBOUNCE_MS);
 
     return () => window.clearTimeout(timeout);
   }, [debouncedSearch, categoryKey, isPlanLimitReady, planLimit]);

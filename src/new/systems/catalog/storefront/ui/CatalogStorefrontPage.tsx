@@ -19,6 +19,7 @@ const money = (value: number) =>
 const DEFAULT_PRICE_MAX_BOUND = 999;
 const SOCIAL_IMAGE_WIDTH = "1200";
 const SOCIAL_IMAGE_HEIGHT = "630";
+const ALL_PRODUCTS_SEARCH_DEBOUNCE_MS = 450;
 const CLOUDINARY_FACEBOOK_TRANSFORM = "c_pad,b_white,g_center,w_1200,h_630,f_jpg,q_auto";
 
 const addCloudinaryFacebookTransform = (imageUrl: string): string => {
@@ -112,6 +113,7 @@ export const CatalogStorefrontPage = () => {
   const [sizeOptions, setSizeOptions] = useState<StorefrontProductExtra[]>([]);
   const [cartReady, setCartReady] = useState(false);
   const businessContextRequestRef = useRef(0);
+  const catalogSearchRequestRef = useRef(0);
   const catalogTitle = store?.name ? `${store.name} | Catálogo digital` : "Catálogo digital | Ravekh";
   const catalogDescription = store?.name
     ? `Explora productos y realiza pedidos en el catálogo digital de ${store.name}.`
@@ -338,23 +340,26 @@ export const CatalogStorefrontPage = () => {
     }
 
     let cancelled = false;
+    const requestId = catalogSearchRequestRef.current + 1;
+    catalogSearchRequestRef.current = requestId;
+
     const timeout = window.setTimeout(() => {
       setSearchingGlobalCatalog(true);
       pageLogic
         .loadAllProducts(businessId, selectedCategoryId, planLimit)
         .then((rows) => {
-          if (cancelled) return;
+          if (cancelled || requestId != catalogSearchRequestRef.current) return;
           setGlobalSearchProducts(rows);
         })
         .catch(() => {
-          if (cancelled) return;
+          if (cancelled || requestId != catalogSearchRequestRef.current) return;
           setGlobalSearchProducts([]);
         })
         .finally(() => {
-          if (cancelled) return;
+          if (cancelled || requestId != catalogSearchRequestRef.current) return;
           setSearchingGlobalCatalog(false);
         });
-    }, 320);
+    }, ALL_PRODUCTS_SEARCH_DEBOUNCE_MS);
 
     return () => {
       cancelled = true;
