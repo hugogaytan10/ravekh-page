@@ -16,6 +16,8 @@ type ProductResponse = {
   id?: number;
   Business_Id?: number;
   businessId?: number;
+  Category_Id?: number | string | null;
+  categoryId?: number | string | null;
   Name?: string;
   name?: string;
   Description?: string;
@@ -205,6 +207,7 @@ const normalizeProducts = (items: ProductResponse[], businessId: string) =>
     .map((item) => ({
       id: parseNumber(item.Id ?? item.id),
       businessId: parseNumber(item.Business_Id ?? item.businessId ?? businessId),
+      categoryId: item.Category_Id != null || item.categoryId != null ? parseNumber(item.Category_Id ?? item.categoryId) : null,
       name: (item.Name ?? item.name ?? "Producto").toString().trim(),
       description: (item.Description ?? item.description ?? "").toString().trim(),
       image: normalizeImage(item.Image ?? item.image, item.Images ?? item.images),
@@ -366,33 +369,32 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
   }
 
   async getAllProductsByBusiness(businessId: string, planLimit?: string): Promise<StorefrontProduct[]> {
-    const collected: StorefrontProduct[] = [];
-    let currentPage = 1;
-    let totalPages = 1;
+    const limit = String(planLimit ?? "30");
+    const url = `${normalizeBase(this.baseUrl)}products/showstore/stockgtzero/all/${businessId}/1`;
+    logCatalogDebug("products-by-business-all:request", { businessId, limit, url });
 
-    do {
-      const page = await this.getProductsByBusinessPage(businessId, currentPage, planLimit);
-      collected.push(...page.products);
-      totalPages = Math.max(page.pagination.totalPages, 1);
-      currentPage += 1;
-    } while (currentPage <= totalPages);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ Limit: limit }),
+    });
+    logCatalogDebug("products-by-business-all:response", { businessId, ok: response.ok, status: response.status });
 
-    return collected;
+    if (!response.ok) return [];
+
+    const raw = (await response.json()) as
+      | { data?: ProductResponse[]; products?: ProductResponse[] }
+      | ProductResponse[];
+    const rows = Array.isArray(raw) ? raw : raw.data ?? raw.products ?? [];
+    const normalized = normalizeProducts(rows, businessId);
+    logCatalogDebug("products-by-business-all:data", { businessId, count: normalized.length });
+
+    return normalized;
   }
 
-  async getAllProductsByCategory(categoryId: number, planLimit?: string): Promise<StorefrontProduct[]> {
-    const collected: StorefrontProduct[] = [];
-    let currentPage = 1;
-    let totalPages = 1;
-
-    do {
-      const page = await this.getProductsByCategoryPage(categoryId, currentPage, planLimit);
-      collected.push(...page.products);
-      totalPages = Math.max(page.pagination.totalPages, 1);
-      currentPage += 1;
-    } while (currentPage <= totalPages);
-
-    return collected;
+  async getAllProductsByCategory(categoryId: number, businessId: string, planLimit?: string): Promise<StorefrontProduct[]> {
+    const products = await this.getAllProductsByBusiness(businessId, planLimit);
+    return products.filter((product) => product.categoryId === categoryId);
   }
 
 

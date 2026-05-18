@@ -29,7 +29,7 @@ export class CatalogStorefrontExperiencePage {
 
   loadAllProducts(businessId: string, categoryId?: number | null, planLimit?: string) {
     if (categoryId != null) {
-      return this.service.getAllProductsByCategory(categoryId, planLimit);
+      return this.service.getAllProductsByCategory(categoryId, businessId, planLimit);
     }
 
     return this.service.getAllProductsByBusiness(businessId, planLimit);

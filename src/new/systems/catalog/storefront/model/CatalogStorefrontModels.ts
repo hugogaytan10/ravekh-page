@@ -1,6 +1,7 @@
 export type StorefrontProduct = {
   id: number;
   businessId: number;
+  categoryId?: number | null;
   name: string;
   description: string;
   image: string;

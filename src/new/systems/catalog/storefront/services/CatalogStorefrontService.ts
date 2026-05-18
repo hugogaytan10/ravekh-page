@@ -27,8 +27,8 @@ export class CatalogStorefrontService {
     return this.repository.getAllProductsByBusiness(businessId, planLimit);
   }
 
-  getAllProductsByCategory(categoryId: number, planLimit?: string) {
-    return this.repository.getAllProductsByCategory(categoryId, planLimit);
+  getAllProductsByCategory(categoryId: number, businessId: string, planLimit?: string) {
+    return this.repository.getAllProductsByCategory(categoryId, businessId, planLimit);
   }
 
   getProduct(productId: string) {
