@@ -1,3 +1,4 @@
+import { ModernSystemsFactory } from "../../../../../index";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -21,6 +22,7 @@ import { hasPosLoyaltyModule, normalizePosCouponsPlan } from "../../../shared/co
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { buildPosPublicCatalogUrl } from "../../../shared/config/posExternalLinks";
 import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
+import { downloadProductsCatalogPdf } from "./productCatalogPdf";
 import "./PosV2MorePage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -42,11 +44,16 @@ export const PosV2MorePage = () => {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [actionMessage, setActionMessage] = useState<string>("");
   const [couponsPlan, setCouponsPlan] = useState<0 | 1 | 2>(0);
+  const [pdfLoading, setPdfLoading] = useState(false);
 
   const modulePage = useMemo(
     () => new MoreModulePage(new MoreModuleService(API_BASE_URL)),
     [],
   );
+  const productsService = useMemo(() => {
+    const factory = new ModernSystemsFactory(API_BASE_URL);
+    return factory.createPosProductsService();
+  }, []);
   const sessionSnapshot = useMemo(() => readPosSessionSnapshot(), []);
   const isSalesOnlyUser = useMemo(() => isSalesOnlyOperator(sessionSnapshot.token), [sessionSnapshot.token]);
   const allowedModuleIdsForSalesOnly = useMemo(() => new Set(["printers"]), []);
@@ -194,6 +201,31 @@ export const PosV2MorePage = () => {
       setActionMessage(
         "No fue posible copiar la URL. Puedes copiarla manualmente.",
       );
+    }
+  };
+
+
+  const downloadProductsPdf = async () => {
+    if (!sessionSnapshot.token || !sessionSnapshot.businessId) {
+      setActionMessage("Inicia sesión para descargar el PDF de productos.");
+      return;
+    }
+
+    setPdfLoading(true);
+    setActionMessage("Preparando PDF de productos...");
+
+    try {
+      const products = await productsService.listProducts(sessionSnapshot.businessId, sessionSnapshot.token);
+      await downloadProductsCatalogPdf(products, API_BASE_URL);
+      setActionMessage("PDF de productos descargado.");
+    } catch (cause) {
+      setActionMessage(
+        cause instanceof Error
+          ? cause.message
+          : "No fue posible descargar el PDF de productos.",
+      );
+    } finally {
+      setPdfLoading(false);
     }
   };
 
@@ -350,6 +382,20 @@ export const PosV2MorePage = () => {
                 Copiar URL
               </button>
             </div>
+          </div>
+          <div className="pos-v2-more__pdf-download">
+            <div>
+              <h4>Catálogo completo en PDF</h4>
+              <p>Descarga todos los productos registrados con sus imágenes en un documento.</p>
+            </div>
+            <button
+              type="button"
+              className="pos-v2-more__pdf-button"
+              onClick={() => void downloadProductsPdf()}
+              disabled={pdfLoading}
+            >
+              {pdfLoading ? "Generando PDF..." : "Descargar PDF"}
+            </button>
           </div>
         </section>
 
