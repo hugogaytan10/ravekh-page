@@ -12,6 +12,7 @@ export type ProductsPaginatedResult = {
 
 export interface IProductsRepository {
   listByBusiness(businessId: number, token: string): Promise<ManagedProduct[]>;
+  listAllByBusiness(businessId: number, token: string, limit: string): Promise<ManagedProduct[]>;
   listByBusinessPaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult>;
   getById(productId: number, token: string): Promise<ManagedProduct | null>;
   create(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct>;

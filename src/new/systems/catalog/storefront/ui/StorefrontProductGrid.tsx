@@ -56,6 +56,7 @@ const ProductCard = memo(({
     () => (getCatalogPriceValue(product.promotionPrice) ? formatCatalogPrice(product.promotionPrice, formatPrice) : null),
     [formatPrice, product.promotionPrice],
   );
+  const shouldShowPrice = product.showPrice !== false;
 
   return (
     <article className="catalog-v2-grid__card group">
@@ -79,14 +80,18 @@ const ProductCard = memo(({
           </NavLink>
         </h2>
         <div className="catalog-v2-grid__bottom">
-          {formattedPromo ? (
-            <div className="catalog-v2-grid__prices">
-              <span>{formattedPromo}</span>
-              {basePrice ? <small>{formattedBase}</small> : null}
-            </div>
-          ) : (
-            <p>{formattedBase}</p>
-          )}
+          <div className="catalog-v2-grid__price-slot" aria-hidden={!shouldShowPrice}>
+            {shouldShowPrice ? (
+              formattedPromo ? (
+                <div className="catalog-v2-grid__prices">
+                  <span>{formattedPromo}</span>
+                  {basePrice ? <small>{formattedBase}</small> : null}
+                </div>
+              ) : (
+                <p>{formattedBase}</p>
+              )
+            ) : null}
+          </div>
           <button type="button" onClick={handleAdd} aria-label={`Agregar ${product.name}`}><FiShoppingCart /></button>
         </div>
       </div>

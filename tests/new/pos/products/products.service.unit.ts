@@ -8,6 +8,7 @@ const buildProduct = (id: number, available = true) =>
 export async function run(): Promise<void> {
   const createRepo = {
     listByBusiness: async () => [],
+    listAllByBusiness: async () => [],
     getById: async () => null,
     create: async () => buildProduct(101),
     update: async () => buildProduct(999),

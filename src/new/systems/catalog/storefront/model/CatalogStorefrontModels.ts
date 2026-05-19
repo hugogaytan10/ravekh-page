@@ -11,6 +11,7 @@ export type StorefrontProduct = {
   forSale?: boolean;
   available?: boolean;
   showInStore?: boolean;
+  showPrice?: boolean;
 };
 
 export type StorefrontBusiness = {
