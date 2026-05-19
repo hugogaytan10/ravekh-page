@@ -48,7 +48,9 @@
 .catalog-v2-grid__meta h2 { margin: 0; font-size: .95rem; min-height: 2.4rem; line-height: 1.25; }
 .catalog-v2-grid__name-link { color: inherit; text-decoration: none; }
 .catalog-v2-grid__name-link:hover { text-decoration: underline; }
-.catalog-v2-grid__bottom { display: flex; align-items: center; justify-content: space-between; }
+.catalog-v2-grid__bottom { display: flex; align-items: center; justify-content: space-between; gap: .4rem; }
+.catalog-v2-grid__price-slot { min-height: 1.35rem; display: flex; align-items: center; }
+
 .catalog-v2-grid__bottom p { margin: 0; color: #0f172a; font-weight: 600; }
 .catalog-v2-grid__prices { display: flex; gap: .35rem; align-items: center; }
 .catalog-v2-grid__prices span { font-weight: 700; }

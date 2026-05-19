@@ -119,9 +119,28 @@ export class PosProductsApi implements IProductsRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
   async listByBusiness(businessId: number, token: string): Promise<ManagedProduct[]> {
+    return this.listProductsFromPath(POS_ENDPOINTS.productsByBusiness(businessId), token);
+  }
+
+  async listAllByBusiness(businessId: number, token: string, limit: string): Promise<ManagedProduct[]> {
+    const products = await this.httpClient.request<ProductResponse[] | { data?: ProductResponse[]; Data?: ProductResponse[]; Products?: ProductResponse[] }>({
+      method: "POST",
+      path: POS_ENDPOINTS.productsStockAvailableGtZeroAll(businessId),
+      token,
+      body: { Limit: limit },
+    });
+
+    const rows = Array.isArray(products)
+      ? products
+      : products?.data ?? products?.Data ?? products?.Products ?? [];
+
+    return rows.map((product) => this.toDomain(product));
+  }
+
+  private async listProductsFromPath(path: string, token: string): Promise<ManagedProduct[]> {
     const products = await this.httpClient.request<ProductResponse[] | { data?: ProductResponse[]; Data?: ProductResponse[]; Products?: ProductResponse[] }>({
       method: "GET",
-      path: POS_ENDPOINTS.productsByBusiness(businessId),
+      path,
       token,
     });
 

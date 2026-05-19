@@ -38,6 +38,9 @@ type ProductResponse = {
   available?: boolean | number | string | null;
   ShowInStore?: boolean | number | string | null;
   showInStore?: boolean | number | string | null;
+  ShowPrice?: boolean | number | string | null;
+  showPrice?: boolean | number | string | null;
+  Showprice?: boolean | number | string | null;
 };
 
 type ProductsPagination = {
@@ -218,6 +221,7 @@ const normalizeProducts = (items: ProductResponse[], businessId: string) =>
       forSale: toBoolean(item.ForSale ?? item.forSale, true),
       available: toBoolean(item.Available ?? item.available, true),
       showInStore: toBoolean(item.ShowInStore ?? item.showInStore, true),
+      showPrice: toBoolean(item.ShowPrice ?? item.Showprice ?? item.showPrice, true),
     }))
     .map((item) => ({
       ...item,

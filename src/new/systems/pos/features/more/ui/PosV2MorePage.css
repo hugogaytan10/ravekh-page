@@ -733,3 +733,43 @@
 :root[data-theme="dark"] .pos-v2-more__warning-grid p {
   color: #fed7aa;
 }
+
+.pos-v2-more__pdf-download {
+  align-items: center;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  justify-content: space-between;
+  padding: 0.8rem;
+}
+
+.pos-v2-more__pdf-download h4,
+.pos-v2-more__pdf-download p {
+  margin: 0;
+}
+
+.pos-v2-more__pdf-download p {
+  color: #475569;
+  margin-top: 0.25rem;
+}
+
+.pos-v2-more__pdf-button {
+  min-height: 42px;
+}
+
+.pos-v2-more__pdf-button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+:root[data-theme="dark"] .pos-v2-more__pdf-download {
+  background: #0f172a;
+  border-color: #334155;
+}
+
+:root[data-theme="dark"] .pos-v2-more__pdf-download p {
+  color: #cbd5e1;
+}
