@@ -180,6 +180,25 @@ export class PosProductsApi implements IProductsRepository {
     };
   }
 
+
+  async listByBusinessAllForSearch(businessId: number, token: string, limit: string | number): Promise<ManagedProduct[]> {
+    const payload = await this.httpClient.request<
+      ProductResponse[] |
+      { products?: ProductResponse[]; data?: ProductResponse[]; Data?: ProductResponse[]; Products?: ProductResponse[] }
+    >({
+      method: "POST",
+      path: POS_ENDPOINTS.productsStockAvailableGtZeroAll(businessId),
+      token,
+      body: { Limit: String(limit) },
+    });
+
+    const rows = Array.isArray(payload)
+      ? payload
+      : payload?.products ?? payload?.data ?? payload?.Data ?? payload?.Products ?? [];
+
+    return rows.map((product) => this.toDomain(product));
+  }
+
   async getById(productId: number, token: string): Promise<ManagedProduct | null> {
     const [product, extrasResponse, variantsResponse] = await Promise.all([
       this.httpClient.request<ProductResponse | { data?: ProductResponse; Data?: ProductResponse } | null>({

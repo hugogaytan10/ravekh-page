@@ -353,16 +353,7 @@ export const ProductsV2PosPage = () => {
       setSearchingCatalog(true);
       (async () => {
         try {
-          const allRows = [];
-          let currentPage = 1;
-          let totalPagesForSearch = 1;
-
-          do {
-            const response = await service.listProductsPaginated(businessId, token, currentPage, productsLimit);
-            allRows.push(...response.products);
-            totalPagesForSearch = Math.max(response.pagination.totalPages ?? 1, 1);
-            currentPage += 1;
-          } while (currentPage <= totalPagesForSearch);
+          const allRows = await service.listProductsAllForSearch(businessId, token, productsLimit);
 
           const mapped = allRows.map((product) => ({
             id: product.id,
