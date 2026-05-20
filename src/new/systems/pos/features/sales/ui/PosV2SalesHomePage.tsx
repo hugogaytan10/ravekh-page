@@ -1839,15 +1839,16 @@ export const PosV2SalesHomePage = () => {
             ) : null}
           </div>
 
-          {!loadingProducts && !productsError && search.trim().length < 2 && totalPages > 1 ? (
+          {!loadingProducts && !productsError && totalPages > 1 ? (
             <nav className="pos-v2-sales-home__pagination" aria-label="Paginación de productos">
+              {search.trim().length >= 2 ? <span>Búsqueda global activa</span> : null}
               <button
                 type="button"
                 onClick={() => {
                   setCurrentPage((page) => Math.max(1, page - 1));
                   scrollToProductsTop();
                 }}
-                disabled={!hasPrevPage}
+                disabled={search.trim().length >= 2 || !hasPrevPage}
               >
                 Anterior
               </button>
@@ -1866,8 +1867,9 @@ export const PosV2SalesHomePage = () => {
                       goToPage();
                     }
                   }}
+                  disabled={search.trim().length >= 2}
                 />
-                <button type="button" onClick={goToPage}>Ir</button>
+                <button type="button" onClick={goToPage} disabled={search.trim().length >= 2}>Ir</button>
               </label>
               <button
                 type="button"
@@ -1875,7 +1877,7 @@ export const PosV2SalesHomePage = () => {
                   setCurrentPage((page) => page + 1);
                   scrollToProductsTop();
                 }}
-                disabled={!hasNextPage}
+                disabled={search.trim().length >= 2 || !hasNextPage}
               >
                 Siguiente
               </button>
