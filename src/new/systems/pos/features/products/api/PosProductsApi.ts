@@ -152,29 +152,40 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   async listByBusinessPaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult> {
+    const resolvedLimit = Math.max(1, Number(limit) || 20);
     const payload = await this.httpClient.request<
       ProductResponse[] |
       { products?: ProductResponse[]; data?: ProductResponse[]; pagination?: Record<string, unknown> }
     >({
-      method: "GET",
-      path: POS_ENDPOINTS.productsByBusiness(businessId),
+      method: "POST",
+      path: POS_ENDPOINTS.productsStockAvailableGtZeroAll(businessId),
       token,
-      query: { page, limit },
+      body: { Limit: String(limit) },
     });
 
     const rows = Array.isArray(payload)
       ? payload
       : payload?.products ?? payload?.data ?? [];
 
-    const paginationPayload = Array.isArray(payload) ? undefined : payload?.pagination;
+    const paginationPayload = Array.isArray(payload)
+      ? undefined
+      : {
+        ...(payload?.pagination ?? {}),
+        page,
+        perPage: resolvedLimit,
+        totalItems: rows.length,
+        totalPages: Math.max(1, Math.ceil(rows.length / resolvedLimit)),
+      };
     const categoryIds = Array.isArray(paginationPayload?.categoryIds)
       ? paginationPayload.categoryIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
       : [];
+    const startIndex = Math.max(0, (page - 1) * resolvedLimit);
+    const pagedRows = rows.slice(startIndex, startIndex + resolvedLimit);
 
     return {
-      products: rows.map((product) => this.toDomain(product)),
+      products: pagedRows.map((product) => this.toDomain(product)),
       pagination: {
-        ...toPaginationMeta(paginationPayload, page, Number(limit) || 20, rows.length),
+        ...toPaginationMeta(paginationPayload, page, resolvedLimit, pagedRows.length),
         categoryIds,
       },
     };
