@@ -26,6 +26,9 @@ type ProductResponse = {
   forSale?: boolean;
   ShowInStore?: boolean;
   showInStore?: boolean;
+  ShowPrice?: boolean | number | string | null;
+  showPrice?: boolean | number | string | null;
+  Showprice?: boolean | number | string | null;
   Available?: boolean | number | string | null;
   available?: boolean | number | string | null;
   Volume?: boolean;
@@ -290,6 +293,7 @@ export class PosProductsApi implements IProductsRepository {
       payload.color ?? null,
       payload.forSale,
       payload.showInStore,
+      payload.showPrice,
       payload.available,
       payload.volume ?? false,
       payload.categoryId ?? null,
@@ -578,6 +582,7 @@ export class PosProductsApi implements IProductsRepository {
       product.Color ?? product.color ?? null,
       product.ForSale ?? product.forSale ?? true,
       product.ShowInStore ?? product.showInStore ?? true,
+      this.toAvailabilityFlag(product.ShowPrice ?? product.showPrice ?? product.Showprice),
       this.toAvailabilityFlag(product.Available ?? product.available),
       product.Volume ?? product.volume ?? false,
       product.Category_Id ?? product.category_Id ?? product.categoryId ?? null,
@@ -622,6 +627,7 @@ export class PosProductsApi implements IProductsRepository {
       Color: payload.color?.trim() || "#000000",
       ForSale: payload.forSale,
       ShowInStore: payload.showInStore,
+      Showprice: payload.showPrice,
       Available: payload.available,
       Images: payload.images,
       Barcode: payload.barcode,
