@@ -161,8 +161,9 @@ export class PosProductsApi implements IProductsRepository {
       { products?: ProductResponse[]; data?: ProductResponse[]; pagination?: Record<string, unknown> }
     >({
       method: "POST",
-      path: POS_ENDPOINTS.productsStockAvailableGtZeroAll(businessId),
+      path: POS_ENDPOINTS.productsStockAvailableGtZero(businessId),
       token,
+      query: { page },
       body: { Limit: String(limit) },
     });
 
@@ -170,20 +171,11 @@ export class PosProductsApi implements IProductsRepository {
       ? payload
       : payload?.products ?? payload?.data ?? [];
 
-    const paginationPayload = Array.isArray(payload)
-      ? undefined
-      : {
-        ...(payload?.pagination ?? {}),
-        page,
-        perPage: resolvedLimit,
-        totalItems: rows.length,
-        totalPages: Math.max(1, Math.ceil(rows.length / resolvedLimit)),
-      };
+    const paginationPayload = Array.isArray(payload) ? undefined : payload?.pagination;
     const categoryIds = Array.isArray(paginationPayload?.categoryIds)
       ? paginationPayload.categoryIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
       : [];
-    const startIndex = Math.max(0, (page - 1) * resolvedLimit);
-    const pagedRows = rows.slice(startIndex, startIndex + resolvedLimit);
+    const pagedRows = rows;
 
     return {
       products: pagedRows.map((product) => this.toDomain(product)),

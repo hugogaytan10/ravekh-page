@@ -357,9 +357,7 @@ export const ProductsV2PosPage = () => {
       setSearchingCatalog(true);
       (async () => {
         try {
-          // Búsqueda global: usar endpoint /all para evitar iterar páginas.
           const allRows = await service.listProductsAllForSearch(businessId, token, productsLimit);
-
           const mapped = allRows.map((product) => ({
             id: product.id,
             name: product.name,
@@ -385,7 +383,6 @@ export const ProductsV2PosPage = () => {
             variants: product.variants,
             extras: product.extras,
           }));
-
           setSearchCatalogProducts(mapped);
         } catch {
           setSearchCatalogProducts([]);

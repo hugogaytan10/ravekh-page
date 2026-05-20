@@ -252,12 +252,10 @@ export const PosV2SalesHomePage = () => {
   const [categoryKey, setCategoryKey] = useState("all");
   const [isGrid, setIsGrid] = useState(true);
   const [products, setProducts] = useState<SaleItemVm[]>([]);
-  const [globalSearchProducts, setGlobalSearchProducts] = useState<SaleItemVm[]>([]);
   const [categories, setCategories] = useState<CategoryVm[]>([]);
   const [availableCategoryIds, setAvailableCategoryIds] = useState<number[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [searchingGlobalCatalog, setSearchingGlobalCatalog] = useState(false);
-  const globalSearchRequestRef = useRef(0);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [cart, setCart] = useState<Record<string, CartItemVm>>({});
   const [discountPercent, setDiscountPercent] = useState("0");
@@ -729,59 +727,13 @@ export const PosV2SalesHomePage = () => {
   const debouncedSearch = useMemo(() => search.trim().toLowerCase(), [search]);
 
   useEffect(() => {
-    if (!isPlanLimitReady || debouncedSearch.length < 2) {
-      setSearchingGlobalCatalog(false);
-      setGlobalSearchProducts([]);
-      return;
-    }
-
-    const { token, businessId } = getCurrentSession();
-    const categoryId = categoryKey === "all" ? null : Number(categoryKey);
-    if (!token || !businessId) {
-      setSearchingGlobalCatalog(false);
-      setGlobalSearchProducts([]);
-      return;
-    }
-
-    const requestId = globalSearchRequestRef.current + 1;
-    globalSearchRequestRef.current = requestId;
-
-    const timeout = window.setTimeout(() => {
-      const factory = new ModernSystemsFactory(API_BASE_URL);
-      const productService = factory.createPosProductService();
-      setSearchingGlobalCatalog(true);
-
-      productService
-        .getSellableProductsForSearch(businessId, token, planLimit)
-        .then((rows) => {
-          if (requestId !== globalSearchRequestRef.current) return;
-          const mapped = rows.map((item) => toSaleItemVm(item));
-          const normalizedCategory = Number.isFinite(categoryId) ? Number(categoryId) : null;
-          const filtered = mapped.filter((product) => {
-            const matchesSearch = product.name.toLowerCase().includes(debouncedSearch);
-            const matchesCategory = normalizedCategory === null || product.categoryId === normalizedCategory;
-            return matchesSearch && matchesCategory;
-          });
-          setGlobalSearchProducts(filtered);
-        })
-        .catch(() => {
-          if (requestId !== globalSearchRequestRef.current) return;
-          setGlobalSearchProducts([]);
-        })
-        .finally(() => {
-          if (requestId !== globalSearchRequestRef.current) return;
-          setSearchingGlobalCatalog(false);
-        });
-    }, ALL_PRODUCTS_SEARCH_DEBOUNCE_MS);
-
-    return () => window.clearTimeout(timeout);
-  }, [debouncedSearch, categoryKey, isPlanLimitReady, planLimit]);
+    setSearchingGlobalCatalog(false);
+  }, [debouncedSearch]);
 
   const filteredProducts = useMemo(() => {
     const normalized = search.trim().toLowerCase();
-    const source = normalized.length >= 2 ? globalSearchProducts : products;
-    return source.filter((product) => product.name.toLowerCase().includes(normalized));
-  }, [globalSearchProducts, products, search]);
+    return products.filter((product) => product.name.toLowerCase().includes(normalized));
+  }, [products, search]);
 
   useEffect(() => {
     setCurrentPage(1);
