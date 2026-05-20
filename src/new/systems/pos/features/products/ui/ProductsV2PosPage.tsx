@@ -24,6 +24,7 @@ type ProductItemVm = {
   available: boolean;
   forSale: boolean;
   showInStore: boolean;
+  showPrice: boolean;
   volume: boolean;
   price: number | null;
   costPerItem: number | null;
@@ -153,6 +154,7 @@ export const ProductsV2PosPage = () => {
   const [stock, setStock] = useState("");
   const [forSale, setForSale] = useState(true);
   const [showInStore, setShowInStore] = useState(true);
+  const [showPrice, setShowPrice] = useState(true);
   const [available, setAvailable] = useState(true);
   const [productColor, setProductColor] = useState("");
   const [variants, setVariants] = useState<VariantFormVm[]>([]);
@@ -181,6 +183,7 @@ export const ProductsV2PosPage = () => {
     setStock("");
     setForSale(true);
     setShowInStore(true);
+    setShowPrice(true);
     setAvailable(true);
     setProductColor("");
     setVariants([]);
@@ -254,6 +257,7 @@ export const ProductsV2PosPage = () => {
           available: product.available,
           forSale: product.forSale,
           showInStore: product.showInStore,
+          showPrice: product.showPrice,
           volume: product.volume,
           price: product.price,
           costPerItem: product.costPerItem,
@@ -374,6 +378,7 @@ export const ProductsV2PosPage = () => {
             available: product.available,
             forSale: product.forSale,
             showInStore: product.showInStore,
+            showPrice: product.showPrice,
             volume: product.volume,
             price: product.price,
             costPerItem: product.costPerItem,
@@ -526,6 +531,7 @@ export const ProductsV2PosPage = () => {
         description: description.trim(),
         forSale,
         showInStore,
+        showPrice,
         available,
         color: productColor.trim() || null,
         volume: false,
@@ -567,6 +573,7 @@ export const ProductsV2PosPage = () => {
     description: detail?.description ?? "",
     forSale: detail?.forSale ?? true,
     showInStore: detail?.showInStore ?? true,
+    showPrice: detail?.showPrice ?? true,
     available: detail?.available ?? true,
     color: detail?.color ?? null,
     volume: detail?.volume ?? false,
@@ -626,6 +633,7 @@ export const ProductsV2PosPage = () => {
       setStock(detail.stock == null ? "" : String(detail.stock));
       setForSale(detail.forSale);
       setShowInStore(detail.showInStore);
+      setShowPrice(detail.showPrice);
       setAvailable(detail.available);
       setProductColor(detail.color ?? "");
       setSelectedCategoryId(detail.categoryId ?? null);
@@ -907,6 +915,7 @@ export const ProductsV2PosPage = () => {
             available: product.available,
             forSale: product.forSale,
             showInStore: product.showInStore,
+            showPrice: product.showPrice,
             volume: product.volume,
             price: product.price,
             costPerItem: product.costPerItem,
@@ -1246,6 +1255,11 @@ export const ProductsV2PosPage = () => {
                     <input type="checkbox" checked={showInStore} onChange={(event) => setShowInStore(event.target.checked)} />
                     <span className="pos-v2-products__switch-ui" aria-hidden="true" />
                     <span>Mostrar en tienda</span>
+                  </label>
+                  <label className="pos-v2-products__toggle-card">
+                    <input type="checkbox" checked={showPrice} onChange={(event) => setShowPrice(event.target.checked)} />
+                    <span className="pos-v2-products__switch-ui" aria-hidden="true" />
+                    <span>Mostrar precio</span>
                   </label>
                   <label className="pos-v2-products__toggle-card">
                     <input type="checkbox" checked={available} onChange={(event) => setAvailable(event.target.checked)} />

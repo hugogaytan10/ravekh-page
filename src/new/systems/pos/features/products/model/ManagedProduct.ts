@@ -40,6 +40,7 @@ export interface SaveManagedProductDto {
   color?: string | null;
   forSale: boolean;
   showInStore: boolean;
+  showPrice: boolean;
   available: boolean;
   volume?: boolean;
   image?: string;
@@ -66,6 +67,7 @@ export class ManagedProduct {
     public readonly color: string | null,
     public readonly forSale: boolean,
     public readonly showInStore: boolean,
+    public readonly showPrice: boolean,
     public readonly available: boolean,
     public readonly volume: boolean,
     public readonly categoryId: number | null,
@@ -96,6 +98,7 @@ export class ManagedProduct {
       color: this.color,
       forSale: this.forSale,
       showInStore: this.showInStore,
+      showPrice: this.showPrice,
       available: this.available,
       volume: this.volume,
       image: this.image ?? undefined,
