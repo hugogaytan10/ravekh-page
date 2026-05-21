@@ -247,11 +247,6 @@ export const CatalogOrderInfoPage = () => {
         })),
       };
 
-      const orderResult = await api.createCatalogOrder(orderPayload);
-      if (!orderResult) {
-        throw new Error("No se pudo registrar el pedido en el servidor.");
-      }
-
       if (paymentMethod === "tarjeta") {
         const [stripeConfig, businessConfig] = await Promise.all([
           api.getStripeConfig(),
@@ -294,6 +289,11 @@ export const CatalogOrderInfoPage = () => {
         }
 
         return;
+      }
+
+      const orderResult = await api.createCatalogOrder(orderPayload);
+      if (!orderResult) {
+        throw new Error("No se pudo registrar el pedido en el servidor.");
       }
 
       const storePhone = (window.localStorage.getItem("telefono") || "").replace(/\D/g, "");
