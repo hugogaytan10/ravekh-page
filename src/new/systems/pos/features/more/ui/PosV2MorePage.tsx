@@ -394,7 +394,7 @@ export const PosV2MorePage = () => {
               </button>
             </div>
           </div>
-          <div className="pos-v2-more__pdf-download">
+          {/* <div className="pos-v2-more__pdf-download">
             <div>
               <h4>Catálogo completo en PDF</h4>
               <p>Descarga todos los productos registrados con sus imágenes en un documento.</p>
@@ -407,7 +407,7 @@ export const PosV2MorePage = () => {
             >
               {pdfLoading ? "Generando PDF..." : "Descargar PDF"}
             </button>
-          </div>
+          </div> */}
         </section>
 
         {filteredSections.map((section) => (
