@@ -460,13 +460,13 @@ export const PosV2SalesHomePage = () => {
       },
     })
       .then((response) => (response.ok ? response.json() : null))
-      .then((payload: { Name?: string; name?: string; Logo?: string; logo?: string; CouponsPlan?: number; couponsPlan?: number } | null) => {
+      .then((payload: { Name?: string; name?: string; Logo?: string; logo?: string; CouponsPlan?: number; couponsPlan?: number; Features?: { Fidelity?: number }; features?: { fidelity?: number } } | null) => {
         if (!payload) return;
         const businessName = String(payload.Name ?? payload.name ?? "").trim();
         const logoUrl = String(payload.Logo ?? payload.logo ?? "").trim();
         if (businessName) setQuoteBusinessName(businessName);
         if (logoUrl) setQuoteLogoUrl(logoUrl);
-        setCouponsPlan(normalizePosCouponsPlan(payload.CouponsPlan ?? payload.couponsPlan ?? 0));
+        setCouponsPlan(normalizePosCouponsPlan(payload.CouponsPlan ?? payload.couponsPlan ?? payload.Features?.Fidelity ?? payload.features?.fidelity ?? 0));
       })
       .catch(() => {
         setCouponsPlan(0);

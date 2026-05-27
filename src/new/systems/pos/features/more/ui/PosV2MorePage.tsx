@@ -134,8 +134,8 @@ export const PosV2MorePage = () => {
         },
       })
         .then((response) => (response.ok ? response.json() : null))
-        .then((payload: { CouponsPlan?: number; couponsPlan?: number } | null) => {
-          setCouponsPlan(normalizePosCouponsPlan(payload?.CouponsPlan ?? payload?.couponsPlan ?? 0));
+        .then((payload: { CouponsPlan?: number; couponsPlan?: number; Features?: { Fidelity?: number }; features?: { fidelity?: number } } | null) => {
+          setCouponsPlan(normalizePosCouponsPlan(payload?.CouponsPlan ?? payload?.couponsPlan ?? payload?.Features?.Fidelity ?? payload?.features?.fidelity ?? 0));
         })
         .catch(() => setCouponsPlan(0));
     };

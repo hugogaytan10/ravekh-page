@@ -248,7 +248,7 @@ export const PosV2LoyaltyPage = () => {
             address: String(payload.Address ?? payload.address ?? "No disponible"),
             plan: String(payload.Plan ?? payload.plan ?? "No definido"),
             chargesEnabled: Number(payload.ChargesEnabled ?? payload.chargesEnabled ?? 0) === 1,
-            couponsPlan: normalizePosCouponsPlan(payload.CouponsPlan ?? payload.couponsPlan ?? 0),
+            couponsPlan: normalizePosCouponsPlan(payload.CouponsPlan ?? payload.couponsPlan ?? payload.Features?.Fidelity ?? payload.features?.fidelity ?? 0),
           });
         })
         .catch(() => setBusinessInfo(null));
