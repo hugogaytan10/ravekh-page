@@ -1,6 +1,6 @@
 import React, { useMemo } from "react";
-import QRCode from "./coupons/lib/QRCode";
-import QRErrorCorrectLevel from "./coupons/lib/QRCode/QRErrorCorrectLevel";
+import QRCode from "./new/systems/loyalty/features/coupons/lib/QRCode";
+import QRErrorCorrectLevel from "./new/systems/loyalty/features/coupons/lib/QRCode/QRErrorCorrectLevel";
 
 type Level = "L" | "M" | "Q" | "H";
 

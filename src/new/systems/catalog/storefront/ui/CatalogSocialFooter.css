@@ -1,0 +1,63 @@
+.catalog-v2-social-footer {
+  width: min(100%, 1040px);
+  margin: 1.5rem auto 0;
+  padding: 0.85rem 1rem;
+  border: 1px solid var(--border-default, #e5e7eb);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-surface, #ffffff) 94%, transparent);
+  color: var(--text-secondary, #475569);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  box-shadow: 0 14px 32px -28px rgba(15, 23, 42, 0.45);
+}
+
+.catalog-v2-social-footer span {
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.catalog-v2-social-footer nav {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+}
+
+.catalog-v2-social-footer a {
+  width: 2.35rem;
+  height: 2.35rem;
+  border: 1px solid var(--border-default, #e5e7eb);
+  border-radius: 999px;
+  background: var(--bg-subtle, #f8fafc);
+  color: var(--text-primary, #0f172a);
+  display: inline-grid;
+  place-items: center;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+}
+
+.catalog-v2-social-footer a:hover,
+.catalog-v2-social-footer a:focus-visible {
+  border-color: var(--text-primary, #0f172a);
+  background: var(--bg-surface, #ffffff);
+  transform: translateY(-1px);
+  outline: none;
+}
+
+.catalog-v2-social-footer svg {
+  width: 1.1rem;
+  height: 1.1rem;
+}
+
+@media (max-width: 640px) {
+  .catalog-v2-social-footer {
+    width: calc(100% - 1rem);
+    margin-top: 1rem;
+    border-radius: 1.25rem;
+    flex-direction: column;
+    gap: 0.55rem;
+  }
+}
