@@ -9,6 +9,7 @@ import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { POS_SESSION_STORAGE_KEYS, readPosSessionSnapshot } from "../../../shared/config/posSession";
 import { getDefaultPosPrinter, readPosPrinters } from "../../../shared/config/posPrinters";
 import { hasPosDynamicVisitsQrModule, hasPosLoyaltyModule, normalizePosCouponsPlan } from "../../../shared/config/posLoyaltyPlan";
+import { PosBusinessFeatureResponse, readPosBusinessFeatures } from "../../../shared/config/posFeatureFlags";
 import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
 
 const ALL_PRODUCTS_SEARCH_DEBOUNCE_MS = 450;
@@ -460,13 +461,13 @@ export const PosV2SalesHomePage = () => {
       },
     })
       .then((response) => (response.ok ? response.json() : null))
-      .then((payload: { Name?: string; name?: string; Logo?: string; logo?: string; CouponsPlan?: number; couponsPlan?: number; Features?: { Fidelity?: number }; features?: { fidelity?: number } } | null) => {
+      .then((payload: ({ Name?: string; name?: string; Logo?: string; logo?: string } & PosBusinessFeatureResponse) | null) => {
         if (!payload) return;
         const businessName = String(payload.Name ?? payload.name ?? "").trim();
         const logoUrl = String(payload.Logo ?? payload.logo ?? "").trim();
         if (businessName) setQuoteBusinessName(businessName);
         if (logoUrl) setQuoteLogoUrl(logoUrl);
-        setCouponsPlan(normalizePosCouponsPlan(payload.CouponsPlan ?? payload.couponsPlan ?? payload.Features?.Fidelity ?? payload.features?.fidelity ?? 0));
+        setCouponsPlan(normalizePosCouponsPlan(readPosBusinessFeatures(payload).fidelity ?? 0));
       })
       .catch(() => {
         setCouponsPlan(0);

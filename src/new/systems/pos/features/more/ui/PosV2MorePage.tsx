@@ -18,10 +18,11 @@ import {
   readPosStringList,
   writePosStringList,
 } from "../../../shared/config/posSession";
-import { hasPosLoyaltyModule, normalizePosCouponsPlan } from "../../../shared/config/posLoyaltyPlan";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { buildPosPublicCatalogUrl } from "../../../shared/config/posExternalLinks";
 import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
+import { fetchPosBusinessFeatures, isPosFeatureBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../../../shared/config/posFeatureFlags";
+import { FeatureUnlockModal } from "../../../shared/ui/FeatureUnlockModal";
 import { downloadProductsCatalogPdf } from "./productCatalogPdf";
 import "./PosV2MorePage.css";
 
@@ -43,7 +44,8 @@ export const PosV2MorePage = () => {
   );
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [actionMessage, setActionMessage] = useState<string>("");
-  const [couponsPlan, setCouponsPlan] = useState<0 | 1 | 2>(0);
+  const [features, setFeatures] = useState<PosBusinessFeatures>(POS_FEATURES_UNKNOWN);
+  const [unlockModal, setUnlockModal] = useState<{ title: string; message: string; buttonText: string } | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
 
   const modulePage = useMemo(
@@ -67,18 +69,9 @@ export const PosV2MorePage = () => {
   );
   const allItems = useMemo(() => {
     const items = MORE_MODULE_SECTIONS.flatMap((section) => section.items);
-    const loyaltyEnabled = hasPosLoyaltyModule(couponsPlan);
-    const filteredByPlan = items.filter((item) => {
-      if (item.id === "coupons" || item.id === "visits" || item.id === "loyalty") {
-        return loyaltyEnabled;
-      }
-
-      return true;
-    });
-
-    if (!isSalesOnlyUser) return filteredByPlan;
-    return filteredByPlan.filter((item) => allowedModuleIdsForSalesOnly.has(item.id));
-  }, [allowedModuleIdsForSalesOnly, couponsPlan, isSalesOnlyUser]);
+    if (!isSalesOnlyUser) return items;
+    return items.filter((item) => allowedModuleIdsForSalesOnly.has(item.id));
+  }, [allowedModuleIdsForSalesOnly, isSalesOnlyUser]);
   const isReadyModule = (item: MoreModuleLink): boolean =>
     item.status === "available" ||
     (item.actionType === "beta-action" &&
@@ -126,18 +119,9 @@ export const PosV2MorePage = () => {
     if (!sessionSnapshot.token || !sessionSnapshot.businessId) return;
 
     const loadBusinessState = () => {
-      fetch(new URL(`business/${sessionSnapshot.businessId}`, API_BASE_URL).toString(), {
-        headers: {
-          "Content-Type": "application/json",
-          token: sessionSnapshot.token,
-          Authorization: `Bearer ${sessionSnapshot.token}`,
-        },
-      })
-        .then((response) => (response.ok ? response.json() : null))
-        .then((payload: { CouponsPlan?: number; couponsPlan?: number; Features?: { Fidelity?: number }; features?: { fidelity?: number } } | null) => {
-          setCouponsPlan(normalizePosCouponsPlan(payload?.CouponsPlan ?? payload?.couponsPlan ?? payload?.Features?.Fidelity ?? payload?.features?.fidelity ?? 0));
-        })
-        .catch(() => setCouponsPlan(0));
+      fetchPosBusinessFeatures(sessionSnapshot.businessId, sessionSnapshot.token, API_BASE_URL)
+        .then(setFeatures)
+        .catch(() => setFeatures(POS_FEATURES_UNKNOWN));
     };
 
     loadBusinessState();
@@ -240,6 +224,39 @@ export const PosV2MorePage = () => {
     }
   };
 
+
+  const openUnlockModal = (title: string, message: string, buttonText: string) => {
+    setUnlockModal({ title, message, buttonText });
+  };
+
+  const getLockedModule = (item: MoreModuleLink): { title: string; message: string; buttonText: string } | null => {
+    if (item.id === "sales" && isPosFeatureBlocked(features.pos)) {
+      return {
+        title: "Ventas bloqueadas",
+        message: "Tu módulo POS está desactivado. Desbloquéalo para acceder a ventas, cobrar más rápido y vender sin límites.",
+        buttonText: "Desbloquear POS",
+      };
+    }
+
+    if ((item.id === "online-store" || item.id === "catalog-settings") && isPosFeatureBlocked(features.catalog)) {
+      return {
+        title: "Desbloquea tu tienda en línea",
+        message: "Activa el catálogo para vender en línea, mostrar tus productos y recibir pedidos desde tu tienda digital.",
+        buttonText: "Desbloquear catálogo",
+      };
+    }
+
+    if ((item.id === "coupons" || item.id === "visits" || item.id === "loyalty") && features.fidelity !== 1 && features.fidelity !== 2) {
+      return {
+        title: "Desbloquea fidelidad",
+        message: "Activa las herramientas de fidelidad para crear cupones, registrar visitas y premiar a tus clientes frecuentes.",
+        buttonText: "Desbloquear fidelidad",
+      };
+    }
+
+    return null;
+  };
+
   const runBetaAction = async (item: MoreModuleLink) => {
     const context: MoreModuleExecutionContext = readPosSessionSnapshot();
 
@@ -265,6 +282,12 @@ export const PosV2MorePage = () => {
   };
 
   const openModule = async (item: MoreModuleLink) => {
+    const lockedModule = getLockedModule(item);
+    if (lockedModule) {
+      openUnlockModal(lockedModule.title, lockedModule.message, lockedModule.buttonText);
+      return;
+    }
+
     if (item.id === "cash-closing") {
       navigate(POS_V2_PATHS.cashClosing);
       return;
@@ -383,9 +406,17 @@ export const PosV2MorePage = () => {
             <div className="pos-v2-more__quick-tools-grid">
               <button
                 type="button"
-                onClick={() =>
-                  window.open(catalogUrl, "_blank", "noopener,noreferrer")
-                }
+                onClick={() => {
+                  if (isPosFeatureBlocked(features.catalog)) {
+                    openUnlockModal(
+                      "Desbloquea tu tienda en línea",
+                      "Activa el catálogo para vender en línea, mostrar tus productos y recibir pedidos desde tu tienda digital.",
+                      "Desbloquear catálogo",
+                    );
+                    return;
+                  }
+                  window.open(catalogUrl, "_blank", "noopener,noreferrer");
+                }}
               >
                 Abrir catálogo
               </button>
@@ -506,6 +537,14 @@ export const PosV2MorePage = () => {
             <pre>{betaResult.payload}</pre>
           </section>
         ) : null}
+
+        <FeatureUnlockModal
+          open={Boolean(unlockModal)}
+          onClose={() => setUnlockModal(null)}
+          title={unlockModal?.title}
+          message={unlockModal?.message}
+          buttonText={unlockModal?.buttonText}
+        />
 
         {showSignOutConfirm ? (
           <section

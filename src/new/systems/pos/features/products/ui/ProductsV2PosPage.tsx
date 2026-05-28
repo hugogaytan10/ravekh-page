@@ -6,6 +6,9 @@ import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
+import { fetchPosBusinessFeatures, isPosFeatureBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../../../shared/config/posFeatureFlags";
+import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
+import { FeatureUnlockModal } from "../../../shared/ui/FeatureUnlockModal";
 import "./ProductsV2PosPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -146,6 +149,8 @@ export const ProductsV2PosPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [productsLimit, setProductsLimit] = useState(() => (window.localStorage.getItem("plan") ?? "").trim() || DEFAULT_PRODUCTS_LIMIT);
+  const [features, setFeatures] = useState<PosBusinessFeatures>(POS_FEATURES_UNKNOWN);
+  const [showPosFeatureUnlock, setShowPosFeatureUnlock] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -210,12 +215,40 @@ export const ProductsV2PosPage = () => {
     setIsFormOpen(true);
   };
 
+  const openPosFeatureUnlock = () => setShowPosFeatureUnlock(true);
+
+  const openCategoryManager = () => {
+    if (isPosFeatureBlocked(features.pos)) {
+      openPosFeatureUnlock();
+      return;
+    }
+
+    setShowCategoryManager(true);
+  };
+
   const resetCategoryForm = () => {
     setEditingCategoryId(null);
     setCategoryNameInput("");
     setCategoryColorInput("#4F46E5");
     setCategoryFormErrors({});
   };
+
+  useEffect(() => {
+    if (!businessId || !token) return;
+
+    const loadFeatures = () => {
+      fetchPosBusinessFeatures(businessId, token, API_BASE_URL)
+        .then(setFeatures)
+        .catch(() => setFeatures(POS_FEATURES_UNKNOWN));
+    };
+
+    loadFeatures();
+
+    return onPosBusinessUpdated((detail) => {
+      if (detail.businessId !== businessId) return;
+      loadFeatures();
+    });
+  }, [businessId, token]);
 
   useEffect(() => {
     if (!businessId || !token) return;
@@ -981,7 +1014,7 @@ export const ProductsV2PosPage = () => {
           <div className="pos-v2-products__header-actions">
             <button type="button" className="pos-v2-products__secondary pos-v2-products__back-main" onClick={() => navigate(-1)}>← Regresar</button>
             <button type="button" className="pos-v2-products__secondary" onClick={openCreateModal}>+ Nuevo</button>
-            <button type="button" className="pos-v2-products__secondary" onClick={() => setShowCategoryManager(true)}>Categorías</button>
+            <button type="button" className="pos-v2-products__secondary" onClick={openCategoryManager}>Categorías</button>
             <button type="button" className="pos-v2-products__secondary" onClick={() => excelInputRef.current?.click()} disabled={importing || !token || !businessId}>
               {importing ? "Importando..." : "Importar CSV"}
             </button>
@@ -1395,6 +1428,14 @@ export const ProductsV2PosPage = () => {
             </section>
           </div>
         ) : null}
+
+        <FeatureUnlockModal
+          open={showPosFeatureUnlock}
+          onClose={() => setShowPosFeatureUnlock(false)}
+          title="Desbloquea esta función"
+          message="Esta función está bloqueada en tu plan actual. Desbloquéala contratando un plan para usarla sin límites."
+          buttonText="Desbloquear ahora"
+        />
 
         {showCategoryManager ? (
           <div className="pos-v2-products__modal-backdrop" role="presentation" onClick={() => setShowCategoryManager(false)}>
