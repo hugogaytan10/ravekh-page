@@ -1,6 +1,11 @@
 import { ICatalogStorefrontRepository } from "../interface/ICatalogStorefrontRepository";
 import { CatalogOrderPayload, StorefrontBusiness, StorefrontProduct } from "../model/CatalogStorefrontModels";
 
+type BusinessFeaturesResponse = {
+  Catalog?: number | string | null;
+  catalog?: number | string | null;
+};
+
 type BusinessResponse = {
   Id?: number;
   Name?: string;
@@ -9,6 +14,8 @@ type BusinessResponse = {
   plan?: string | null;
   Logo?: string | null;
   logo?: string | null;
+  Features?: BusinessFeaturesResponse | null;
+  features?: BusinessFeaturesResponse | null;
 };
 type CategoryResponse = { Id?: number; id?: number; Name?: string; name?: string };
 type ProductResponse = {
@@ -114,6 +121,12 @@ const normalizeBase = (value: string) => (value.endsWith("/") ? value : `${value
 const parseNumber = (value: unknown, fallback = 0) => {
   const next = Number(value);
   return Number.isFinite(next) ? next : fallback;
+};
+
+const normalizeOptionalNumber = (value: unknown): number | null => {
+  if (value == null) return null;
+  const next = Number(value);
+  return Number.isFinite(next) ? next : null;
 };
 
 const toBoolean = (value: unknown, fallback = true) => {
@@ -257,7 +270,8 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
     logCatalogDebug("business:response", { businessId, ok: response.ok, status: response.status });
     if (!response.ok) return null;
     const data = (await response.json()) as BusinessResponse;
-    logCatalogDebug("business:data", { businessId, plan: data.Plan ?? data.plan ?? null, name: data.Name ?? null });
+    const catalogFeature = normalizeOptionalNumber(data.Features?.Catalog ?? data.features?.catalog);
+    logCatalogDebug("business:data", { businessId, plan: data.Plan ?? data.plan ?? null, catalogFeature, name: data.Name ?? null });
 
     return {
       id: Number(data.Id ?? 0),
@@ -265,6 +279,7 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
       phone: data.PhoneNumber ?? null,
       plan: String(data.Plan ?? data.plan ?? "").trim() || null,
       logo: String(data.Logo ?? data.logo ?? "").trim() || null,
+      catalogFeature,
     };
   }
 
