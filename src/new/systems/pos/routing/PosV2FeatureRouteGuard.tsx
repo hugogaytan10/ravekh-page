@@ -1,12 +1,12 @@
 import { ReactNode, useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { fetchPosBusinessFeatures, isPosFeatureBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../shared/config/posFeatureFlags";
+import { fetchPosBusinessFeatures, isPosFeatureBlocked, isPosModuleBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures, PosFeatureKey } from "../shared/config/posFeatureFlags";
 import { readPosSessionSnapshot } from "../shared/config/posSession";
 import { POS_V2_PATHS } from "./PosV2Paths";
 
 type PosV2FeatureRouteGuardProps = {
   children: ReactNode;
-  feature: keyof PosBusinessFeatures;
+  feature: PosFeatureKey;
   fallbackPath?: string;
 };
 
@@ -35,7 +35,9 @@ export const PosV2FeatureRouteGuard = ({ children, feature, fallbackPath = POS_V
   }, []);
 
   if (!features) return null;
-  if (isPosFeatureBlocked(features[feature])) return <Navigate to={fallbackPath} replace />;
+  if (feature === "pos" ? isPosModuleBlocked(features) : isPosFeatureBlocked(features[feature])) {
+    return <Navigate to={fallbackPath} replace />;
+  }
 
   return <>{children}</>;
 };

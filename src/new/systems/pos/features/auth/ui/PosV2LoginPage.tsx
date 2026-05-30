@@ -1,9 +1,11 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
-import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
+import { clearPendingPosUpgradeContext, clearPosSessionSnapshot, POS_SESSION_STORAGE_KEYS, readPendingPosUpgradeContext, storePendingPosUpgradeContext } from "../../../shared/config/posSession";
+import { fetchPosBusinessFeatures, isOfflinePosPlan } from "../../../shared/config/posFeatureFlags";
+import { FeatureUnlockModal } from "../../../shared/ui/FeatureUnlockModal";
 import "./PosV2LoginPage.css";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 
@@ -47,6 +49,7 @@ const FormField = ({ id, label, type, placeholder, value, required = true, autoC
 
 export const PosV2LoginPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState<PanelMode>("signin");
   const [signUpStep, setSignUpStep] = useState<SignUpStep>("account");
 
@@ -66,6 +69,7 @@ export const PosV2LoginPage = () => {
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showOfflineUpgrade, setShowOfflineUpgrade] = useState(false);
 
   const authPage = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
@@ -73,6 +77,7 @@ export const PosV2LoginPage = () => {
   }, []);
 
   const persistSession = (session: { token: string; businessId: number; employeeId: number; email: string }) => {
+    clearPendingPosUpgradeContext();
     window.localStorage.setItem(TOKEN_KEY, session.token);
     window.localStorage.setItem(BUSINESS_ID_KEY, String(session.businessId));
     window.localStorage.setItem(EMPLOYEE_ID_KEY, String(session.employeeId));
@@ -83,8 +88,14 @@ export const PosV2LoginPage = () => {
     const existingToken = window.localStorage.getItem(TOKEN_KEY);
     if (existingToken) {
       navigate(POS_V2_PATHS.sales, { replace: true });
+      return;
     }
-  }, [navigate]);
+
+    if (new URLSearchParams(location.search).get("reason") === "offline") {
+      setError("Tu plan actual no incluye acceso al POS. Actualiza tu plan para iniciar sesión.");
+      setShowOfflineUpgrade(Boolean(readPendingPosUpgradeContext()));
+    }
+  }, [location.search, navigate]);
 
   const goToSignIn = () => {
     setMode("signin");
@@ -99,6 +110,15 @@ export const PosV2LoginPage = () => {
 
     try {
       const session = await authPage.signIn({ email: signInEmail, password: signInPassword });
+      const features = await fetchPosBusinessFeatures(session.businessId, session.token, API_BASE_URL);
+      if (isOfflinePosPlan(features.plan)) {
+        storePendingPosUpgradeContext(session);
+        clearPosSessionSnapshot();
+        setError("Tu plan actual no incluye acceso al POS. Actualiza tu plan para iniciar sesión.");
+        setShowOfflineUpgrade(true);
+        return;
+      }
+
       persistSession(session);
       navigate(POS_V2_PATHS.sales, { replace: true });
     } catch (cause) {
@@ -246,6 +266,11 @@ export const PosV2LoginPage = () => {
               }}
             />
             {error && mode === "signin" ? <span className="pos-v2-error">{error}</span> : null}
+            {readPendingPosUpgradeContext() ? (
+              <button type="button" className="pos-v2-btn" onClick={() => setShowOfflineUpgrade(true)}>
+                Actualizar plan
+              </button>
+            ) : null}
             <button
               type="button"
               className="pos-v2-forgot-link"
@@ -296,6 +321,13 @@ export const PosV2LoginPage = () => {
           </div>
         </div>
       </div>
+      <FeatureUnlockModal
+        open={showOfflineUpgrade}
+        onClose={() => setShowOfflineUpgrade(false)}
+        title="Actualiza tu plan"
+        message="Tu plan actual no cubre esta función. Elige un plan para recuperar el acceso al POS."
+        buttonText="Actualizar plan"
+      />
     </div>
   );
 };

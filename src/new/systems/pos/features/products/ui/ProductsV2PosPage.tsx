@@ -6,7 +6,7 @@ import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
-import { fetchPosBusinessFeatures, isPosFeatureBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../../../shared/config/posFeatureFlags";
+import { fetchPosBusinessFeatures, isOfflinePosPlan, isPosFeatureBlocked, isPosModuleBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../../../shared/config/posFeatureFlags";
 import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
 import { FeatureUnlockModal } from "../../../shared/ui/FeatureUnlockModal";
 import "./ProductsV2PosPage.css";
@@ -208,17 +208,24 @@ export const ProductsV2PosPage = () => {
     resetForm();
   };
 
+  const openPosFeatureUnlock = () => setShowPosFeatureUnlock(true);
+
+  const blockOfflineProductMutation = (): boolean => {
+    if (!isOfflinePosPlan(features.plan)) return false;
+    openPosFeatureUnlock();
+    return true;
+  };
+
   const openCreateModal = () => {
+    if (blockOfflineProductMutation()) return;
     resetForm();
     setSaveResult(null);
     setError(null);
     setIsFormOpen(true);
   };
 
-  const openPosFeatureUnlock = () => setShowPosFeatureUnlock(true);
-
   const openCategoryManager = () => {
-    if (isPosFeatureBlocked(features.pos)) {
+    if (isPosModuleBlocked(features)) {
       openPosFeatureUnlock();
       return;
     }
@@ -504,6 +511,11 @@ export const ProductsV2PosPage = () => {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
+    if (blockOfflineProductMutation()) {
+      closeFormModal();
+      return;
+    }
+
     if (!businessId) {
       setError("Business ID es obligatorio.");
       return;
@@ -616,6 +628,7 @@ export const ProductsV2PosPage = () => {
   });
 
   const handleRestore = async (productId: number) => {
+    if (blockOfflineProductMutation()) return;
     if (!token) {
       setToast({ type: "error", message: "Token es obligatorio para restaurar." });
       return;
@@ -636,6 +649,7 @@ export const ProductsV2PosPage = () => {
   };
 
   const handleEdit = async (productId: number) => {
+    if (blockOfflineProductMutation()) return;
     if (!token) {
       setError("Token es obligatorio para editar.");
       return;
@@ -693,11 +707,16 @@ export const ProductsV2PosPage = () => {
   };
 
   const requestArchive = (productId: number, productName: string) => {
+    if (blockOfflineProductMutation()) return;
     setArchiveDialog({ id: productId, name: productName });
   };
 
   const handleArchive = async () => {
     if (!archiveDialog) return;
+    if (blockOfflineProductMutation()) {
+      setArchiveDialog(null);
+      return;
+    }
 
     if (!token) {
       setError("Token es obligatorio para eliminar/archivar.");
@@ -761,6 +780,11 @@ export const ProductsV2PosPage = () => {
   };
 
   const saveCategory = async () => {
+    if (isPosModuleBlocked(features)) {
+      setShowCategoryManager(false);
+      openPosFeatureUnlock();
+      return;
+    }
     if (!token || !businessId) return;
     if (!validateCategoryForm()) {
       setToast({ type: "error", message: "Revisa los campos de categoría para continuar." });
@@ -783,6 +807,11 @@ export const ProductsV2PosPage = () => {
   };
 
   const editCategory = (category: ProductCategoryVm) => {
+    if (isPosModuleBlocked(features)) {
+      setShowCategoryManager(false);
+      openPosFeatureUnlock();
+      return;
+    }
     setEditingCategoryId(category.id);
     setCategoryNameInput(category.name);
     setCategoryColorInput(category.color || "#4F46E5");
@@ -791,6 +820,11 @@ export const ProductsV2PosPage = () => {
   };
 
   const deleteCategory = async (categoryId: number) => {
+    if (isPosModuleBlocked(features)) {
+      setShowCategoryManager(false);
+      openPosFeatureUnlock();
+      return;
+    }
     if (!token) return;
     try {
       await service.deleteCategory(categoryId, token);
@@ -831,11 +865,17 @@ export const ProductsV2PosPage = () => {
     categoryCarouselRef.current.scrollBy({ left: offset, behavior: "smooth" });
   };
 
+  const openImportProducts = () => {
+    if (blockOfflineProductMutation()) return;
+    excelInputRef.current?.click();
+  };
+
   const handleImportProducts = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
 
     if (!file) return;
+    if (blockOfflineProductMutation()) return;
     if (!token || !businessId) {
       setToast({ type: "error", message: "Conecta tu sesión para importar productos." });
       return;
@@ -1015,7 +1055,7 @@ export const ProductsV2PosPage = () => {
             <button type="button" className="pos-v2-products__secondary pos-v2-products__back-main" onClick={() => navigate(-1)}>← Regresar</button>
             <button type="button" className="pos-v2-products__secondary" onClick={openCreateModal}>+ Nuevo</button>
             <button type="button" className="pos-v2-products__secondary" onClick={openCategoryManager}>Categorías</button>
-            <button type="button" className="pos-v2-products__secondary" onClick={() => excelInputRef.current?.click()} disabled={importing || !token || !businessId}>
+            <button type="button" className="pos-v2-products__secondary" onClick={openImportProducts} disabled={importing || !token || !businessId}>
               {importing ? "Importando..." : "Importar CSV"}
             </button>
             <button type="button" className="pos-v2-products__secondary" onClick={handleExportProducts} disabled={!isVipPlan || !token || !businessId}>

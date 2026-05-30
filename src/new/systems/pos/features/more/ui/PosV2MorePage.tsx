@@ -21,7 +21,7 @@ import {
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { buildPosPublicCatalogUrl } from "../../../shared/config/posExternalLinks";
 import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
-import { fetchPosBusinessFeatures, isPosFeatureBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../../../shared/config/posFeatureFlags";
+import { fetchPosBusinessFeatures, isPosFeatureBlocked, isPosModuleBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../../../shared/config/posFeatureFlags";
 import { FeatureUnlockModal } from "../../../shared/ui/FeatureUnlockModal";
 import { downloadProductsCatalogPdf } from "./productCatalogPdf";
 import "./PosV2MorePage.css";
@@ -230,7 +230,7 @@ export const PosV2MorePage = () => {
   };
 
   const getLockedModule = (item: MoreModuleLink): { title: string; message: string; buttonText: string } | null => {
-    if (item.id === "sales" && isPosFeatureBlocked(features.pos)) {
+    if (item.id === "sales" && isPosModuleBlocked(features)) {
       return {
         title: "Ventas bloqueadas",
         message: "Tu módulo POS está desactivado. Desbloquéalo para acceder a ventas, cobrar más rápido y vender sin límites.",

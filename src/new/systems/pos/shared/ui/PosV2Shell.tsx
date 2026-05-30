@@ -1,9 +1,9 @@
 import { MouseEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { FiBarChart2, FiBox, FiDollarSign, FiMoreHorizontal, FiShoppingCart } from "react-icons/fi";
-import { isSalesOnlyOperator, readPosSessionSnapshot } from "../config/posSession";
+import { clearPosSessionSnapshot, isSalesOnlyOperator, readPosSessionSnapshot, storePendingPosUpgradeContext } from "../config/posSession";
 import { POS_V2_PATHS } from "../../routing/PosV2Paths";
-import { fetchPosBusinessFeatures, isPosFeatureBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../config/posFeatureFlags";
+import { fetchPosBusinessFeatures, isOfflinePosPlan, isPosModuleBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../config/posFeatureFlags";
 import { onPosBusinessUpdated } from "../config/posBusinessEvents";
 import { FeatureUnlockModal } from "./FeatureUnlockModal";
 import "./PosV2Shell.css";
@@ -50,7 +50,15 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
 
     const loadFeatures = () => {
       fetchPosBusinessFeatures(session.businessId, session.token)
-        .then(setFeatures)
+        .then((nextFeatures) => {
+          if (isOfflinePosPlan(nextFeatures.plan)) {
+            storePendingPosUpgradeContext(session);
+            clearPosSessionSnapshot();
+            navigate(`${POS_V2_PATHS.login}?reason=offline`, { replace: true });
+            return;
+          }
+          setFeatures(nextFeatures);
+        })
         .catch(() => setFeatures(POS_FEATURES_UNKNOWN));
     };
 
@@ -60,7 +68,7 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
       if (detail.businessId !== session.businessId) return;
       loadFeatures();
     });
-  }, []);
+  }, [navigate]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -78,7 +86,7 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
   }, [location.pathname, navItems]);
 
   const handleNavClick = (event: MouseEvent<HTMLAnchorElement>, to: string) => {
-    if (to !== POS_V2_PATHS.sales || !isPosFeatureBlocked(features.pos)) return;
+    if (to !== POS_V2_PATHS.sales || !isPosModuleBlocked(features)) return;
     event.preventDefault();
     setShowSalesUnlock(true);
   };

@@ -1,7 +1,7 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { emitPosBusinessUpdated } from "../config/posBusinessEvents";
 import { getPosApiBaseUrl } from "../config/posEnv";
-import { readPosSessionSnapshot } from "../config/posSession";
+import { clearPendingPosUpgradeContext, readPendingPosUpgradeContext, readPosSessionSnapshot } from "../config/posSession";
 import "./FeatureUnlockModal.css";
 
 export type UnlockModalProps = {
@@ -187,10 +187,11 @@ const getStoredObject = (key: string): Record<string, unknown> | null => {
 
 const resolveCheckoutContext = () => {
   const session = readPosSessionSnapshot();
+  const pendingUpgrade = readPendingPosUpgradeContext();
   const storedUser = getStoredObject("user") ?? getStoredObject("User");
   const storedBusiness = getStoredObject("business") ?? getStoredObject("Business");
-  const businessId = Number(storedUser?.Business_Id ?? storedUser?.businessId ?? storedBusiness?.Id ?? storedBusiness?.id ?? session.businessId);
-  const token = String(storedUser?.Token ?? storedUser?.token ?? session.token ?? "").trim();
+  const businessId = Number(pendingUpgrade?.businessId ?? storedUser?.Business_Id ?? storedUser?.businessId ?? storedBusiness?.Id ?? storedBusiness?.id ?? session.businessId);
+  const token = String(pendingUpgrade?.token ?? storedUser?.Token ?? storedUser?.token ?? session.token ?? "").trim();
 
   const context = {
     businessId: Number.isFinite(businessId) ? businessId : 0,
@@ -418,6 +419,7 @@ export const FeatureUnlockModal = ({
     if (!response.ok) throw new Error("El pago fue exitoso, pero no se pudo actualizar el plan del negocio.");
     window.localStorage.setItem("plan", plan);
     updateStoredBusinessPlan(plan);
+    clearPendingPosUpgradeContext();
     emitPosBusinessUpdated({ businessId, source: "plan-checkout" });
     logUnlockCheckout("business:update-plan:success", { businessId, plan });
   };
