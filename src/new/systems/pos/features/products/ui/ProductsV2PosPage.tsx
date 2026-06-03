@@ -1475,6 +1475,7 @@ export const ProductsV2PosPage = () => {
           title="Desbloquea esta función"
           message="Esta función está bloqueada en tu plan actual. Desbloquéala contratando un plan para usarla sin límites."
           buttonText="Desbloquear ahora"
+          unlockFeature="Pos"
         />
 
         {showCategoryManager ? (

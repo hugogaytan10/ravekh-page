@@ -4,6 +4,8 @@ import { getPosApiBaseUrl } from "../config/posEnv";
 import { clearPendingPosUpgradeContext, readPendingPosUpgradeContext, readPosSessionSnapshot } from "../config/posSession";
 import "./FeatureUnlockModal.css";
 
+export type UnlockFeature = "Pos" | "Catalog" | "Fidelity" | "DynamicQr";
+
 export type UnlockModalProps = {
   open: boolean;
   onClose: () => void;
@@ -11,16 +13,29 @@ export type UnlockModalProps = {
   message?: string;
   buttonText?: string;
   onUpgrade?: () => void;
+  unlockFeature?: UnlockFeature;
 };
 
 type PlanKey = "INICIAL" | "BASICO" | "INTERMEDIO" | "EMPRESARIAL" | "VIP" | "EMPRENDEDOR";
+type PlanFeature = "Catalog" | "Pos";
 
-type PlanConfig = {
+type PaymentSelection = {
+  id: string;
+  label: string;
+  description: string;
+  amount: number;
+  kind: "PLAN" | "MODULES";
+  plan?: PlanKey;
+  moduleName?: "Fidelity";
+  planFeatures?: PlanFeature[];
+};
+
+type PlanSelection = {
   amount: number;
   plan: PlanKey;
 };
 
-type CheckoutStep = "intro" | "plans" | "payment" | "success" | "error";
+type CheckoutStep = "intro" | "plans" | "features" | "payment" | "success" | "error";
 
 type PaymentIntentResponse = {
   publishableKey?: string;
@@ -47,7 +62,7 @@ declare global {
   }
 }
 
-const PLAN_CONFIG: Record<PlanKey, PlanConfig> = {
+const PLAN_CONFIG: Record<PlanKey, PlanSelection> = {
   INICIAL: { amount: 200, plan: "INICIAL" },
   BASICO: { amount: 300, plan: "BASICO" },
   INTERMEDIO: { amount: 700, plan: "INTERMEDIO" },
@@ -55,6 +70,17 @@ const PLAN_CONFIG: Record<PlanKey, PlanConfig> = {
   VIP: { amount: 1050, plan: "VIP" },
   EMPRENDEDOR: { amount: 500, plan: "EMPRENDEDOR" },
 };
+
+const MODULE_ADDON_AMOUNT = 50;
+
+const PLAN_CHOICES: PlanSelection[] = [
+  PLAN_CONFIG.INICIAL,
+  PLAN_CONFIG.BASICO,
+  PLAN_CONFIG.EMPRENDEDOR,
+  PLAN_CONFIG.INTERMEDIO,
+  PLAN_CONFIG.EMPRESARIAL,
+  PLAN_CONFIG.VIP,
+];
 
 const STRIPE_JS_SRC = "https://js.stripe.com/v3/";
 const stripeScriptPromise: { current: Promise<void> | null } = { current: null };
@@ -68,52 +94,17 @@ const normalizePlanName = (plan: unknown): PlanKey | null => {
   return normalizedPlan in PLAN_CONFIG ? (normalizedPlan as PlanKey) : null;
 };
 
-const UNLOCK_LOG_MESSAGES: Record<string, string> = {
-  "stripe-js:already-loaded": "Stripe ya estaba cargado en la página.",
-  "stripe-js:load-reuse": "Ya había una carga de Stripe en proceso, reutilizando esa carga.",
-  "stripe-js:load-start": "Cargando Stripe.js para mostrar el formulario de pago.",
-  "stripe-js:existing-script": "Encontré el script de Stripe en el DOM, esperando que termine de cargar.",
-  "stripe-js:load-success": "Stripe.js cargó correctamente.",
-  "stripe-js:load-error": "Stripe.js no pudo cargar.",
-  "request:start": "Enviando petición al backend.",
-  "request:complete": "El backend respondió la petición.",
-  "payment-element:prepare": "Preparando el formulario de tarjeta de Stripe.",
-  "stripe:init-success": "Stripe quedó inicializado con la llave pública del backend.",
-  "payment-element:mounted": "El formulario de pago ya está visible para el usuario.",
-  "payment-element:error": "No se pudo preparar el formulario de pago.",
-  "payment-element:cleanup-error": "Stripe ya había limpiado el formulario de pago; se ignora el segundo intento.",
-  "payment:create:start": "El usuario eligió un plan; creando pago en backend.",
-  "payment:create:invalid-plan": "El plan seleccionado no existe en la configuración local.",
-  "payment:create:missing-context": "No hay datos suficientes para crear el pago.",
-  "payment:create:invalid-response": "El backend creó una respuesta incompleta para iniciar Stripe.",
-  "payment:create:success": "Pago creado; ya tengo clientSecret y llave pública para Stripe.",
-  "payment:create:error": "Falló la creación del pago.",
-  "backend-confirm:start": "Confirmando PaymentIntent contra el backend.",
-  "backend-confirm:fallback": "El endpoint principal no existe; intentando endpoint alternativo.",
-  "business:update-plan:start": "Pago exitoso; actualizando plan del negocio en backend.",
-  "business:update-plan:response": "El backend respondió la actualización de plan.",
-  "business:update-plan:success": "Plan actualizado correctamente en backend y frontend.",
-  "stripe-confirm:start": "El usuario confirmó el pago; enviando confirmación a Stripe.",
-  "stripe-confirm:missing-context": "No hay sesión/negocio suficiente para confirmar el pago.",
-  "stripe-confirm:stripe-error": "Stripe rechazó o no pudo confirmar el pago.",
-  "stripe-confirm:stripe-success": "Stripe confirmó el pago sin error.",
-  "backend-confirm:response": "Respuesta de confirmación final del backend.",
-  "checkout:success": "Checkout terminado con éxito.",
-  "checkout:error": "Checkout terminó con error.",
+const logUnlockCheckout = (_event: string, _payload: Record<string, unknown> = {}) => {
+  void _event;
+  void _payload;
 };
-
-const describeUnlockLog = (event: string) => UNLOCK_LOG_MESSAGES[event] ?? event;
-
-const logUnlockCheckout = (event: string, payload: Record<string, unknown> = {}) => {
-  console.info(`Pago/desbloqueo: ${describeUnlockLog(event)}`, { paso: event, ...payload });
+const warnUnlockCheckout = (_event: string, _payload: Record<string, unknown> = {}) => {
+  void _event;
+  void _payload;
 };
-
-const warnUnlockCheckout = (event: string, payload: Record<string, unknown> = {}) => {
-  console.warn(`Pago/desbloqueo: ${describeUnlockLog(event)}`, { paso: event, ...payload });
-};
-
-const errorUnlockCheckout = (event: string, payload: Record<string, unknown> = {}) => {
-  console.error(`Pago/desbloqueo: ${describeUnlockLog(event)}`, { paso: event, ...payload });
+const errorUnlockCheckout = (_event: string, _payload: Record<string, unknown> = {}) => {
+  void _event;
+  void _payload;
 };
 
 const sanitizeForLog = (value: unknown): unknown => {
@@ -233,13 +224,75 @@ const getPaymentStatus = (value: unknown): string => {
   return String(record.status ?? record.Status ?? record.paymentStatus ?? record.PaymentStatus ?? "").toLowerCase();
 };
 
-const updateStoredBusinessPlan = (plan: PlanKey) => {
-  for (const key of ["business", "Business"]) {
-    const storedBusiness = getStoredObject(key);
-    if (!storedBusiness) continue;
-    window.localStorage.setItem(key, JSON.stringify({ ...storedBusiness, Plan: plan, plan }));
-  }
+const getCurrentPlan = (): PlanKey | null => {
+  const storedBusiness = getStoredObject("business") ?? getStoredObject("Business");
+  return normalizePlanName(window.localStorage.getItem("plan") ?? storedBusiness?.Plan ?? storedBusiness?.plan);
 };
+
+const isPaidCurrentPlan = (plan: PlanKey | null): plan is PlanKey => Boolean(plan && plan !== "INICIAL");
+
+const getRequestedFeature = (unlockFeature?: UnlockFeature): UnlockFeature | null => unlockFeature ?? null;
+
+const buildDirectPaymentSelections = (unlockFeature?: UnlockFeature): PaymentSelection[] => {
+  const requestedFeature = getRequestedFeature(unlockFeature);
+  if (requestedFeature === "Fidelity" || requestedFeature === "DynamicQr") {
+    return [{
+      id: requestedFeature === "Fidelity" ? "fidelity-module" : "dynamic-qr-module",
+      label: requestedFeature === "Fidelity" ? "Fidelity" : "QR dinámico",
+      description: requestedFeature === "Fidelity"
+        ? "Activa cupones, visitas y fidelidad."
+        : "Activa QR dinámico como feature extra de fidelidad.",
+      amount: MODULE_ADDON_AMOUNT,
+      kind: "MODULES",
+      moduleName: "Fidelity",
+    }];
+  }
+
+  const currentPlan = getCurrentPlan();
+  if ((requestedFeature === "Catalog" || requestedFeature === "Pos") && isPaidCurrentPlan(currentPlan)) {
+    return [{
+      id: `${requestedFeature.toLowerCase()}-addon`,
+      label: `Agregar ${requestedFeature === "Catalog" ? "Catálogo" : "POS"}`,
+      description: `Desbloquea ${requestedFeature === "Catalog" ? "el catálogo" : "el POS"} en tu plan actual por $50 MXN.`,
+      amount: MODULE_ADDON_AMOUNT,
+      kind: "PLAN",
+      plan: currentPlan,
+      planFeatures: [requestedFeature],
+    }];
+  }
+
+  return [];
+};
+
+const buildPlanFeatureSelections = (selectedPlan: PlanSelection): PaymentSelection[] => [
+  {
+    id: `${selectedPlan.plan.toLowerCase()}-catalog`,
+    label: "Catálogo",
+    description: `Contrata ${selectedPlan.plan} y activa solo catálogo.`,
+    amount: selectedPlan.amount,
+    kind: "PLAN",
+    plan: selectedPlan.plan,
+    planFeatures: ["Catalog"],
+  },
+  {
+    id: `${selectedPlan.plan.toLowerCase()}-pos`,
+    label: "POS",
+    description: `Contrata ${selectedPlan.plan} y activa solo POS.`,
+    amount: selectedPlan.amount,
+    kind: "PLAN",
+    plan: selectedPlan.plan,
+    planFeatures: ["Pos"],
+  },
+  {
+    id: `${selectedPlan.plan.toLowerCase()}-catalog-pos`,
+    label: "Catálogo + POS",
+    description: `Contrata ${selectedPlan.plan} con Catálogo y POS (+$50 MXN).`,
+    amount: selectedPlan.amount + MODULE_ADDON_AMOUNT,
+    kind: "PLAN",
+    plan: selectedPlan.plan,
+    planFeatures: ["Catalog", "Pos"],
+  },
+];
 
 export const FeatureUnlockModal = ({
   open,
@@ -248,27 +301,29 @@ export const FeatureUnlockModal = ({
   message = "Esta función está bloqueada en tu plan actual. Desbloquéala contratando un plan para usarla sin límites.",
   buttonText = "Desbloquear ahora",
   onUpgrade,
+  unlockFeature,
 }: UnlockModalProps) => {
   const [step, setStep] = useState<CheckoutStep>("intro");
-  const [selectedPlan, setSelectedPlan] = useState<PlanConfig | null>(null);
+  const [selectedSelection, setSelectedSelection] = useState<PaymentSelection | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<PlanSelection | null>(null);
   const [payment, setPayment] = useState<PaymentIntentResponse | null>(null);
   const [stripe, setStripe] = useState<StripeInstance | null>(null);
   const [elements, setElements] = useState<StripeElements | null>(null);
-  const [paymentElement, setPaymentElement] = useState<{ unmount?: () => void; destroy?: () => void } | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const paymentElementRef = useRef<HTMLDivElement | null>(null);
 
-  const plans = useMemo(() => Object.values(PLAN_CONFIG), []);
+  const directPaymentSelections = useMemo(() => buildDirectPaymentSelections(unlockFeature), [unlockFeature, open]);
+  const featureSelections = useMemo(() => selectedPlan ? buildPlanFeatureSelections(selectedPlan) : [], [selectedPlan]);
 
   useEffect(() => {
     if (!open) {
       setStep("intro");
+      setSelectedSelection(null);
       setSelectedPlan(null);
       setPayment(null);
       setStripe(null);
       setElements(null);
-      setPaymentElement(null);
       setLoading(false);
       setError("");
     }
@@ -280,7 +335,7 @@ export const FeatureUnlockModal = ({
     let cancelled = false;
     let mountedPaymentElement: { unmount?: () => void; destroy?: () => void } | null = null;
     logUnlockCheckout("payment-element:prepare", {
-      plan: selectedPlan?.plan,
+      selection: selectedSelection?.label,
       hasPublishableKey: Boolean(payment.publishableKey),
       hasClientSecret: Boolean(payment.clientSecret),
     });
@@ -290,15 +345,14 @@ export const FeatureUnlockModal = ({
         if (cancelled) return;
         const stripeClient = window.Stripe?.(payment.publishableKey || "") ?? null;
         if (!stripeClient) throw new Error("No fue posible inicializar Stripe.");
-        logUnlockCheckout("stripe:init-success", { plan: selectedPlan?.plan });
+        logUnlockCheckout("stripe:init-success", { selection: selectedSelection?.label });
         const nextElements = stripeClient.elements({ clientSecret: payment.clientSecret || "" });
         const nextPaymentElement = nextElements.create("payment");
         mountedPaymentElement = nextPaymentElement;
         nextPaymentElement.mount(paymentElementRef.current as HTMLElement);
         setStripe(stripeClient);
         setElements(nextElements);
-        setPaymentElement(nextPaymentElement);
-        logUnlockCheckout("payment-element:mounted", { plan: selectedPlan?.plan });
+        logUnlockCheckout("payment-element:mounted", { selection: selectedSelection?.label });
       })
       .catch((cause) => {
         if (!cancelled) {
@@ -329,15 +383,21 @@ export const FeatureUnlockModal = ({
     setStep("plans");
   };
 
-  const createPayment = async (plan: PlanConfig) => {
-    logUnlockCheckout("payment:create:start", { selectedPlan: plan.plan, amount: plan.amount });
-    const resolvedPlan = PLAN_CONFIG[normalizePlanName(plan.plan) || "VIP"];
-    if (!resolvedPlan) {
-      warnUnlockCheckout("payment:create:invalid-plan", { selectedPlan: plan.plan });
-      setError("Selecciona un plan válido para continuar.");
-      setStep("error");
-      return;
-    }
+  const selectPlan = (plan: PlanSelection) => {
+    setSelectedPlan(plan);
+    setError("");
+    setStep("features");
+  };
+
+  const createPayment = async (selection: PaymentSelection) => {
+    logUnlockCheckout("payment:create:start", {
+      selected: selection.label,
+      kind: selection.kind,
+      amount: selection.amount,
+      plan: selection.plan ?? null,
+      moduleName: selection.moduleName ?? null,
+      planFeatures: selection.planFeatures ?? null,
+    });
 
     const context = resolveCheckoutContext();
     if (!context.businessId || !context.token) {
@@ -350,17 +410,24 @@ export const FeatureUnlockModal = ({
     setLoading(true);
     setError("");
     try {
-      const startsAt = new Date().toISOString().slice(0, 10);
-      const { response, data } = await postJson<PaymentIntentResponse>("createGeneralPayment", {
-        businessId: context.businessId,
-        kind: "PLAN",
-        amount: resolvedPlan.amount,
-        planName: resolvedPlan.plan,
-        startsAt,
-        durationDays: 30,
-        currency: "MXN",
-        notes: `Pago plan ${resolvedPlan.plan.toLowerCase()}`,
-      }, context.token);
+      const payload = selection.kind === "MODULES"
+        ? {
+            businessId: context.businessId,
+            kind: "MODULES",
+            moduleName: selection.moduleName,
+            amount: selection.amount,
+            currency: "MXN",
+          }
+        : {
+            businessId: context.businessId,
+            kind: "PLAN",
+            amount: selection.amount,
+            planName: selection.plan,
+            currency: "MXN",
+            planFeatures: selection.planFeatures ?? [],
+          };
+
+      const { response, data } = await postJson<PaymentIntentResponse>("createGeneralPayment", payload, context.token);
 
       if (!response.ok || !data?.publishableKey || !data.clientSecret) {
         warnUnlockCheckout("payment:create:invalid-response", {
@@ -375,14 +442,15 @@ export const FeatureUnlockModal = ({
       }
 
       logUnlockCheckout("payment:create:success", {
-        plan: resolvedPlan.plan,
-        amount: resolvedPlan.amount,
+        selected: selection.label,
+        kind: selection.kind,
+        amount: selection.amount,
         status: data.status ?? null,
         hasPaymentIntentId: Boolean(data.paymentIntentId),
         hasPaymentId: Boolean(data.paymentId),
         backendResponse: sanitizeForLog(data),
       });
-      setSelectedPlan(resolvedPlan);
+      setSelectedSelection(selection);
       setPayment(data);
       setStep("payment");
     } catch (cause) {
@@ -403,36 +471,15 @@ export const FeatureUnlockModal = ({
     return postJson<Record<string, unknown>>("stripe/confirmPaymentIntent", payload, token);
   };
 
-  const updateBusinessPlan = async (businessId: number, token: string, plan: PlanKey) => {
-    logUnlockCheckout("business:update-plan:start", { businessId, plan });
-    const response = await fetch(new URL("update-plan", getApiBaseUrl()).toString(), {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        token,
-      },
-      body: JSON.stringify({ id: businessId, plan }),
-    });
-    const updatePlanResponse = await response.json().catch(() => null) as unknown;
-
-    logUnlockCheckout("business:update-plan:response", { ok: response.ok, status: response.status, businessId, plan, backendResponse: sanitizeForLog(updatePlanResponse) });
-    if (!response.ok) throw new Error("El pago fue exitoso, pero no se pudo actualizar el plan del negocio.");
-    window.localStorage.setItem("plan", plan);
-    updateStoredBusinessPlan(plan);
-    clearPendingPosUpgradeContext();
-    emitPosBusinessUpdated({ businessId, source: "plan-checkout" });
-    logUnlockCheckout("business:update-plan:success", { businessId, plan });
-  };
-
   const confirmStripePayment = async (event: FormEvent) => {
     event.preventDefault();
     logUnlockCheckout("stripe-confirm:start", {
-      plan: selectedPlan?.plan ?? null,
+      selection: selectedSelection?.label ?? null,
       hasStripe: Boolean(stripe),
       hasElements: Boolean(elements),
       hasPaymentIntentId: Boolean(payment?.paymentIntentId),
     });
-    if (!stripe || !elements || !selectedPlan || !payment?.paymentIntentId) {
+    if (!stripe || !elements || !selectedSelection || !payment?.paymentIntentId) {
       setError("El formulario de pago todavía no está listo.");
       return;
     }
@@ -452,7 +499,7 @@ export const FeatureUnlockModal = ({
         warnUnlockCheckout("stripe-confirm:stripe-error", { message: result.error.message ?? "unknown" });
         throw new Error(result.error.message || "Stripe no pudo confirmar el pago.");
       }
-      logUnlockCheckout("stripe-confirm:stripe-success", { plan: selectedPlan.plan });
+      logUnlockCheckout("stripe-confirm:stripe-success", { selection: selectedSelection.label });
 
       const confirmation = await confirmPaymentInBackend(payment.paymentIntentId, context.token);
       const status = getPaymentStatus(confirmation.data);
@@ -461,8 +508,9 @@ export const FeatureUnlockModal = ({
         throw new Error("El pago no fue confirmado como exitoso por el servidor.");
       }
 
-      await updateBusinessPlan(context.businessId, context.token, selectedPlan.plan);
-      logUnlockCheckout("checkout:success", { businessId: context.businessId, plan: selectedPlan.plan });
+      clearPendingPosUpgradeContext();
+      emitPosBusinessUpdated({ businessId: context.businessId, source: "payment-checkout" });
+      logUnlockCheckout("checkout:success", { businessId: context.businessId, selection: selectedSelection.label, kind: selectedSelection.kind });
       setStep("success");
     } catch (cause) {
       errorUnlockCheckout("checkout:error", { message: cause instanceof Error ? cause.message : String(cause) });
@@ -475,18 +523,60 @@ export const FeatureUnlockModal = ({
 
   const renderBody = () => {
     if (step === "plans") {
+      if (directPaymentSelections.length > 0) {
+        return (
+          <>
+            <span className="pos-feature-unlock__badge">Selecciona qué desbloquear</span>
+            <h3>Elige la función</h3>
+            <p>Esta función se desbloquea como extra independiente por $50 MXN.</p>
+            <div className="pos-feature-unlock__plans">
+              {directPaymentSelections.map((selection) => (
+                <button key={selection.id} type="button" onClick={() => void createPayment(selection)} disabled={loading}>
+                  <strong>{selection.label}</strong>
+                  <small>{selection.description}</small>
+                  <span>${selection.amount} MXN</span>
+                </button>
+              ))}
+            </div>
+          </>
+        );
+      }
+
       return (
         <>
           <span className="pos-feature-unlock__badge">Selecciona un plan</span>
-          <h3>Elige cómo desbloquear</h3>
-          <p>Contrata un plan mensual y activa las funciones disponibles para tu negocio.</p>
+          <h3>Elige el plan</h3>
+          <p>Primero selecciona el plan que quieres contratar. Después eliges si agregas Catálogo, POS o ambos.</p>
           <div className="pos-feature-unlock__plans">
-            {plans.map((plan) => (
-              <button key={plan.plan} type="button" onClick={() => void createPayment(plan)} disabled={loading}>
+            {PLAN_CHOICES.map((plan) => (
+              <button key={plan.plan} type="button" onClick={() => selectPlan(plan)} disabled={loading}>
                 <strong>{plan.plan}</strong>
-                <span>${plan.amount} MXN / mes</span>
+                <small>Plan mensual base</small>
+                <span>${plan.amount} MXN</span>
               </button>
             ))}
+          </div>
+        </>
+      );
+    }
+
+    if (step === "features") {
+      return (
+        <>
+          <span className="pos-feature-unlock__badge">Selecciona funciones</span>
+          <h3>¿Qué quieres activar con {selectedPlan?.plan}?</h3>
+          <p>Catálogo o POS mantienen el precio del plan. Si eliges ambos, se agrega $50 MXN extra.</p>
+          <div className="pos-feature-unlock__plans">
+            {featureSelections.map((selection) => (
+              <button key={selection.id} type="button" onClick={() => void createPayment(selection)} disabled={loading}>
+                <strong>{selection.label}</strong>
+                <small>{selection.description}</small>
+                <span>${selection.amount} MXN</span>
+              </button>
+            ))}
+          </div>
+          <div className="pos-feature-unlock__actions pos-feature-unlock__actions--single">
+            <button type="button" className="is-secondary" onClick={() => setStep("plans")}>Cambiar plan</button>
           </div>
         </>
       );
@@ -496,12 +586,12 @@ export const FeatureUnlockModal = ({
       return (
         <>
           <span className="pos-feature-unlock__badge">Pago seguro</span>
-          <h3>Checkout Stripe · {selectedPlan?.plan}</h3>
-          <p>Completa el pago de ${selectedPlan?.amount} MXN para activar tu plan por 30 días.</p>
-          <form className="pos-feature-unlock__payment" onSubmit={confirmStripePayment}>
+          <h3>Checkout Stripe · {selectedSelection?.label}</h3>
+          <p>Completa el pago de ${selectedSelection?.amount} MXN para activar {selectedSelection?.label}.</p>
+          <form className="pos-feature-unlock__payment" onSubmit={confirmStripePayment} autoComplete="off">
             <div ref={paymentElementRef} className="pos-feature-unlock__payment-element" />
             {error ? <p className="pos-feature-unlock__error">{error}</p> : null}
-            <button type="submit" disabled={loading || !stripe || !elements}>{loading ? "Confirmando..." : "Pagar y activar plan"}</button>
+            <button type="submit" disabled={loading || !stripe || !elements}>{loading ? "Confirmando..." : "Pagar y activar"}</button>
           </form>
         </>
       );
@@ -511,8 +601,8 @@ export const FeatureUnlockModal = ({
       return (
         <>
           <span className="pos-feature-unlock__badge">Pago exitoso</span>
-          <h3>Tu plan fue activado</h3>
-          <p>El pago se confirmó correctamente y el plan {selectedPlan?.plan} ya quedó asignado a tu negocio.</p>
+          <h3>Tu compra fue activada</h3>
+          <p>El pago se confirmó correctamente. El backend activará el plan o módulo comprado.</p>
           <div className="pos-feature-unlock__actions pos-feature-unlock__actions--single">
             <button type="button" onClick={onClose}>Continuar</button>
           </div>

@@ -93,7 +93,5 @@ export const fetchPosBusinessFeatures = async (businessId: number, token: string
 
   if (!response.ok) throw new Error(`No se pudo validar el negocio (${response.status}).`);
   const payload = await response.json() as PosBusinessFeatureResponse;
-  const features = readPosBusinessFeatures(payload);
-  console.info("POS acceso: negocio validado.", { businessId, plan: features.plan, pos: features.pos });
-  return features;
+  return readPosBusinessFeatures(payload);
 };

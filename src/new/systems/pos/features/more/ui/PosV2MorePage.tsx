@@ -22,7 +22,7 @@ import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { buildPosPublicCatalogUrl } from "../../../shared/config/posExternalLinks";
 import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
 import { fetchPosBusinessFeatures, isPosFeatureBlocked, isPosModuleBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../../../shared/config/posFeatureFlags";
-import { FeatureUnlockModal } from "../../../shared/ui/FeatureUnlockModal";
+import { FeatureUnlockModal, type UnlockFeature } from "../../../shared/ui/FeatureUnlockModal";
 import { downloadProductsCatalogPdf } from "./productCatalogPdf";
 import "./PosV2MorePage.css";
 
@@ -45,7 +45,7 @@ export const PosV2MorePage = () => {
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [actionMessage, setActionMessage] = useState<string>("");
   const [features, setFeatures] = useState<PosBusinessFeatures>(POS_FEATURES_UNKNOWN);
-  const [unlockModal, setUnlockModal] = useState<{ title: string; message: string; buttonText: string } | null>(null);
+  const [unlockModal, setUnlockModal] = useState<{ title: string; message: string; buttonText: string; unlockFeature?: UnlockFeature } | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
 
   const modulePage = useMemo(
@@ -225,16 +225,17 @@ export const PosV2MorePage = () => {
   };
 
 
-  const openUnlockModal = (title: string, message: string, buttonText: string) => {
-    setUnlockModal({ title, message, buttonText });
+  const openUnlockModal = (title: string, message: string, buttonText: string, unlockFeature?: UnlockFeature) => {
+    setUnlockModal({ title, message, buttonText, unlockFeature });
   };
 
-  const getLockedModule = (item: MoreModuleLink): { title: string; message: string; buttonText: string } | null => {
+  const getLockedModule = (item: MoreModuleLink): { title: string; message: string; buttonText: string; unlockFeature?: UnlockFeature } | null => {
     if (item.id === "sales" && isPosModuleBlocked(features)) {
       return {
         title: "Ventas bloqueadas",
         message: "Tu módulo POS está desactivado. Desbloquéalo para acceder a ventas, cobrar más rápido y vender sin límites.",
         buttonText: "Desbloquear POS",
+        unlockFeature: "Pos",
       };
     }
 
@@ -243,6 +244,7 @@ export const PosV2MorePage = () => {
         title: "Desbloquea tu tienda en línea",
         message: "Activa el catálogo para vender en línea, mostrar tus productos y recibir pedidos desde tu tienda digital.",
         buttonText: "Desbloquear catálogo",
+        unlockFeature: "Catalog",
       };
     }
 
@@ -251,6 +253,7 @@ export const PosV2MorePage = () => {
         title: "Desbloquea fidelidad",
         message: "Activa las herramientas de fidelidad para crear cupones, registrar visitas y premiar a tus clientes frecuentes.",
         buttonText: "Desbloquear fidelidad",
+        unlockFeature: "Fidelity",
       };
     }
 
@@ -284,7 +287,7 @@ export const PosV2MorePage = () => {
   const openModule = async (item: MoreModuleLink) => {
     const lockedModule = getLockedModule(item);
     if (lockedModule) {
-      openUnlockModal(lockedModule.title, lockedModule.message, lockedModule.buttonText);
+      openUnlockModal(lockedModule.title, lockedModule.message, lockedModule.buttonText, lockedModule.unlockFeature);
       return;
     }
 
@@ -412,6 +415,7 @@ export const PosV2MorePage = () => {
                       "Desbloquea tu tienda en línea",
                       "Activa el catálogo para vender en línea, mostrar tus productos y recibir pedidos desde tu tienda digital.",
                       "Desbloquear catálogo",
+                      "Catalog",
                     );
                     return;
                   }
@@ -544,6 +548,7 @@ export const PosV2MorePage = () => {
           title={unlockModal?.title}
           message={unlockModal?.message}
           buttonText={unlockModal?.buttonText}
+          unlockFeature={unlockModal?.unlockFeature}
         />
 
         {showSignOutConfirm ? (

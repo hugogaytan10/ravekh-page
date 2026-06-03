@@ -143,6 +143,7 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
         title="Ventas bloqueadas"
         message="Tu módulo POS está desactivado. Desbloquéalo para acceder a ventas, cobrar más rápido y vender sin límites."
         buttonText="Desbloquear POS"
+        unlockFeature="Pos"
       />
     </div>
   );

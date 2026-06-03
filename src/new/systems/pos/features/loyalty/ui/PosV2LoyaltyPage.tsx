@@ -10,7 +10,7 @@ import QRErrorCorrectLevel from "../../../../loyalty/features/coupons/lib/QRCode
 import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
 import { hasPosDynamicVisitsQrModule, hasPosLoyaltyModule, normalizePosCouponsPlan } from "../../../shared/config/posLoyaltyPlan";
 import { readPosBusinessFeatures } from "../../../shared/config/posFeatureFlags";
-import { FeatureUnlockModal } from "../../../shared/ui/FeatureUnlockModal";
+import { FeatureUnlockModal, type UnlockFeature } from "../../../shared/ui/FeatureUnlockModal";
 import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
 import "./PosV2LoyaltyPage.css";
 
@@ -19,6 +19,7 @@ const QR_ALPHABET = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
 const DYNAMIC_QR_ROTATION_SECONDS = 40;
 const DYNAMIC_QR_ROTATION_MS = DYNAMIC_QR_ROTATION_SECONDS * 1000;
 const randomChunk = (length: number): string => Array.from({ length }, () => QR_ALPHABET[Math.floor(Math.random() * QR_ALPHABET.length)]).join("");
+
 const buildCouponQrCode = (): string => `QR-${randomChunk(5)}-${randomChunk(4)}`;
 const pad = (value: number): string => String(value).padStart(2, "0");
 const toLegacyDateTime = (value: string): string | undefined => {
@@ -147,7 +148,7 @@ export const PosV2LoyaltyPage = () => {
   const [toast, setToast] = useState<string>("");
   const [coupon, setCoupon] = useState<{ id: number; qr?: string; description: string; maxRedemptions: number; valid?: string } | null>(null);
   const [businessInfo, setBusinessInfo] = useState<{ name: string; phone: string; address: string; plan: string; chargesEnabled: boolean; couponsPlan: 0 | 1 | 2 } | null>(null);
-  const [unlockModal, setUnlockModal] = useState<{ title: string; message: string; buttonText: string } | null>(null);
+  const [unlockModal, setUnlockModal] = useState<{ title: string; message: string; buttonText: string; unlockFeature?: UnlockFeature } | null>(null);
   const [couponDescriptionQuery, setCouponDescriptionQuery] = useState("");
   const [visitQuery, setVisitQuery] = useState("");
   const [isVisitFilterOpen, setIsVisitFilterOpen] = useState(false);
@@ -274,6 +275,7 @@ export const PosV2LoyaltyPage = () => {
       title: "Desbloquea fidelidad",
       message: "Activa las herramientas de fidelidad para crear cupones, registrar visitas y premiar a tus clientes frecuentes.",
       buttonText: "Desbloquear fidelidad",
+      unlockFeature: "Fidelity",
     });
   };
   const openDynamicQrUnlock = () => {
@@ -281,6 +283,7 @@ export const PosV2LoyaltyPage = () => {
       title: "Desbloquea los QR dinámicos",
       message: "Activa esta función premium para generar QRs dinámicos, automatizar visitas y ofrecer una experiencia más pro a tus clientes.",
       buttonText: "Desbloquear función",
+      unlockFeature: "DynamicQr",
     });
   };
 
@@ -507,8 +510,20 @@ export const PosV2LoyaltyPage = () => {
   };
 
   const refreshDynamicQr = useCallback(async (silent = false) => {
-    if (!session.hasSession || dynamicQrRequestInFlightRef.current) return;
+    if (!session.hasSession || dynamicQrRequestInFlightRef.current) {
+      logDynamicQrFlow("No se genera QR", {
+        reason: !session.hasSession ? "sin sesión" : "petición en curso",
+        silent,
+        businessId: session.businessId,
+      });
+      return;
+    }
 
+    logDynamicQrFlow("Solicitando QR dinámico al backend", {
+      businessId: session.businessId,
+      domain: defaultDomain,
+      silent,
+    });
     dynamicQrRequestInFlightRef.current = true;
     if (!silent) {
       setDynamicQrLoading(true);
@@ -521,8 +536,18 @@ export const PosV2LoyaltyPage = () => {
         ...nextQr,
         refreshAfterSeconds: DYNAMIC_QR_ROTATION_SECONDS,
       });
+      logDynamicQrFlow("Backend respondió QR dinámico", {
+        businessId: session.businessId,
+        hasToken: Boolean(nextQr.token),
+        hasQrUrl: Boolean(nextQr.qrUrl),
+        refreshAfterSeconds: DYNAMIC_QR_ROTATION_SECONDS,
+      });
       if (!silent) setToast("QR dinámico actualizado correctamente.");
-    } catch {
+    } catch (cause) {
+      logDynamicQrFlow("Falló la generación del QR dinámico", {
+        businessId: session.businessId,
+        message: cause instanceof Error ? cause.message : String(cause),
+      });
       if (!silent) {
         setDynamicQr(null);
         setError("No se pudo generar el QR dinámico.");
@@ -784,6 +809,7 @@ export const PosV2LoyaltyPage = () => {
           title={unlockModal?.title}
           message={unlockModal?.message}
           buttonText={unlockModal?.buttonText}
+          unlockFeature={unlockModal?.unlockFeature}
         />
 
         {loyaltyModuleEnabled && isCouponsModalOpen ? (
