@@ -1,3 +1,4 @@
+import { ProductImportResult } from "../interface/IProductsRepository";
 import { ProductsService } from "../services/ProductsService";
 import { ProductCategory, SaveManagedProductDto } from "../model/ManagedProduct";
 
@@ -54,7 +55,11 @@ export class ProductsManagementPage {
     await this.service.deleteCategory(categoryId, token);
   }
 
-  async importProducts(businessId: number, file: File, token: string): Promise<{ imported: number; message: string; errors?: string[] }> {
+  async importProducts(businessId: number, file: File, token: string): Promise<ProductImportResult> {
     return this.service.importProducts(businessId, file, token);
+  }
+
+  async importProductsZip(businessId: number, file: File, token: string): Promise<ProductImportResult> {
+    return this.service.importProductsZip(businessId, file, token);
   }
 }

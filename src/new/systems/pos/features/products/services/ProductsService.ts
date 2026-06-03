@@ -1,4 +1,4 @@
-import { IProductsRepository, ProductsPaginatedResult } from "../interface/IProductsRepository";
+import { IProductsRepository, ProductImportResult, ProductsPaginatedResult } from "../interface/IProductsRepository";
 import { ManagedProduct, ProductCategory, SaveManagedProductDto } from "../model/ManagedProduct";
 
 export class ProductsService {
@@ -48,7 +48,11 @@ export class ProductsService {
     return this.repository.deleteCategory(categoryId, token);
   }
 
-  async importProducts(businessId: number, file: File, token: string): Promise<{ imported: number; message: string; errors?: string[] }> {
+  async importProducts(businessId: number, file: File, token: string): Promise<ProductImportResult> {
     return this.repository.importProducts(businessId, file, token);
+  }
+
+  async importProductsZip(businessId: number, file: File, token: string): Promise<ProductImportResult> {
+    return this.repository.importProductsZip(businessId, file, token);
   }
 }
