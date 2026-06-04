@@ -10,6 +10,7 @@ import { POS_V2_ROUTES } from "../systems/pos/routing/PosV2Routes";
 import { LoyaltyCustomerRoutes } from "../systems/loyalty/features/customer-experience/ui/LoyaltyCustomerRoutes";
 import { PrivacyPoliciesIndexPage } from "../systems/legal/pages/PrivacyPoliciesIndexPage";
 import { PrivacyPolicyPage } from "../systems/legal/pages/PrivacyPolicyPage";
+import { MainCatalogPage } from "../systems/main-catalog/pages/MainCatalogPage";
 
 const LegacyCatalogRedirect = () => {
   const { idBusiness } = useParams<{ idBusiness: string }>();
@@ -80,6 +81,14 @@ const RouteSeo = () => {
       };
     }
 
+    if (pathname === "/maincatalogo") {
+      return {
+        title: "Catálogo digital para vender por WhatsApp | Ravekh",
+        description: "Crea un catálogo digital profesional para organizar productos, compartir un link y vender por WhatsApp con menos fricción.",
+        robots: "index,follow,max-image-preview:large",
+      };
+    }
+
     if (pathname.startsWith("/v2/catalogo") || pathname.startsWith("/catalogo")) {
       return {
         title: "Catálogo digital | Ravekh",
@@ -135,6 +144,7 @@ export const NewAppRoutes = () => {
       <RouteSeo />
       <Routes>
         <Route path="/" element={<LandingPageRavekhPage />} />
+        <Route path="/maincatalogo" element={<MainCatalogPage />} />
 
       {/* Catálogo v2 moderno y desacoplado */}
         <Route path="/v2/catalogo/:Id" element={<CatalogStorefrontPage />} />
