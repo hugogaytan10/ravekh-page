@@ -26,6 +26,9 @@ type ProductResponse = {
   forSale?: boolean;
   ShowInStore?: boolean;
   showInStore?: boolean;
+  ShowPrice?: boolean | number | string | null;
+  showPrice?: boolean | number | string | null;
+  Showprice?: boolean | number | string | null;
   Available?: boolean | number | string | null;
   available?: boolean | number | string | null;
   Volume?: boolean;
@@ -119,9 +122,28 @@ export class PosProductsApi implements IProductsRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
   async listByBusiness(businessId: number, token: string): Promise<ManagedProduct[]> {
+    return this.listProductsFromPath(POS_ENDPOINTS.productsByBusiness(businessId), token);
+  }
+
+  async listAllByBusiness(businessId: number, token: string, limit: string): Promise<ManagedProduct[]> {
+    const products = await this.httpClient.request<ProductResponse[] | { data?: ProductResponse[]; Data?: ProductResponse[]; Products?: ProductResponse[] }>({
+      method: "POST",
+      path: POS_ENDPOINTS.productsStockAvailableGtZeroAll(businessId),
+      token,
+      body: { Limit: limit },
+    });
+
+    const rows = Array.isArray(products)
+      ? products
+      : products?.data ?? products?.Data ?? products?.Products ?? [];
+
+    return rows.map((product) => this.toDomain(product));
+  }
+
+  private async listProductsFromPath(path: string, token: string): Promise<ManagedProduct[]> {
     const products = await this.httpClient.request<ProductResponse[] | { data?: ProductResponse[]; Data?: ProductResponse[]; Products?: ProductResponse[] }>({
       method: "GET",
-      path: POS_ENDPOINTS.productsByBusiness(businessId),
+      path,
       token,
     });
 
@@ -133,14 +155,16 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   async listByBusinessPaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult> {
+    const resolvedLimit = Math.max(1, Number(limit) || 20);
     const payload = await this.httpClient.request<
       ProductResponse[] |
       { products?: ProductResponse[]; data?: ProductResponse[]; pagination?: Record<string, unknown> }
     >({
-      method: "GET",
-      path: POS_ENDPOINTS.productsByBusiness(businessId),
+      method: "POST",
+      path: POS_ENDPOINTS.productsStockAvailableGtZero(businessId),
       token,
-      query: { page, limit },
+      query: { page },
+      body: { Limit: String(limit) },
     });
 
     const rows = Array.isArray(payload)
@@ -151,14 +175,34 @@ export class PosProductsApi implements IProductsRepository {
     const categoryIds = Array.isArray(paginationPayload?.categoryIds)
       ? paginationPayload.categoryIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
       : [];
+    const pagedRows = rows;
 
     return {
-      products: rows.map((product) => this.toDomain(product)),
+      products: pagedRows.map((product) => this.toDomain(product)),
       pagination: {
-        ...toPaginationMeta(paginationPayload, page, Number(limit) || 20, rows.length),
+        ...toPaginationMeta(paginationPayload, page, resolvedLimit, pagedRows.length),
         categoryIds,
       },
     };
+  }
+
+
+  async listByBusinessAllForSearch(businessId: number, token: string, limit: string | number): Promise<ManagedProduct[]> {
+    const payload = await this.httpClient.request<
+      ProductResponse[] |
+      { products?: ProductResponse[]; data?: ProductResponse[]; Data?: ProductResponse[]; Products?: ProductResponse[] }
+    >({
+      method: "POST",
+      path: POS_ENDPOINTS.productsStockAvailableGtZeroAll(businessId),
+      token,
+      body: { Limit: String(limit) },
+    });
+
+    const rows = Array.isArray(payload)
+      ? payload
+      : payload?.products ?? payload?.data ?? payload?.Data ?? payload?.Products ?? [];
+
+    return rows.map((product) => this.toDomain(product));
   }
 
   async getById(productId: number, token: string): Promise<ManagedProduct | null> {
@@ -241,6 +285,7 @@ export class PosProductsApi implements IProductsRepository {
       payload.color ?? null,
       payload.forSale,
       payload.showInStore,
+      payload.showPrice,
       payload.available,
       payload.volume ?? false,
       payload.categoryId ?? null,
@@ -529,6 +574,7 @@ export class PosProductsApi implements IProductsRepository {
       product.Color ?? product.color ?? null,
       product.ForSale ?? product.forSale ?? true,
       product.ShowInStore ?? product.showInStore ?? true,
+      this.toAvailabilityFlag(product.ShowPrice ?? product.showPrice ?? product.Showprice),
       this.toAvailabilityFlag(product.Available ?? product.available),
       product.Volume ?? product.volume ?? false,
       product.Category_Id ?? product.category_Id ?? product.categoryId ?? null,
@@ -573,6 +619,7 @@ export class PosProductsApi implements IProductsRepository {
       Color: payload.color?.trim() || "#000000",
       ForSale: payload.forSale,
       ShowInStore: payload.showInStore,
+      Showprice: payload.showPrice,
       Available: payload.available,
       Images: payload.images,
       Barcode: payload.barcode,

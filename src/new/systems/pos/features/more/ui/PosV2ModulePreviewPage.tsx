@@ -10,6 +10,7 @@ import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
 import { emitPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
+import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import "./PosV2ModulePreviewPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -51,6 +52,11 @@ const PREVIEW_MODULES: Record<string, PreviewData> = {
     eta: "Sprint configuración v2",
     warning: "Los cambios impactan facturación y catálogos públicos; valida antes de guardar.",
   },
+  "social-networks": {
+    title: "Redes sociales",
+    description: "Configura los perfiles públicos del negocio para catálogo y comunicación con clientes.",
+    eta: "Disponible en POS moderno",
+  },
   "payment-methods": {
     title: "Métodos de pago",
     description: "Configura qué métodos estarán disponibles para cobrar en POS v2.",
@@ -73,6 +79,15 @@ export const PosV2ModulePreviewPage = () => {
   const [taxSaving, setTaxSaving] = useState(false);
   const [taxError, setTaxError] = useState("");
   const [taxSuccess, setTaxSuccess] = useState("");
+  const [socialNetworksLoading, setSocialNetworksLoading] = useState(false);
+  const [socialNetworksSaving, setSocialNetworksSaving] = useState(false);
+  const [socialNetworksError, setSocialNetworksError] = useState("");
+  const [socialNetworksSuccess, setSocialNetworksSuccess] = useState("");
+  const [socialNetworksForm, setSocialNetworksForm] = useState({
+    facebook: "",
+    instagram: "",
+    tikTok: "",
+  });
   const [exportLoading, setExportLoading] = useState(false);
   const [exportError, setExportError] = useState("");
   const [exportRows, setExportRows] = useState<Array<{
@@ -121,6 +136,7 @@ export const PosV2ModulePreviewPage = () => {
   const [stripeAccountId, setStripeAccountId] = useState<string>("");
   const [brandingLoading, setBrandingLoading] = useState(false);
   const [brandingSaving, setBrandingSaving] = useState(false);
+  const [brandingImageUploading, setBrandingImageUploading] = useState(false);
   const [brandingSuccess, setBrandingSuccess] = useState("");
   const [brandingError, setBrandingError] = useState("");
   const [brandingForm, setBrandingForm] = useState({
@@ -197,6 +213,25 @@ export const PosV2ModulePreviewPage = () => {
         setTaxError(cause instanceof Error ? cause.message : "No fue posible cargar impuestos.");
       } finally {
         setTaxLoading(false);
+      }
+    };
+
+    const loadSocialNetworks = async () => {
+      if (moduleId !== "social-networks") return;
+      setSocialNetworksLoading(true);
+      setSocialNetworksError("");
+      setSocialNetworksSuccess("");
+      try {
+        const settings = await factory.createPosSocialNetworksPage().getSocialNetworksSettings(businessId, token);
+        setSocialNetworksForm({
+          facebook: settings.facebook,
+          instagram: settings.instagram,
+          tikTok: settings.tikTok,
+        });
+      } catch (cause) {
+        setSocialNetworksError(cause instanceof Error ? cause.message : "No fue posible cargar redes sociales.");
+      } finally {
+        setSocialNetworksLoading(false);
       }
     };
 
@@ -299,6 +334,7 @@ export const PosV2ModulePreviewPage = () => {
     };
 
     loadTax();
+    loadSocialNetworks();
     loadExportPreview();
     loadCashClosing();
     loadBranding();
@@ -471,6 +507,34 @@ export const PosV2ModulePreviewPage = () => {
     }
   };
 
+  const saveSocialNetworks = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const businessId = Number(businessIdInput);
+    setSocialNetworksSaving(true);
+    setSocialNetworksError("");
+    setSocialNetworksSuccess("");
+
+    try {
+      const saved = await factory.createPosSocialNetworksPage().saveSocialNetworksSettings({
+        businessId,
+        facebook: socialNetworksForm.facebook,
+        instagram: socialNetworksForm.instagram,
+        tikTok: socialNetworksForm.tikTok,
+      }, token);
+      setSocialNetworksForm({
+        facebook: saved.facebook,
+        instagram: saved.instagram,
+        tikTok: saved.tikTok,
+      });
+      setSocialNetworksSuccess("Redes sociales guardadas correctamente.");
+      emitPosBusinessUpdated({ businessId, source: "social-networks" });
+    } catch (cause) {
+      setSocialNetworksError(cause instanceof Error ? cause.message : "No se pudo guardar la configuración de redes sociales.");
+    } finally {
+      setSocialNetworksSaving(false);
+    }
+  };
+
   const toggleCardChargesEnabled = async (enabled: boolean) => {
     const businessId = Number(businessIdInput);
     try {
@@ -513,6 +577,13 @@ export const PosV2ModulePreviewPage = () => {
     setBrandingSaving(true);
     setBrandingSuccess("");
     setBrandingError("");
+
+    if (brandingImageUploading) {
+      setBrandingSaving(false);
+      setBrandingError("Espera a que termine de subir el logo antes de guardar.");
+      return;
+    }
+
     try {
       const saved = await factory.createPosBrandingPage().saveProfile(businessId, brandingForm, token);
       setBrandingForm({
@@ -544,23 +615,24 @@ export const PosV2ModulePreviewPage = () => {
     if (!file) return;
     if (!file.type.startsWith("image/")) {
       setBrandingError("Selecciona un archivo de imagen válido.");
+      event.target.value = "";
       return;
     }
 
-    const encoded = await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
-      reader.onerror = () => reject(new Error("No fue posible procesar la imagen."));
-      reader.readAsDataURL(file);
-    }).catch(() => "");
-
-    if (!encoded) {
-      setBrandingError("No fue posible cargar la imagen.");
-      return;
-    }
-
+    setBrandingImageUploading(true);
+    setBrandingSuccess("");
     setBrandingError("");
-    setBrandingForm((current) => ({ ...current, logo: encoded }));
+
+    try {
+      const logoUrl = await uploadImageToCloudinary(file);
+      setBrandingForm((current) => ({ ...current, logo: logoUrl }));
+      setBrandingSuccess("Logo subido a Cloudinary. Guarda la información del negocio para aplicar el cambio.");
+    } catch (cause) {
+      setBrandingError(cause instanceof Error ? cause.message : "No fue posible subir la imagen a Cloudinary.");
+      event.target.value = "";
+    } finally {
+      setBrandingImageUploading(false);
+    }
   };
 
   const createStripeAccount = async () => {
@@ -665,9 +737,9 @@ export const PosV2ModulePreviewPage = () => {
                   <span>Dirección</span>
                 </label>
                 <label className="pos-v2-module-preview__color-field">
-                  <span>Logo del negocio</span>
+                  <span>{brandingImageUploading ? "Subiendo logo..." : "Logo del negocio"}</span>
                   <div className="pos-v2-module-preview__logo-upload">
-                    <input type="file" accept="image/*" onChange={onBrandingImageSelected} />
+                    <input type="file" accept="image/*" onChange={onBrandingImageSelected} disabled={brandingImageUploading || brandingSaving} />
                   </div>
                 </label>
               </div>
@@ -676,8 +748,54 @@ export const PosV2ModulePreviewPage = () => {
               </div>
               {brandingSuccess ? <p className="pos-v2-module-preview__ok">{brandingSuccess}</p> : null}
               {brandingError ? <p className="pos-v2-module-preview__error">{brandingError}</p> : null}
-              <button type="submit" disabled={brandingSaving}>{brandingSaving ? "Guardando..." : "Guardar información del negocio"}</button>
+              <button type="submit" disabled={brandingSaving || brandingImageUploading}>{brandingSaving ? "Guardando..." : brandingImageUploading ? "Subiendo logo..." : "Guardar información del negocio"}</button>
             </form>
+          </section>
+        ) : null}
+
+        {moduleId === "social-networks" ? (
+          <section className="pos-v2-module-preview__beta">
+            <h3>Redes sociales</h3>
+            <p className="pos-v2-module-preview__subtitle">
+              Captura los usuarios, correos o enlaces que quieras mostrar como canales sociales del negocio.
+            </p>
+            {socialNetworksLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /><span /></div> : null}
+            {!socialNetworksLoading ? (
+              <form className="pos-v2-module-preview__form" onSubmit={saveSocialNetworks}>
+                <div className="pos-v2-module-preview__inputs pos-v2-module-preview__inputs--full-row">
+                  <label className="pos-v2-module-preview__floating-field">
+                    <input
+                      value={socialNetworksForm.facebook}
+                      onChange={(event) => setSocialNetworksForm((current) => ({ ...current, facebook: event.target.value }))}
+                      placeholder=" "
+                      autoComplete="url"
+                    />
+                    <span>Facebook</span>
+                  </label>
+                  <label className="pos-v2-module-preview__floating-field">
+                    <input
+                      value={socialNetworksForm.instagram}
+                      onChange={(event) => setSocialNetworksForm((current) => ({ ...current, instagram: event.target.value }))}
+                      placeholder=" "
+                      autoComplete="url"
+                    />
+                    <span>Instagram</span>
+                  </label>
+                  <label className="pos-v2-module-preview__floating-field">
+                    <input
+                      value={socialNetworksForm.tikTok}
+                      onChange={(event) => setSocialNetworksForm((current) => ({ ...current, tikTok: event.target.value }))}
+                      placeholder=" "
+                      autoComplete="url"
+                    />
+                    <span>TikTok</span>
+                  </label>
+                </div>
+                {socialNetworksError ? <p className="pos-v2-module-preview__error">{socialNetworksError}</p> : null}
+                {socialNetworksSuccess ? <p className="pos-v2-module-preview__ok">{socialNetworksSuccess}</p> : null}
+                <button type="submit" disabled={socialNetworksSaving}>{socialNetworksSaving ? "Guardando..." : "Guardar redes sociales"}</button>
+              </form>
+            ) : null}
           </section>
         ) : null}
 

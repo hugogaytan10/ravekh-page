@@ -1,6 +1,7 @@
 export type StorefrontProduct = {
   id: number;
   businessId: number;
+  categoryId?: number | null;
   name: string;
   description: string;
   image: string;
@@ -11,6 +12,7 @@ export type StorefrontProduct = {
   forSale?: boolean;
   available?: boolean;
   showInStore?: boolean;
+  showPrice?: boolean;
 };
 
 export type StorefrontBusiness = {
@@ -18,6 +20,8 @@ export type StorefrontBusiness = {
   name: string;
   phone: string | null;
   plan: string | null;
+  logo: string | null;
+  catalogFeature: number | null;
 };
 
 export type StorefrontCartItem = {
@@ -29,7 +33,7 @@ export type StorefrontCartItem = {
   colorName?: string;
   sizeName?: string;
   name: string;
-  price: number;
+  price?: number | null;
   cost?: number;
   quantity: number;
   image: string;

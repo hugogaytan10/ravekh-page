@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
 import { CatalogStorefrontApi } from "../api/CatalogStorefrontApi";
 import { getStripe } from "./stripeClient";
+import { CatalogSocialFooter } from "./CatalogSocialFooter";
+import { formatCatalogPrice, getCatalogPriceValue } from "./catalogPrice";
 import "./CatalogOrderInfoPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
@@ -29,7 +31,7 @@ type CartItem = {
   colorName?: string;
   sizeName?: string;
   name: string;
-  price: number;
+  price?: number | null;
   cost?: number;
   quantity: number;
 };
@@ -47,6 +49,12 @@ const defaultShippingOptions: ShippingOptions = {
 
 const hasAnyAddressFieldEnabled = (options: ShippingOptions) =>
   options.Street || options.ZipCode || options.City || options.State || options.References;
+
+const money = (value: number) =>
+  new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
+
+const buildWhatsAppProductLine = (item: CartItem) =>
+  `• ${item.name} x${item.quantity} - ${formatCatalogPrice(item.price, money)}`;
 
 export const CatalogOrderInfoPage = () => {
   useCatalogThemeSync();
@@ -234,15 +242,10 @@ export const CatalogOrderInfoPage = () => {
             : { Product_Id: Number(item.productId) || 0 }),
           ...(item.colorId ? { Color_Id: Number(item.colorId) || 0 } : {}),
           ...(item.sizeId ? { Size_Id: Number(item.sizeId) || 0 } : {}),
-          ...(item.price ? { Price: Number(item.price) || 0 } : {}),
+          ...(getCatalogPriceValue(item.price) ? { Price: getCatalogPriceValue(item.price) ?? 0 } : {}),
           ...(item.cost ? { Cost: Number(item.cost) || 0 } : {}),
         })),
       };
-
-      const orderResult = await api.createCatalogOrder(orderPayload);
-      if (!orderResult) {
-        throw new Error("No se pudo registrar el pedido en el servidor.");
-      }
 
       if (paymentMethod === "tarjeta") {
         const [stripeConfig, businessConfig] = await Promise.all([
@@ -259,7 +262,7 @@ export const CatalogOrderInfoPage = () => {
             price_data: {
               currency: businessConfig.currency.toLowerCase(),
               product_data: { name: item.name },
-              unit_amount: Math.round(item.price * 100),
+              unit_amount: Math.round((getCatalogPriceValue(item.price) ?? 0) * 100),
             },
             quantity: item.quantity,
           })),
@@ -288,8 +291,13 @@ export const CatalogOrderInfoPage = () => {
         return;
       }
 
+      const orderResult = await api.createCatalogOrder(orderPayload);
+      if (!orderResult) {
+        throw new Error("No se pudo registrar el pedido en el servidor.");
+      }
+
       const storePhone = (window.localStorage.getItem("telefono") || "").replace(/\D/g, "");
-      const lines = cart.map((item) => `• ${item.name} x${item.quantity}`);
+      const lines = cart.map(buildWhatsAppProductLine);
       const message = [
         `Hola ${storeName}, quiero hacer mi pedido:`,
         ...lines,
@@ -445,6 +453,7 @@ export const CatalogOrderInfoPage = () => {
           {submitting ? "Procesando..." : "Preparar pedido"}
         </button>
       </section>
+      <CatalogSocialFooter businessId={businessId} />
     </main>
   );
 };

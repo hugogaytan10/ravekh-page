@@ -16,9 +16,9 @@ const LegacyCatalogRedirect = () => {
   return <Navigate to={`/v2/catalogo/${idBusiness ?? ""}`} replace />;
 };
 
-const LegacyProductRedirect = () => {
-  const { idProducto, telefono } = useParams<{ idProducto: string; telefono: string }>();
-  return <Navigate to={`/v2/catalogo/producto/${idProducto ?? ""}/${telefono ?? ""}`} replace />;
+const V2ProductRedirect = () => {
+  const { productId, phone } = useParams<{ productId: string; phone: string }>();
+  return <Navigate to={`/catalogo/producto/${productId ?? ""}/${phone ?? ""}`} replace />;
 };
 
 const LegacyCategoryRedirect = () => {
@@ -80,7 +80,7 @@ const RouteSeo = () => {
       };
     }
 
-    if (pathname.startsWith("/v2/catalogo")) {
+    if (pathname.startsWith("/v2/catalogo") || pathname.startsWith("/catalogo")) {
       return {
         title: "Catálogo digital | Ravekh",
         description: "Explora productos, revisa detalles y realiza pedidos desde el catálogo digital de Ravekh.",
@@ -137,19 +137,19 @@ export const NewAppRoutes = () => {
         <Route path="/" element={<LandingPageRavekhPage />} />
 
       {/* Catálogo v2 moderno y desacoplado */}
-        <Route path="/v2/catalogo/:businessId" element={<CatalogStorefrontPage />} />
-        <Route path="/v2/catalogo/producto/:productId/:phone" element={<CatalogProductDetailPage />} />
-        <Route path="/v2/catalogo/pedido" element={<CatalogCartPage />} />
-        <Route path="/v2/catalogo/pedido-info" element={<CatalogOrderInfoPage />} />
+        <Route path="/v2/catalogo/:Id" element={<CatalogStorefrontPage />} />
+        <Route path="/catalogo/producto/:productId/:phone" element={<CatalogProductDetailPage />} />
+        <Route path="/catalogo/pedido" element={<CatalogCartPage />} />
+        <Route path="/catalogo/pedido-info" element={<CatalogOrderInfoPage />} />
         <Route path="/coupons/*" element={<LoyaltyCustomerRoutes />} />
         <Route path="/politicas" element={<PrivacyPoliciesIndexPage />} />
         <Route path="/politicas/:policySlug" element={<PrivacyPolicyPage />} />
 
       {/* Compatibilidad de URLs antiguas sin dependencias a módulos legacy */}
         <Route path="/catalogo/:idBusiness" element={<LegacyCatalogRedirect />} />
-        <Route path="/catalogo/producto/:idProducto/:telefono" element={<LegacyProductRedirect />} />
-        <Route path="/catalogo/pedido" element={<Navigate to="/v2/catalogo/pedido" replace />} />
-        <Route path="/catalogo/pedido-info" element={<Navigate to="/v2/catalogo/pedido-info" replace />} />
+        <Route path="/v2/catalogo/producto/:productId/:phone" element={<V2ProductRedirect />} />
+        <Route path="/v2/catalogo/pedido" element={<Navigate to="/catalogo/pedido" replace />} />
+        <Route path="/v2/catalogo/pedido-info" element={<Navigate to="/catalogo/pedido-info" replace />} />
         <Route path="/categoria/:idCategoria" element={<LegacyCategoryRedirect />} />
         <Route path="/v2/loyalty/customer/*" element={<LoyaltyLegacyRedirect />} />
         <Route path="/v2/loyalty/clone/*" element={<LoyaltyLegacyRedirect />} />

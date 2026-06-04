@@ -2,6 +2,7 @@ import { memo, useMemo } from "react";
 import { NavLink } from "react-router-dom";
 import { FiEye, FiShoppingCart, FiTrash2 } from "react-icons/fi";
 import { StorefrontProduct } from "../model/CatalogStorefrontModels";
+import { formatCatalogPrice, getCatalogPriceValue } from "./catalogPrice";
 
 type ProductGridProps = {
   products: StorefrontProduct[];
@@ -49,16 +50,18 @@ const ProductCard = memo(({
     onSetQuantity(product, parsed);
   };
 
-  const formattedBase = useMemo(() => formatPrice(product.price), [formatPrice, product.price]);
+  const basePrice = useMemo(() => getCatalogPriceValue(product.price), [product.price]);
+  const formattedBase = useMemo(() => formatCatalogPrice(product.price, formatPrice), [formatPrice, product.price]);
   const formattedPromo = useMemo(
-    () => (product.promotionPrice && product.promotionPrice > 0 ? formatPrice(product.promotionPrice) : null),
+    () => (getCatalogPriceValue(product.promotionPrice) ? formatCatalogPrice(product.promotionPrice, formatPrice) : null),
     [formatPrice, product.promotionPrice],
   );
+  const shouldShowPrice = product.showPrice !== false;
 
   return (
     <article className="catalog-v2-grid__card group">
       <div className="catalog-v2-grid__media">
-        <NavLink to={`/v2/catalogo/producto/${product.id}/${phone ?? ""}`} className="catalog-v2-grid__link" aria-label={`Ver detalle de ${product.name}`}>
+        <NavLink to={`/catalogo/producto/${product.id}/${phone ?? ""}`} className="catalog-v2-grid__link" aria-label={`Ver detalle de ${product.name}`}>
           {product.image ? <img src={product.image} alt={product.name} loading="lazy" decoding="async" /> : <div className="catalog-v2-grid__placeholder">Sin imagen</div>}
         </NavLink>
 
@@ -72,19 +75,23 @@ const ProductCard = memo(({
 
       <div className="catalog-v2-grid__meta">
         <h2>
-          <NavLink to={`/v2/catalogo/producto/${product.id}/${phone ?? ""}`} className="catalog-v2-grid__name-link">
+          <NavLink to={`/catalogo/producto/${product.id}/${phone ?? ""}`} className="catalog-v2-grid__name-link">
             {product.name}
           </NavLink>
         </h2>
         <div className="catalog-v2-grid__bottom">
-          {formattedPromo ? (
-            <div className="catalog-v2-grid__prices">
-              <span>{formattedPromo}</span>
-              <small>{formattedBase}</small>
-            </div>
-          ) : (
-            <p>{formattedBase}</p>
-          )}
+          <div className="catalog-v2-grid__price-slot" aria-hidden={!shouldShowPrice}>
+            {shouldShowPrice ? (
+              formattedPromo ? (
+                <div className="catalog-v2-grid__prices">
+                  <span>{formattedPromo}</span>
+                  {basePrice ? <small>{formattedBase}</small> : null}
+                </div>
+              ) : (
+                <p>{formattedBase}</p>
+              )
+            ) : null}
+          </div>
           <button type="button" onClick={handleAdd} aria-label={`Agregar ${product.name}`}><FiShoppingCart /></button>
         </div>
       </div>

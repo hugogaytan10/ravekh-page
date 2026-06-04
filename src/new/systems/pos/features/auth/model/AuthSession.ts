@@ -38,3 +38,26 @@ export interface SignUpPayload {
   deviceToken: string;
   createTables?: boolean;
 }
+
+export class SecurityQuestion {
+  constructor(
+    public readonly id: unknown,
+    public readonly text: string,
+  ) {}
+
+  isUsable(): boolean {
+    return this.id !== undefined && this.id !== null && Boolean(this.text.trim());
+  }
+}
+
+export interface CompareSecurityQuestionPayload {
+  questionId: unknown;
+  answer: string;
+  password: string;
+}
+
+export type CompareSecurityQuestionResult = Record<string, unknown>;
+
+export interface ResetPasswordPayload {
+  password: string;
+}

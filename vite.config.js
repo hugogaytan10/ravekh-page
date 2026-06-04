@@ -4,6 +4,7 @@ import svgr from 'vite-plugin-svgr'
 
 // https://vite.dev/config/
 export default defineConfig({
+  envPrefix: ['VITE_', 'FACTURA_ELECTRONICA_API_URL'],
   resolve: {
     alias: {
       'qrcode.react': '/src/qrcode-react-shim.tsx',

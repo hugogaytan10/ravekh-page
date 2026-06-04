@@ -11,6 +11,7 @@ const suites = [
   { name: "integration-products-api-service-page", entry: "tests/new/pos/products/products.integration.ts" },
   { name: "integration-finance-api", entry: "tests/new/pos/finance/finance.api.integration.ts" },
   { name: "unit-more-module-page", entry: "tests/new/pos/more/more.module.page.unit.ts" },
+  { name: "integration-branding-api", entry: "tests/new/pos/branding/branding.api.integration.ts" },
   { name: "integration-reporting-api", entry: "tests/new/pos/reporting/reporting.api.integration.ts" },
   { name: "integration-dashboard-api", entry: "tests/new/pos/reporting/dashboard.api.integration.ts" },
   { name: "unit-online-orders-page", entry: "tests/new/pos/online-orders/online-orders.page.unit.ts" },

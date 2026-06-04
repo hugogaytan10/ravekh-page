@@ -23,6 +23,7 @@ export async function run(): Promise<void> {
   const cashClosing = findModule("cash-closing");
   const inventory = findModule("inventory");
   const loyalty = findModule("loyalty");
+  const securityQuestions = findModule("security-questions");
   assert.equal(printers.actionType, "route");
   assert.equal(printers.status, "available");
   assert.equal(printers.description.includes("Wi"), true);
@@ -35,6 +36,8 @@ export async function run(): Promise<void> {
   assert.equal(inventory.actionType, "route");
   assert.equal(loyalty.path, POS_V2_PATHS.loyalty);
   assert.equal(loyalty.actionType, "route");
+  assert.equal(securityQuestions.path, POS_V2_PATHS.securityQuestions);
+  assert.equal(securityQuestions.actionType, "route");
   const roles = MORE_MODULE_SECTIONS.flatMap((section) => section.items).find((item) => item.id === "roles");
   const branches = MORE_MODULE_SECTIONS.flatMap((section) => section.items).find((item) => item.id === "branches");
   assert.equal(roles, undefined);

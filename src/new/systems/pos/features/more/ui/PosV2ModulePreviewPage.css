@@ -62,6 +62,10 @@
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
 }
 
+.pos-v2-module-preview__inputs--full-row {
+  grid-template-columns: 1fr;
+}
+
 .pos-v2-module-preview__inputs input {
   min-height: 38px;
   border: 1px solid #cbd5e1;

@@ -5,6 +5,7 @@ import { PosModeEntryPage } from "./PosModeEntryPage";
 import { ProductsV2PosPage } from "../features/products/ui/ProductsV2PosPage";
 import { PosHealthV2Screen } from "../features/health/ui/PosHealthV2Screen";
 import { PosV2LoginPage } from "../features/auth/ui/PosV2LoginPage";
+import { PosV2PasswordRecoveryPage } from "../features/auth/ui/PosV2PasswordRecoveryPage";
 import { PosV2SalesHomePage } from "../features/sales/ui/PosV2SalesHomePage";
 import { PosV2FinancePage } from "../features/finance/ui/PosV2FinancePage";
 import { PosV2ReportingPage } from "../features/reporting/ui/PosV2ReportingPage";
@@ -19,20 +20,24 @@ import { PosV2CashClosingPage } from "../features/cash-closing/ui/PosV2CashClosi
 import { PosV2InventoryPage } from "../features/inventory/ui/PosV2InventoryPage";
 import { PosV2LoyaltyPage } from "../features/loyalty/ui/PosV2LoyaltyPage";
 import { PosV2CatalogPage } from "../features/catalog/ui/PosV2CatalogPage";
+import { FacturaElectronicaPage } from "../features/factura-electronica/ui/FacturaElectronicaPage";
 import { PosV2RequireAuth } from "./PosV2RequireAuth";
 import { POS_V2_LEGACY_PATHS, POS_V2_PATHS } from "./PosV2Paths";
+import { PosV2FeatureRouteGuard } from "./PosV2FeatureRouteGuard";
 
 const withAuth = (element: JSX.Element) => <PosV2RequireAuth>{element}</PosV2RequireAuth>;
 
 export const POS_V2_PRIMARY_ROUTES = [
   { path: "/pos", element: <PosModeEntryPage /> },
   { path: POS_V2_PATHS.login, element: <PosV2LoginPage /> },
-  { path: POS_V2_PATHS.sales, element: withAuth(<PosV2SalesHomePage />) },
+  { path: POS_V2_PATHS.passwordRecovery, element: <PosV2PasswordRecoveryPage /> },
+  { path: POS_V2_PATHS.sales, element: withAuth(<PosV2FeatureRouteGuard feature="pos"><PosV2SalesHomePage /></PosV2FeatureRouteGuard>) },
   { path: POS_V2_PATHS.products, element: withAuth(<ProductsV2PosPage />) },
   { path: POS_V2_PATHS.finances, element: withAuth(<PosV2FinancePage />) },
   { path: POS_V2_PATHS.reports, element: withAuth(<PosV2ReportingPage />) },
   { path: POS_V2_PATHS.more, element: withAuth(<PosV2MorePage />) },
   { path: POS_V2_PATHS.morePreview(), element: withAuth(<PosV2ModulePreviewPage />) },
+  { path: POS_V2_PATHS.facturaElectronica, element: withAuth(<FacturaElectronicaPage />) },
   { path: POS_V2_PATHS.customers, element: withAuth(<PosV2CustomersPage />) },
   { path: POS_V2_PATHS.employees, element: withAuth(<PosV2EmployeesPage />) },
   { path: POS_V2_PATHS.tableZones, element: withAuth(<PosV2TableZonesPage />) },
@@ -42,10 +47,11 @@ export const POS_V2_PRIMARY_ROUTES = [
   { path: POS_V2_PATHS.loyalty, element: withAuth(<PosV2LoyaltyPage />) },
   { path: POS_V2_PATHS.coupons, element: withAuth(<PosV2LoyaltyPage />) },
   { path: POS_V2_PATHS.visits, element: withAuth(<PosV2LoyaltyPage />) },
-  { path: POS_V2_PATHS.catalog, element: withAuth(<PosV2CatalogPage />) },
-  { path: POS_V2_PATHS.onlineStore, element: withAuth(<PosV2OnlineOrdersPage />) },
+  { path: POS_V2_PATHS.catalog, element: withAuth(<PosV2FeatureRouteGuard feature="catalog"><PosV2CatalogPage /></PosV2FeatureRouteGuard>) },
+  { path: POS_V2_PATHS.onlineStore, element: withAuth(<PosV2FeatureRouteGuard feature="catalog"><PosV2OnlineOrdersPage /></PosV2FeatureRouteGuard>) },
   { path: POS_V2_PATHS.health, element: withAuth(<PosHealthV2Screen />) },
   { path: POS_V2_LEGACY_PATHS.login, element: <Navigate to={POS_V2_PATHS.login} replace /> },
+  { path: POS_V2_LEGACY_PATHS.passwordRecovery, element: <Navigate to={POS_V2_PATHS.passwordRecovery} replace /> },
   { path: POS_V2_LEGACY_PATHS.sales, element: <Navigate to={POS_V2_PATHS.sales} replace /> },
   { path: POS_V2_LEGACY_PATHS.products, element: <Navigate to={POS_V2_PATHS.products} replace /> },
   { path: POS_V2_LEGACY_PATHS.finances, element: <Navigate to={POS_V2_PATHS.finances} replace /> },

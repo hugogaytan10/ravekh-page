@@ -6,6 +6,9 @@ import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
+import { fetchPosBusinessFeatures, isOfflinePosPlan, isPosFeatureBlocked, isPosModuleBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../../../shared/config/posFeatureFlags";
+import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
+import { FeatureUnlockModal } from "../../../shared/ui/FeatureUnlockModal";
 import "./ProductsV2PosPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -24,6 +27,7 @@ type ProductItemVm = {
   available: boolean;
   forSale: boolean;
   showInStore: boolean;
+  showPrice: boolean;
   volume: boolean;
   price: number | null;
   costPerItem: number | null;
@@ -145,6 +149,8 @@ export const ProductsV2PosPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [productsLimit, setProductsLimit] = useState(() => (window.localStorage.getItem("plan") ?? "").trim() || DEFAULT_PRODUCTS_LIMIT);
+  const [features, setFeatures] = useState<PosBusinessFeatures>(POS_FEATURES_UNKNOWN);
+  const [showPosFeatureUnlock, setShowPosFeatureUnlock] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -153,6 +159,7 @@ export const ProductsV2PosPage = () => {
   const [stock, setStock] = useState("");
   const [forSale, setForSale] = useState(true);
   const [showInStore, setShowInStore] = useState(true);
+  const [showPrice, setShowPrice] = useState(true);
   const [available, setAvailable] = useState(true);
   const [productColor, setProductColor] = useState("");
   const [variants, setVariants] = useState<VariantFormVm[]>([]);
@@ -181,6 +188,7 @@ export const ProductsV2PosPage = () => {
     setStock("");
     setForSale(true);
     setShowInStore(true);
+    setShowPrice(true);
     setAvailable(true);
     setProductColor("");
     setVariants([]);
@@ -200,11 +208,29 @@ export const ProductsV2PosPage = () => {
     resetForm();
   };
 
+  const openPosFeatureUnlock = () => setShowPosFeatureUnlock(true);
+
+  const blockOfflineProductMutation = (): boolean => {
+    if (!isOfflinePosPlan(features.plan)) return false;
+    openPosFeatureUnlock();
+    return true;
+  };
+
   const openCreateModal = () => {
+    if (blockOfflineProductMutation()) return;
     resetForm();
     setSaveResult(null);
     setError(null);
     setIsFormOpen(true);
+  };
+
+  const openCategoryManager = () => {
+    if (isPosModuleBlocked(features)) {
+      openPosFeatureUnlock();
+      return;
+    }
+
+    setShowCategoryManager(true);
   };
 
   const resetCategoryForm = () => {
@@ -213,6 +239,23 @@ export const ProductsV2PosPage = () => {
     setCategoryColorInput("#4F46E5");
     setCategoryFormErrors({});
   };
+
+  useEffect(() => {
+    if (!businessId || !token) return;
+
+    const loadFeatures = () => {
+      fetchPosBusinessFeatures(businessId, token, API_BASE_URL)
+        .then(setFeatures)
+        .catch(() => setFeatures(POS_FEATURES_UNKNOWN));
+    };
+
+    loadFeatures();
+
+    return onPosBusinessUpdated((detail) => {
+      if (detail.businessId !== businessId) return;
+      loadFeatures();
+    });
+  }, [businessId, token]);
 
   useEffect(() => {
     if (!businessId || !token) return;
@@ -254,6 +297,7 @@ export const ProductsV2PosPage = () => {
           available: product.available,
           forSale: product.forSale,
           showInStore: product.showInStore,
+          showPrice: product.showPrice,
           volume: product.volume,
           price: product.price,
           costPerItem: product.costPerItem,
@@ -353,17 +397,7 @@ export const ProductsV2PosPage = () => {
       setSearchingCatalog(true);
       (async () => {
         try {
-          const allRows = [];
-          let currentPage = 1;
-          let totalPagesForSearch = 1;
-
-          do {
-            const response = await service.listProductsPaginated(businessId, token, currentPage, productsLimit);
-            allRows.push(...response.products);
-            totalPagesForSearch = Math.max(response.pagination.totalPages ?? 1, 1);
-            currentPage += 1;
-          } while (currentPage <= totalPagesForSearch);
-
+          const allRows = await service.listProductsAllForSearch(businessId, token, productsLimit);
           const mapped = allRows.map((product) => ({
             id: product.id,
             name: product.name,
@@ -374,6 +408,7 @@ export const ProductsV2PosPage = () => {
             available: product.available,
             forSale: product.forSale,
             showInStore: product.showInStore,
+            showPrice: product.showPrice,
             volume: product.volume,
             price: product.price,
             costPerItem: product.costPerItem,
@@ -388,7 +423,6 @@ export const ProductsV2PosPage = () => {
             variants: product.variants,
             extras: product.extras,
           }));
-
           setSearchCatalogProducts(mapped);
         } catch {
           setSearchCatalogProducts([]);
@@ -477,6 +511,11 @@ export const ProductsV2PosPage = () => {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
+    if (blockOfflineProductMutation()) {
+      closeFormModal();
+      return;
+    }
+
     if (!businessId) {
       setError("Business ID es obligatorio.");
       return;
@@ -526,6 +565,7 @@ export const ProductsV2PosPage = () => {
         description: description.trim(),
         forSale,
         showInStore,
+        showPrice,
         available,
         color: productColor.trim() || null,
         volume: false,
@@ -567,6 +607,7 @@ export const ProductsV2PosPage = () => {
     description: detail?.description ?? "",
     forSale: detail?.forSale ?? true,
     showInStore: detail?.showInStore ?? true,
+    showPrice: detail?.showPrice ?? true,
     available: detail?.available ?? true,
     color: detail?.color ?? null,
     volume: detail?.volume ?? false,
@@ -587,6 +628,7 @@ export const ProductsV2PosPage = () => {
   });
 
   const handleRestore = async (productId: number) => {
+    if (blockOfflineProductMutation()) return;
     if (!token) {
       setToast({ type: "error", message: "Token es obligatorio para restaurar." });
       return;
@@ -607,6 +649,7 @@ export const ProductsV2PosPage = () => {
   };
 
   const handleEdit = async (productId: number) => {
+    if (blockOfflineProductMutation()) return;
     if (!token) {
       setError("Token es obligatorio para editar.");
       return;
@@ -626,6 +669,7 @@ export const ProductsV2PosPage = () => {
       setStock(detail.stock == null ? "" : String(detail.stock));
       setForSale(detail.forSale);
       setShowInStore(detail.showInStore);
+      setShowPrice(detail.showPrice);
       setAvailable(detail.available);
       setProductColor(detail.color ?? "");
       setSelectedCategoryId(detail.categoryId ?? null);
@@ -663,11 +707,16 @@ export const ProductsV2PosPage = () => {
   };
 
   const requestArchive = (productId: number, productName: string) => {
+    if (blockOfflineProductMutation()) return;
     setArchiveDialog({ id: productId, name: productName });
   };
 
   const handleArchive = async () => {
     if (!archiveDialog) return;
+    if (blockOfflineProductMutation()) {
+      setArchiveDialog(null);
+      return;
+    }
 
     if (!token) {
       setError("Token es obligatorio para eliminar/archivar.");
@@ -731,6 +780,11 @@ export const ProductsV2PosPage = () => {
   };
 
   const saveCategory = async () => {
+    if (isPosModuleBlocked(features)) {
+      setShowCategoryManager(false);
+      openPosFeatureUnlock();
+      return;
+    }
     if (!token || !businessId) return;
     if (!validateCategoryForm()) {
       setToast({ type: "error", message: "Revisa los campos de categoría para continuar." });
@@ -753,6 +807,11 @@ export const ProductsV2PosPage = () => {
   };
 
   const editCategory = (category: ProductCategoryVm) => {
+    if (isPosModuleBlocked(features)) {
+      setShowCategoryManager(false);
+      openPosFeatureUnlock();
+      return;
+    }
     setEditingCategoryId(category.id);
     setCategoryNameInput(category.name);
     setCategoryColorInput(category.color || "#4F46E5");
@@ -761,6 +820,11 @@ export const ProductsV2PosPage = () => {
   };
 
   const deleteCategory = async (categoryId: number) => {
+    if (isPosModuleBlocked(features)) {
+      setShowCategoryManager(false);
+      openPosFeatureUnlock();
+      return;
+    }
     if (!token) return;
     try {
       await service.deleteCategory(categoryId, token);
@@ -801,11 +865,17 @@ export const ProductsV2PosPage = () => {
     categoryCarouselRef.current.scrollBy({ left: offset, behavior: "smooth" });
   };
 
+  const openImportProducts = () => {
+    if (blockOfflineProductMutation()) return;
+    excelInputRef.current?.click();
+  };
+
   const handleImportProducts = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     event.target.value = "";
 
     if (!file) return;
+    if (blockOfflineProductMutation()) return;
     if (!token || !businessId) {
       setToast({ type: "error", message: "Conecta tu sesión para importar productos." });
       return;
@@ -907,6 +977,7 @@ export const ProductsV2PosPage = () => {
             available: product.available,
             forSale: product.forSale,
             showInStore: product.showInStore,
+            showPrice: product.showPrice,
             volume: product.volume,
             price: product.price,
             costPerItem: product.costPerItem,
@@ -983,8 +1054,8 @@ export const ProductsV2PosPage = () => {
           <div className="pos-v2-products__header-actions">
             <button type="button" className="pos-v2-products__secondary pos-v2-products__back-main" onClick={() => navigate(-1)}>← Regresar</button>
             <button type="button" className="pos-v2-products__secondary" onClick={openCreateModal}>+ Nuevo</button>
-            <button type="button" className="pos-v2-products__secondary" onClick={() => setShowCategoryManager(true)}>Categorías</button>
-            <button type="button" className="pos-v2-products__secondary" onClick={() => excelInputRef.current?.click()} disabled={importing || !token || !businessId}>
+            <button type="button" className="pos-v2-products__secondary" onClick={openCategoryManager}>Categorías</button>
+            <button type="button" className="pos-v2-products__secondary" onClick={openImportProducts} disabled={importing || !token || !businessId}>
               {importing ? "Importando..." : "Importar CSV"}
             </button>
             <button type="button" className="pos-v2-products__secondary" onClick={handleExportProducts} disabled={!isVipPlan || !token || !businessId}>
@@ -1248,6 +1319,11 @@ export const ProductsV2PosPage = () => {
                     <span>Mostrar en tienda</span>
                   </label>
                   <label className="pos-v2-products__toggle-card">
+                    <input type="checkbox" checked={showPrice} onChange={(event) => setShowPrice(event.target.checked)} />
+                    <span className="pos-v2-products__switch-ui" aria-hidden="true" />
+                    <span>Mostrar precio</span>
+                  </label>
+                  <label className="pos-v2-products__toggle-card">
                     <input type="checkbox" checked={available} onChange={(event) => setAvailable(event.target.checked)} />
                     <span className="pos-v2-products__switch-ui" aria-hidden="true" />
                     <span>Disponible</span>
@@ -1392,6 +1468,15 @@ export const ProductsV2PosPage = () => {
             </section>
           </div>
         ) : null}
+
+        <FeatureUnlockModal
+          open={showPosFeatureUnlock}
+          onClose={() => setShowPosFeatureUnlock(false)}
+          title="Desbloquea esta función"
+          message="Esta función está bloqueada en tu plan actual. Desbloquéala contratando un plan para usarla sin límites."
+          buttonText="Desbloquear ahora"
+          unlockFeature="Pos"
+        />
 
         {showCategoryManager ? (
           <div className="pos-v2-products__modal-backdrop" role="presentation" onClick={() => setShowCategoryManager(false)}>

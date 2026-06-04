@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { FiSearch, FiShoppingCart, FiSliders, FiX } from "react-icons/fi";
+import { Helmet } from "react-helmet-async";
+import { FiMessageCircle, FiSearch, FiShoppingCart, FiSliders, FiX } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
 import { CatalogStorefrontApi, StorefrontCategory, StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
 import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExperiencePage";
@@ -8,12 +9,40 @@ import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontBusiness, StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
 import { StorefrontProductGrid } from "./StorefrontProductGrid";
 import { VariantSelectionModalV2 } from "./VariantSelectionModalV2";
+import { formatCatalogTotal, getEffectiveCatalogPrice } from "./catalogPrice";
+import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import "./CatalogStorefrontPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
 const DEFAULT_PRICE_MAX_BOUND = 999;
+const SOCIAL_IMAGE_WIDTH = "1200";
+const SOCIAL_IMAGE_HEIGHT = "630";
+const ALL_PRODUCTS_SEARCH_DEBOUNCE_MS = 450;
+const CLOUDINARY_FACEBOOK_TRANSFORM = "c_pad,b_white,g_center,w_1200,h_630,f_jpg,q_auto";
+
+const addCloudinaryFacebookTransform = (imageUrl: string): string => {
+  const parsedUrl = new URL(imageUrl);
+  if (!parsedUrl.hostname.includes("cloudinary.com") || !parsedUrl.pathname.includes("/upload/")) return imageUrl;
+
+  parsedUrl.pathname = parsedUrl.pathname.replace("/upload/", `/upload/${CLOUDINARY_FACEBOOK_TRANSFORM}/`);
+  return parsedUrl.toString();
+};
+
+const buildAbsoluteCatalogUrl = (value?: string | null): string => {
+  const fallback = typeof window !== "undefined" ? `${window.location.origin}/ravekh.png` : "/ravekh.png";
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return fallback;
+
+  if (typeof window === "undefined") return normalized;
+
+  const absoluteUrl = /^https?:\/\//i.test(normalized)
+    ? normalized
+    : new URL(normalized.startsWith("/") ? normalized : `/${normalized}`, window.location.origin).toString();
+
+  return addCloudinaryFacebookTransform(absoluteUrl);
+};
 
 const SkeletonGrid = () => (
   <div className="catalog-v2-grid" aria-hidden="true">
@@ -33,16 +62,30 @@ const logCatalogDebug = (scope: string, payload: Record<string, unknown>) => {
   console.info(`[catalog-v2][${scope}]`, payload);
 };
 
+const normalizePlan = (plan?: string | null) => String(plan ?? "").trim().toUpperCase();
+
+const isOfflinePlan = (plan?: string | null): boolean => normalizePlan(plan) === "OFFLINE";
+
+const isCatalogFeatureDisabled = (catalogFeature?: number | null): boolean => catalogFeature === 0;
+
 const isPaidPlan = (plan?: string | null): boolean => {
-  const normalized = String(plan ?? "").trim().toUpperCase();
-  if (!normalized) return false;
+  const normalized = normalizePlan(plan);
+  if (!normalized || normalized === "OFFLINE") return false;
   return normalized !== "GRATUITO" && normalized !== "PRUEBA";
+};
+
+const buildWhatsAppUrl = (phone?: string | null) => {
+  const digits = String(phone ?? "").replace(/\D/g, "");
+  if (!digits) return null;
+
+  return `https://wa.me/${digits}`;
 };
 
 export const CatalogStorefrontPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
-  const { businessId = "" } = useParams<{ businessId: string }>();
+  const params = useParams<{ businessId?: string; Id?: string }>();
+  const businessId = params.businessId ?? params.Id ?? "";
   const [store, setStore] = useState<StorefrontBusiness | null>(null);
   const [planLimit, setPlanLimit] = useState<string | undefined>(undefined);
   const [businessContextLoaded, setBusinessContextLoaded] = useState(false);
@@ -72,12 +115,24 @@ export const CatalogStorefrontPage = () => {
   const [sizeOptions, setSizeOptions] = useState<StorefrontProductExtra[]>([]);
   const [cartReady, setCartReady] = useState(false);
   const businessContextRequestRef = useRef(0);
+  const catalogSearchRequestRef = useRef(0);
+  const catalogTitle = store?.name ? `${store.name} | Catálogo digital` : "Catálogo digital | Ravekh";
+  const catalogDescription = store?.name
+    ? `Explora productos y realiza pedidos en el catálogo digital de ${store.name}.`
+    : "Explora productos, revisa detalles y realiza pedidos desde el catálogo digital de Ravekh.";
+  const catalogUrl = typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}` : `/v2/catalogo/${businessId}`;
+  const catalogImage = buildAbsoluteCatalogUrl(store?.logo);
 
   const pageLogic = useMemo(() => {
     const repository = new CatalogStorefrontApi(getPosApiBaseUrl());
     const service = new CatalogStorefrontService(repository);
     return new CatalogStorefrontExperiencePage(service);
   }, []);
+  const catalogUnavailable = useMemo(
+    () => isOfflinePlan(store?.plan) || isCatalogFeatureDisabled(store?.catalogFeature),
+    [store?.catalogFeature, store?.plan],
+  );
+  const whatsappUrl = useMemo(() => buildWhatsAppUrl(store?.phone), [store?.phone]);
 
   useEffect(() => {
     setPage(1);
@@ -90,7 +145,7 @@ export const CatalogStorefrontPage = () => {
 
   useEffect(() => {
     const highestPrice = products.reduce((maxValue, product) => {
-      const productPrice = product.promotionPrice && product.promotionPrice > 0 ? product.promotionPrice : product.price;
+      const productPrice = getEffectiveCatalogPrice(product.price, product.promotionPrice) ?? 0;
       return Math.max(maxValue, productPrice);
     }, 0);
     const nextCeiling = Math.max(DEFAULT_PRICE_MAX_BOUND, Math.ceil(highestPrice));
@@ -148,6 +203,15 @@ export const CatalogStorefrontPage = () => {
   useEffect(() => {
     if (!businessContextLoaded || !businessId) return;
 
+    if (catalogUnavailable) {
+      setProducts([]);
+      setGlobalSearchProducts([]);
+      setTotalPages(1);
+      setError(null);
+      setLoading(false);
+      return;
+    }
+
     let cancelled = false;
 
     const run = async () => {
@@ -182,7 +246,7 @@ export const CatalogStorefrontPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [businessContextLoaded, businessId, page, pageLogic, selectedCategoryId, planLimit]);
+  }, [businessContextLoaded, businessId, page, pageLogic, selectedCategoryId, planLimit, catalogUnavailable]);
 
   useEffect(() => {
     if (!businessId) return;
@@ -267,7 +331,7 @@ export const CatalogStorefrontPage = () => {
   );
 
   const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
-  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalLabel = formatCatalogTotal(cart, money);
   const normalizedSearch = search.trim().toLowerCase();
   const paidPlanEnabled = useMemo(() => isPaidPlan(store?.plan), [store?.plan]);
   const useGlobalSearch = normalizedSearch.length >= 2 && paidPlanEnabled;
@@ -281,23 +345,26 @@ export const CatalogStorefrontPage = () => {
     }
 
     let cancelled = false;
+    const requestId = catalogSearchRequestRef.current + 1;
+    catalogSearchRequestRef.current = requestId;
+
     const timeout = window.setTimeout(() => {
       setSearchingGlobalCatalog(true);
       pageLogic
         .loadAllProducts(businessId, selectedCategoryId, planLimit)
         .then((rows) => {
-          if (cancelled) return;
+          if (cancelled || requestId != catalogSearchRequestRef.current) return;
           setGlobalSearchProducts(rows);
         })
         .catch(() => {
-          if (cancelled) return;
+          if (cancelled || requestId != catalogSearchRequestRef.current) return;
           setGlobalSearchProducts([]);
         })
         .finally(() => {
-          if (cancelled) return;
+          if (cancelled || requestId != catalogSearchRequestRef.current) return;
           setSearchingGlobalCatalog(false);
         });
-    }, 320);
+    }, ALL_PRODUCTS_SEARCH_DEBOUNCE_MS);
 
     return () => {
       cancelled = true;
@@ -313,15 +380,15 @@ export const CatalogStorefrontPage = () => {
       : publishable.filter((product) => `${product.name} ${product.description}`.toLowerCase().includes(normalizedSearch));
 
     const inRange = base.filter((product) => {
-      const price = product.promotionPrice && product.promotionPrice > 0 ? product.promotionPrice : product.price;
-      return price >= priceMin && price <= priceMax;
+      const price = getEffectiveCatalogPrice(product.price, product.promotionPrice);
+      return !price || (price >= priceMin && price <= priceMax);
     });
 
     if (sortMode === "none") return inRange;
 
     return [...inRange].sort((a, b) => {
-      const aPrice = a.promotionPrice && a.promotionPrice > 0 ? a.promotionPrice : a.price;
-      const bPrice = b.promotionPrice && b.promotionPrice > 0 ? b.promotionPrice : b.price;
+      const aPrice = getEffectiveCatalogPrice(a.price, a.promotionPrice) ?? Number.POSITIVE_INFINITY;
+      const bPrice = getEffectiveCatalogPrice(b.price, b.promotionPrice) ?? Number.POSITIVE_INFINITY;
       return sortMode === "asc" ? aPrice - bPrice : bPrice - aPrice;
     });
   }, [globalSearchProducts, normalizedSearch, priceMax, priceMin, products, sortMode, useGlobalSearch]);
@@ -343,8 +410,8 @@ export const CatalogStorefrontPage = () => {
     const cartKey = [variantProduct.id, variant?.id ?? "base", color?.id ?? "nc", size?.id ?? "ns"].join("-");
     const productIdToStore = variantProduct.id;
     const selectedPrice = isBaseProduct
-      ? (variantProduct.promotionPrice && variantProduct.promotionPrice > 0 ? variantProduct.promotionPrice : variantProduct.price)
-      : (variant.promotionPrice && variant.promotionPrice > 0 ? variant.promotionPrice : variant.price);
+      ? getEffectiveCatalogPrice(variantProduct.price, variantProduct.promotionPrice)
+      : getEffectiveCatalogPrice(variant.price, variant.promotionPrice);
     const selectedCost = variant?.costPerItem ?? undefined;
     const selectedName = [
       isBaseProduct ? variantProduct.name : `${variantProduct.name} · ${variant.description}`,
@@ -388,7 +455,7 @@ export const CatalogStorefrontPage = () => {
     setToast("Variante agregada al carrito");
 
     if (buyNow) {
-      navigate("/v2/catalogo/pedido");
+      navigate("/catalogo/pedido");
     }
   };
 
@@ -411,14 +478,71 @@ export const CatalogStorefrontPage = () => {
 
   return (
     <main className="catalog-v2">
+      <Helmet>
+        <title>{catalogTitle}</title>
+        <meta name="description" content={catalogDescription} />
+        <link rel="canonical" href={catalogUrl} />
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content={store?.name || "Ravekh"} />
+        <meta property="og:title" content={catalogTitle} />
+        <meta property="og:description" content={catalogDescription} />
+        <meta property="og:url" content={catalogUrl} />
+        <meta property="og:image" content={catalogImage} />
+        <meta property="og:image:secure_url" content={catalogImage} />
+        <meta property="og:image:type" content="image/jpeg" />
+        <meta property="og:image:width" content={SOCIAL_IMAGE_WIDTH} />
+        <meta property="og:image:height" content={SOCIAL_IMAGE_HEIGHT} />
+        <meta property="og:image:alt" content={store?.name ? `Logo de ${store.name}` : "Ravekh"} />
+        <meta property="og:locale" content="es_MX" />
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content={catalogTitle} />
+        <meta name="twitter:description" content={catalogDescription} />
+        <meta name="twitter:image" content={catalogImage} />
+      </Helmet>
       <header className="catalog-v2__header">
-        <h1>{store?.name || "Catálogo digital"}</h1>
-        <Link to="/v2/catalogo/pedido" className="catalog-v2__cart-link" aria-label="Ver carrito">
-          <FiShoppingCart />
-          {totalItems > 0 ? <span>{totalItems}</span> : null}
-        </Link>
+        <div className="catalog-v2__brand">
+          <span className="catalog-v2__logo-sphere" aria-hidden={!store?.logo}>
+            {store?.logo ? (
+              <img src={store.logo} alt={`Logo de ${store.name || "catálogo"}`} />
+            ) : (
+              <span>{(store?.name || "Catálogo digital").trim().charAt(0).toUpperCase()}</span>
+            )}
+          </span>
+          <h1>{store?.name || "Catálogo digital"}</h1>
+        </div>
+        {!catalogUnavailable ? (
+          <Link to="/catalogo/pedido" className="catalog-v2__cart-link" aria-label="Ver carrito">
+            <FiShoppingCart />
+            {totalItems > 0 ? <span>{totalItems}</span> : null}
+          </Link>
+        ) : null}
       </header>
 
+
+      {catalogUnavailable ? (
+        <>
+          <section className="catalog-v2__offline" aria-live="polite">
+            <div>
+              <p className="catalog-v2__offline-eyebrow">Catálogo no disponible</p>
+              <h2>Este catálogo no esta disponible, por favor contacta al dueño del negocio</h2>
+            </div>
+            {whatsappUrl ? (
+              <a className="catalog-v2__offline-whatsapp" href={whatsappUrl} target="_blank" rel="noopener noreferrer">
+                <FiMessageCircle />
+                Contactar por WhatsApp
+              </a>
+            ) : (
+              <button className="catalog-v2__offline-whatsapp" type="button" disabled>
+                <FiMessageCircle />
+                WhatsApp no disponible
+              </button>
+            )}
+          </section>
+
+          <CatalogSocialFooter businessId={businessId} />
+        </>
+      ) : (
+        <>
       <section className="flex gap-2" aria-label="Búsqueda de productos">
         <div className="relative flex-1">
           <input
@@ -543,7 +667,11 @@ export const CatalogStorefrontPage = () => {
       ) : null}
 
 
-      {showFilters ? (
+      <CatalogSocialFooter businessId={businessId} />
+        </>
+      )}
+
+      {!catalogUnavailable && showFilters ? (
         <div className="fixed inset-0 z-40 grid bg-black/55">
           <aside className="ml-auto grid h-full w-full max-w-[390px] content-start gap-4 overflow-y-auto border-l border-[var(--border-default)] bg-[var(--bg-surface)] p-4 text-[var(--text-primary)] sm:max-w-[420px] max-sm:mt-auto max-sm:h-auto max-sm:max-w-full max-sm:rounded-t-2xl max-sm:border-l-0 max-sm:border-t">
             <button
@@ -607,9 +735,9 @@ export const CatalogStorefrontPage = () => {
         onConfirm={addVariantToCart}
       />
 
-      {totalItems > 0 ? (
-        <Link to="/v2/catalogo/pedido" className="catalog-v2__cart-fab">
-          Ver carrito ({totalItems}) · {money(total)}
+      {!catalogUnavailable && totalItems > 0 ? (
+        <Link to="/catalogo/pedido" className="catalog-v2__cart-fab">
+          Ver carrito ({totalItems}) · {totalLabel}
         </Link>
       ) : null}
     </main>

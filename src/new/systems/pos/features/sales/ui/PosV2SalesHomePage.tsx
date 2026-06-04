@@ -9,7 +9,10 @@ import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { POS_SESSION_STORAGE_KEYS, readPosSessionSnapshot } from "../../../shared/config/posSession";
 import { getDefaultPosPrinter, readPosPrinters } from "../../../shared/config/posPrinters";
 import { hasPosDynamicVisitsQrModule, hasPosLoyaltyModule, normalizePosCouponsPlan } from "../../../shared/config/posLoyaltyPlan";
+import { PosBusinessFeatureResponse, readPosBusinessFeatures } from "../../../shared/config/posFeatureFlags";
 import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
+
+const ALL_PRODUCTS_SEARCH_DEBOUNCE_MS = 450;
 
 type SaleItemVm = {
   id: number;
@@ -250,7 +253,6 @@ export const PosV2SalesHomePage = () => {
   const [categoryKey, setCategoryKey] = useState("all");
   const [isGrid, setIsGrid] = useState(true);
   const [products, setProducts] = useState<SaleItemVm[]>([]);
-  const [globalSearchProducts, setGlobalSearchProducts] = useState<SaleItemVm[]>([]);
   const [categories, setCategories] = useState<CategoryVm[]>([]);
   const [availableCategoryIds, setAvailableCategoryIds] = useState<number[]>([]);
   const [loadingProducts, setLoadingProducts] = useState(true);
@@ -459,13 +461,13 @@ export const PosV2SalesHomePage = () => {
       },
     })
       .then((response) => (response.ok ? response.json() : null))
-      .then((payload: { Name?: string; name?: string; Logo?: string; logo?: string; CouponsPlan?: number; couponsPlan?: number } | null) => {
+      .then((payload: ({ Name?: string; name?: string; Logo?: string; logo?: string } & PosBusinessFeatureResponse) | null) => {
         if (!payload) return;
         const businessName = String(payload.Name ?? payload.name ?? "").trim();
         const logoUrl = String(payload.Logo ?? payload.logo ?? "").trim();
         if (businessName) setQuoteBusinessName(businessName);
         if (logoUrl) setQuoteLogoUrl(logoUrl);
-        setCouponsPlan(normalizePosCouponsPlan(payload.CouponsPlan ?? payload.couponsPlan ?? 0));
+        setCouponsPlan(normalizePosCouponsPlan(readPosBusinessFeatures(payload).fidelity ?? 0));
       })
       .catch(() => {
         setCouponsPlan(0);
@@ -726,53 +728,13 @@ export const PosV2SalesHomePage = () => {
   const debouncedSearch = useMemo(() => search.trim().toLowerCase(), [search]);
 
   useEffect(() => {
-    if (!isPlanLimitReady || debouncedSearch.length < 2) {
-      setSearchingGlobalCatalog(false);
-      setGlobalSearchProducts([]);
-      return;
-    }
-
-    const { token, businessId } = getCurrentSession();
-    const categoryId = categoryKey === "all" ? null : Number(categoryKey);
-    if (!token || !businessId) {
-      setSearchingGlobalCatalog(false);
-      setGlobalSearchProducts([]);
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      const factory = new ModernSystemsFactory(API_BASE_URL);
-      const productService = factory.createPosProductService();
-      setSearchingGlobalCatalog(true);
-
-      productService
-        .getSellableProductsForSearch(businessId, token, planLimit)
-        .then((rows) => {
-          const mapped = rows.map((item) => toSaleItemVm(item));
-          const normalizedCategory = Number.isFinite(categoryId) ? Number(categoryId) : null;
-          const filtered = mapped.filter((product) => {
-            const matchesSearch = product.name.toLowerCase().includes(debouncedSearch);
-            const matchesCategory = normalizedCategory === null || product.categoryId === normalizedCategory;
-            return matchesSearch && matchesCategory;
-          });
-          setGlobalSearchProducts(filtered);
-        })
-        .catch(() => {
-          setGlobalSearchProducts([]);
-        })
-        .finally(() => {
-          setSearchingGlobalCatalog(false);
-        });
-    }, 320);
-
-    return () => window.clearTimeout(timeout);
-  }, [debouncedSearch, categoryKey, isPlanLimitReady, planLimit]);
+    setSearchingGlobalCatalog(false);
+  }, [debouncedSearch]);
 
   const filteredProducts = useMemo(() => {
     const normalized = search.trim().toLowerCase();
-    const source = normalized.length >= 2 ? globalSearchProducts : products;
-    return source.filter((product) => product.name.toLowerCase().includes(normalized));
-  }, [globalSearchProducts, products, search]);
+    return products.filter((product) => product.name.toLowerCase().includes(normalized));
+  }, [products, search]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -1830,15 +1792,16 @@ export const PosV2SalesHomePage = () => {
             ) : null}
           </div>
 
-          {!loadingProducts && !productsError && search.trim().length < 2 && totalPages > 1 ? (
+          {!loadingProducts && !productsError && totalPages > 1 ? (
             <nav className="pos-v2-sales-home__pagination" aria-label="Paginación de productos">
+              {search.trim().length >= 2 ? <span>Búsqueda global activa</span> : null}
               <button
                 type="button"
                 onClick={() => {
                   setCurrentPage((page) => Math.max(1, page - 1));
                   scrollToProductsTop();
                 }}
-                disabled={!hasPrevPage}
+                disabled={search.trim().length >= 2 || !hasPrevPage}
               >
                 Anterior
               </button>
@@ -1857,8 +1820,9 @@ export const PosV2SalesHomePage = () => {
                       goToPage();
                     }
                   }}
+                  disabled={search.trim().length >= 2}
                 />
-                <button type="button" onClick={goToPage}>Ir</button>
+                <button type="button" onClick={goToPage} disabled={search.trim().length >= 2}>Ir</button>
               </label>
               <button
                 type="button"
@@ -1866,7 +1830,7 @@ export const PosV2SalesHomePage = () => {
                   setCurrentPage((page) => page + 1);
                   scrollToProductsTop();
                 }}
-                disabled={!hasNextPage}
+                disabled={search.trim().length >= 2 || !hasNextPage}
               >
                 Siguiente
               </button>

@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
+import type React from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
@@ -6,6 +7,8 @@ import { CatalogStorefrontApi, StorefrontProductExtra, StorefrontVariant } from 
 import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExperiencePage";
 import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
+import { CatalogSocialFooter } from "./CatalogSocialFooter";
+import { formatCatalogPrice, getCatalogPriceValue, getEffectiveCatalogPrice } from "./catalogPrice";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
 const money = (value: number) =>
@@ -26,6 +29,15 @@ export const CatalogProductDetailPage = () => {
   const [activeImage, setActiveImage] = useState(0);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
+  const [previewAlt, setPreviewAlt] = useState("");
+  const [zoomLevel, setZoomLevel] = useState(2);
+  const [magnifierPosition, setMagnifierPosition] = useState({
+    xPercent: 50,
+    yPercent: 50,
+  });
+  const [showMagnifier, setShowMagnifier] = useState(false);
 
   const pageLogic = useMemo(() => {
     const repository = new CatalogStorefrontApi(getPosApiBaseUrl());
@@ -72,6 +84,71 @@ export const CatalogProductDetailPage = () => {
     setDetailError(null);
   }, [productId]);
 
+
+  const openPreview = useCallback((src: string | null, alt: string) => {
+    if (!src) return;
+
+    setPreviewSrc(src);
+    setPreviewAlt(alt);
+    setZoomLevel(2);
+    setMagnifierPosition({ xPercent: 50, yPercent: 50 });
+    setShowMagnifier(false);
+    setPreviewOpen(true);
+  }, []);
+
+  const closePreview = useCallback(() => {
+    setPreviewOpen(false);
+    setShowMagnifier(false);
+
+    setTimeout(() => {
+      setPreviewSrc(null);
+      setPreviewAlt("");
+    }, 120);
+  }, []);
+
+  useEffect(() => {
+    if (!previewOpen) return;
+
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closePreview();
+      }
+    };
+
+    window.addEventListener("keydown", onKey);
+
+    return () => window.removeEventListener("keydown", onKey);
+  }, [previewOpen, closePreview]);
+
+  const handleMagnifierMove = (event: React.MouseEvent<HTMLDivElement>) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+
+    const x = ((event.clientX - rect.left) / rect.width) * 100;
+    const y = ((event.clientY - rect.top) / rect.height) * 100;
+
+    const clamp = (value: number) => Math.min(100, Math.max(0, value));
+
+    setMagnifierPosition({
+      xPercent: clamp(x),
+      yPercent: clamp(y),
+    });
+  };
+
+  const handleWheelZoom = (event: React.WheelEvent<HTMLDivElement>) => {
+    event.preventDefault();
+
+    const delta = event.deltaY > 0 ? -0.2 : 0.2;
+
+    setZoomLevel((current) =>
+      Math.min(5, Math.max(1.5, Number((current + delta).toFixed(1))))
+    );
+  };
+
+  const resetZoom = () => {
+    setZoomLevel(2);
+    setMagnifierPosition({ xPercent: 50, yPercent: 50 });
+  };
+
   const buildCartWithSelection = () => {
     if (!product) return;
     const isBaseSelected = selectedVariantId === "base";
@@ -93,8 +170,8 @@ export const CatalogProductDetailPage = () => {
       selectedSize?.description ? `Talla: ${selectedSize.description}` : "",
     ].filter(Boolean).join(" · ");
     const priceToStore = selectedVariant
-      ? (selectedVariant.promotionPrice && selectedVariant.promotionPrice > 0 ? selectedVariant.promotionPrice : selectedVariant.price)
-      : (product.promotionPrice && product.promotionPrice > 0 ? product.promotionPrice : product.price);
+      ? getEffectiveCatalogPrice(selectedVariant.price, selectedVariant.promotionPrice)
+      : getEffectiveCatalogPrice(product.price, product.promotionPrice);
     const costToStore = selectedVariant?.costPerItem ?? undefined;
 
     const key = `catalog-v2-cart:${product.businessId}`;
@@ -140,7 +217,7 @@ export const CatalogProductDetailPage = () => {
       setDetailError("Selecciona una opción antes de continuar.");
       return;
     }
-    navigate("/v2/catalogo/pedido");
+    navigate("/catalogo/pedido");
   };
 
   if (loading) return <main className="mx-auto grid max-w-5xl gap-4 p-4"><p className="text-[var(--text-secondary)]">Cargando producto...</p></main>;
@@ -150,8 +227,8 @@ export const CatalogProductDetailPage = () => {
   const isBaseSelected = selectedVariantId === "base";
   const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? null;
   const effectivePrice = selectedVariant
-    ? (selectedVariant.promotionPrice && selectedVariant.promotionPrice > 0 ? selectedVariant.promotionPrice : selectedVariant.price)
-    : (product.promotionPrice && product.promotionPrice > 0 ? product.promotionPrice : product.price);
+    ? getEffectiveCatalogPrice(selectedVariant.price, selectedVariant.promotionPrice)
+    : getEffectiveCatalogPrice(product.price, product.promotionPrice);
 
   return (
     <main className="mx-auto grid max-w-5xl gap-4 p-4">
@@ -167,11 +244,21 @@ export const CatalogProductDetailPage = () => {
         {currentImage ? (
           <div className="grid gap-2">
             <div className="relative">
-              <img
-                className="h-[300px] w-full rounded-xl bg-[var(--bg-subtle)] object-cover md:h-[390px]"
-                src={currentImage}
-                alt={product.name}
-              />
+              <button
+                type="button"
+                onClick={() => openPreview(currentImage, product.name ?? "Producto")}
+                className="group relative block w-full overflow-hidden rounded-xl"
+                aria-label="Ver imagen del producto en grande"
+              >
+                <img
+                  className="h-[300px] w-full rounded-xl bg-[var(--bg-subtle)] object-cover transition-transform duration-200 group-hover:scale-[1.01] md:h-[390px]"
+                  src={currentImage}
+                  alt={product.name}
+                />
+                <span className="pointer-events-none absolute bottom-3 right-3 rounded-full bg-black/60 px-3 py-1 text-xs font-semibold text-white opacity-0 shadow transition-opacity group-hover:opacity-100">
+                  Ver más
+                </span>
+              </button>
             {images.length > 1 ? (
               <>
                 <button
@@ -204,6 +291,13 @@ export const CatalogProductDetailPage = () => {
               </>
             ) : null}
             </div>
+            <button
+              type="button"
+              onClick={() => openPreview(currentImage, product.name ?? "Producto")}
+              className="w-fit rounded-full border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] shadow-sm transition hover:bg-[var(--bg-surface)]"
+            >
+              Ver más
+            </button>
             {images.length > 1 ? (
               <div className="flex gap-2 overflow-x-auto pb-1">
                 {images.map((image, index) => (
@@ -226,13 +320,13 @@ export const CatalogProductDetailPage = () => {
             <p className="text-sm text-[var(--text-secondary)]">{product.description || "Sin descripción."}</p>
           </header>
           <div className="flex items-center gap-2">
-            {product.promotionPrice && product.promotionPrice > 0 && !selectedVariant ? (
+            {getCatalogPriceValue(product.promotionPrice) && !selectedVariant ? (
               <>
-                <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{money(product.promotionPrice)}</strong>
-                <small className="text-sm text-[var(--text-muted)] line-through">{money(product.price)}</small>
+                <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{formatCatalogPrice(product.promotionPrice, money)}</strong>
+                {getCatalogPriceValue(product.price) ? <small className="text-sm text-[var(--text-muted)] line-through">{formatCatalogPrice(product.price, money)}</small> : null}
               </>
             ) : (
-              <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{money(effectivePrice)}</strong>
+              <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{formatCatalogPrice(effectivePrice, money)}</strong>
             )}
           </div>
           {variants.length > 0 ? (
@@ -330,6 +424,120 @@ export const CatalogProductDetailPage = () => {
           </div>
         </article>
       </section>
+
+      {previewOpen && previewSrc && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          aria-modal="true"
+          role="dialog"
+          onClick={(event) => {
+            if (event.target === event.currentTarget) {
+              closePreview();
+            }
+          }}
+        >
+          <div className="pointer-events-none absolute inset-0 bg-black/70 backdrop-blur-sm" />
+
+          <div className="relative z-10 w-full max-w-5xl">
+            <div className="mb-2 flex justify-end">
+              <button
+                type="button"
+                onClick={closePreview}
+                className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-sm shadow hover:bg-white"
+              >
+                Cerrar ✕
+              </button>
+            </div>
+
+            <div className="relative max-h-[80vh] w-full overflow-hidden rounded-2xl bg-zinc-900 p-4">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-black/30 px-3 py-2 text-white">
+                <p className="text-xs text-zinc-200">
+                  Pasa el mouse sobre la imagen y usa la rueda para controlar el zoom.
+                </p>
+
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setZoomLevel((current) =>
+                        Math.max(1.5, Number((current - 0.2).toFixed(1)))
+                      )
+                    }
+                    className="rounded-lg bg-zinc-700 px-3 py-1 text-xs text-white hover:bg-zinc-600"
+                  >
+                    -
+                  </button>
+
+                  <label className="text-xs text-zinc-200">Zoom</label>
+
+                  <input
+                    type="range"
+                    min={1.5}
+                    max={5}
+                    step={0.1}
+                    value={zoomLevel}
+                    onChange={(event) => setZoomLevel(Number(event.target.value))}
+                    className="accent-indigo-400"
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setZoomLevel((current) =>
+                        Math.min(5, Number((current + 0.2).toFixed(1)))
+                      )
+                    }
+                    className="rounded-lg bg-zinc-700 px-3 py-1 text-xs text-white hover:bg-zinc-600"
+                  >
+                    +
+                  </button>
+
+                  <span className="w-10 text-right text-xs">
+                    {zoomLevel.toFixed(1)}x
+                  </span>
+
+                  <button
+                    type="button"
+                    onClick={resetZoom}
+                    className="rounded-lg bg-zinc-700 px-3 py-1 text-xs text-white hover:bg-zinc-600"
+                  >
+                    Reset
+                  </button>
+                </div>
+              </div>
+
+              <div
+                className="relative flex h-[68vh] items-center justify-center overflow-hidden rounded-xl"
+                onMouseMove={handleMagnifierMove}
+                onMouseEnter={() => setShowMagnifier(true)}
+                onMouseLeave={() => setShowMagnifier(false)}
+                onWheel={handleWheelZoom}
+              >
+                <img
+                  src={previewSrc}
+                  alt={previewAlt}
+                  className="max-h-full max-w-full select-none rounded-xl object-contain shadow-2xl"
+                  draggable={false}
+                />
+
+                {showMagnifier && (
+                  <div
+                    className="pointer-events-none absolute hidden h-56 w-56 rounded-full border-2 border-white/80 shadow-2xl md:block"
+                    style={{
+                      top: `calc(${magnifierPosition.yPercent}% - 112px)`,
+                      left: `calc(${magnifierPosition.xPercent}% - 112px)`,
+                      backgroundImage: `url(${previewSrc})`,
+                      backgroundRepeat: "no-repeat",
+                      backgroundSize: `${zoomLevel * 100}%`,
+                      backgroundPosition: `${magnifierPosition.xPercent}% ${magnifierPosition.yPercent}%`,
+                    }}
+                  />
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 };

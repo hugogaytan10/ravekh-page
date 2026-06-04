@@ -1,13 +1,30 @@
 import { ICatalogStorefrontRepository } from "../interface/ICatalogStorefrontRepository";
 import { CatalogOrderPayload, StorefrontBusiness, StorefrontProduct } from "../model/CatalogStorefrontModels";
 
-type BusinessResponse = { Id?: number; Name?: string; PhoneNumber?: string | null; Plan?: string | null; plan?: string | null };
+type BusinessFeaturesResponse = {
+  Catalog?: number | string | null;
+  catalog?: number | string | null;
+};
+
+type BusinessResponse = {
+  Id?: number;
+  Name?: string;
+  PhoneNumber?: string | null;
+  Plan?: string | null;
+  plan?: string | null;
+  Logo?: string | null;
+  logo?: string | null;
+  Features?: BusinessFeaturesResponse | null;
+  features?: BusinessFeaturesResponse | null;
+};
 type CategoryResponse = { Id?: number; id?: number; Name?: string; name?: string };
 type ProductResponse = {
   Id?: number;
   id?: number;
   Business_Id?: number;
   businessId?: number;
+  Category_Id?: number | string | null;
+  categoryId?: number | string | null;
   Name?: string;
   name?: string;
   Description?: string;
@@ -28,6 +45,9 @@ type ProductResponse = {
   available?: boolean | number | string | null;
   ShowInStore?: boolean | number | string | null;
   showInStore?: boolean | number | string | null;
+  ShowPrice?: boolean | number | string | null;
+  showPrice?: boolean | number | string | null;
+  Showprice?: boolean | number | string | null;
 };
 
 type ProductsPagination = {
@@ -101,6 +121,12 @@ const normalizeBase = (value: string) => (value.endsWith("/") ? value : `${value
 const parseNumber = (value: unknown, fallback = 0) => {
   const next = Number(value);
   return Number.isFinite(next) ? next : fallback;
+};
+
+const normalizeOptionalNumber = (value: unknown): number | null => {
+  if (value == null) return null;
+  const next = Number(value);
+  return Number.isFinite(next) ? next : null;
 };
 
 const toBoolean = (value: unknown, fallback = true) => {
@@ -197,6 +223,7 @@ const normalizeProducts = (items: ProductResponse[], businessId: string) =>
     .map((item) => ({
       id: parseNumber(item.Id ?? item.id),
       businessId: parseNumber(item.Business_Id ?? item.businessId ?? businessId),
+      categoryId: item.Category_Id != null || item.categoryId != null ? parseNumber(item.Category_Id ?? item.categoryId) : null,
       name: (item.Name ?? item.name ?? "Producto").toString().trim(),
       description: (item.Description ?? item.description ?? "").toString().trim(),
       image: normalizeImage(item.Image ?? item.image, item.Images ?? item.images),
@@ -207,6 +234,7 @@ const normalizeProducts = (items: ProductResponse[], businessId: string) =>
       forSale: toBoolean(item.ForSale ?? item.forSale, true),
       available: toBoolean(item.Available ?? item.available, true),
       showInStore: toBoolean(item.ShowInStore ?? item.showInStore, true),
+      showPrice: toBoolean(item.ShowPrice ?? item.Showprice ?? item.showPrice, true),
     }))
     .map((item) => ({
       ...item,
@@ -242,13 +270,16 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
     logCatalogDebug("business:response", { businessId, ok: response.ok, status: response.status });
     if (!response.ok) return null;
     const data = (await response.json()) as BusinessResponse;
-    logCatalogDebug("business:data", { businessId, plan: data.Plan ?? data.plan ?? null, name: data.Name ?? null });
+    const catalogFeature = normalizeOptionalNumber(data.Features?.Catalog ?? data.features?.catalog);
+    logCatalogDebug("business:data", { businessId, plan: data.Plan ?? data.plan ?? null, catalogFeature, name: data.Name ?? null });
 
     return {
       id: Number(data.Id ?? 0),
       name: data.Name?.trim() || "Tienda",
       phone: data.PhoneNumber ?? null,
       plan: String(data.Plan ?? data.plan ?? "").trim() || null,
+      logo: String(data.Logo ?? data.logo ?? "").trim() || null,
+      catalogFeature,
     };
   }
 
@@ -357,33 +388,32 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
   }
 
   async getAllProductsByBusiness(businessId: string, planLimit?: string): Promise<StorefrontProduct[]> {
-    const collected: StorefrontProduct[] = [];
-    let currentPage = 1;
-    let totalPages = 1;
+    const limit = String(planLimit ?? "30");
+    const url = `${normalizeBase(this.baseUrl)}products/showstore/stockgtzero/all/${businessId}/1`;
+    logCatalogDebug("products-by-business-all:request", { businessId, limit, url });
 
-    do {
-      const page = await this.getProductsByBusinessPage(businessId, currentPage, planLimit);
-      collected.push(...page.products);
-      totalPages = Math.max(page.pagination.totalPages, 1);
-      currentPage += 1;
-    } while (currentPage <= totalPages);
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ Limit: limit }),
+    });
+    logCatalogDebug("products-by-business-all:response", { businessId, ok: response.ok, status: response.status });
 
-    return collected;
+    if (!response.ok) return [];
+
+    const raw = (await response.json()) as
+      | { data?: ProductResponse[]; products?: ProductResponse[] }
+      | ProductResponse[];
+    const rows = Array.isArray(raw) ? raw : raw.data ?? raw.products ?? [];
+    const normalized = normalizeProducts(rows, businessId);
+    logCatalogDebug("products-by-business-all:data", { businessId, count: normalized.length });
+
+    return normalized;
   }
 
-  async getAllProductsByCategory(categoryId: number, planLimit?: string): Promise<StorefrontProduct[]> {
-    const collected: StorefrontProduct[] = [];
-    let currentPage = 1;
-    let totalPages = 1;
-
-    do {
-      const page = await this.getProductsByCategoryPage(categoryId, currentPage, planLimit);
-      collected.push(...page.products);
-      totalPages = Math.max(page.pagination.totalPages, 1);
-      currentPage += 1;
-    } while (currentPage <= totalPages);
-
-    return collected;
+  async getAllProductsByCategory(categoryId: number, businessId: string, planLimit?: string): Promise<StorefrontProduct[]> {
+    const products = await this.getAllProductsByBusiness(businessId, planLimit);
+    return products.filter((product) => product.categoryId === categoryId);
   }
 
 

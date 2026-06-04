@@ -31,6 +31,8 @@ export * from "./features/settings/table-zones/pages/TableZoneManagementPage";
 export * from "./features/settings/table-zones/services/TableZoneService";
 export * from "./features/settings/tax/pages/SalesTaxSettingsPage";
 export * from "./features/settings/tax/services/SalesTaxService";
+export * from "./features/settings/social-networks/pages/SocialNetworksSettingsPage";
+export * from "./features/settings/social-networks/services/SocialNetworksService";
 export * from "./features/settings/payment-methods/pages/PaymentMethodManagementPage";
 export * from "./features/settings/payment-methods/services/PaymentMethodService";
 export * from "./features/settings/branding/pages/BrandingCustomizationPage";

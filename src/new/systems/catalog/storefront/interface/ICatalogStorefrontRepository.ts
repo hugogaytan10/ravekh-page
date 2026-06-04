@@ -9,7 +9,7 @@ export interface ICatalogStorefrontRepository {
   getProductsByBusinessPage(businessId: string, page: number, planLimit?: string): Promise<StorefrontProductsPage>;
   getProductsByCategoryPage(categoryId: number, page: number, planLimit?: string): Promise<StorefrontProductsPage>;
   getAllProductsByBusiness(businessId: string, planLimit?: string): Promise<StorefrontProduct[]>;
-  getAllProductsByCategory(categoryId: number, planLimit?: string): Promise<StorefrontProduct[]>;
+  getAllProductsByCategory(categoryId: number, businessId: string, planLimit?: string): Promise<StorefrontProduct[]>;
   getProductById(productId: string): Promise<StorefrontProduct | null>;
   getVariantsByProductId(productId: number): Promise<StorefrontVariant[]>;
   getProductExtrasByProductId(productId: number): Promise<StorefrontProductExtras>;

@@ -1,13 +1,16 @@
 export const POS_V2_PATHS = {
   login: "/login-punto-venta",
+  passwordRecovery: "/recuperar-contrasena",
   sales: "/MainSales",
   products: "/main-products/items",
   finances: "/MainFinances",
   reports: "/dashboard",
   more: "/more",
   morePreview: (moduleId = ":moduleId") => `/more/preview/${moduleId}`,
+  facturaElectronica: "/more/facturacion-electronica",
   tableZones: "/settings/table-zones",
   printers: "/settings/printers",
+  securityQuestions: "/settings/security-questions",
   cashClosing: "/cash-closing",
   inventory: "/inventory",
   loyalty: "/loyalty",
@@ -39,6 +42,7 @@ export const POS_V2_PATHS = {
 
 export const POS_V2_LEGACY_PATHS = {
   login: "/v2/login-punto-venta",
+  passwordRecovery: "/v2/recuperar-contrasena",
   sales: "/v2/MainSales",
   products: "/v2/main-products/items",
   finances: "/v2/MainFinances",
@@ -46,6 +50,7 @@ export const POS_V2_LEGACY_PATHS = {
   more: "/v2/more",
   tableZones: "/v2/settings/table-zones",
   printers: "/v2/settings/printers",
+  securityQuestions: "/v2/settings/security-questions",
   cashClosing: "/v2/cash-closing",
   inventory: "/v2/inventory",
   loyalty: "/v2/loyalty",
