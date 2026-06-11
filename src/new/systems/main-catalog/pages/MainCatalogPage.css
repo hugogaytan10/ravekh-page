@@ -539,6 +539,7 @@
   place-items: center;
   border-radius: 1rem;
   background: linear-gradient(135deg, var(--catalog-purple-soft), var(--catalog-pink));
+  color: var(--catalog-purple);
   margin-bottom: 1rem;
 }
 
@@ -1146,5 +1147,134 @@
 
   .main-catalog-floating-card--three {
     left: 0.4rem;
+  }
+}
+/* Pega este bloque al final de MainCatalogPage.css */
+.main-catalog-pricing-section .main-catalog-section-heading {
+  margin-bottom: 1.4rem;
+}
+
+.main-catalog-billing-toggle {
+  width: fit-content;
+  margin: 0 auto;
+  padding: 0.35rem;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(7rem, 1fr));
+  gap: 0.35rem;
+  border: 1px solid rgba(91, 18, 183, 0.14);
+  border-radius: 999px;
+  background: rgba(244, 236, 255, 0.72);
+  box-shadow: 0 14px 34px rgba(39, 0, 80, 0.08);
+}
+
+.main-catalog-billing-toggle__button {
+  min-height: 2.75rem;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--catalog-muted);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 950;
+  transition:
+    transform 180ms ease,
+    box-shadow 180ms ease,
+    background-color 180ms ease,
+    color 180ms ease;
+}
+
+.main-catalog-billing-toggle__button:hover,
+.main-catalog-billing-toggle__button:focus-visible {
+  color: var(--catalog-purple);
+  outline: none;
+}
+
+.main-catalog-billing-toggle__button--active {
+  background: linear-gradient(135deg, var(--catalog-purple), var(--catalog-magenta));
+  color: #fff;
+  box-shadow: 0 12px 24px rgba(91, 18, 183, 0.22);
+}
+
+.main-catalog-billing-toggle__button--active:hover,
+.main-catalog-billing-toggle__button--active:focus-visible {
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.main-catalog-billing-helper {
+  max-width: 34rem;
+  margin: 0.85rem auto 2rem;
+  color: var(--catalog-muted);
+  text-align: center;
+  line-height: 1.65;
+  font-weight: 700;
+}
+
+.main-catalog-pricing-grid {
+  align-items: stretch;
+}
+
+.main-catalog-plan {
+  min-height: 100%;
+}
+
+.main-catalog-plan__header {
+  min-height: 4.4rem;
+  display: grid;
+  align-content: start;
+  gap: 0.65rem;
+}
+
+.main-catalog-plan__price-row {
+  display: grid;
+  gap: 0.25rem;
+}
+
+.main-catalog-plan__price-row > span {
+  color: var(--catalog-muted);
+  font-size: 0.86rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.main-catalog-plan__saving {
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(40, 198, 111, 0.12);
+  color: #087a3b;
+  font-size: 0.82rem;
+  font-weight: 950;
+  padding: 0.4rem 0.65rem;
+}
+
+.main-catalog-plan ul {
+  flex: 1;
+}
+
+@media (min-width: 720px) {
+  .main-catalog-pricing-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1120px) {
+  .main-catalog-pricing-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .main-catalog-plan {
+    padding: 1.15rem;
+  }
+
+  .main-catalog-plan__price {
+    font-size: clamp(1.35rem, 1.55vw, 1.7rem);
+  }
+}
+
+@media (max-width: 520px) {
+  .main-catalog-billing-toggle {
+    width: 100%;
+    grid-template-columns: 1fr 1fr;
   }
 }
