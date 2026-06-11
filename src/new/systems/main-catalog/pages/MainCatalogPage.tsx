@@ -1,8 +1,11 @@
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import "./MainCatalogPage.css";
 
-const WHATSAPP_URL = "https://wa.me/5653989702";
+const WHATSAPP_PHONE = "5653989702";
+const WHATSAPP_URL = `https://wa.me/${WHATSAPP_PHONE}`;
 const CONTACT_HASH = "#planes";
+const LEAD_FORM_HASH = "#solicitar-catalogo";
 
 type CardItem = {
   icon: string;
@@ -124,37 +127,43 @@ const plans: Plan[] = [
   },
   {
     name: "Catálogo Básico",
-    price: "Precio editable",
-    limit: "Límite de productos/fotos editable",
-    benefits: ["Todo lo del plan Inicial", "Categorías organizadas", "Secciones destacadas", "Métricas básicas"],
+    price: "299.00 MXN",
+    limit: "Perfecto para empezar con un catálogo simple",
+    benefits: ["Importación masiva", "Acceso a reportes", "Productos Ilimitados 1 imagen por producto", "Sincronisación en la nube"],
     recommended: true,
   },
   {
     name: "Catálogo Intermedio",
-    price: "Precio editable",
-    limit: "Límite de productos/fotos editable",
+    price: "599.00 MXN",
+    limit: "Para negocios con más variedad de productos",
     benefits: ["Todo lo del plan Básico", "Mayor capacidad de productos", "Mejor seguimiento comercial", "Preparado para crecer a POS"],
   },
     {
-    name: "Catálogo Intermedio",
-    price: "Precio editable",
+    name: "Catálogo Pro",
+    price: "1299.00 MXN",
     limit: "Límite de productos/fotos editable",
-    benefits: ["Todo lo del plan Básico", "Mayor capacidad de productos", "Mejor seguimiento comercial", "Preparado para crecer a POS"],
+    benefits: ["Todo lo del plan Intermedio", "Capacidad de productos personalizada", "Soporte prioritario", "100 Facturas timbradas al mes ante el sat"],
   },
 ];
 
 const testimonials = [
   {
     quote: "Ahora mis clientes ven todo en un solo link y me preguntan menos por precios.",
-    business: "Negocio de ropa",
+    business: "As Perfumeria",
+    logoUrl: "https://res.cloudinary.com/ravekh/image/upload/v1778857844/ravekh-fotos/hwo8yhdacmg92cxhmjcb.jpg",
+    logoAlt: "As Perfumeria",
   },
   {
     quote: "Me ayudó a ordenar mis productos y compartirlos más rápido por WhatsApp.",
-    business: "Tienda local",
+    business: "Óptica Bicentenario",
+    logoUrl: "https://res.cloudinary.com/ravekh/image/upload/v1778874056/ravekh-fotos/gx700ycd7uh6qvbxhvp5.jpg",
+    logoAlt: "Óptica Bicentenario",
   },
   {
     quote: "El catálogo se siente más profesional que mandar muchas fotos sueltas.",
-    business: "Venta por redes",
+    business: "DIABLITA SEXSHOP 😈🔥",
+    logoUrl: "https://res.cloudinary.com/dban2urdk/image/upload/v1780428838/jfc5ozxjietcmcfe6ol9.jpg",
+    logoAlt: "DIABLITA SEXSHOP 😈🔥",
   },
 ];
 
@@ -195,6 +204,26 @@ const scrollToId = (id: string) => (event: React.MouseEvent<HTMLAnchorElement>) 
   event.preventDefault();
   document.querySelector(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
 };
+
+const buildLeadWhatsAppUrl = (businessName: string, businessLine: string) => {
+  const message = [
+    "Hola, quiero información para crear mi catálogo digital en Ravekh.",
+    "",
+    `Nombre del negocio: ${businessName.trim() || "Por definir"}`,
+    `Giro / qué vende: ${businessLine.trim() || "Por definir"}`,
+  ].join("\n");
+
+  return `https://wa.me/${WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
+};
+
+const WhatsAppIcon = ({ className = "" }: { className?: string }) => (
+  <svg className={className} viewBox="0 0 32 32" aria-hidden="true" focusable="false">
+    <path
+      fill="currentColor"
+      d="M16.04 3C8.86 3 3.02 8.73 3.02 15.78c0 2.25.6 4.45 1.74 6.38L3 29l7.03-1.8a13.17 13.17 0 0 0 6.01 1.47c7.18 0 13.02-5.73 13.02-12.78C29.06 8.73 23.22 3 16.04 3Zm0 23.5c-1.86 0-3.68-.49-5.27-1.42l-.38-.22-4.17 1.07 1.11-4.02-.25-.4a10.39 10.39 0 0 1-1.6-5.55c0-5.84 4.84-10.6 10.78-10.6s10.78 4.76 10.78 10.6-5.06 10.54-11 10.54Zm5.9-7.92c-.32-.16-1.9-.92-2.2-1.03-.3-.1-.52-.16-.74.16-.22.32-.85 1.03-1.04 1.24-.19.22-.38.24-.7.08-.32-.16-1.36-.49-2.6-1.56-.96-.84-1.6-1.88-1.8-2.2-.18-.32-.02-.5.14-.65.14-.14.32-.38.49-.57.16-.19.22-.32.32-.54.11-.22.05-.4-.03-.57-.08-.16-.74-1.76-1.01-2.41-.27-.65-.54-.54-.74-.55h-.63c-.22 0-.57.08-.87.4-.3.32-1.14 1.1-1.14 2.67s1.17 3.1 1.33 3.31c.16.22 2.3 3.45 5.57 4.84.78.33 1.39.52 1.86.67.78.24 1.49.2 2.05.12.63-.09 1.9-.76 2.17-1.5.27-.73.27-1.35.19-1.5-.08-.13-.3-.21-.62-.37Z"
+    />
+  </svg>
+);
 
 const BenefitCard = ({ icon, title, text }: CardItem) => (
   <article className="main-catalog-card main-catalog-benefit-card">
@@ -367,6 +396,79 @@ const PricingSection = () => (
   </section>
 );
 
+const LeadFormSection = () => {
+  const [businessName, setBusinessName] = useState("");
+  const [businessLine, setBusinessLine] = useState("");
+
+  const whatsappLeadUrl = useMemo(() => buildLeadWhatsAppUrl(businessName, businessLine), [businessName, businessLine]);
+  const isFormReady = businessName.trim().length > 0 && businessLine.trim().length > 0;
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    window.open(whatsappLeadUrl, "_blank", "noopener,noreferrer");
+  };
+
+  return (
+    <section className="main-catalog-section main-catalog-lead-form-section" id="solicitar-catalogo">
+      <div className="main-catalog-container main-catalog-lead-form-card">
+        <div className="main-catalog-lead-form-copy">
+          <span className="main-catalog-eyebrow">Contacto por WhatsApp</span>
+          <h2>Cuéntanos de tu negocio y te orientamos mejor</h2>
+          <p>Llena estos datos y se abrirá WhatsApp con el mensaje listo. Así podemos entender rápido qué vendes y qué tipo de catálogo necesitas.</p>
+          <div className="main-catalog-lead-form-preview" aria-live="polite">
+            <strong>Mensaje que se enviará:</strong>
+            <span>Nombre del negocio: {businessName.trim() || "Por definir"}</span>
+            <span>Giro / qué vende: {businessLine.trim() || "Por definir"}</span>
+          </div>
+        </div>
+
+        <form className="main-catalog-lead-form" onSubmit={handleSubmit}>
+          <label htmlFor="businessName">Nombre del negocio</label>
+          <input
+            id="businessName"
+            name="businessName"
+            type="text"
+            value={businessName}
+            onChange={(event) => setBusinessName(event.target.value)}
+            placeholder="Ej. Boutique Mariela"
+            autoComplete="organization"
+            required
+          />
+
+          <label htmlFor="businessLine">¿Cuál es su giro? ¿Qué vende?</label>
+          <textarea
+            id="businessLine"
+            name="businessLine"
+            value={businessLine}
+            onChange={(event) => setBusinessLine(event.target.value)}
+            placeholder="Ej. Ropa para dama, calzado, perfumes, comida, refacciones..."
+            rows={4}
+            required
+          />
+
+          <button className="main-catalog-whatsapp-submit" type="submit" disabled={!isFormReady}>
+            <WhatsAppIcon className="main-catalog-whatsapp-submit__icon" />
+            Enviar datos por WhatsApp
+          </button>
+          <p className="main-catalog-lead-form-note">No se envía nada hasta que confirmes el mensaje en WhatsApp.</p>
+        </form>
+      </div>
+    </section>
+  );
+};
+
+const FloatingWhatsAppButton = () => (
+  <a
+    className="main-catalog-whatsapp-float"
+    href={LEAD_FORM_HASH}
+    onClick={scrollToId(LEAD_FORM_HASH)}
+    aria-label="Ir al formulario de contacto por WhatsApp"
+  >
+    <WhatsAppIcon className="main-catalog-whatsapp-float__icon" />
+    <span>Quiero mi catálogo</span>
+  </a>
+);
+
 const FAQSection = () => (
   <section className="main-catalog-section main-catalog-section--soft" id="faq">
     <div className="main-catalog-container">
@@ -418,7 +520,16 @@ export const MainCatalogPage = (): JSX.Element => {
           <a href="#como-funciona" onClick={scrollToId("#como-funciona")}>Cómo funciona</a>
           <a href="#planes" onClick={scrollToId("#planes")}>Planes</a>
           <a href="#faq" onClick={scrollToId("#faq")}>FAQ</a>
+          <a href={LEAD_FORM_HASH} onClick={scrollToId(LEAD_FORM_HASH)}>WhatsApp</a>
         </nav>
+        <div className="main-catalog-nav-actions" aria-label="Accesos principales">
+          <a className="main-catalog-nav-cta main-catalog-nav-cta--primary" href={LEAD_FORM_HASH} onClick={scrollToId(LEAD_FORM_HASH)}>
+            Prueba gratis
+          </a>
+          <Link className="main-catalog-nav-cta main-catalog-nav-cta--secondary" to="/login-punto-venta">
+            Ingresar
+          </Link>
+        </div>
       </header>
 
       <CatalogHero />
@@ -500,6 +611,7 @@ export const MainCatalogPage = (): JSX.Element => {
       </section>
 
       <PricingSection />
+      <LeadFormSection />
 
       <section className="main-catalog-section main-catalog-testimonials">
         <div className="main-catalog-container">
@@ -513,7 +625,9 @@ export const MainCatalogPage = (): JSX.Element => {
                 <span aria-hidden="true">“</span>
                 <p>{testimonial.quote}</p>
                 <div>
-                  <div className="main-catalog-avatar" aria-hidden="true" />
+                  <div className="main-catalog-avatar" aria-hidden="true">
+                    <img src={testimonial.logoUrl} alt="" loading="lazy" />
+                  </div>
                   <strong>{testimonial.business}</strong>
                 </div>
               </article>
@@ -524,6 +638,8 @@ export const MainCatalogPage = (): JSX.Element => {
 
       <FAQSection />
       <FinalCTA />
+
+      <FloatingWhatsAppButton />
 
       <footer className="main-catalog-footer">
         <div className="main-catalog-container">
