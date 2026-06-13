@@ -8,6 +8,7 @@ import {
 } from "react";
 import { Link } from "react-router-dom";
 import "./MainCatalogPage.css";
+import { trackMetaEvent, trackMetaCustomEvent } from "../../../../../scripts/metaPixel";
 
 const WHATSAPP_PHONE = "5653989702";
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_PHONE}`;
@@ -799,6 +800,12 @@ const PricingSection = () => {
               <a
                 className="main-catalog-button main-catalog-button--primary main-catalog-button--full"
                 href={WHATSAPP_URL}
+                 onClick={() => {
+    trackMetaEvent("Contact", {
+      content_name: plan.name,
+      plan_price: plan.prices[billingCycle],
+    });
+     }}
                 aria-label={`Elegir ${plan.name} ${billingCycleCopy[billingCycle].label.toLowerCase()}`}
               >
                 Elegir plan
@@ -822,16 +829,24 @@ const LeadFormSection = () => {
   const isFormReady =
     businessName.trim().length > 0 && businessLine.trim().length > 0;
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    window.open(whatsappLeadUrl, "_blank", "noopener,noreferrer");
-  };
+const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  event.preventDefault();
 
+  trackMetaEvent("Lead", {
+    content_name: "catalogo_digital_whatsapp_form",
+    business_name: businessName.trim(),
+    business_line: businessLine.trim(),
+  });
+
+  window.open(whatsappLeadUrl, "_blank", "noopener,noreferrer");
+};
   return (
+    
     <section
       className="main-catalog-section main-catalog-lead-form-section"
       id="solicitar-catalogo"
     >
+      
       <div className="main-catalog-container main-catalog-lead-form-card">
         <div className="main-catalog-lead-form-copy">
           <span className="main-catalog-eyebrow">Contacto por WhatsApp</span>
@@ -893,15 +908,20 @@ const LeadFormSection = () => {
 };
 
 const FloatingWhatsAppButton = () => (
-  <a
-    className="main-catalog-whatsapp-float"
-    href={LEAD_FORM_HASH}
-    onClick={scrollToId(LEAD_FORM_HASH)}
-    aria-label="Ir al formulario de contacto por WhatsApp"
-  >
-    <WhatsAppIcon className="main-catalog-whatsapp-float__icon" />
-    <span>Quiero mi catálogo</span>
-  </a>
+<a
+  className="main-catalog-button main-catalog-button--primary"
+  href={CONTACT_HASH}
+  onClick={(event) => {
+    trackMetaCustomEvent("CatalogCTA_Click", {
+      location: "hero",
+      destination: "planes",
+    });
+
+    scrollToId(CONTACT_HASH)(event);
+  }}
+>
+  Quiero mi catálogo
+</a>
 );
 
 const FAQSection = () => (
