@@ -106,7 +106,7 @@ export async function run(): Promise<void> {
       showInStore: true,
       available: true,
       categoryId: 3,
-      variants: [{ description: "Botella 500ml", price: 30, stock: 8, color: "VERDE" }],
+      variants: [{ description: "Botella 500ml", price: 30, wholesalePrice: 25, wholesaleMinQuantity: 3, stock: 8, color: "VERDE" }],
       extras: [
         { description: "M", type: "TALLA" },
         { description: "VERDE", type: "COLOR" },
@@ -156,11 +156,14 @@ export async function run(): Promise<void> {
       Color: "#000000",
       ForSale: true,
       ShowInStore: true,
+      Showprice: undefined,
       Available: true,
       Images: [],
       Barcode: undefined,
       Price: undefined,
       PromotionPrice: null,
+      WholesalePrice: null,
+      WholesaleMinQuantity: null,
       CostPerItem: undefined,
       Stock: undefined,
       ExpDate: null,
@@ -177,6 +180,8 @@ export async function run(): Promise<void> {
         Color: "VERDE",
         Price: 30,
         PromotionPrice: null,
+        WholesalePrice: 25,
+        WholesaleMinQuantity: 3,
         CostPerItem: null,
         Stock: 8,
         ExpDate: null,
@@ -199,11 +204,14 @@ export async function run(): Promise<void> {
     Color: "#000000",
     ForSale: true,
     ShowInStore: true,
+    Showprice: undefined,
     Available: true,
     Images: [],
     Barcode: undefined,
     Price: undefined,
     PromotionPrice: null,
+    WholesalePrice: null,
+    WholesaleMinQuantity: null,
     CostPerItem: undefined,
     Stock: undefined,
     ExpDate: null,
@@ -220,7 +228,7 @@ export async function run(): Promise<void> {
   assert.deepEqual(categories, [{ id: 1, name: "Bebidas", color: "#111" }]);
   assert.equal(importResult.imported, 4);
   assert.equal(importResult.message, "Importación OK");
-  assert.equal(importBody instanceof FormData, true);
+  assert.deepEqual(importBody, { rows: [{ id: "1", name: "Café" }] });
   assert.deepEqual(createdCategory, { id: 2, name: "Pan", color: "#222" });
   assert.deepEqual(updatedCategory, { id: 2, name: "Pan dulce", color: "#333" });
 
@@ -250,6 +258,7 @@ export async function run(): Promise<void> {
     "POST extras",
     "POST extras",
     "PUT products/available/8",
+    "GET categories/business/7",
     "GET categories/business/7",
     "POST products/import/7",
     "POST categories",
