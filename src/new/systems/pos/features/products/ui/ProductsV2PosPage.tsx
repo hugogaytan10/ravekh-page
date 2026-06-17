@@ -1,7 +1,9 @@
 import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
+import { ProductImportResult } from "../interface/IProductsRepository";
 import { ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
+import { ProductImportModal } from "./ProductImportModal";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
@@ -134,6 +136,9 @@ export const ProductsV2PosPage = () => {
   const [archivingId, setArchivingId] = useState<number | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [importing, setImporting] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [importResult, setImportResult] = useState<ProductImportResult | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
@@ -171,7 +176,6 @@ export const ProductsV2PosPage = () => {
   const [storedImages, setStoredImages] = useState<string[]>([]);
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
   const categoryCarouselRef = useRef<HTMLDivElement | null>(null);
-  const excelInputRef = useRef<HTMLInputElement | null>(null);
   const categoryNameInputRef = useRef<HTMLInputElement | null>(null);
 
   const service = useMemo(() => {
@@ -870,32 +874,78 @@ export const ProductsV2PosPage = () => {
     excelInputRef.current?.click();
   };
 
-  const handleImportProducts = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    event.target.value = "";
+  const getImportErrorMessage = (cause: unknown): string => {
+    if (cause instanceof Error) {
+      const payload = (cause as Error & { payload?: { message?: string; error?: string } }).payload;
+      return [payload?.message, payload?.error].filter(Boolean).join(" — ") || cause.message;
+    }
+    return "No se pudo importar el archivo.";
+  };
 
-    if (!file) return;
-    if (blockOfflineProductMutation()) return;
+  const openImportModal = () => {
+    setImportResult(null);
+    setImportError(null);
+    setIsImportModalOpen(true);
+  };
+
+  const closeImportModal = () => {
+    if (importing) return;
+    setIsImportModalOpen(false);
+    setImportResult(null);
+    setImportError(null);
+  };
+
+  const finishImport = async (result: ProductImportResult) => {
+    const failed = result.errors.length;
+    setImportResult(result);
+    if (failed > 0) {
+      setToast({
+        type: "info",
+        message: `${result.message} (${result.imported} importados, ${failed} con error).`,
+      });
+    } else {
+      setToast({ type: "success", message: `${result.message} (${result.imported} productos importados).` });
+    }
+    await loadProducts(currentPage);
+  };
+
+  const handleImportProducts = async (file: File) => {
     if (!token || !businessId) {
-      setToast({ type: "error", message: "Conecta tu sesión para importar productos." });
+      setImportError("Conecta tu sesión para importar productos.");
       return;
     }
 
     setImporting(true);
+    setImportError(null);
+    setImportResult(null);
     try {
       const result = await service.importProducts(businessId, file, token);
-      const failed = Array.isArray(result.errors) ? result.errors.length : 0;
-      if (failed > 0) {
-        setToast({
-          type: "info",
-          message: `${result.message} (${result.imported} importados, ${failed} con error).`,
-        });
-      } else {
-        setToast({ type: "success", message: `${result.message} (${result.imported} productos importados).` });
-      }
-      await loadProducts(currentPage);
+      await finishImport(result);
     } catch (cause) {
-      setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo importar el archivo." });
+      const message = getImportErrorMessage(cause);
+      setImportError(message);
+      setToast({ type: "error", message });
+    } finally {
+      setImporting(false);
+    }
+  };
+
+  const handleImportProductsZip = async (file: File) => {
+    if (!token || !businessId) {
+      setImportError("Conecta tu sesión para importar productos.");
+      return;
+    }
+
+    setImporting(true);
+    setImportError(null);
+    setImportResult(null);
+    try {
+      const result = await service.importProductsZip(businessId, file, token);
+      await finishImport(result);
+    } catch (cause) {
+      const message = getImportErrorMessage(cause);
+      setImportError(message);
+      setToast({ type: "error", message });
     } finally {
       setImporting(false);
     }
@@ -1054,8 +1104,8 @@ export const ProductsV2PosPage = () => {
           <div className="pos-v2-products__header-actions">
             <button type="button" className="pos-v2-products__secondary pos-v2-products__back-main" onClick={() => navigate(-1)}>← Regresar</button>
             <button type="button" className="pos-v2-products__secondary" onClick={openCreateModal}>+ Nuevo</button>
-            <button type="button" className="pos-v2-products__secondary" onClick={openCategoryManager}>Categorías</button>
-            <button type="button" className="pos-v2-products__secondary" onClick={openImportProducts} disabled={importing || !token || !businessId}>
+            <button type="button" className="pos-v2-products__secondary" onClick={() => setShowCategoryManager(true)}>Categorías</button>
+            <button type="button" className="pos-v2-products__secondary" onClick={openImportModal} disabled={importing || !token || !businessId}>
               {importing ? "Importando..." : "Importar CSV"}
             </button>
             <button type="button" className="pos-v2-products__secondary" onClick={handleExportProducts} disabled={!isVipPlan || !token || !businessId}>
@@ -1065,14 +1115,19 @@ export const ProductsV2PosPage = () => {
               {loading ? "Actualizando..." : "Actualizar"}
             </button>
           </div>
-          <input
-            ref={excelInputRef}
-            type="file"
-            accept=".csv,text/csv"
-            className="pos-v2-products__hidden-input"
-            onChange={handleImportProducts}
-          />
         </header>
+
+        <ProductImportModal
+          open={isImportModalOpen}
+          businessId={businessId}
+          token={token}
+          importing={importing}
+          result={importResult}
+          error={importError}
+          onClose={closeImportModal}
+          onImportCsv={handleImportProducts}
+          onImportZip={handleImportProductsZip}
+        />
 
         {error ? <p className="pos-v2-products__error" role="alert">{error}</p> : null}
         {toast ? <p className={`pos-v2-products__toast is-${toast.type}`} role="status">{toast.message}</p> : null}

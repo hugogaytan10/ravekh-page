@@ -1,7 +1,7 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { POS_ENDPOINTS } from "../../../shared/api/posEndpoints";
 import { toPaginationMeta } from "../../../shared/model/Pagination";
-import { IProductsRepository, ProductsPaginatedResult } from "../interface/IProductsRepository";
+import { IProductsRepository, ProductImportResult, ProductsPaginatedResult } from "../interface/IProductsRepository";
 import { ManagedProduct, ProductCategory, ProductExtra, ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 
 type ProductResponse = {
@@ -395,7 +395,7 @@ export class PosProductsApi implements IProductsRepository {
     });
   }
 
-  async importProducts(businessId: number, file: File, token: string): Promise<{ imported: number; message: string; errors?: string[] }> {
+  async importProducts(businessId: number, file: File, token: string): Promise<ProductImportResult> {
     const extension = file.name.split(".").pop()?.toLowerCase();
     if (extension !== "csv") {
       throw new Error("Por ahora la importación soporta archivos CSV. Guarda tu Excel como .csv e inténtalo de nuevo.");
@@ -414,6 +414,33 @@ export class PosProductsApi implements IProductsRepository {
       path: POS_ENDPOINTS.productImport(businessId),
       token,
       body: { rows },
+    });
+
+    const imported = Number(response?.imported ?? response?.total ?? 0);
+    const created = Number(response?.created ?? 0);
+    const updated = Number(response?.updated ?? 0);
+
+    return {
+      imported: Number.isFinite(imported) && imported > 0 ? imported : Math.max(created + updated, 0),
+      message: response?.message ?? "Importación completada.",
+      errors: Array.isArray(response?.errors) ? response.errors : [],
+    };
+  }
+
+  async importProductsZip(businessId: number, file: File, token: string): Promise<ProductImportResult> {
+    const extension = file.name.split(".").pop()?.toLowerCase();
+    if (extension !== "zip") {
+      throw new Error("Selecciona un archivo .zip con productos.csv e imágenes.");
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+
+    const response = await this.httpClient.request<{ imported?: number; message?: string; total?: number; created?: number; updated?: number; errors?: string[] }>({
+      method: "POST",
+      path: POS_ENDPOINTS.productImport(businessId),
+      token,
+      body: formData,
     });
 
     const imported = Number(response?.imported ?? response?.total ?? 0);
