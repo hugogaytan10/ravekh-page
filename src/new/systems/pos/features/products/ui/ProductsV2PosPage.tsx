@@ -31,6 +31,8 @@ type ProductItemVm = {
   price: number | null;
   costPerItem: number | null;
   promotionPrice: number | null;
+  wholesalePrice: number | null;
+  wholesaleMinQuantity: number | null;
   stock: number | null;
   expDate: string | null;
   minStock: number | null;
@@ -50,6 +52,8 @@ type VariantFormVm = {
   color: string;
   price: string;
   promotionPrice: string;
+  wholesalePrice: string;
+  wholesaleMinQuantity: string;
   costPerItem: string;
   stock: string;
   minStock: string;
@@ -96,6 +100,8 @@ const createVariantDraft = (): VariantFormVm => ({
   color: "",
   price: "",
   promotionPrice: "",
+  wholesalePrice: "",
+  wholesaleMinQuantity: "",
   costPerItem: "",
   stock: "",
   minStock: "",
@@ -156,6 +162,8 @@ export const ProductsV2PosPage = () => {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [costPerItem, setCostPerItem] = useState("");
+  const [wholesalePrice, setWholesalePrice] = useState("");
+  const [wholesaleMinQuantity, setWholesaleMinQuantity] = useState("");
   const [stock, setStock] = useState("");
   const [forSale, setForSale] = useState(true);
   const [showInStore, setShowInStore] = useState(true);
@@ -184,6 +192,8 @@ export const ProductsV2PosPage = () => {
     setDescription("");
     setPrice("");
     setCostPerItem("");
+    setWholesalePrice("");
+    setWholesaleMinQuantity("");
     setStock("");
     setForSale(true);
     setShowInStore(true);
@@ -266,6 +276,8 @@ export const ProductsV2PosPage = () => {
           price: product.price,
           costPerItem: product.costPerItem,
           promotionPrice: product.promotionPrice,
+          wholesalePrice: product.wholesalePrice,
+          wholesaleMinQuantity: product.wholesaleMinQuantity,
           stock: product.stock,
           expDate: product.expDate,
           minStock: product.minStock,
@@ -377,6 +389,8 @@ export const ProductsV2PosPage = () => {
             price: product.price,
             costPerItem: product.costPerItem,
             promotionPrice: product.promotionPrice,
+            wholesalePrice: product.wholesalePrice,
+            wholesaleMinQuantity: product.wholesaleMinQuantity,
             stock: product.stock,
             expDate: product.expDate,
             minStock: product.minStock,
@@ -420,6 +434,8 @@ export const ProductsV2PosPage = () => {
         stock: toNullableNumber(variant.stock),
         costPerItem: toNullableNumber(variant.costPerItem),
         promotionPrice: toNullableNumber(variant.promotionPrice),
+        wholesalePrice: toNullableNumber(variant.wholesalePrice),
+        wholesaleMinQuantity: variant.wholesalePrice.trim() === "" ? null : toNullableNumber(variant.wholesaleMinQuantity),
         minStock: toNullableNumber(variant.minStock),
         optStock: toNullableNumber(variant.optStock),
         expDate: variant.expDate.trim() || null,
@@ -492,6 +508,9 @@ export const ProductsV2PosPage = () => {
 
     const parsedPrice = price.trim() === "" ? null : Number(price);
     const parsedCostPerItem = costPerItem.trim() === "" ? null : Number(costPerItem);
+    const parsedWholesalePrice = wholesalePrice.trim() === "" ? null : Number(wholesalePrice);
+    const parsedWholesaleMinQuantity = wholesaleMinQuantity.trim() === "" ? null : Number(wholesaleMinQuantity);
+    const normalizedWholesaleMinQuantity = parsedWholesalePrice === null ? null : parsedWholesaleMinQuantity;
     const parsedStock = stock.trim() === "" ? null : Number(stock);
 
     if (parsedPrice !== null && (Number.isNaN(parsedPrice) || parsedPrice < 0)) {
@@ -507,6 +526,73 @@ export const ProductsV2PosPage = () => {
     if (parsedCostPerItem !== null && (Number.isNaN(parsedCostPerItem) || parsedCostPerItem < 0)) {
       setError("El costo por producto debe ser un número válido mayor o igual a 0.");
       return;
+    }
+
+    if (parsedWholesalePrice !== null && (Number.isNaN(parsedWholesalePrice) || parsedWholesalePrice <= 0)) {
+      setError("El precio por mayoreo debe ser un número válido mayor a 0.");
+      return;
+    }
+
+    if (parsedWholesalePrice !== null && parsedPrice === null) {
+      setError("Agrega el precio normal antes de configurar precio por mayoreo.");
+      return;
+    }
+
+    if (parsedWholesalePrice !== null && parsedPrice !== null && parsedWholesalePrice > parsedPrice) {
+      setError("El precio por mayoreo no puede ser mayor que el precio normal.");
+      return;
+    }
+
+    if (parsedWholesalePrice !== null && normalizedWholesaleMinQuantity === null) {
+      setError("La cantidad mínima para mayoreo es obligatoria cuando agregas precio por mayoreo.");
+      return;
+    }
+
+    if (parsedWholesalePrice === null && parsedWholesaleMinQuantity !== null) {
+      setError("No puedes agregar cantidad mínima para mayoreo sin precio por mayoreo.");
+      return;
+    }
+
+    if (normalizedWholesaleMinQuantity !== null && (Number.isNaN(normalizedWholesaleMinQuantity) || normalizedWholesaleMinQuantity < 2)) {
+      setError("La cantidad mínima para mayoreo debe ser mayor o igual a 2.");
+      return;
+    }
+
+    for (const [index, variant] of variants.entries()) {
+      const parsedVariantPrice = variant.price.trim() === "" ? null : Number(variant.price);
+      const parsedVariantWholesalePrice = variant.wholesalePrice.trim() === "" ? null : Number(variant.wholesalePrice);
+      const parsedVariantWholesaleMinQuantity = variant.wholesaleMinQuantity.trim() === "" ? null : Number(variant.wholesaleMinQuantity);
+      const variantLabel = `variante ${index + 1}`;
+
+      if (parsedVariantWholesalePrice !== null && (Number.isNaN(parsedVariantWholesalePrice) || parsedVariantWholesalePrice <= 0)) {
+        setError(`El precio por mayoreo de la ${variantLabel} debe ser mayor a 0.`);
+        return;
+      }
+
+      if (parsedVariantWholesalePrice !== null && parsedVariantPrice === null) {
+        setError(`Agrega el precio normal de la ${variantLabel} antes de configurar mayoreo.`);
+        return;
+      }
+
+      if (parsedVariantWholesalePrice !== null && parsedVariantPrice !== null && parsedVariantWholesalePrice > parsedVariantPrice) {
+        setError(`El precio por mayoreo de la ${variantLabel} no puede ser mayor que su precio normal.`);
+        return;
+      }
+
+      if (parsedVariantWholesalePrice !== null && parsedVariantWholesaleMinQuantity === null) {
+        setError(`La cantidad mínima para mayoreo de la ${variantLabel} es obligatoria.`);
+        return;
+      }
+
+      if (parsedVariantWholesalePrice === null && parsedVariantWholesaleMinQuantity !== null) {
+        setError(`No puedes agregar cantidad mínima para mayoreo en la ${variantLabel} sin precio por mayoreo.`);
+        return;
+      }
+
+      if (parsedVariantWholesaleMinQuantity !== null && (Number.isNaN(parsedVariantWholesaleMinQuantity) || parsedVariantWholesaleMinQuantity < 2)) {
+        setError(`La cantidad mínima para mayoreo de la ${variantLabel} debe ser mayor o igual a 2.`);
+        return;
+      }
     }
 
     setSaving(true);
@@ -530,6 +616,8 @@ export const ProductsV2PosPage = () => {
         volume: false,
         price: parsedPrice,
         promotionPrice: null,
+        wholesalePrice: parsedWholesalePrice,
+        wholesaleMinQuantity: normalizedWholesaleMinQuantity,
         stock: parsedStock,
         expDate: null,
         minStock: null,
@@ -572,6 +660,8 @@ export const ProductsV2PosPage = () => {
     volume: detail?.volume ?? false,
     price: detail?.price ?? null,
     promotionPrice: detail?.promotionPrice ?? null,
+    wholesalePrice: detail?.wholesalePrice ?? null,
+    wholesaleMinQuantity: detail?.wholesaleMinQuantity ?? null,
     stock: detail?.stock ?? null,
     expDate: detail?.expDate ?? null,
     minStock: detail?.minStock ?? null,
@@ -623,6 +713,8 @@ export const ProductsV2PosPage = () => {
       setDescription(detail.description);
       setPrice(detail.price == null ? "" : String(detail.price));
       setCostPerItem(detail.costPerItem == null ? "" : String(detail.costPerItem));
+      setWholesalePrice(detail.wholesalePrice == null ? "" : String(detail.wholesalePrice));
+      setWholesaleMinQuantity(detail.wholesaleMinQuantity == null ? "" : String(detail.wholesaleMinQuantity));
       setStock(detail.stock == null ? "" : String(detail.stock));
       setForSale(detail.forSale);
       setShowInStore(detail.showInStore);
@@ -645,6 +737,8 @@ export const ProductsV2PosPage = () => {
           color: variant.color ?? "",
           price: variant.price == null ? "" : String(variant.price),
           promotionPrice: variant.promotionPrice == null ? "" : String(variant.promotionPrice),
+          wholesalePrice: variant.wholesalePrice == null ? "" : String(variant.wholesalePrice),
+          wholesaleMinQuantity: variant.wholesaleMinQuantity == null ? "" : String(variant.wholesaleMinQuantity),
           costPerItem: variant.costPerItem == null ? "" : String(variant.costPerItem),
           stock: variant.stock == null ? "" : String(variant.stock),
           minStock: variant.minStock == null ? "" : String(variant.minStock),
@@ -707,7 +801,14 @@ export const ProductsV2PosPage = () => {
   const removeSelectedImage = (indexToRemove: number) => setSelectedImageFiles((current) => current.filter((_, index) => index !== indexToRemove));
 
   const updateVariant = (key: string, field: keyof VariantFormVm, value: string) => {
-    setVariants((current) => current.map((variant) => (variant.key === key ? { ...variant, [field]: value } : variant)));
+    setVariants((current) => current.map((variant) => {
+      if (variant.key !== key) return variant;
+      return {
+        ...variant,
+        [field]: value,
+        ...(field === "wholesalePrice" && value.trim() === "" ? { wholesaleMinQuantity: "" } : {}),
+      };
+    }));
   };
 
   const validateCategoryForm = (): boolean => {
@@ -960,6 +1061,8 @@ export const ProductsV2PosPage = () => {
             price: product.price,
             costPerItem: product.costPerItem,
             promotionPrice: product.promotionPrice,
+            wholesalePrice: product.wholesalePrice,
+            wholesaleMinQuantity: product.wholesaleMinQuantity,
             stock: product.stock,
             expDate: product.expDate,
             minStock: product.minStock,
@@ -1129,6 +1232,11 @@ export const ProductsV2PosPage = () => {
                         <strong>{product.price == null ? "--" : `$${product.price.toFixed(2)}`}</strong>
                         <small>Stock: {product.stock ?? "--"}</small>
                       </div>
+                      {product.wholesalePrice != null ? (
+                        <small className="pos-v2-products__simple-meta">
+                          Mayoreo: ${product.wholesalePrice.toFixed(2)} desde {product.wholesaleMinQuantity ?? "--"} pzas.
+                        </small>
+                      ) : null}
                       {product.categoryName ? <small className="pos-v2-products__simple-meta">Categoría: {product.categoryName}</small> : null}
 
                       <small className="pos-v2-products__simple-meta">
@@ -1237,6 +1345,35 @@ export const ProductsV2PosPage = () => {
                   <label>
                     Precio (opcional)
                     <input type="number" min="0" step="0.01" inputMode="decimal" value={price} onChange={(event) => setPrice(event.target.value)} />
+                  </label>
+                  <label>
+                    Precio por mayoreo
+                    <input
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      inputMode="decimal"
+                      value={wholesalePrice}
+                      onChange={(event) => {
+                        setWholesalePrice(event.target.value);
+                        if (event.target.value.trim() === "") {
+                          setWholesaleMinQuantity("");
+                        }
+                      }}
+                      placeholder="Ej. 80"
+                    />
+                  </label>
+                  <label>
+                    Cantidad mínima para mayoreo
+                    <input
+                      type="number"
+                      min="2"
+                      step="1"
+                      inputMode="numeric"
+                      value={wholesaleMinQuantity}
+                      onChange={(event) => setWholesaleMinQuantity(event.target.value)}
+                      placeholder="Ej. 3"
+                    />
                   </label>
                   <label>
                     Costo por producto (opcional)
@@ -1349,6 +1486,8 @@ export const ProductsV2PosPage = () => {
                         <input value={variant.barcode} onChange={(event) => updateVariant(variant.key, "barcode", event.target.value)} placeholder="Código de barras" aria-label={`Código de barras de variante ${index + 1}`} />
                         <input value={variant.price} onChange={(event) => updateVariant(variant.key, "price", event.target.value)} placeholder="Precio" type="number" min="0" step="0.01" inputMode="decimal" aria-label={`Precio de variante ${index + 1}`} />
                         <input value={variant.promotionPrice} onChange={(event) => updateVariant(variant.key, "promotionPrice", event.target.value)} placeholder="Promoción" type="number" min="0" step="0.01" inputMode="decimal" aria-label={`Promoción de variante ${index + 1}`} />
+                        <input value={variant.wholesalePrice} onChange={(event) => updateVariant(variant.key, "wholesalePrice", event.target.value)} placeholder="Precio por mayoreo" type="number" min="0" step="0.01" inputMode="decimal" aria-label={`Precio por mayoreo de variante ${index + 1}`} />
+                        <input value={variant.wholesaleMinQuantity} onChange={(event) => updateVariant(variant.key, "wholesaleMinQuantity", event.target.value)} placeholder="Cantidad mínima para mayoreo" type="number" min="2" step="1" inputMode="numeric" aria-label={`Cantidad mínima para mayoreo de variante ${index + 1}`} />
                         <input value={variant.costPerItem} onChange={(event) => updateVariant(variant.key, "costPerItem", event.target.value)} placeholder="Costo" type="number" min="0" step="0.01" inputMode="decimal" aria-label={`Costo de variante ${index + 1}`} />
                         <input value={variant.stock} onChange={(event) => updateVariant(variant.key, "stock", event.target.value)} placeholder="Stock" type="number" min="0" step="1" inputMode="numeric" aria-label={`Stock de variante ${index + 1}`} />
                         <input value={variant.minStock} onChange={(event) => updateVariant(variant.key, "minStock", event.target.value)} placeholder="Stock mínimo" type="number" min="0" step="1" inputMode="numeric" aria-label={`Stock mínimo de variante ${index + 1}`} />

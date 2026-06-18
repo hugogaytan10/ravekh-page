@@ -8,6 +8,8 @@ export type StorefrontProduct = {
   images?: string[];
   price: number;
   promotionPrice?: number | null;
+  wholesalePrice?: number | null;
+  wholesaleMinQuantity?: number | null;
   variantsCount?: number;
   forSale?: boolean;
   available?: boolean;
@@ -33,6 +35,9 @@ export type StorefrontCartItem = {
   sizeName?: string;
   name: string;
   price?: number | null;
+  promotionPrice?: number | null;
+  wholesalePrice?: number | null;
+  wholesaleMinQuantity?: number | null;
   cost?: number;
   quantity: number;
   image: string;

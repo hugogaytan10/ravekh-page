@@ -43,6 +43,10 @@ type ProductResponse = {
   price?: number | null;
   PromotionPrice?: number | null;
   promotionPrice?: number | null;
+  WholesalePrice?: number | null;
+  wholesalePrice?: number | null;
+  WholesaleMinQuantity?: number | null;
+  wholesaleMinQuantity?: number | null;
   CostPerItem?: number | null;
   costPerItem?: number | null;
   Stock?: number | null;
@@ -80,6 +84,10 @@ type LegacyVariantResponse = {
   price?: number | null;
   PromotionPrice?: number | null;
   promotionPrice?: number | null;
+  WholesalePrice?: number | null;
+  wholesalePrice?: number | null;
+  WholesaleMinQuantity?: number | null;
+  wholesaleMinQuantity?: number | null;
   CostPerItem?: number | null;
   costPerItem?: number | null;
   Stock?: number | null;
@@ -304,6 +312,8 @@ export class PosProductsApi implements IProductsRepository {
       payload.variants ?? [],
       payload.extras ?? [],
       payload.variants?.length ?? 0,
+      payload.wholesalePrice ?? null,
+      payload.wholesaleMinQuantity ?? null,
     );
   }
 
@@ -620,6 +630,8 @@ export class PosProductsApi implements IProductsRepository {
       variants,
       extras,
       variantsCount,
+      product.WholesalePrice ?? product.wholesalePrice ?? null,
+      product.WholesaleMinQuantity ?? product.wholesaleMinQuantity ?? null,
     );
   }
 
@@ -652,6 +664,8 @@ export class PosProductsApi implements IProductsRepository {
       Barcode: payload.barcode,
       Price: payload.price,
       PromotionPrice: payload.promotionPrice ?? null,
+      WholesalePrice: payload.wholesalePrice ?? null,
+      WholesaleMinQuantity: payload.wholesaleMinQuantity ?? null,
       CostPerItem: payload.costPerItem,
       Stock: payload.stock,
       ExpDate: payload.expDate ?? null,
@@ -671,6 +685,8 @@ export class PosProductsApi implements IProductsRepository {
       size: variant.Size ?? variant.size ?? variant.Talla ?? variant.talla ?? null,
       price: variant.Price ?? variant.price ?? null,
       promotionPrice: variant.PromotionPrice ?? variant.promotionPrice ?? null,
+      wholesalePrice: variant.WholesalePrice ?? variant.wholesalePrice ?? null,
+      wholesaleMinQuantity: variant.WholesaleMinQuantity ?? variant.wholesaleMinQuantity ?? null,
       costPerItem: variant.CostPerItem ?? variant.costPerItem ?? null,
       stock: variant.Stock ?? variant.stock ?? null,
       expDate: variant.ExpDate ?? variant.expDate ?? null,
@@ -691,6 +707,8 @@ export class PosProductsApi implements IProductsRepository {
       ...(normalizedSize ? { Size: normalizedSize, Talla: normalizedSize } : {}),
       Price: variant.price ?? null,
       PromotionPrice: variant.promotionPrice ?? null,
+      WholesalePrice: variant.wholesalePrice ?? null,
+      WholesaleMinQuantity: variant.wholesaleMinQuantity ?? null,
       CostPerItem: variant.costPerItem ?? null,
       Stock: variant.stock ?? null,
       ExpDate: variant.expDate ?? null,

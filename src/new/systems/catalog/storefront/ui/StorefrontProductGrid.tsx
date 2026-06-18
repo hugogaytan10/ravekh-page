@@ -56,6 +56,10 @@ const ProductCard = memo(({
     () => (getCatalogPriceValue(product.promotionPrice) ? formatCatalogPrice(product.promotionPrice, formatPrice) : null),
     [formatPrice, product.promotionPrice],
   );
+  const formattedWholesale = useMemo(
+    () => (getCatalogPriceValue(product.wholesalePrice) && product.wholesaleMinQuantity ? formatCatalogPrice(product.wholesalePrice, formatPrice) : null),
+    [formatPrice, product.wholesaleMinQuantity, product.wholesalePrice],
+  );
   const shouldShowPrice = product.showPrice !== false;
 
   return (
@@ -91,6 +95,7 @@ const ProductCard = memo(({
                 <p>{formattedBase}</p>
               )
             ) : null}
+            {formattedWholesale ? <small>Mayoreo: {formattedWholesale} desde {product.wholesaleMinQuantity} pzas.</small> : null}
           </div>
           <button type="button" onClick={handleAdd} aria-label={`Agregar ${product.name}`}><FiShoppingCart /></button>
         </div>
