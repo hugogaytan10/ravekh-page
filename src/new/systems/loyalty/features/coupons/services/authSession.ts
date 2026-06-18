@@ -35,14 +35,14 @@ const parseNumericId = (value: unknown): number | null => {
   return null;
 };
 
-const persistCuponesAuthSession = (payload: CuponesAuthPayload): { role: string; userId: number } => {
+const persistCuponesAuthSession = (payload: CuponesAuthPayload): { userId: number } => {
   const role = (payload.Role ?? payload.role ?? "").trim();
   const userId = parseNumericId(payload.Id ?? payload.id);
   const businessId = parseNumericId(payload.Business_Id ?? payload.businessId);
   const userName = (payload.Name ?? payload.name ?? "").trim();
   const token = (payload.Token ?? payload.token ?? "").trim();
 
-  if (!role || !userId) {
+  if (!userId) {
     throw new Error("No encontramos la información necesaria para iniciar tu sesión.");
   }
 
@@ -53,7 +53,7 @@ const persistCuponesAuthSession = (payload: CuponesAuthPayload): { role: string;
   setCuponesToken(token);
   setCuponesRole(role);
 
-  return { role, userId };
+  return { userId };
 };
 
 export { parseNumericId, persistCuponesAuthSession };

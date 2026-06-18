@@ -1,6 +1,8 @@
 import { PaginatedMeta } from "../../../shared/model/Pagination";
 import { ManagedProduct, ProductCategory, SaveManagedProductDto } from "../model/ManagedProduct";
 
+export type ProductImportResult = { imported: number; message: string; errors: string[] };
+
 export type ProductsPagination = PaginatedMeta & {
   categoryIds: number[];
 };
@@ -24,5 +26,6 @@ export interface IProductsRepository {
   createCategory(category: ProductCategory, token: string): Promise<ProductCategory>;
   updateCategory(category: ProductCategory, token: string): Promise<ProductCategory>;
   deleteCategory(categoryId: number, token: string): Promise<void>;
-  importProducts(businessId: number, file: File, token: string): Promise<{ imported: number; message: string; errors?: string[] }>;
+  importProducts(businessId: number, file: File, token: string): Promise<ProductImportResult>;
+  importProductsZip(businessId: number, file: File, token: string): Promise<ProductImportResult>;
 }
