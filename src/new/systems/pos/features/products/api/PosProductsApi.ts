@@ -76,6 +76,8 @@ type LegacyVariantResponse = {
   barcode?: string | null;
   Color?: string | null;
   color?: string | null;
+  Image?: string | null;
+  image?: string | null;
   Size?: string | null;
   size?: string | null;
   Talla?: string | null;
@@ -682,6 +684,7 @@ export class PosProductsApi implements IProductsRepository {
       description: variant.Description ?? variant.description ?? "",
       barcode: variant.Barcode ?? variant.barcode ?? null,
       color: variant.Color ?? variant.color ?? null,
+      Image: variant.Image ?? variant.image ?? null,
       size: variant.Size ?? variant.size ?? variant.Talla ?? variant.talla ?? null,
       price: variant.Price ?? variant.price ?? null,
       promotionPrice: variant.PromotionPrice ?? variant.promotionPrice ?? null,
@@ -704,6 +707,7 @@ export class PosProductsApi implements IProductsRepository {
       Description: variant.description,
       Barcode: variant.barcode ?? null,
       Color: variant.color?.trim() || null,
+      Image: variant.Image ?? null,
       ...(normalizedSize ? { Size: normalizedSize, Talla: normalizedSize } : {}),
       Price: variant.price ?? null,
       PromotionPrice: variant.promotionPrice ?? null,

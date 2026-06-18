@@ -7,6 +7,7 @@ export interface ProductVariant {
   barcode?: string | null;
   color?: string | null;
   size?: string | null;
+  Image?: string | null;
   price?: number | null;
   promotionPrice?: number | null;
   wholesalePrice?: number | null;

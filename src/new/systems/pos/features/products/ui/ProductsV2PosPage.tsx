@@ -15,6 +15,8 @@ const DEFAULT_BUSINESS_ID = Number(import.meta.env.VITE_POS_BUSINESS_ID ?? 0);
 const DEFAULT_PRODUCTS_LIMIT = "EMPRENDEDOR";
 const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
 const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
 
 type ProductItemVm = {
   id: number;
@@ -60,6 +62,9 @@ type VariantFormVm = {
   optStock: string;
   expDate: string;
   barcode: string;
+  Image: string | null;
+  imageUploading: boolean;
+  imageError: string | null;
 };
 
 type ViewMode = "grid" | "list";
@@ -108,7 +113,16 @@ const createVariantDraft = (): VariantFormVm => ({
   optStock: "",
   expDate: "",
   barcode: "",
+  Image: null,
+  imageUploading: false,
+  imageError: null,
 });
+
+const validateImageFile = (file: File): string | null => {
+  if (!ACCEPTED_IMAGE_TYPES.has(file.type)) return "Solo se aceptan imágenes JPG, JPEG, PNG o WEBP.";
+  if (file.size > MAX_IMAGE_SIZE_BYTES) return "La imagen no puede pesar más de 5MB.";
+  return null;
+};
 
 const toNullableNumber = (value: string): number | null => {
   const trimmed = value.trim();
@@ -439,6 +453,7 @@ export const ProductsV2PosPage = () => {
         minStock: toNullableNumber(variant.minStock),
         optStock: toNullableNumber(variant.optStock),
         expDate: variant.expDate.trim() || null,
+        Image: variant.Image ?? null,
       }));
   };
 
@@ -503,6 +518,11 @@ export const ProductsV2PosPage = () => {
 
     if (!name.trim()) {
       setError("El nombre del producto es obligatorio.");
+      return;
+    }
+
+    if (variants.some((variant) => variant.imageUploading)) {
+      setError("Espera a que terminen de subir las imágenes de variantes.");
       return;
     }
 
@@ -745,6 +765,9 @@ export const ProductsV2PosPage = () => {
           optStock: variant.optStock == null ? "" : String(variant.optStock),
           expDate: variant.expDate ?? "",
           barcode: variant.barcode ?? "",
+          Image: variant.Image ?? null,
+          imageUploading: false,
+          imageError: null,
         })),
       );
       setError(null);
@@ -790,9 +813,14 @@ export const ProductsV2PosPage = () => {
   };
 
   const handleImageInput = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []).filter((file) => file.type.startsWith("image/"));
-    if (files.length === 0) return;
-    setSelectedImageFiles((current) => [...current, ...files]);
+    const files = Array.from(event.target.files ?? []);
+    const validFiles = files.filter((file) => {
+      const validationError = validateImageFile(file);
+      if (validationError) setError(validationError);
+      return !validationError;
+    });
+    if (validFiles.length === 0) return;
+    setSelectedImageFiles((current) => [...current, ...validFiles]);
     event.target.value = "";
   };
 
@@ -800,7 +828,7 @@ export const ProductsV2PosPage = () => {
   const removeStoredImage = (indexToRemove: number) => setStoredImages((current) => current.filter((_, index) => index !== indexToRemove));
   const removeSelectedImage = (indexToRemove: number) => setSelectedImageFiles((current) => current.filter((_, index) => index !== indexToRemove));
 
-  const updateVariant = (key: string, field: keyof VariantFormVm, value: string) => {
+  const updateVariant = (key: string, field: keyof Pick<VariantFormVm, "description" | "color" | "price" | "promotionPrice" | "wholesalePrice" | "wholesaleMinQuantity" | "costPerItem" | "stock" | "minStock" | "optStock" | "expDate" | "barcode">, value: string) => {
     setVariants((current) => current.map((variant) => {
       if (variant.key !== key) return variant;
       return {
@@ -809,6 +837,36 @@ export const ProductsV2PosPage = () => {
         ...(field === "wholesalePrice" && value.trim() === "" ? { wholesaleMinQuantity: "" } : {}),
       };
     }));
+  };
+
+
+
+  const updateVariantImageState = (key: string, patch: Partial<Pick<VariantFormVm, "Image" | "imageUploading" | "imageError">>) => {
+    setVariants((current) => current.map((variant) => (variant.key === key ? { ...variant, ...patch } : variant)));
+  };
+
+  const handleVariantImageInput = async (key: string, event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      updateVariantImageState(key, { imageError: validationError });
+      return;
+    }
+
+    updateVariantImageState(key, { imageUploading: true, imageError: null });
+    try {
+      const imageUrl = await uploadImageToCloudinary(file);
+      updateVariantImageState(key, { Image: imageUrl, imageUploading: false, imageError: null });
+    } catch (cause) {
+      updateVariantImageState(key, { imageUploading: false, imageError: cause instanceof Error ? cause.message : "No se pudo subir la imagen de la variante." });
+    }
+  };
+
+  const removeVariantImage = (key: string) => {
+    updateVariantImageState(key, { Image: null, imageError: null });
   };
 
   const validateCategoryForm = (): boolean => {
@@ -1406,7 +1464,7 @@ export const ProductsV2PosPage = () => {
 
                 <label>
                   Fotos del producto
-                  <input type="file" accept="image/*" multiple onChange={handleImageInput} />
+                  <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" multiple onChange={handleImageInput} />
                 </label>
 
                 {formImagePreviews.length > 0 ? (
@@ -1463,6 +1521,15 @@ export const ProductsV2PosPage = () => {
                       <div className="pos-v2-products__variant-head">
                         <strong>Variante {index + 1}</strong>
                         <button type="button" className="is-delete" onClick={() => removeVariant(variant.key)}>Eliminar</button>
+                      </div>
+                      <div className="pos-v2-products__variant-image">
+                        {variant.Image ? <img src={toImageUrl(variant.Image) ?? variant.Image} alt={`Imagen de variante ${index + 1}`} loading="lazy" /> : <span>Sin imagen</span>}
+                        <label className="pos-v2-products__variant-image-action">
+                          {variant.imageUploading ? "Subiendo..." : variant.Image ? "Cambiar imagen" : "Agregar imagen"}
+                          <input type="file" accept="image/jpeg,image/jpg,image/png,image/webp" onChange={(event) => void handleVariantImageInput(variant.key, event)} disabled={variant.imageUploading || saving} />
+                        </label>
+                        {variant.Image ? <button type="button" className="is-delete" onClick={() => removeVariantImage(variant.key)} disabled={variant.imageUploading || saving}>Quitar</button> : null}
+                        {variant.imageError ? <small className="pos-v2-products__variant-image-error">{variant.imageError}</small> : null}
                       </div>
                       <div className="pos-v2-products__variant-grid">
                         <input value={variant.description} onChange={(event) => updateVariant(variant.key, "description", event.target.value)} placeholder="Descripción" aria-label={`Nombre de variante ${index + 1}`} />
@@ -1566,7 +1633,7 @@ export const ProductsV2PosPage = () => {
 
                 <div className="pos-v2-products__form-actions is-modal">
                   <button type="button" className="pos-v2-products__secondary" onClick={closeFormModal}>Cancelar</button>
-                  <button type="submit" className="pos-v2-products__primary" disabled={saving}>{saving ? "Guardando..." : editingId ? "Guardar cambios" : "Guardar producto"}</button>
+                  <button type="submit" className="pos-v2-products__primary" disabled={saving || variants.some((variant) => variant.imageUploading)}>{saving ? "Guardando..." : variants.some((variant) => variant.imageUploading) ? "Subiendo imagen..." : editingId ? "Guardar cambios" : "Guardar producto"}</button>
                 </div>
               </form>
             </section>
