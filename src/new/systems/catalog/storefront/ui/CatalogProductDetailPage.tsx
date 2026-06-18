@@ -14,6 +14,15 @@ import { useCatalogThemeSync } from "./useCatalogThemeSync";
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
 
+const normalizeOptionText = (value?: string | null) => value?.trim().toLowerCase() ?? "";
+
+const variantMatchesColor = (variant: StorefrontVariant, color: StorefrontProductExtra | null) => {
+  const variantColor = normalizeOptionText(variant.color);
+  if (!variantColor) return true;
+  if (!color) return false;
+  return variantColor === normalizeOptionText(color.description);
+};
+
 export const CatalogProductDetailPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
@@ -196,7 +205,7 @@ export const CatalogProductDetailPage = () => {
         wholesaleMinQuantity: wholesaleMinQuantityToStore,
         cost: costToStore,
         quantity,
-        image: product.image,
+        image: selectedVariant?.image || product.image,
       }];
 
     window.localStorage.setItem(key, JSON.stringify(updated));
@@ -227,9 +236,13 @@ export const CatalogProductDetailPage = () => {
   if (loading) return <main className="mx-auto grid max-w-5xl gap-4 p-4"><p className="text-[var(--text-secondary)]">Cargando producto...</p></main>;
   if (!product) return <main className="mx-auto grid max-w-5xl gap-4 p-4"><p className="text-[var(--text-secondary)]">No encontramos este producto.</p></main>;
   const images = Array.from(new Set([product.image, ...(product.images ?? [])].filter(Boolean)));
-  const currentImage = images[activeImage] ?? product.image;
   const isBaseSelected = selectedVariantId === "base";
-  const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? null;
+  const selectedColor = colors.find((color) => color.id === selectedColorId) ?? null;
+  const visibleVariants = variants.filter((variant) => variantMatchesColor(variant, selectedColor));
+  const selectedVariant = visibleVariants.find((variant) => variant.id === selectedVariantId) ?? null;
+  const selectedVariantImage = selectedVariant?.image?.trim() || "";
+  const displayImages = selectedVariantImage ? [selectedVariantImage] : images;
+  const currentImage = displayImages[activeImage] ?? displayImages[0] ?? product.image;
   const selectedWholesalePrice = selectedVariant ? selectedVariant.wholesalePrice : product.wholesalePrice;
   const selectedWholesaleMinQuantity = selectedVariant ? selectedVariant.wholesaleMinQuantity : product.wholesaleMinQuantity;
   const effectivePrice = selectedVariant
@@ -266,12 +279,12 @@ export const CatalogProductDetailPage = () => {
                   Ver más
                 </span>
               </button>
-            {images.length > 1 ? (
+            {displayImages.length > 1 ? (
               <>
                 <button
                   type="button"
                   className="absolute left-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white"
-                  onClick={() => setActiveImage((prev) => (prev - 1 + images.length) % images.length)}
+                  onClick={() => setActiveImage((prev) => (prev - 1 + displayImages.length) % displayImages.length)}
                   aria-label="Imagen anterior"
                 >
                   <FiChevronLeft />
@@ -279,13 +292,13 @@ export const CatalogProductDetailPage = () => {
                 <button
                   type="button"
                   className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white"
-                  onClick={() => setActiveImage((prev) => (prev + 1) % images.length)}
+                  onClick={() => setActiveImage((prev) => (prev + 1) % displayImages.length)}
                   aria-label="Imagen siguiente"
                 >
                   <FiChevronRight />
                 </button>
                 <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
-                  {images.map((_, index) => (
+                  {displayImages.map((_, index) => (
                     <button
                       key={index}
                       type="button"
@@ -305,9 +318,9 @@ export const CatalogProductDetailPage = () => {
             >
               Ver más
             </button>
-            {images.length > 1 ? (
+            {displayImages.length > 1 ? (
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {images.map((image, index) => (
+                {displayImages.map((image, index) => (
                   <button
                     key={`${image}-${index}`}
                     type="button"
@@ -346,11 +359,14 @@ export const CatalogProductDetailPage = () => {
                     ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
                     : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
                     }`}
-                  onClick={() => setSelectedVariantId("base")}
+                  onClick={() => {
+                    setSelectedVariantId("base");
+                    setActiveImage(0);
+                  }}
                 >
                   {product.name}
                 </button>
-                {variants.map((variant) => (
+                {visibleVariants.map((variant) => (
                   <button
                     key={variant.id}
                     type="button"
@@ -358,7 +374,10 @@ export const CatalogProductDetailPage = () => {
                       ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
                       : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
                       }`}
-                    onClick={() => setSelectedVariantId(variant.id)}
+                    onClick={() => {
+                      setSelectedVariantId(variant.id);
+                      setActiveImage(0);
+                    }}
                   >
                     {variant.description}
                   </button>
@@ -378,7 +397,14 @@ export const CatalogProductDetailPage = () => {
                       ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
                       : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
                       }`}
-                    onClick={() => setSelectedColorId((current) => current === color.id ? null : color.id)}
+                    onClick={() => {
+                      setSelectedColorId((current) => current === color.id ? null : color.id);
+                      setSelectedVariantId((current) => {
+                        if (!current || current === "base") return current;
+                        const currentVariant = variants.find((variant) => variant.id === current) ?? null;
+                        return currentVariant && variantMatchesColor(currentVariant, color) ? current : null;
+                      });
+                    }}
                   >
                     {color.description}
                   </button>
