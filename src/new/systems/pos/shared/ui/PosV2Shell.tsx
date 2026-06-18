@@ -1,8 +1,11 @@
-import { ReactNode, useEffect, useMemo, useState } from "react";
+import { MouseEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { FiBarChart2, FiBox, FiDollarSign, FiMoreHorizontal, FiShoppingCart } from "react-icons/fi";
-import { isSalesOnlyOperator, readPosSessionSnapshot } from "../config/posSession";
+import { clearPosSessionSnapshot, isSalesOnlyOperator, readPosSessionSnapshot, storePendingPosUpgradeContext } from "../config/posSession";
 import { POS_V2_PATHS } from "../../routing/PosV2Paths";
+import { fetchPosBusinessFeatures, isOfflinePosPlan, isPosModuleBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../config/posFeatureFlags";
+import { onPosBusinessUpdated } from "../config/posBusinessEvents";
+import { FeatureUnlockModal } from "./FeatureUnlockModal";
 import "./PosV2Shell.css";
 
 type PosV2ShellProps = {
@@ -26,6 +29,8 @@ const NAV_ITEMS = [
 export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const [features, setFeatures] = useState<PosBusinessFeatures>(POS_FEATURES_UNKNOWN);
+  const [showSalesUnlock, setShowSalesUnlock] = useState(false);
   const [theme, setTheme] = useState<UiTheme>(() => {
     const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
     if (stored === "light" || stored === "dark") {
@@ -38,6 +43,32 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
 
     return "light";
   });
+
+  useEffect(() => {
+    const session = readPosSessionSnapshot();
+    if (!session.token || !session.businessId) return;
+
+    const loadFeatures = () => {
+      fetchPosBusinessFeatures(session.businessId, session.token)
+        .then((nextFeatures) => {
+          if (isOfflinePosPlan(nextFeatures.plan)) {
+            storePendingPosUpgradeContext(session);
+            clearPosSessionSnapshot();
+            navigate(`${POS_V2_PATHS.login}?reason=offline`, { replace: true });
+            return;
+          }
+          setFeatures(nextFeatures);
+        })
+        .catch(() => setFeatures(POS_FEATURES_UNKNOWN));
+    };
+
+    loadFeatures();
+
+    return onPosBusinessUpdated((detail) => {
+      if (detail.businessId !== session.businessId) return;
+      loadFeatures();
+    });
+  }, [navigate]);
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
@@ -53,6 +84,12 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
   const shouldShowBottomNav = useMemo(() => {
     return navItems.some((item) => item.to === location.pathname);
   }, [location.pathname, navItems]);
+
+  const handleNavClick = (event: MouseEvent<HTMLAnchorElement>, to: string) => {
+    if (to !== POS_V2_PATHS.sales || !isPosModuleBlocked(features)) return;
+    event.preventDefault();
+    setShowSalesUnlock(true);
+  };
 
   return (
     <div className="pos-v2-shell">
@@ -87,6 +124,7 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
               key={to}
               to={to}
               className={({ isActive }) => `pos-v2-shell__nav-item ${isActive ? "is-active" : ""}`}
+              onClick={(event) => handleNavClick(event, to)}
             >
               {({ isActive }) => (
                 <>
@@ -98,6 +136,15 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
           ))}
         </nav>
       ) : null}
+
+      <FeatureUnlockModal
+        open={showSalesUnlock}
+        onClose={() => setShowSalesUnlock(false)}
+        title="Ventas bloqueadas"
+        message="Tu módulo POS está desactivado. Desbloquéalo para acceder a ventas, cobrar más rápido y vender sin límites."
+        buttonText="Desbloquear POS"
+        unlockFeature="Pos"
+      />
     </div>
   );
 };

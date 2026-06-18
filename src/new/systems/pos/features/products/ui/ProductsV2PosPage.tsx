@@ -8,6 +8,9 @@ import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
+import { fetchPosBusinessFeatures, isOfflinePosPlan, isPosFeatureBlocked, isPosModuleBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../../../shared/config/posFeatureFlags";
+import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
+import { FeatureUnlockModal } from "../../../shared/ui/FeatureUnlockModal";
 import "./ProductsV2PosPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -171,6 +174,8 @@ export const ProductsV2PosPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [productsLimit, setProductsLimit] = useState(() => (window.localStorage.getItem("plan") ?? "").trim() || DEFAULT_PRODUCTS_LIMIT);
+  const [features, setFeatures] = useState<PosBusinessFeatures>(POS_FEATURES_UNKNOWN);
+  const [showPosFeatureUnlock, setShowPosFeatureUnlock] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -231,11 +236,29 @@ export const ProductsV2PosPage = () => {
     resetForm();
   };
 
+  const openPosFeatureUnlock = () => setShowPosFeatureUnlock(true);
+
+  const blockOfflineProductMutation = (): boolean => {
+    if (!isOfflinePosPlan(features.plan)) return false;
+    openPosFeatureUnlock();
+    return true;
+  };
+
   const openCreateModal = () => {
+    if (blockOfflineProductMutation()) return;
     resetForm();
     setSaveResult(null);
     setError(null);
     setIsFormOpen(true);
+  };
+
+  const openCategoryManager = () => {
+    if (isPosModuleBlocked(features)) {
+      openPosFeatureUnlock();
+      return;
+    }
+
+    setShowCategoryManager(true);
   };
 
   const resetCategoryForm = () => {
@@ -244,6 +267,23 @@ export const ProductsV2PosPage = () => {
     setCategoryColorInput("#4F46E5");
     setCategoryFormErrors({});
   };
+
+  useEffect(() => {
+    if (!businessId || !token) return;
+
+    const loadFeatures = () => {
+      fetchPosBusinessFeatures(businessId, token, API_BASE_URL)
+        .then(setFeatures)
+        .catch(() => setFeatures(POS_FEATURES_UNKNOWN));
+    };
+
+    loadFeatures();
+
+    return onPosBusinessUpdated((detail) => {
+      if (detail.businessId !== businessId) return;
+      loadFeatures();
+    });
+  }, [businessId, token]);
 
   useEffect(() => {
     if (!businessId || !token) return;
@@ -506,6 +546,11 @@ export const ProductsV2PosPage = () => {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
+    if (blockOfflineProductMutation()) {
+      closeFormModal();
+      return;
+    }
+
     if (!businessId) {
       setError("Business ID es obligatorio.");
       return;
@@ -697,6 +742,7 @@ export const ProductsV2PosPage = () => {
   });
 
   const handleRestore = async (productId: number) => {
+    if (blockOfflineProductMutation()) return;
     if (!token) {
       setToast({ type: "error", message: "Token es obligatorio para restaurar." });
       return;
@@ -717,6 +763,7 @@ export const ProductsV2PosPage = () => {
   };
 
   const handleEdit = async (productId: number) => {
+    if (blockOfflineProductMutation()) return;
     if (!token) {
       setError("Token es obligatorio para editar.");
       return;
@@ -781,11 +828,16 @@ export const ProductsV2PosPage = () => {
   };
 
   const requestArchive = (productId: number, productName: string) => {
+    if (blockOfflineProductMutation()) return;
     setArchiveDialog({ id: productId, name: productName });
   };
 
   const handleArchive = async () => {
     if (!archiveDialog) return;
+    if (blockOfflineProductMutation()) {
+      setArchiveDialog(null);
+      return;
+    }
 
     if (!token) {
       setError("Token es obligatorio para eliminar/archivar.");
@@ -891,6 +943,11 @@ export const ProductsV2PosPage = () => {
   };
 
   const saveCategory = async () => {
+    if (isPosModuleBlocked(features)) {
+      setShowCategoryManager(false);
+      openPosFeatureUnlock();
+      return;
+    }
     if (!token || !businessId) return;
     if (!validateCategoryForm()) {
       setToast({ type: "error", message: "Revisa los campos de categoría para continuar." });
@@ -913,6 +970,11 @@ export const ProductsV2PosPage = () => {
   };
 
   const editCategory = (category: ProductCategoryVm) => {
+    if (isPosModuleBlocked(features)) {
+      setShowCategoryManager(false);
+      openPosFeatureUnlock();
+      return;
+    }
     setEditingCategoryId(category.id);
     setCategoryNameInput(category.name);
     setCategoryColorInput(category.color || "#4F46E5");
@@ -921,6 +983,11 @@ export const ProductsV2PosPage = () => {
   };
 
   const deleteCategory = async (categoryId: number) => {
+    if (isPosModuleBlocked(features)) {
+      setShowCategoryManager(false);
+      openPosFeatureUnlock();
+      return;
+    }
     if (!token) return;
     try {
       await service.deleteCategory(categoryId, token);
@@ -959,6 +1026,11 @@ export const ProductsV2PosPage = () => {
     if (!categoryCarouselRef.current) return;
     const offset = direction === "left" ? -220 : 220;
     categoryCarouselRef.current.scrollBy({ left: offset, behavior: "smooth" });
+  };
+
+  const openImportProducts = () => {
+    if (blockOfflineProductMutation()) return;
+    excelInputRef.current?.click();
   };
 
   const getImportErrorMessage = (cause: unknown): string => {
@@ -1657,6 +1729,15 @@ export const ProductsV2PosPage = () => {
             </section>
           </div>
         ) : null}
+
+        <FeatureUnlockModal
+          open={showPosFeatureUnlock}
+          onClose={() => setShowPosFeatureUnlock(false)}
+          title="Desbloquea esta función"
+          message="Esta función está bloqueada en tu plan actual. Desbloquéala contratando un plan para usarla sin límites."
+          buttonText="Desbloquear ahora"
+          unlockFeature="Pos"
+        />
 
         {showCategoryManager ? (
           <div className="pos-v2-products__modal-backdrop" role="presentation" onClick={() => setShowCategoryManager(false)}>

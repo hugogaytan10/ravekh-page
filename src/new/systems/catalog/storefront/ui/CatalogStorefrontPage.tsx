@@ -66,6 +66,8 @@ const normalizePlan = (plan?: string | null) => String(plan ?? "").trim().toUppe
 
 const isOfflinePlan = (plan?: string | null): boolean => normalizePlan(plan) === "OFFLINE";
 
+const isCatalogFeatureDisabled = (catalogFeature?: number | null): boolean => catalogFeature === 0;
+
 const isPaidPlan = (plan?: string | null): boolean => {
   const normalized = normalizePlan(plan);
   if (!normalized || normalized === "OFFLINE") return false;
@@ -126,7 +128,10 @@ export const CatalogStorefrontPage = () => {
     const service = new CatalogStorefrontService(repository);
     return new CatalogStorefrontExperiencePage(service);
   }, []);
-  const catalogOffline = useMemo(() => isOfflinePlan(store?.plan), [store?.plan]);
+  const catalogUnavailable = useMemo(
+    () => isOfflinePlan(store?.plan) || isCatalogFeatureDisabled(store?.catalogFeature),
+    [store?.catalogFeature, store?.plan],
+  );
   const whatsappUrl = useMemo(() => buildWhatsAppUrl(store?.phone), [store?.phone]);
 
   useEffect(() => {
@@ -198,7 +203,7 @@ export const CatalogStorefrontPage = () => {
   useEffect(() => {
     if (!businessContextLoaded || !businessId) return;
 
-    if (catalogOffline) {
+    if (catalogUnavailable) {
       setProducts([]);
       setGlobalSearchProducts([]);
       setTotalPages(1);
@@ -241,7 +246,7 @@ export const CatalogStorefrontPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [businessContextLoaded, businessId, page, pageLogic, selectedCategoryId, planLimit, catalogOffline]);
+  }, [businessContextLoaded, businessId, page, pageLogic, selectedCategoryId, planLimit, catalogUnavailable]);
 
   useEffect(() => {
     if (!businessId) return;
@@ -517,7 +522,7 @@ export const CatalogStorefrontPage = () => {
           </span>
           <h1>{store?.name || "Catálogo digital"}</h1>
         </div>
-        {!catalogOffline ? (
+        {!catalogUnavailable ? (
           <Link to="/catalogo/pedido" className="catalog-v2__cart-link" aria-label="Ver carrito">
             <FiShoppingCart />
             {totalItems > 0 ? <span>{totalItems}</span> : null}
@@ -526,7 +531,7 @@ export const CatalogStorefrontPage = () => {
       </header>
 
 
-      {catalogOffline ? (
+      {catalogUnavailable ? (
         <>
           <section className="catalog-v2__offline" aria-live="polite">
             <div>
@@ -678,7 +683,7 @@ export const CatalogStorefrontPage = () => {
         </>
       )}
 
-      {!catalogOffline && showFilters ? (
+      {!catalogUnavailable && showFilters ? (
         <div className="fixed inset-0 z-40 grid bg-black/55">
           <aside className="ml-auto grid h-full w-full max-w-[390px] content-start gap-4 overflow-y-auto border-l border-[var(--border-default)] bg-[var(--bg-surface)] p-4 text-[var(--text-primary)] sm:max-w-[420px] max-sm:mt-auto max-sm:h-auto max-sm:max-w-full max-sm:rounded-t-2xl max-sm:border-l-0 max-sm:border-t">
             <button
@@ -745,7 +750,7 @@ export const CatalogStorefrontPage = () => {
         onConfirm={addVariantToCart}
       />
 
-      {!catalogOffline && totalItems > 0 ? (
+      {!catalogUnavailable && totalItems > 0 ? (
         <Link to="/catalogo/pedido" className="catalog-v2__cart-fab">
           Ver carrito ({totalItems}) · {totalLabel}
         </Link>

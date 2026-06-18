@@ -224,7 +224,7 @@ const deleteCouponsAccount = async (userId: number, token: string): Promise<{ me
 };
 
 const loginCupones = async (payload: LoginPayload): Promise<LoginResponse> => {
-  const response = await fetch(`${COUPONS_API_URL}Login`, {
+  const response = await fetch(`${COUPONS_API_URL}Logincustomer`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
