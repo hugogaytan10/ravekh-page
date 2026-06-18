@@ -8,7 +8,7 @@ import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExper
 import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
-import { formatCatalogPrice, getCatalogPriceValue, getEffectiveCatalogPrice } from "./catalogPrice";
+import { formatCatalogPrice, getCatalogPriceValue, getEffectiveCatalogPrice, getEffectiveCatalogPriceForQuantity } from "./catalogPrice";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
 const money = (value: number) =>
@@ -172,6 +172,8 @@ export const CatalogProductDetailPage = () => {
     const priceToStore = selectedVariant
       ? getEffectiveCatalogPrice(selectedVariant.price, selectedVariant.promotionPrice)
       : getEffectiveCatalogPrice(product.price, product.promotionPrice);
+    const wholesalePriceToStore = selectedVariant ? selectedVariant.wholesalePrice : product.wholesalePrice;
+    const wholesaleMinQuantityToStore = selectedVariant ? selectedVariant.wholesaleMinQuantity : product.wholesaleMinQuantity;
     const costToStore = selectedVariant?.costPerItem ?? undefined;
 
     const key = `catalog-v2-cart:${product.businessId}`;
@@ -190,6 +192,8 @@ export const CatalogProductDetailPage = () => {
         sizeName: selectedSize?.description,
         name: productLabel,
         price: priceToStore,
+        wholesalePrice: wholesalePriceToStore,
+        wholesaleMinQuantity: wholesaleMinQuantityToStore,
         cost: costToStore,
         quantity,
         image: product.image,
@@ -226,9 +230,12 @@ export const CatalogProductDetailPage = () => {
   const currentImage = images[activeImage] ?? product.image;
   const isBaseSelected = selectedVariantId === "base";
   const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? null;
+  const selectedWholesalePrice = selectedVariant ? selectedVariant.wholesalePrice : product.wholesalePrice;
+  const selectedWholesaleMinQuantity = selectedVariant ? selectedVariant.wholesaleMinQuantity : product.wholesaleMinQuantity;
   const effectivePrice = selectedVariant
-    ? getEffectiveCatalogPrice(selectedVariant.price, selectedVariant.promotionPrice)
-    : getEffectiveCatalogPrice(product.price, product.promotionPrice);
+    ? getEffectiveCatalogPriceForQuantity(selectedVariant.price, selectedVariant.promotionPrice, selectedVariant.wholesalePrice, selectedVariant.wholesaleMinQuantity, quantity)
+    : getEffectiveCatalogPriceForQuantity(product.price, product.promotionPrice, product.wholesalePrice, product.wholesaleMinQuantity, quantity);
+  const baseDisplayPrice = selectedVariant ? selectedVariant.price : product.price;
 
   return (
     <main className="mx-auto grid max-w-5xl gap-4 p-4">
@@ -320,15 +327,14 @@ export const CatalogProductDetailPage = () => {
             <p className="text-sm text-[var(--text-secondary)]">{product.description || "Sin descripción."}</p>
           </header>
           <div className="flex items-center gap-2">
-            {getCatalogPriceValue(product.promotionPrice) && !selectedVariant ? (
-              <>
-                <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{formatCatalogPrice(product.promotionPrice, money)}</strong>
-                {getCatalogPriceValue(product.price) ? <small className="text-sm text-[var(--text-muted)] line-through">{formatCatalogPrice(product.price, money)}</small> : null}
-              </>
-            ) : (
-              <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{formatCatalogPrice(effectivePrice, money)}</strong>
-            )}
+            <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{formatCatalogPrice(effectivePrice, money)}</strong>
+            {getCatalogPriceValue(baseDisplayPrice) && effectivePrice !== getCatalogPriceValue(baseDisplayPrice) ? <small className="text-sm text-[var(--text-muted)] line-through">{formatCatalogPrice(baseDisplayPrice, money)}</small> : null}
           </div>
+          {getCatalogPriceValue(selectedWholesalePrice) && selectedWholesaleMinQuantity ? (
+            <p className="text-sm font-semibold text-[var(--text-secondary)]">
+              Mayoreo: {formatCatalogPrice(selectedWholesalePrice, money)} desde {selectedWholesaleMinQuantity} pzas.
+            </p>
+          ) : null}
           {variants.length > 0 ? (
             <div className="grid gap-2">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Variantes</h3>

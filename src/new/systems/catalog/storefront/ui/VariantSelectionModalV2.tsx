@@ -1,13 +1,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { FiPlus, FiMinus, FiX } from "react-icons/fi";
 import { StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
-import { formatCatalogPrice, getEffectiveCatalogPrice } from "./catalogPrice";
+import { formatCatalogPrice, getCatalogPriceValue, getEffectiveCatalogPriceForQuantity } from "./catalogPrice";
 
 type Props = {
   open: boolean;
   productName: string;
   productImage?: string;
   productBasePrice?: number;
+  productBasePromotionPrice?: number | null;
+  productBaseWholesalePrice?: number | null;
+  productBaseWholesaleMinQuantity?: number | null;
   variants: StorefrontVariant[];
   colors: StorefrontProductExtra[];
   sizes: StorefrontProductExtra[];
@@ -21,6 +24,9 @@ export const VariantSelectionModalV2 = ({
   productName,
   productImage,
   productBasePrice,
+  productBasePromotionPrice,
+  productBaseWholesalePrice,
+  productBaseWholesaleMinQuantity,
   variants,
   colors,
   sizes,
@@ -49,9 +55,11 @@ export const VariantSelectionModalV2 = ({
   const selectedSize = useMemo(() => sizes.find((size) => size.id === selectedSizeId) || null, [selectedSizeId, sizes]);
 
   const isBaseSelected = selectedVariantId === "base";
+  const selectedWholesalePrice = selectedVariant ? selectedVariant.wholesalePrice : productBaseWholesalePrice;
+  const selectedWholesaleMinQuantity = selectedVariant ? selectedVariant.wholesaleMinQuantity : productBaseWholesaleMinQuantity;
   const selectedPrice = selectedVariant
-    ? getEffectiveCatalogPrice(selectedVariant.price, selectedVariant.promotionPrice)
-    : getEffectiveCatalogPrice(productBasePrice);
+    ? getEffectiveCatalogPriceForQuantity(selectedVariant.price, selectedVariant.promotionPrice, selectedVariant.wholesalePrice, selectedVariant.wholesaleMinQuantity, quantity)
+    : getEffectiveCatalogPriceForQuantity(productBasePrice, productBasePromotionPrice, productBaseWholesalePrice, productBaseWholesaleMinQuantity, quantity);
 
   const hasVariantSelection = variants.length === 0 || isBaseSelected || Boolean(selectedVariant);
   const hasAnyOptionSelected = hasVariantSelection || Boolean(selectedColor) || Boolean(selectedSize);
@@ -78,6 +86,11 @@ export const VariantSelectionModalV2 = ({
           <div className="grid gap-4 pt-1">
             <h3 className="text-2xl font-bold leading-tight text-[var(--text-primary)] md:text-3xl">{productName}</h3>
             <p className="text-3xl font-extrabold leading-none text-[var(--text-primary)] md:text-4xl">{formatCatalogPrice(selectedPrice, formatPrice)}</p>
+            {getCatalogPriceValue(selectedWholesalePrice) && selectedWholesaleMinQuantity ? (
+              <p className="text-sm font-semibold text-[var(--text-secondary)]">
+                Mayoreo: {formatCatalogPrice(selectedWholesalePrice, formatPrice)} desde {selectedWholesaleMinQuantity} pzas.
+              </p>
+            ) : null}
 
             <div className="grid gap-1">
               <strong className="text-xl font-bold leading-tight text-[var(--text-primary)]">Variantes</strong>

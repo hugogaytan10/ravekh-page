@@ -291,7 +291,15 @@ export const CatalogStorefrontPage = () => {
           item.productId === product.id ? { ...item, quantity: item.quantity + 1 } : item,
         );
       }
-      return [...current, { productId: product.id, name: product.name, price: product.price, quantity: 1, image: product.image }];
+      return [...current, {
+        productId: product.id,
+        name: product.name,
+        price: getEffectiveCatalogPrice(product.price, product.promotionPrice),
+        wholesalePrice: product.wholesalePrice,
+        wholesaleMinQuantity: product.wholesaleMinQuantity,
+        quantity: 1,
+        image: product.image,
+      }];
     });
     setToast("Producto agregado al carrito");
   };
@@ -407,6 +415,8 @@ export const CatalogStorefrontPage = () => {
     const selectedPrice = isBaseProduct
       ? getEffectiveCatalogPrice(variantProduct.price, variantProduct.promotionPrice)
       : getEffectiveCatalogPrice(variant.price, variant.promotionPrice);
+    const selectedWholesalePrice = isBaseProduct ? variantProduct.wholesalePrice : variant.wholesalePrice;
+    const selectedWholesaleMinQuantity = isBaseProduct ? variantProduct.wholesaleMinQuantity : variant.wholesaleMinQuantity;
     const selectedCost = variant?.costPerItem ?? undefined;
     const selectedName = [
       isBaseProduct ? variantProduct.name : `${variantProduct.name} · ${variant.description}`,
@@ -431,6 +441,8 @@ export const CatalogStorefrontPage = () => {
           sizeName: size?.description,
           name: selectedName,
           price: selectedPrice,
+          wholesalePrice: selectedWholesalePrice,
+          wholesaleMinQuantity: selectedWholesaleMinQuantity,
           cost: selectedCost,
           quantity,
           image: variantProduct.image,
@@ -716,6 +728,9 @@ export const CatalogStorefrontPage = () => {
         productName={variantProduct?.name ?? "Variantes"}
         productImage={variantProduct?.image}
         productBasePrice={variantProduct?.price}
+        productBasePromotionPrice={variantProduct?.promotionPrice}
+        productBaseWholesalePrice={variantProduct?.wholesalePrice}
+        productBaseWholesaleMinQuantity={variantProduct?.wholesaleMinQuantity}
         variants={variantOptions}
         colors={colorOptions}
         sizes={sizeOptions}

@@ -28,6 +28,10 @@ type ProductResponse = {
   price?: number | string;
   PromotionPrice?: number | string;
   promotionPrice?: number | string;
+  WholesalePrice?: number | string | null;
+  wholesalePrice?: number | string | null;
+  WholesaleMinQuantity?: number | string | null;
+  wholesaleMinQuantity?: number | string | null;
   Images?: unknown;
   images?: unknown;
   VariantsCount?: number | string;
@@ -66,6 +70,8 @@ export type StorefrontVariant = {
   color?: string;
   price: number;
   promotionPrice: number | null;
+  wholesalePrice: number | null;
+  wholesaleMinQuantity: number | null;
   costPerItem: number | null;
   stock: number | null;
 };
@@ -217,6 +223,8 @@ const normalizeProducts = (items: ProductResponse[], businessId: string) =>
       images: normalizeImages(item.Image ?? item.image, item.Images ?? item.images),
       price: parseNumber(item.Price ?? item.price),
       promotionPrice: item.PromotionPrice ?? item.promotionPrice ?? null,
+      wholesalePrice: item.WholesalePrice ?? item.wholesalePrice ?? null,
+      wholesaleMinQuantity: item.WholesaleMinQuantity ?? item.wholesaleMinQuantity ?? null,
       variantsCount: parseNumber(item.VariantsCount ?? item.variantsCount),
       forSale: toBoolean(item.ForSale ?? item.forSale, true),
       available: toBoolean(item.Available ?? item.available, true),
@@ -226,6 +234,8 @@ const normalizeProducts = (items: ProductResponse[], businessId: string) =>
     .map((item) => ({
       ...item,
       promotionPrice: item.promotionPrice != null ? parseNumber(item.promotionPrice) : null,
+      wholesalePrice: item.wholesalePrice != null ? parseNumber(item.wholesalePrice) : null,
+      wholesaleMinQuantity: item.wholesaleMinQuantity != null ? parseNumber(item.wholesaleMinQuantity) : null,
     }))
     .filter((item) => item.id > 0);
 
@@ -446,7 +456,7 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
   async getVariantsByProductId(productId: number): Promise<StorefrontVariant[]> {
     const response = await fetch(`${normalizeBase(this.baseUrl)}variants/product/${productId}`);
     if (!response.ok) return [];
-    const raw = (await response.json()) as Array<{ Id?: number; Description?: string; Color?: string; Price?: number | string; PromotionPrice?: number | string; CostPerItem?: number | string; Stock?: number | string }>;
+    const raw = (await response.json()) as Array<{ Id?: number; Description?: string; Color?: string; Price?: number | string; PromotionPrice?: number | string; WholesalePrice?: number | string | null; WholesaleMinQuantity?: number | string | null; CostPerItem?: number | string; Stock?: number | string }>;
     if (!Array.isArray(raw)) return [];
 
     return raw
@@ -456,6 +466,8 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
         color: item.Color?.trim() || "",
         price: parseNumber(item.Price),
         promotionPrice: item.PromotionPrice != null ? parseNumber(item.PromotionPrice) : null,
+        wholesalePrice: item.WholesalePrice != null ? parseNumber(item.WholesalePrice) : null,
+        wholesaleMinQuantity: item.WholesaleMinQuantity != null ? parseNumber(item.WholesaleMinQuantity) : null,
         costPerItem: item.CostPerItem != null ? parseNumber(item.CostPerItem) : null,
         stock: item.Stock != null ? parseNumber(item.Stock) : null,
       }))
@@ -502,6 +514,14 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
       promotionPrice:
         item.PromotionPrice != null || item.promotionPrice != null
           ? parseNumber(item.PromotionPrice ?? item.promotionPrice)
+          : null,
+      wholesalePrice:
+        item.WholesalePrice != null || item.wholesalePrice != null
+          ? parseNumber(item.WholesalePrice ?? item.wholesalePrice)
+          : null,
+      wholesaleMinQuantity:
+        item.WholesaleMinQuantity != null || item.wholesaleMinQuantity != null
+          ? parseNumber(item.WholesaleMinQuantity ?? item.wholesaleMinQuantity)
           : null,
       variantsCount: parseNumber(item.VariantsCount ?? item.variantsCount),
       forSale: toBoolean(item.ForSale ?? item.forSale, true),
