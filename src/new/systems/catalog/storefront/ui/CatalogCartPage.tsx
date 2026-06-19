@@ -4,7 +4,7 @@ import { FiArrowLeft, FiMinus, FiPlus, FiTrash2 } from "react-icons/fi";
 import { StorefrontCartItem } from "../model/CatalogStorefrontModels";
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import "./CatalogCartPage.css";
-import { CATALOG_QUOTABLE_LABEL, formatCatalogPrice, formatCatalogTotal, getCatalogPriceValue } from "./catalogPrice";
+import { CATALOG_QUOTABLE_LABEL, formatCatalogPrice, formatCatalogTotal, getCatalogPriceValue, getEffectiveCatalogPriceForQuantity } from "./catalogPrice";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
 const money = (value: number) =>
@@ -103,8 +103,9 @@ export const CatalogCartPage = () => {
                   {item.image ? <img src={item.image} alt={item.name} /> : <div className="placeholder" />}
                   <div>
                     <p>{item.name}</p>
-                    <strong>{formatCatalogPrice(item.price, money)}</strong>
-                    <small>Total: {getCatalogPriceValue(item.price) ? money((getCatalogPriceValue(item.price) ?? 0) * item.quantity) : CATALOG_QUOTABLE_LABEL}</small>
+                    <strong>{formatCatalogPrice(getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity), money)}</strong>
+                    {getCatalogPriceValue(item.wholesalePrice) && item.wholesaleMinQuantity ? <small>Mayoreo desde {item.wholesaleMinQuantity} pzas.</small> : null}
+                    <small>Total: {getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity) ? money((getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity) ?? 0) * item.quantity) : CATALOG_QUOTABLE_LABEL}</small>
                     <div className="qty-controls">
                       <button type="button" onClick={() => decrement(item.productId)}><FiMinus /></button>
                       <input

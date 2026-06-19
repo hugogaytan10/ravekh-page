@@ -25,6 +25,7 @@ export class ProductsService {
   }
 
   async saveProduct(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct> {
+    console.log("Saving product with payload:", payload);
     return payload.id ? this.repository.update(payload, token) : this.repository.create(payload, token);
   }
 

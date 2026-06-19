@@ -4,7 +4,7 @@ import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
 import { CatalogStorefrontApi } from "../api/CatalogStorefrontApi";
 import { getStripe } from "./stripeClient";
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
-import { formatCatalogPrice, getCatalogPriceValue } from "./catalogPrice";
+import { formatCatalogPrice, getEffectiveCatalogPriceForQuantity } from "./catalogPrice";
 import "./CatalogOrderInfoPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
@@ -32,6 +32,9 @@ type CartItem = {
   sizeName?: string;
   name: string;
   price?: number | null;
+  promotionPrice?: number | null;
+  wholesalePrice?: number | null;
+  wholesaleMinQuantity?: number | null;
   cost?: number;
   quantity: number;
 };
@@ -54,7 +57,7 @@ const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
 
 const buildWhatsAppProductLine = (item: CartItem) =>
-  `• ${item.name} x${item.quantity} - ${formatCatalogPrice(item.price, money)}`;
+  `• ${item.name} x${item.quantity} - ${formatCatalogPrice(getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity), money)}`;
 
 export const CatalogOrderInfoPage = () => {
   useCatalogThemeSync();
@@ -242,7 +245,7 @@ export const CatalogOrderInfoPage = () => {
             : { Product_Id: Number(item.productId) || 0 }),
           ...(item.colorId ? { Color_Id: Number(item.colorId) || 0 } : {}),
           ...(item.sizeId ? { Size_Id: Number(item.sizeId) || 0 } : {}),
-          ...(getCatalogPriceValue(item.price) ? { Price: getCatalogPriceValue(item.price) ?? 0 } : {}),
+          ...(getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity) ? { Price: getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity) ?? 0 } : {}),
           ...(item.cost ? { Cost: Number(item.cost) || 0 } : {}),
         })),
       };
@@ -262,7 +265,7 @@ export const CatalogOrderInfoPage = () => {
             price_data: {
               currency: businessConfig.currency.toLowerCase(),
               product_data: { name: item.name },
-              unit_amount: Math.round((getCatalogPriceValue(item.price) ?? 0) * 100),
+              unit_amount: Math.round((getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity) ?? 0) * 100),
             },
             quantity: item.quantity,
           })),

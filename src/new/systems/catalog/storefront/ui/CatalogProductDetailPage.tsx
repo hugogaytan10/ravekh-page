@@ -8,11 +8,20 @@ import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExper
 import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
-import { formatCatalogPrice, getCatalogPriceValue, getEffectiveCatalogPrice } from "./catalogPrice";
+import { formatCatalogPrice, getCatalogPriceValue, getEffectiveCatalogPrice, getEffectiveCatalogPriceForQuantity } from "./catalogPrice";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
+
+const normalizeOptionText = (value?: string | null) => value?.trim().toLowerCase() ?? "";
+
+const variantMatchesColor = (variant: StorefrontVariant, color: StorefrontProductExtra | null) => {
+  const variantColor = normalizeOptionText(variant.color);
+  if (!variantColor) return true;
+  if (!color) return false;
+  return variantColor === normalizeOptionText(color.description);
+};
 
 export const CatalogProductDetailPage = () => {
   useCatalogThemeSync();
@@ -172,6 +181,8 @@ export const CatalogProductDetailPage = () => {
     const priceToStore = selectedVariant
       ? getEffectiveCatalogPrice(selectedVariant.price, selectedVariant.promotionPrice)
       : getEffectiveCatalogPrice(product.price, product.promotionPrice);
+    const wholesalePriceToStore = selectedVariant ? selectedVariant.wholesalePrice : product.wholesalePrice;
+    const wholesaleMinQuantityToStore = selectedVariant ? selectedVariant.wholesaleMinQuantity : product.wholesaleMinQuantity;
     const costToStore = selectedVariant?.costPerItem ?? undefined;
 
     const key = `catalog-v2-cart:${product.businessId}`;
@@ -190,9 +201,11 @@ export const CatalogProductDetailPage = () => {
         sizeName: selectedSize?.description,
         name: productLabel,
         price: priceToStore,
+        wholesalePrice: wholesalePriceToStore,
+        wholesaleMinQuantity: wholesaleMinQuantityToStore,
         cost: costToStore,
         quantity,
-        image: product.image,
+        image: selectedVariant?.image || product.image,
       }];
 
     window.localStorage.setItem(key, JSON.stringify(updated));
@@ -223,12 +236,19 @@ export const CatalogProductDetailPage = () => {
   if (loading) return <main className="mx-auto grid max-w-5xl gap-4 p-4"><p className="text-[var(--text-secondary)]">Cargando producto...</p></main>;
   if (!product) return <main className="mx-auto grid max-w-5xl gap-4 p-4"><p className="text-[var(--text-secondary)]">No encontramos este producto.</p></main>;
   const images = Array.from(new Set([product.image, ...(product.images ?? [])].filter(Boolean)));
-  const currentImage = images[activeImage] ?? product.image;
   const isBaseSelected = selectedVariantId === "base";
-  const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? null;
+  const selectedColor = colors.find((color) => color.id === selectedColorId) ?? null;
+  const visibleVariants = variants.filter((variant) => variantMatchesColor(variant, selectedColor));
+  const selectedVariant = visibleVariants.find((variant) => variant.id === selectedVariantId) ?? null;
+  const selectedVariantImage = selectedVariant?.image?.trim() || "";
+  const displayImages = selectedVariantImage ? [selectedVariantImage] : images;
+  const currentImage = displayImages[activeImage] ?? displayImages[0] ?? product.image;
+  const selectedWholesalePrice = selectedVariant ? selectedVariant.wholesalePrice : product.wholesalePrice;
+  const selectedWholesaleMinQuantity = selectedVariant ? selectedVariant.wholesaleMinQuantity : product.wholesaleMinQuantity;
   const effectivePrice = selectedVariant
-    ? getEffectiveCatalogPrice(selectedVariant.price, selectedVariant.promotionPrice)
-    : getEffectiveCatalogPrice(product.price, product.promotionPrice);
+    ? getEffectiveCatalogPriceForQuantity(selectedVariant.price, selectedVariant.promotionPrice, selectedVariant.wholesalePrice, selectedVariant.wholesaleMinQuantity, quantity)
+    : getEffectiveCatalogPriceForQuantity(product.price, product.promotionPrice, product.wholesalePrice, product.wholesaleMinQuantity, quantity);
+  const baseDisplayPrice = selectedVariant ? selectedVariant.price : product.price;
 
   return (
     <main className="mx-auto grid max-w-5xl gap-4 p-4">
@@ -259,12 +279,12 @@ export const CatalogProductDetailPage = () => {
                   Ver más
                 </span>
               </button>
-            {images.length > 1 ? (
+            {displayImages.length > 1 ? (
               <>
                 <button
                   type="button"
                   className="absolute left-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white"
-                  onClick={() => setActiveImage((prev) => (prev - 1 + images.length) % images.length)}
+                  onClick={() => setActiveImage((prev) => (prev - 1 + displayImages.length) % displayImages.length)}
                   aria-label="Imagen anterior"
                 >
                   <FiChevronLeft />
@@ -272,13 +292,13 @@ export const CatalogProductDetailPage = () => {
                 <button
                   type="button"
                   className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white"
-                  onClick={() => setActiveImage((prev) => (prev + 1) % images.length)}
+                  onClick={() => setActiveImage((prev) => (prev + 1) % displayImages.length)}
                   aria-label="Imagen siguiente"
                 >
                   <FiChevronRight />
                 </button>
                 <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
-                  {images.map((_, index) => (
+                  {displayImages.map((_, index) => (
                     <button
                       key={index}
                       type="button"
@@ -298,9 +318,9 @@ export const CatalogProductDetailPage = () => {
             >
               Ver más
             </button>
-            {images.length > 1 ? (
+            {displayImages.length > 1 ? (
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {images.map((image, index) => (
+                {displayImages.map((image, index) => (
                   <button
                     key={`${image}-${index}`}
                     type="button"
@@ -320,15 +340,14 @@ export const CatalogProductDetailPage = () => {
             <p className="text-sm text-[var(--text-secondary)]">{product.description || "Sin descripción."}</p>
           </header>
           <div className="flex items-center gap-2">
-            {getCatalogPriceValue(product.promotionPrice) && !selectedVariant ? (
-              <>
-                <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{formatCatalogPrice(product.promotionPrice, money)}</strong>
-                {getCatalogPriceValue(product.price) ? <small className="text-sm text-[var(--text-muted)] line-through">{formatCatalogPrice(product.price, money)}</small> : null}
-              </>
-            ) : (
-              <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{formatCatalogPrice(effectivePrice, money)}</strong>
-            )}
+            <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{formatCatalogPrice(effectivePrice, money)}</strong>
+            {getCatalogPriceValue(baseDisplayPrice) && effectivePrice !== getCatalogPriceValue(baseDisplayPrice) ? <small className="text-sm text-[var(--text-muted)] line-through">{formatCatalogPrice(baseDisplayPrice, money)}</small> : null}
           </div>
+          {getCatalogPriceValue(selectedWholesalePrice) && selectedWholesaleMinQuantity ? (
+            <p className="text-sm font-semibold text-[var(--text-secondary)]">
+              Mayoreo: {formatCatalogPrice(selectedWholesalePrice, money)} desde {selectedWholesaleMinQuantity} pzas.
+            </p>
+          ) : null}
           {variants.length > 0 ? (
             <div className="grid gap-2">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Variantes</h3>
@@ -340,11 +359,14 @@ export const CatalogProductDetailPage = () => {
                     ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
                     : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
                     }`}
-                  onClick={() => setSelectedVariantId("base")}
+                  onClick={() => {
+                    setSelectedVariantId("base");
+                    setActiveImage(0);
+                  }}
                 >
                   {product.name}
                 </button>
-                {variants.map((variant) => (
+                {visibleVariants.map((variant) => (
                   <button
                     key={variant.id}
                     type="button"
@@ -352,7 +374,10 @@ export const CatalogProductDetailPage = () => {
                       ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
                       : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
                       }`}
-                    onClick={() => setSelectedVariantId(variant.id)}
+                    onClick={() => {
+                      setSelectedVariantId(variant.id);
+                      setActiveImage(0);
+                    }}
                   >
                     {variant.description}
                   </button>
@@ -372,7 +397,14 @@ export const CatalogProductDetailPage = () => {
                       ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
                       : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
                       }`}
-                    onClick={() => setSelectedColorId((current) => current === color.id ? null : color.id)}
+                    onClick={() => {
+                      setSelectedColorId((current) => current === color.id ? null : color.id);
+                      setSelectedVariantId((current) => {
+                        if (!current || current === "base") return current;
+                        const currentVariant = variants.find((variant) => variant.id === current) ?? null;
+                        return currentVariant && variantMatchesColor(currentVariant, color) ? current : null;
+                      });
+                    }}
                   >
                     {color.description}
                   </button>

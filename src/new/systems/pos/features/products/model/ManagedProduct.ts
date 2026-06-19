@@ -7,8 +7,11 @@ export interface ProductVariant {
   barcode?: string | null;
   color?: string | null;
   size?: string | null;
+  Image?: string | null;
   price?: number | null;
   promotionPrice?: number | null;
+  wholesalePrice?: number | null;
+  wholesaleMinQuantity?: number | null;
   costPerItem?: number | null;
   stock?: number | null;
   expDate?: string | null;
@@ -48,6 +51,8 @@ export interface SaveManagedProductDto {
   barcode?: string | null;
   price?: number | null;
   promotionPrice?: number | null;
+  wholesalePrice?: number | null;
+  wholesaleMinQuantity?: number | null;
   costPerItem?: number | null;
   stock?: number | null;
   expDate?: string | null;
@@ -86,6 +91,8 @@ export class ManagedProduct {
     public readonly variants: ProductVariant[],
     public readonly extras: ProductExtra[],
     public readonly variantsCount: number = 0,
+    public readonly wholesalePrice: number | null = null,
+    public readonly wholesaleMinQuantity: number | null = null,
   ) {}
 
   toSaveDto(): SaveManagedProductDto {
@@ -106,6 +113,8 @@ export class ManagedProduct {
       barcode: this.barcode,
       price: this.price,
       promotionPrice: this.promotionPrice,
+      wholesalePrice: this.wholesalePrice,
+      wholesaleMinQuantity: this.wholesaleMinQuantity,
       costPerItem: this.costPerItem,
       stock: this.stock,
       expDate: this.expDate,
