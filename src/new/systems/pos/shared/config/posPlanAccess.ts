@@ -4,8 +4,14 @@ export type PlanProtectedAction =
   | "products.printPdf"
   | "products.exportExcel"
   | "reports.advanced"
+  | "reports.export"
+  | "settings.tableZones"
+  | "customers.manage"
+  | "employees.manage"
   | "employees.create"
   | "inventory.adjust"
+  | "loyalty.coupons"
+  | "loyalty.visits"
   | "loyalty.createCoupon"
   | "catalog.advancedCustomization"
   | "cashClosing.export";
@@ -31,6 +37,9 @@ const POS_PLAN_ALIASES: Record<string, PosPlan> = {
   EMPRESARIAL: "START",
   VIP: "MAX",
   "CONTROL TOTAL": "MAX",
+  INICIAL: "START",
+  BASICO: "START",
+  INTERMEDIO: "PRO",
 };
 
 export const POS_PLAN_ACTION_RULES: Record<PlanProtectedAction, PlanActionRule> = {
@@ -49,6 +58,26 @@ export const POS_PLAN_ACTION_RULES: Record<PlanProtectedAction, PlanActionRule> 
     title: "Reportes avanzados bloqueados",
     message: "Actualiza tu plan para acceder a esta función. Los reportes avanzados están disponibles desde el plan PRO.",
   },
+  "reports.export": {
+    requiredPlan: "PRO",
+    title: "Exportar reportes bloqueado",
+    message: "Actualiza tu plan para acceder a esta función. La exportación de reportes está disponible desde el plan PRO.",
+  },
+  "settings.tableZones": {
+    requiredPlan: "START",
+    title: "Mesas y zonas bloqueado",
+    message: "Actualiza tu plan para acceder a esta función. Mesas y zonas está disponible desde el plan START.",
+  },
+  "customers.manage": {
+    requiredPlan: "START",
+    title: "Clientes bloqueado",
+    message: "Actualiza tu plan para acceder a esta función. La gestión de clientes está disponible desde el plan START.",
+  },
+  "employees.manage": {
+    requiredPlan: "START",
+    title: "Empleados bloqueado",
+    message: "Actualiza tu plan para acceder a esta función. La gestión de empleados está disponible desde el plan START.",
+  },
   "employees.create": {
     requiredPlan: "START",
     title: "Gestión de empleados bloqueada",
@@ -59,10 +88,20 @@ export const POS_PLAN_ACTION_RULES: Record<PlanProtectedAction, PlanActionRule> 
     title: "Ajustes de inventario bloqueados",
     message: "Actualiza tu plan para acceder a esta función. Los ajustes avanzados de inventario están disponibles desde el plan PRO.",
   },
-  "loyalty.createCoupon": {
-    requiredPlan: "PRO",
+  "loyalty.coupons": {
+    requiredPlan: "START",
     title: "Cupones bloqueados",
-    message: "Actualiza tu plan para acceder a esta función. La creación de cupones está disponible desde el plan PRO.",
+    message: "Actualiza tu plan para acceder a esta función. Los cupones están disponibles desde el plan START.",
+  },
+  "loyalty.visits": {
+    requiredPlan: "START",
+    title: "Visitas bloqueadas",
+    message: "Actualiza tu plan para acceder a esta función. El registro de visitas está disponible desde el plan START.",
+  },
+  "loyalty.createCoupon": {
+    requiredPlan: "START",
+    title: "Cupones bloqueados",
+    message: "Actualiza tu plan para acceder a esta función. La creación de cupones está disponible desde el plan START.",
   },
   "catalog.advancedCustomization": {
     requiredPlan: "START",
