@@ -255,7 +255,7 @@ export const PosV2MorePage = () => {
     } finally {
       setPdfLoading(false);
     }
-  };
+  });
 
 
   const openUnlockModal = (title: string, message: string, buttonText: string, unlockFeature?: UnlockFeature) => {
