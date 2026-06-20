@@ -1,0 +1,219 @@
+.pos-feature-unlock {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  display: grid;
+  align-items: center;
+  justify-items: center;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.58);
+  backdrop-filter: blur(8px);
+}
+
+.pos-feature-unlock__card {
+  width: min(100%, 520px);
+  max-height: calc(100vh - 2rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  display: grid;
+  gap: 0.85rem;
+  border-radius: 26px;
+  padding: 1.35rem;
+  background: #ffffff;
+  color: #0f172a;
+  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+}
+
+.pos-feature-unlock__badge {
+  width: fit-content;
+  border-radius: 999px;
+  padding: 0.35rem 0.75rem;
+  background: #fff7ed;
+  color: #c2410c;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.pos-feature-unlock__card h3,
+.pos-feature-unlock__card p {
+  margin: 0;
+}
+
+.pos-feature-unlock__card h3 {
+  font-size: clamp(1.35rem, 4vw, 1.9rem);
+  line-height: 1.05;
+}
+
+.pos-feature-unlock__card p {
+  color: #475569;
+  line-height: 1.55;
+}
+
+.pos-feature-unlock__actions {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr;
+  gap: 0.75rem;
+}
+
+.pos-feature-unlock__actions button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.8rem 1rem;
+  background: #111827;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pos-feature-unlock__actions button.is-secondary {
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #334155;
+}
+
+:root[data-theme="dark"] .pos-feature-unlock__card {
+  background: #111827;
+  color: #f8fafc;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+}
+
+:root[data-theme="dark"] .pos-feature-unlock__card p {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-feature-unlock__actions button.is-secondary {
+  background: #1f2937;
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.3);
+}
+
+@media (max-width: 520px) {
+  .pos-feature-unlock {
+    align-items: start;
+    padding: 0.5rem;
+  }
+
+  .pos-feature-unlock__card {
+    width: 100%;
+    max-height: calc(100vh - 1rem);
+    max-height: calc(100dvh - 1rem);
+    border-radius: 22px;
+    padding: 1rem;
+  }
+
+  .pos-feature-unlock__actions {
+    grid-template-columns: 1fr;
+  }
+
+  .pos-feature-unlock__payment-element {
+    padding: 0.75rem;
+  }
+}
+
+.pos-feature-unlock__plans {
+  display: grid;
+  gap: 0.5rem;
+  max-height: min(60vh, 520px);
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.pos-feature-unlock__plans button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) max-content;
+  align-items: center;
+  gap: 0.35rem 1rem;
+  min-height: 58px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 0.8rem 0.9rem;
+  background: #f8fafc;
+  color: #0f172a;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pos-feature-unlock__plans button:hover:not(:disabled),
+.pos-feature-unlock__plans button:focus-visible:not(:disabled) {
+  border-color: #111827;
+  outline: none;
+}
+
+.pos-feature-unlock__plans button:disabled,
+.pos-feature-unlock__payment button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+.pos-feature-unlock__plans strong,
+.pos-feature-unlock__plans small,
+.pos-feature-unlock__plans span {
+  display: block;
+}
+
+.pos-feature-unlock__plans small {
+  grid-column: 1 / 2;
+  color: #64748b;
+  font-size: 0.8rem;
+  font-weight: 600;
+  line-height: 1.35;
+}
+
+.pos-feature-unlock__plans span {
+  justify-self: end;
+  color: #334155;
+  font-size: 0.95rem;
+  font-weight: 800;
+}
+
+.pos-feature-unlock__payment {
+  display: grid;
+  gap: 1rem;
+  min-height: 0;
+}
+
+.pos-feature-unlock__payment-element {
+  min-height: 120px;
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  padding: 1rem;
+  background: #f8fafc;
+}
+
+.pos-feature-unlock__payment button {
+  min-height: 46px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.8rem 1rem;
+  background: #111827;
+  color: #ffffff;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pos-feature-unlock__error {
+  color: #b91c1c !important;
+  font-weight: 700;
+}
+
+.pos-feature-unlock__actions--single {
+  grid-template-columns: 1fr;
+}
+
+:root[data-theme="dark"] .pos-feature-unlock__plans button,
+:root[data-theme="dark"] .pos-feature-unlock__payment-element {
+  background: #0f172a;
+  border-color: rgba(148, 163, 184, 0.25);
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-feature-unlock__plans small,
+:root[data-theme="dark"] .pos-feature-unlock__plans span {
+  color: #cbd5e1;
+}
