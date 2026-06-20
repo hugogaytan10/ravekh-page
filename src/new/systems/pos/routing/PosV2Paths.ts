@@ -21,6 +21,7 @@ export const POS_V2_PATHS = {
   employees: "/employees",
   onlineStore: "/online-store",
   health: "/health",
+  upgradePlan: "/upgrade-plan",
   posRoot: "/pos",
   posLoginAlias: "/pos/login",
   posSalesAlias: "/pos/sales",

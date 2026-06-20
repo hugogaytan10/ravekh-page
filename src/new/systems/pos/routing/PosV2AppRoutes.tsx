@@ -19,6 +19,7 @@ import { PosV2InventoryPage } from "../features/inventory/ui/PosV2InventoryPage"
 import { PosV2LoyaltyPage } from "../features/loyalty/ui/PosV2LoyaltyPage";
 import { PosV2CatalogPage } from "../features/catalog/ui/PosV2CatalogPage";
 import { FacturaElectronicaPage } from "../features/factura-electronica/ui/FacturaElectronicaPage";
+import { PosV2UpgradePlanPage } from "../features/upgrade-plan/ui/PosV2UpgradePlanPage";
 import { PosV2RequireAuth } from "./PosV2RequireAuth";
 import { POS_V2_PATHS } from "./PosV2Paths";
 import { PosV2FeatureRouteGuard } from "./PosV2FeatureRouteGuard";
@@ -49,5 +50,6 @@ export const POS_V2_APP_ROUTES = (
     <Route path={POS_V2_PATHS.visits} element={withAuth(<PosV2LoyaltyPage />)} />
     <Route path={POS_V2_PATHS.catalog} element={withAuth(<PosV2FeatureRouteGuard feature="catalog"><PosV2CatalogPage /></PosV2FeatureRouteGuard>)} />
     <Route path={POS_V2_PATHS.health} element={withAuth(<PosHealthV2Screen />)} />
+    <Route path={POS_V2_PATHS.upgradePlan} element={withAuth(<PosV2UpgradePlanPage />)} />
   </>
 );
