@@ -22,11 +22,27 @@ import { hasPosLoyaltyModule, normalizePosCouponsPlan } from "../../../shared/co
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { buildPosPublicCatalogUrl } from "../../../shared/config/posExternalLinks";
 import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
+import { usePlanActionGuard } from "../../../shared/hooks/usePlanActionGuard";
+import { type PlanProtectedAction } from "../../../shared/config/posPlanAccess";
+import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
 import { downloadProductsCatalogPdf } from "./productCatalogPdf";
 import "./PosV2MorePage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
 const FAVORITES_KEY = POS_SESSION_STORAGE_KEYS.moreFavorites;
+
+const MORE_MODULE_PLAN_ACTIONS: Partial<Record<string, PlanProtectedAction>> = {
+  "table-zones": "settings.tableZones",
+  tables: "settings.tableZones",
+  tableZones: "settings.tableZones",
+  exports: "reports.export",
+  reports: "reports.export",
+  customers: "customers.manage",
+  employees: "employees.manage",
+  coupons: "loyalty.coupons",
+  visits: "loyalty.visits",
+  loyalty: "loyalty.coupons",
+};
 
 export const PosV2MorePage = () => {
   const navigate = useNavigate();
@@ -45,6 +61,7 @@ export const PosV2MorePage = () => {
   const [actionMessage, setActionMessage] = useState<string>("");
   const [couponsPlan, setCouponsPlan] = useState<0 | 1 | 2>(0);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const { runWithPlanAccess, blockedAction, closeBlockedActionModal, goToUpgradePlan, checkingPlanAccess } = usePlanActionGuard();
 
   const modulePage = useMemo(
     () => new MoreModulePage(new MoreModuleService(API_BASE_URL)),
@@ -209,7 +226,7 @@ export const PosV2MorePage = () => {
   };
 
 
-  const downloadProductsPdf = async () => {
+  const downloadProductsPdf = async () => runWithPlanAccess("products.printPdf", async () => {
     if (!sessionSnapshot.token || !sessionSnapshot.businessId) {
       setActionMessage("Inicia sesión para descargar el PDF de productos.");
       return;
@@ -240,6 +257,42 @@ export const PosV2MorePage = () => {
     }
   };
 
+
+  const openUnlockModal = (title: string, message: string, buttonText: string, unlockFeature?: UnlockFeature) => {
+    setUnlockModal({ title, message, buttonText, unlockFeature });
+  };
+
+  const getLockedModule = (item: MoreModuleLink): { title: string; message: string; buttonText: string; unlockFeature?: UnlockFeature } | null => {
+    if (item.id === "sales" && isPosModuleBlocked(features)) {
+      return {
+        title: "Ventas bloqueadas",
+        message: "Tu módulo POS está desactivado. Desbloquéalo para acceder a ventas, cobrar más rápido y vender sin límites.",
+        buttonText: "Desbloquear POS",
+        unlockFeature: "Pos",
+      };
+    }
+
+    if ((item.id === "online-store" || item.id === "catalog-settings") && isPosFeatureBlocked(features.catalog)) {
+      return {
+        title: "Desbloquea tu tienda en línea",
+        message: "Activa el catálogo para vender en línea, mostrar tus productos y recibir pedidos desde tu tienda digital.",
+        buttonText: "Desbloquear catálogo",
+        unlockFeature: "Catalog",
+      };
+    }
+
+    if ((item.id === "coupons" || item.id === "visits" || item.id === "loyalty") && features.fidelity !== 1 && features.fidelity !== 2) {
+      return {
+        title: "Desbloquea fidelidad",
+        message: "Activa las herramientas de fidelidad para crear cupones, registrar visitas y premiar a tus clientes frecuentes.",
+        buttonText: "Desbloquear fidelidad",
+        unlockFeature: "Fidelity",
+      };
+    }
+
+    return null;
+  };
+
   const runBetaAction = async (item: MoreModuleLink) => {
     const context: MoreModuleExecutionContext = readPosSessionSnapshot();
 
@@ -264,7 +317,13 @@ export const PosV2MorePage = () => {
     }
   };
 
-  const openModule = async (item: MoreModuleLink) => {
+  const openAllowedModule = async (item: MoreModuleLink) => {
+    const lockedModule = getLockedModule(item);
+    if (lockedModule) {
+      openUnlockModal(lockedModule.title, lockedModule.message, lockedModule.buttonText, lockedModule.unlockFeature);
+      return;
+    }
+
     if (item.id === "cash-closing") {
       navigate(POS_V2_PATHS.cashClosing);
       return;
@@ -279,6 +338,17 @@ export const PosV2MorePage = () => {
     }
 
     navigate(item.path);
+  };
+
+  const openModule = async (item: MoreModuleLink) => {
+    const planAction = MORE_MODULE_PLAN_ACTIONS[item.id];
+
+    if (planAction) {
+      await runWithPlanAccess(planAction, () => openAllowedModule(item));
+      return;
+    }
+
+    await openAllowedModule(item);
   };
 
   return (
@@ -394,7 +464,7 @@ export const PosV2MorePage = () => {
               </button>
             </div>
           </div>
-          {/* <div className="pos-v2-more__pdf-download">
+          <div className="pos-v2-more__pdf-download">
             <div>
               <h4>Catálogo completo en PDF</h4>
               <p>Descarga todos los productos registrados con sus imágenes en un documento.</p>
@@ -403,11 +473,11 @@ export const PosV2MorePage = () => {
               type="button"
               className="pos-v2-more__pdf-button"
               onClick={() => void downloadProductsPdf()}
-              disabled={pdfLoading}
+              disabled={pdfLoading || checkingPlanAccess}
             >
-              {pdfLoading ? "Generando PDF..." : "Descargar PDF"}
+              {checkingPlanAccess ? "Validando plan..." : pdfLoading ? "Generando PDF..." : "Descargar PDF"}
             </button>
-          </div> */}
+          </div>
         </section>
 
         {filteredSections.map((section) => (
@@ -506,6 +576,25 @@ export const PosV2MorePage = () => {
             <pre>{betaResult.payload}</pre>
           </section>
         ) : null}
+
+        <PlanUpgradeModal
+          open={Boolean(blockedAction)}
+          title={blockedAction?.title}
+          message={blockedAction?.message}
+          requiredPlan={blockedAction?.requiredPlan}
+          ctaLabel={blockedAction?.ctaLabel}
+          onClose={closeBlockedActionModal}
+          onUpgrade={goToUpgradePlan}
+        />
+
+        <FeatureUnlockModal
+          open={Boolean(unlockModal)}
+          onClose={() => setUnlockModal(null)}
+          title={unlockModal?.title}
+          message={unlockModal?.message}
+          buttonText={unlockModal?.buttonText}
+          unlockFeature={unlockModal?.unlockFeature}
+        />
 
         {showSignOutConfirm ? (
           <section
