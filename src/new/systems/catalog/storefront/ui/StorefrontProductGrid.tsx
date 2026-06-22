@@ -95,7 +95,7 @@ const ProductCard = memo(({
                 <p>{formattedBase}</p>
               )
             ) : null}
-            {formattedWholesale ? <small>Mayoreo: {formattedWholesale} desde {product.wholesaleMinQuantity} pzas.</small> : null}
+            {/*{formattedWholesale ? <small>Mayoreo: {formattedWholesale} desde {product.wholesaleMinQuantity} pzas.</small> : null}*/}
           </div>
           <button type="button" onClick={handleAdd} aria-label={`Agregar ${product.name}`}><FiShoppingCart /></button>
         </div>
