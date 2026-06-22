@@ -11,6 +11,9 @@ import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import { fetchPosBusinessFeatures, isOfflinePosPlan, isPosFeatureBlocked, isPosModuleBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../../../shared/config/posFeatureFlags";
 import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
 import { FeatureUnlockModal } from "../../../shared/ui/FeatureUnlockModal";
+import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
+import type { PosPlan } from "../../../shared/config/posPlanAccess";
+import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import "./ProductsV2PosPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -20,6 +23,14 @@ const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
 const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const ACCEPTED_IMAGE_TYPES = new Set(["image/jpeg", "image/jpg", "image/png", "image/webp"]);
+const FREE_PRODUCT_LIMIT = 20;
+const FREE_PRODUCT_PLAN_VALUES = new Set(["GRATUITO", "PRUEBA", "GRATUITO ONLINE"]);
+
+type ProductLimitUpgradeState = {
+  currentCount: number;
+  limit: number;
+  requiredPlan: PosPlan;
+};
 
 type ProductItemVm = {
   id: number;
@@ -176,6 +187,7 @@ export const ProductsV2PosPage = () => {
   const [productsLimit, setProductsLimit] = useState(() => (window.localStorage.getItem("plan") ?? "").trim() || DEFAULT_PRODUCTS_LIMIT);
   const [features, setFeatures] = useState<PosBusinessFeatures>(POS_FEATURES_UNKNOWN);
   const [showPosFeatureUnlock, setShowPosFeatureUnlock] = useState(false);
+  const [productLimitUpgrade, setProductLimitUpgrade] = useState<ProductLimitUpgradeState | null>(null);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -244,8 +256,64 @@ export const ProductsV2PosPage = () => {
     return true;
   };
 
+  const normalizePlanValue = (value?: string | null) => String(value ?? "").trim().toUpperCase();
+
+  const isFreePlan = useMemo(() => {
+    const rawProductsLimit = normalizePlanValue(productsLimit);
+    const rawFeaturePlan = normalizePlanValue(features.plan);
+    return FREE_PRODUCT_PLAN_VALUES.has(rawProductsLimit) || FREE_PRODUCT_PLAN_VALUES.has(rawFeaturePlan);
+  }, [features.plan, productsLimit]);
+
+  const productLimitCount = Math.max(totalItems, products.length);
+  const freeProductLimitReached = isFreePlan && productLimitCount >= FREE_PRODUCT_LIMIT;
+
+  const openProductLimitUpgradeModal = (currentCount = productLimitCount, limit = FREE_PRODUCT_LIMIT) => {
+    setProductLimitUpgrade({
+      currentCount: Math.max(currentCount, limit),
+      limit,
+      requiredPlan: "START",
+    });
+  };
+
+  const blockFreeProductCreation = (): boolean => {
+    if (!freeProductLimitReached) return false;
+    openProductLimitUpgradeModal();
+    return true;
+  };
+
+  const closeProductLimitUpgradeModal = () => setProductLimitUpgrade(null);
+
+  const goToUpgradeProductPlan = () => {
+    const params = new URLSearchParams({
+      requiredPlan: productLimitUpgrade?.requiredPlan ?? "START",
+      feature: "products.create",
+      from: POS_V2_PATHS.products,
+    });
+    setProductLimitUpgrade(null);
+    navigate(`${POS_V2_PATHS.upgradePlan}?${params.toString()}`);
+  };
+
+  const getProductLimitPayload = (cause: unknown): { currentCount?: number; limit?: number; requiredPlan?: PosPlan } | null => {
+    const error = cause as Error & {
+      payload?: { code?: string; message?: string; error?: string; currentCount?: number; limit?: number; requiredPlan?: PosPlan };
+    };
+    const code = error?.payload?.code;
+    const message = [error?.payload?.message, error?.payload?.error, error?.message].filter(Boolean).join(" ");
+
+    if (code !== "FREE_PRODUCT_LIMIT_REACHED" && !/plan gratuito permite hasta 20 productos/i.test(message)) {
+      return null;
+    }
+
+    return {
+      currentCount: Number(error.payload?.currentCount ?? FREE_PRODUCT_LIMIT),
+      limit: Number(error.payload?.limit ?? FREE_PRODUCT_LIMIT),
+      requiredPlan: error.payload?.requiredPlan ?? "START",
+    };
+  };
+
   const openCreateModal = () => {
     if (blockOfflineProductMutation()) return;
+    if (blockFreeProductCreation()) return;
     resetForm();
     setSaveResult(null);
     setError(null);
@@ -551,6 +619,10 @@ export const ProductsV2PosPage = () => {
       return;
     }
 
+    if (!editingId && blockFreeProductCreation()) {
+      return;
+    }
+
     if (!businessId) {
       setError("Business ID es obligatorio.");
       return;
@@ -704,6 +776,11 @@ export const ProductsV2PosPage = () => {
       setToast({ type: "success", message: editingId ? "Producto actualizado correctamente." : "Producto creado correctamente." });
       await loadProducts(currentPage);
     } catch (cause) {
+      const productLimitPayload = getProductLimitPayload(cause);
+      if (!editingId && productLimitPayload) {
+        setIsFormOpen(false);
+        openProductLimitUpgradeModal(productLimitPayload.currentCount, productLimitPayload.limit);
+      }
       setError(cause instanceof Error ? cause.message : "No se pudo guardar producto.");
       setSaveResult({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo guardar producto." });
       setToast({ type: "error", message: cause instanceof Error ? cause.message : "No se pudo guardar producto." });
@@ -1042,6 +1119,7 @@ export const ProductsV2PosPage = () => {
   };
 
   const openImportModal = () => {
+    if (blockFreeProductCreation()) return;
     setImportResult(null);
     setImportError(null);
     setIsImportModalOpen(true);
@@ -1074,6 +1152,11 @@ export const ProductsV2PosPage = () => {
       return;
     }
 
+    if (blockFreeProductCreation()) {
+      setImportError("Tu plan gratuito permite hasta 20 productos. Actualiza a START para importar más productos.");
+      return;
+    }
+
     setImporting(true);
     setImportError(null);
     setImportResult(null);
@@ -1081,6 +1164,11 @@ export const ProductsV2PosPage = () => {
       const result = await service.importProducts(businessId, file, token);
       await finishImport(result);
     } catch (cause) {
+      const productLimitPayload = getProductLimitPayload(cause);
+      if (productLimitPayload) {
+        closeImportModal();
+        openProductLimitUpgradeModal(productLimitPayload.currentCount, productLimitPayload.limit);
+      }
       const message = getImportErrorMessage(cause);
       setImportError(message);
       setToast({ type: "error", message });
@@ -1095,6 +1183,11 @@ export const ProductsV2PosPage = () => {
       return;
     }
 
+    if (blockFreeProductCreation()) {
+      setImportError("Tu plan gratuito permite hasta 20 productos. Actualiza a START para importar más productos.");
+      return;
+    }
+
     setImporting(true);
     setImportError(null);
     setImportResult(null);
@@ -1102,6 +1195,11 @@ export const ProductsV2PosPage = () => {
       const result = await service.importProductsZip(businessId, file, token);
       await finishImport(result);
     } catch (cause) {
+      const productLimitPayload = getProductLimitPayload(cause);
+      if (productLimitPayload) {
+        closeImportModal();
+        openProductLimitUpgradeModal(productLimitPayload.currentCount, productLimitPayload.limit);
+      }
       const message = getImportErrorMessage(cause);
       setImportError(message);
       setToast({ type: "error", message });
@@ -1729,6 +1827,16 @@ export const ProductsV2PosPage = () => {
             </section>
           </div>
         ) : null}
+
+        <PlanUpgradeModal
+          open={Boolean(productLimitUpgrade)}
+          title="Límite de productos alcanzado"
+          message={`Tu plan gratuito permite hasta ${productLimitUpgrade?.limit ?? FREE_PRODUCT_LIMIT} productos. Actualmente tienes ${productLimitUpgrade?.currentCount ?? productLimitCount} producto(s) activos. Actualiza a START para agregar más productos a tu catálogo.`}
+          requiredPlan={productLimitUpgrade?.requiredPlan ?? "START"}
+          ctaLabel="Actualizar a START"
+          onClose={closeProductLimitUpgradeModal}
+          onUpgrade={goToUpgradeProductPlan}
+        />
 
         <FeatureUnlockModal
           open={showPosFeatureUnlock}
