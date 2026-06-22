@@ -91,7 +91,13 @@ export const PosV2LoginPage = () => {
       return;
     }
 
-    if (new URLSearchParams(location.search).get("reason") === "offline") {
+    const searchParams = new URLSearchParams(location.search);
+    if (searchParams.get("mode") === "signup") {
+      setMode("signup");
+      setSignUpStep("account");
+    }
+
+    if (searchParams.get("reason") === "offline") {
       setError("Tu plan actual no incluye acceso al POS. Actualiza tu plan para iniciar sesión.");
       setShowOfflineUpgrade(Boolean(readPendingPosUpgradeContext()));
       return;
