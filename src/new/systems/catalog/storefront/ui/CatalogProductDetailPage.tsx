@@ -211,7 +211,7 @@ export const CatalogProductDetailPage = () => {
       return;
     }
 
-    navigate(`/v2/catalogo/${product.businessId}`);
+    navigate(`/v2/catalogo/${product!.businessId}`);
   };
 
   const buyNow = () => {
@@ -330,11 +330,11 @@ export const CatalogProductDetailPage = () => {
             <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{formatCatalogPrice(effectivePrice, money)}</strong>
             {getCatalogPriceValue(baseDisplayPrice) && effectivePrice !== getCatalogPriceValue(baseDisplayPrice) ? <small className="text-sm text-[var(--text-muted)] line-through">{formatCatalogPrice(baseDisplayPrice, money)}</small> : null}
           </div>
-          {getCatalogPriceValue(selectedWholesalePrice) && selectedWholesaleMinQuantity ? (
+          {/*{getCatalogPriceValue(selectedWholesalePrice) && selectedWholesaleMinQuantity ? (
             <p className="text-sm font-semibold text-[var(--text-secondary)]">
               Mayoreo: {formatCatalogPrice(selectedWholesalePrice, money)} desde {selectedWholesaleMinQuantity} pzas.
             </p>
-          ) : null}
+          ) : null}*/}
           {variants.length > 0 ? (
             <div className="grid gap-2">
               <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Variantes</h3>
