@@ -717,6 +717,108 @@ button.is-active{
   color: #111827;
 }
 
+.pos-v2-sales-home__plan-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(17, 24, 39, 0.68);
+  display: grid;
+  place-items: center;
+  z-index: 82;
+  padding: 1rem;
+}
+
+.pos-v2-sales-home__plan-modal-card {
+  width: min(100%, 460px);
+  border-radius: 18px;
+  border: 1px solid #e9d5ff;
+  background: #ffffff;
+  color: #111827;
+  padding: 1.15rem;
+  display: grid;
+  gap: 0.8rem;
+  box-shadow: 0 24px 70px rgba(17, 24, 39, 0.28);
+}
+
+.pos-v2-sales-home__plan-modal-card h3,
+.pos-v2-sales-home__plan-modal-card p {
+  margin: 0;
+}
+
+.pos-v2-sales-home__plan-modal-card h3 {
+  font-size: 1.28rem;
+  line-height: 1.15;
+}
+
+.pos-v2-sales-home__plan-eyebrow {
+  width: fit-content;
+  border-radius: 9999px;
+  background: #f5edff;
+  color: #6d01d1;
+  padding: 0.28rem 0.62rem;
+  font-size: 0.72rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pos-v2-sales-home__plan-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.pos-v2-sales-home__plan-stats article {
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  background: #f9fafb;
+  padding: 0.72rem;
+  display: grid;
+  gap: 0.18rem;
+}
+
+.pos-v2-sales-home__plan-stats span {
+  color: #6b7280;
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.pos-v2-sales-home__plan-stats strong {
+  color: #111827;
+  font-size: 1.02rem;
+}
+
+.pos-v2-sales-home__plan-note {
+  border-radius: 12px;
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  padding: 0.62rem;
+  font-size: 0.86rem;
+}
+
+.pos-v2-sales-home__plan-actions {
+  display: flex;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.pos-v2-sales-home__plan-actions button {
+  flex: 1 1 150px;
+  min-height: 42px;
+  border: none;
+  border-radius: 12px;
+  background: #6d01d1;
+  color: #ffffff;
+  font-weight: 800;
+  padding: 0.62rem 0.8rem;
+}
+
+.pos-v2-sales-home__plan-actions button.is-secondary {
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+}
+
 .pos-v2-sales-home__tables-bar {
   position: fixed;
   left: 0;
@@ -1387,6 +1489,38 @@ button.is-active{
   background: rgba(30, 41, 59, 0.9);
   color: #e9d5ff;
   border: 1px solid rgba(139, 92, 246, 0.35);
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__plan-modal-card {
+  background: #111827;
+  border-color: #4c1d95;
+  color: #f9fafb;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__plan-eyebrow {
+  background: #2e1065;
+  color: #ddd6fe;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__plan-stats article {
+  background: #0f172a;
+  border-color: #374151;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__plan-stats strong {
+  color: #f9fafb;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__plan-note {
+  background: #172554;
+  border-color: #1d4ed8;
+  color: #bfdbfe;
+}
+
+:root[data-theme="dark"] .pos-v2-sales-home__plan-actions button.is-secondary {
+  background: #111827;
+  color: #e5e7eb;
+  border-color: #374151;
 }
 
 :root[data-theme="dark"] .pos-v2-sales-home__categories button.is-active::after {
