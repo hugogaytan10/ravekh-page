@@ -11,7 +11,9 @@ import { LoyaltyCustomerRoutes } from "../systems/loyalty/features/customer-expe
 import { PrivacyPoliciesIndexPage } from "../systems/legal/pages/PrivacyPoliciesIndexPage";
 import { PrivacyPolicyPage } from "../systems/legal/pages/PrivacyPolicyPage";
 import { MainCatalogPage } from "../systems/main-catalog/pages/MainCatalogPage";
-
+import { RavekhPerfumeriaPage } from "../systems/ravekh-perfumeria/pages/RavekhPerfumeriaPage";
+import { RavekhBoutiquePage } from "../systems/ravekh-perfumeria/pages/RavekhBoutique";
+import { RavekhRefaccionesPage } from "../systems/ravekh-perfumeria/pages/RavekhRefacciones";
 const LegacyCatalogRedirect = () => {
   const { idBusiness } = useParams<{ idBusiness: string }>();
   return <Navigate to={`/v2/catalogo/${idBusiness ?? ""}`} replace />;
@@ -89,6 +91,22 @@ const RouteSeo = () => {
       };
     }
 
+    if (pathname === "/RavekhPerfumeria") {
+      return {
+        title: "Ravekh Perfumería | Catálogo digital para perfumerías",
+        description: "Presenta tus fragancias en un catálogo elegante, comparte un link y recibe pedidos claros por WhatsApp.",
+        robots: "index,follow,max-image-preview:large",
+      };
+    }
+
+    if (pathname === "/RavekhBoutique") {
+      return {
+        title: "Ravekh Boutique | Catálogo digital para boutiques",
+        description: "Presenta tus productos en un catálogo elegante, comparte un link y recibe pedidos claros por WhatsApp.",
+        robots: "index,follow,max-image-preview:large",
+      };
+    }
+
     if (pathname.startsWith("/v2/catalogo") || pathname.startsWith("/catalogo")) {
       return {
         title: "Catálogo digital | Ravekh",
@@ -145,6 +163,9 @@ export const NewAppRoutes = () => {
       <Routes>
         <Route path="/" element={<LandingPageRavekhPage />} />
         <Route path="/maincatalogo" element={<MainCatalogPage />} />
+        <Route path="/RavekhBoutique" element={<RavekhBoutiquePage />} />
+        <Route path="/RavekhPerfumeria" element={<RavekhPerfumeriaPage />} />
+        <Route path="/RavekhRefacciones" element={<RavekhRefaccionesPage />} />
 
       {/* Catálogo v2 moderno y desacoplado */}
         <Route path="/v2/catalogo/:Id" element={<CatalogStorefrontPage />} />
