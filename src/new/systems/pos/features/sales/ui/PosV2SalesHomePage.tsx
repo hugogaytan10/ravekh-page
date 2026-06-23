@@ -13,6 +13,9 @@ import { PosBusinessFeatureResponse, readPosBusinessFeatures } from "../../../sh
 import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
 
 const ALL_PRODUCTS_SEARCH_DEBOUNCE_MS = 450;
+const FREE_PLAN_ORDER_LIMIT_CODE = "FREE_PLAN_ORDER_LIMIT_REACHED";
+const FREE_PLAN_SALES_LIMIT = 50;
+const POS_UPGRADE_PLAN_PATH = "/upgrade-plan";
 
 type SaleItemVm = {
   id: number;
@@ -70,6 +73,25 @@ type CompletedSale = {
   customerName?: string;
   createdAt: string;
   items: CompletedSaleLine[];
+};
+
+type SaleLimitDetails = {
+  limit?: number;
+  totalOrdersThisMonth?: number;
+};
+
+type SaleMutationResponse = {
+  message?: string;
+  error?: string;
+  code?: string;
+  Id?: number;
+  details?: SaleLimitDetails;
+};
+
+type PlanUpgradePromptState = {
+  limit: number;
+  totalOrdersThisMonth: number | null;
+  message: string;
 };
 
 const getIsoDate = (offsetDays = 0): string => {
@@ -264,6 +286,7 @@ export const PosV2SalesHomePage = () => {
   const [ticket, setTicket] = useState<string | null>(null);
   const [mobileStep, setMobileStep] = useState<MobileStep>("catalog");
   const [validationError, setValidationError] = useState<string | null>(null);
+  const [planUpgradePrompt, setPlanUpgradePrompt] = useState<PlanUpgradePromptState | null>(null);
   const [isCompletingSale, setIsCompletingSale] = useState(false);
   const [tables, setTables] = useState<TableVm[]>([]);
   const [tableZones, setTableZones] = useState<TableZoneVm[]>([]);
@@ -376,6 +399,42 @@ export const PosV2SalesHomePage = () => {
     }
 
     setSelectedTableId(normalized);
+  };
+
+  const isFreePlanOrderLimitError = (responseData: SaleMutationResponse | null): boolean => {
+    const code = String(responseData?.code ?? "").trim();
+    const message = String(responseData?.message ?? responseData?.error ?? "").toLowerCase();
+
+    return code === FREE_PLAN_ORDER_LIMIT_CODE
+      || (message.includes("plan gratuito") && message.includes("50") && message.includes("venta"));
+  };
+
+  const openPlanUpgradePrompt = (responseData: SaleMutationResponse | null) => {
+    const rawLimit = Number(responseData?.details?.limit);
+    const rawTotalOrders = Number(responseData?.details?.totalOrdersThisMonth);
+    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : FREE_PLAN_SALES_LIMIT;
+    const totalOrdersThisMonth = Number.isFinite(rawTotalOrders) && rawTotalOrders >= 0 ? rawTotalOrders : null;
+    const message = responseData?.message?.trim()
+      || `Tu plan gratuito permite hasta ${limit} ventas al mes. Actualiza tu plan para seguir registrando ventas.`;
+
+    setValidationError(null);
+    setPlanUpgradePrompt({
+      limit,
+      totalOrdersThisMonth,
+      message,
+    });
+    setMobileStep("checkout");
+  };
+
+  const handleGoToUpgradePlan = () => {
+    const params = new URLSearchParams({
+      requiredPlan: "START",
+      feature: "ventas mensuales",
+      from: `${window.location.pathname}${window.location.search}`,
+    });
+
+    setPlanUpgradePrompt(null);
+    navigate(`${POS_UPGRADE_PLAN_PATH}?${params.toString()}`);
   };
 
   useEffect(() => {
@@ -1301,6 +1360,7 @@ export const PosV2SalesHomePage = () => {
 
     setIsCompletingSale(true);
     setValidationError(null);
+    setPlanUpgradePrompt(null);
     debugLog("Intentando finalizar venta.", {
       endpoint: selectedTableId ? "commands" : "orders",
       selectedTable: selectedTableName,
@@ -1335,10 +1395,15 @@ export const PosV2SalesHomePage = () => {
         body: JSON.stringify(payload),
       });
 
-      const responseData = (await response.json().catch(() => null)) as { message?: string; Id?: number } | null;
+      const responseData = (await response.json().catch(() => null)) as SaleMutationResponse | null;
 
       if (!response.ok) {
-        throw new Error(responseData?.message ?? "No pudimos registrar la venta en la base de datos.");
+        if (isFreePlanOrderLimitError(responseData)) {
+          openPlanUpgradePrompt(responseData);
+          return;
+        }
+
+        throw new Error(responseData?.message ?? responseData?.error ?? "No pudimos registrar la venta en la base de datos.");
       }
       debugLog("Venta registrada correctamente.", responseData);
 
@@ -1400,6 +1465,7 @@ export const PosV2SalesHomePage = () => {
       }
       setCart({});
       setDiscountPercent("0");
+      setPlanUpgradePrompt(null);
       setMobileStep("catalog");
     } catch (error) {
       setValidationError(error instanceof Error ? error.message : "No pudimos registrar la venta en la base de datos.");
@@ -2314,6 +2380,40 @@ export const PosV2SalesHomePage = () => {
       ) : null}
 
       {tablesError ? <p className="pos-v2-sales-home__error">{tablesError}</p> : null}
+
+      {planUpgradePrompt ? (
+        <section
+          className="pos-v2-sales-home__plan-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="pos-v2-sales-home-plan-title"
+          onClick={() => setPlanUpgradePrompt(null)}
+        >
+          <article className="pos-v2-sales-home__plan-modal-card" onClick={(event) => event.stopPropagation()}>
+            <span className="pos-v2-sales-home__plan-eyebrow">Límite mensual alcanzado</span>
+            <h3 id="pos-v2-sales-home-plan-title">Necesitas subir de plan para seguir vendiendo</h3>
+            <p>{planUpgradePrompt.message}</p>
+
+            <div className="pos-v2-sales-home__plan-stats">
+              <article>
+                <span>Plan actual</span>
+                <strong>GRATUITO</strong>
+              </article>
+              <article>
+                <span>Ventas usadas</span>
+                <strong>{planUpgradePrompt.totalOrdersThisMonth ?? planUpgradePrompt.limit}/{planUpgradePrompt.limit}</strong>
+              </article>
+            </div>
+
+            <p className="pos-v2-sales-home__plan-note">La venta no se registró ni se descontó stock. Sube de plan para continuar con la misma venta.</p>
+
+            <div className="pos-v2-sales-home__plan-actions">
+              <button type="button" className="is-secondary" onClick={() => setPlanUpgradePrompt(null)}>Ahora no</button>
+              <button type="button" onClick={handleGoToUpgradePlan}>Ver planes</button>
+            </div>
+          </article>
+        </section>
+      ) : null}
 
       {completedSale ? (
         <div className="pos-v2-sales-home__sale-modal" role="dialog" aria-modal="true" aria-label="Venta finalizada">
