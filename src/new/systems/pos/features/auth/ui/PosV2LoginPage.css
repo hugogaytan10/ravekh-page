@@ -356,3 +356,99 @@
 :root[data-theme="dark"] .pos-v2-file-name {
   color: #cbd5e1;
 }
+
+.pos-v2-security-prompt-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.52);
+  backdrop-filter: blur(10px);
+}
+
+.pos-v2-security-prompt {
+  width: min(100%, 440px);
+  border: 1px solid rgba(109, 1, 209, 0.14);
+  border-radius: 24px;
+  background: #ffffff;
+  padding: 1.5rem;
+  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+  text-align: left;
+}
+
+.pos-v2-security-prompt__eyebrow {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 0.8rem;
+  border-radius: 999px;
+  background: #f5f3ff;
+  color: #6d01d1;
+  padding: 0.42rem 0.72rem;
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.pos-v2-security-prompt h2 {
+  margin: 0;
+  color: #111827;
+  font-size: 1.35rem;
+}
+
+.pos-v2-security-prompt p {
+  margin: 0.75rem 0 0;
+  color: #4b5563;
+  line-height: 1.5;
+}
+
+.pos-v2-security-prompt__actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+  margin-top: 1.25rem;
+}
+
+.pos-v2-security-prompt__skip {
+  border: 1px solid #ddd6fe;
+  border-radius: 20px;
+  background: #fff;
+  color: #4c1d95;
+  padding: 12px 20px;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.pos-v2-security-prompt__skip:hover,
+.pos-v2-security-prompt__skip:focus-visible {
+  background: #f5f3ff;
+  outline: none;
+}
+
+:root[data-theme="dark"] .pos-v2-security-prompt {
+  background: #111827;
+  border-color: #334155;
+}
+
+:root[data-theme="dark"] .pos-v2-security-prompt h2 {
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .pos-v2-security-prompt p {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-security-prompt__eyebrow {
+  background: rgba(109, 1, 209, 0.22);
+  color: #ddd6fe;
+}
+
+:root[data-theme="dark"] .pos-v2-security-prompt__skip {
+  background: #0f172a;
+  border-color: #334155;
+  color: #ddd6fe;
+}

@@ -7,6 +7,7 @@ import {
   LoginCredentials,
   ResetPasswordPayload,
   SecurityQuestion,
+  SecurityQuestionStatus,
   SignUpPayload,
 } from "../model/AuthSession";
 
@@ -49,7 +50,12 @@ type QuestionsResponse =
 
 export class PosAuthOnboardingApi implements IAuthOnboardingRepository {
   constructor(private readonly httpClient: HttpClient) {}
-
+async getSecurityQuestionStatus(employeeId: number): Promise<SecurityQuestionStatus> {
+  return this.httpClient.request<SecurityQuestionStatus>({
+    method: "GET",
+    path: `security-questions/status/${employeeId}`,
+  });
+}
   async login(credentials: LoginCredentials): Promise<AuthSession> {
     const response = await this.httpClient.request<LoginResponse>({
       method: "POST",

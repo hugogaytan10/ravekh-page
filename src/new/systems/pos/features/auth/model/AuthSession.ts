@@ -61,3 +61,9 @@ export type CompareSecurityQuestionResult = Record<string, unknown>;
 export interface ResetPasswordPayload {
   password: string;
 }
+
+export type SecurityQuestionStatus = {
+  configured: boolean;
+  answersCount: number;
+  shouldPrompt: boolean;
+};
