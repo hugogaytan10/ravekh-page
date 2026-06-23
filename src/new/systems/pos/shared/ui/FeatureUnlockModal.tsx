@@ -13,6 +13,7 @@ export type UnlockModalProps = {
   message?: string;
   buttonText?: string;
   onUpgrade?: () => void;
+  onPaymentSuccess?: () => void;
   unlockFeature?: UnlockFeature;
 };
 
@@ -301,6 +302,7 @@ export const FeatureUnlockModal = ({
   message = "Esta función está bloqueada en tu plan actual. Desbloquéala contratando un plan para usarla sin límites.",
   buttonText = "Desbloquear ahora",
   onUpgrade,
+  onPaymentSuccess,
   unlockFeature,
 }: UnlockModalProps) => {
   const [step, setStep] = useState<CheckoutStep>("intro");
@@ -512,6 +514,7 @@ export const FeatureUnlockModal = ({
       emitPosBusinessUpdated({ businessId: context.businessId, source: "payment-checkout" });
       logUnlockCheckout("checkout:success", { businessId: context.businessId, selection: selectedSelection.label, kind: selectedSelection.kind });
       setStep("success");
+      onPaymentSuccess?.();
     } catch (cause) {
       errorUnlockCheckout("checkout:error", { message: cause instanceof Error ? cause.message : String(cause) });
       setError(cause instanceof Error ? cause.message : "No fue posible completar el pago.");

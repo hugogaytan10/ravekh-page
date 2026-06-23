@@ -6,7 +6,10 @@ import {
   type ReactNode,
   type SVGProps,
 } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { FreeCatalogLoginModal } from "../components/FreeCatalogLoginModal";
+import { POS_SESSION_STORAGE_KEYS } from "../../pos/shared/config/posSession";
+import { FeatureUnlockModal } from "../../pos/shared/ui/FeatureUnlockModal";
 import "./MainCatalogPage.css";
 import { trackMetaEvent, trackMetaCustomEvent } from "../../../../../scripts/metaPixel";
 
@@ -14,6 +17,9 @@ const WHATSAPP_PHONE = "5653989702";
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_PHONE}`;
 const CONTACT_HASH = "#planes";
 const LEAD_FORM_HASH = "#solicitar-catalogo";
+const LOGIN_POS_PATH = "/login-punto-venta";
+const MAIN_SALES_PATH = "/MainSales";
+const FREE_CATALOG_PLAN_NAME = "Catálogo Gratuito";
 
 type CardItem = {
   icon: ReactNode;
@@ -390,7 +396,7 @@ const billingCycleCopy: Record<
 
 const plans: Plan[] = [
   {
-    name: "Catálogo Gratuito",
+    name: FREE_CATALOG_PLAN_NAME,
     prices: { monthly: "0.00 MXN", annual: "0.00 MXN" },
     periodLabel: { monthly: "Gratis", annual: "Gratis" },
     limit: "Límite de productos/fotos editable",
@@ -729,8 +735,14 @@ const MetricsSection = () => (
 );
 
 const PricingSection = () => {
+  const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
+  const [loginModalPlan, setLoginModalPlan] = useState<string | null>(null);
+  const [unlockModalPlan, setUnlockModalPlan] = useState<string | null>(null);
   const activeBilling = billingCycleCopy[billingCycle];
+
+  const hasStoredPosSession = () =>
+    Boolean(window.localStorage.getItem(POS_SESSION_STORAGE_KEYS.token));
 
   return (
     <section
@@ -799,13 +811,24 @@ const PricingSection = () => {
               </ul>
               <a
                 className="main-catalog-button main-catalog-button--primary main-catalog-button--full"
-                href={WHATSAPP_URL}
-                 onClick={() => {
-    trackMetaEvent("Contact", {
-      content_name: plan.name,
-      plan_price: plan.prices[billingCycle],
-    });
-     }}
+                href={plan.name === FREE_CATALOG_PLAN_NAME ? LOGIN_POS_PATH : "#planes"}
+                onClick={(event) => {
+                  trackMetaEvent("Contact", {
+                    content_name: plan.name,
+                    plan_price: plan.prices[billingCycle],
+                  });
+
+                  if (plan.name !== FREE_CATALOG_PLAN_NAME) {
+                    event.preventDefault();
+
+                    if (!hasStoredPosSession()) {
+                      setLoginModalPlan(plan.name);
+                      return;
+                    }
+
+                    setUnlockModalPlan(plan.name);
+                  }
+                }}
                 aria-label={`Elegir ${plan.name} ${billingCycleCopy[billingCycle].label.toLowerCase()}`}
               >
                 Elegir plan
@@ -814,6 +837,24 @@ const PricingSection = () => {
           ))}
         </div>
       </div>
+      <FreeCatalogLoginModal
+        open={Boolean(loginModalPlan)}
+        planName={loginModalPlan ?? undefined}
+        onAuthenticated={() => {
+          setUnlockModalPlan(loginModalPlan);
+          setLoginModalPlan(null);
+        }}
+        onClose={() => setLoginModalPlan(null)}
+      />
+      <FeatureUnlockModal
+        open={Boolean(unlockModalPlan)}
+        onClose={() => setUnlockModalPlan(null)}
+        title={`Activa ${unlockModalPlan ?? "tu plan"}`}
+        message="Completa el pago para activar el paquete seleccionado y entrar al punto de venta."
+        buttonText="Continuar al pago"
+        unlockFeature="Catalog"
+        onPaymentSuccess={() => navigate(MAIN_SALES_PATH)}
+      />
     </section>
   );
 };
