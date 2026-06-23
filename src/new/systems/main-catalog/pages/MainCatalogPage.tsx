@@ -25,6 +25,7 @@ type CardItem = {
   icon: ReactNode;
   title: string;
   text: string;
+  href?: string;
 };
 
 type BillingCycle = "monthly" | "annual";
@@ -331,16 +332,19 @@ const businessTypes: CardItem[] = [
     icon: <BagIcon />,
     title: "Ropa y calzado",
     text: "Tallas, estilos y temporadas en un solo lugar.",
+    href: "/ravekhBoutique",
   },
   {
     icon: <ToolIcon />,
     title: "Refacciones",
     text: "Muestra piezas y variantes sin perder conversaciones.",
+    href: "/RavekhRefacciones",
   },
   {
     icon: <BottleIcon />,
     title: "Perfumes",
     text: "Organiza aromas, presentaciones y promociones.",
+    href: "/RavekhPerfumeria",
   },
   {
     icon: <UtensilsIcon />,
@@ -586,15 +590,27 @@ const BenefitCard = ({ icon, title, text }: CardItem) => (
   </article>
 );
 
-const FeatureCard = ({ icon, title, text }: CardItem) => (
-  <article className="main-catalog-card main-catalog-feature-card">
-    <span className="main-catalog-icon" aria-hidden="true">
-      {icon}
-    </span>
-    <h3>{title}</h3>
-    <p>{text}</p>
-  </article>
-);
+const FeatureCard = ({ icon, title, text, href }: CardItem) => {
+  const content = (
+    <>
+      <span className="main-catalog-icon" aria-hidden="true">
+        {icon}
+      </span>
+      <h3>{title}</h3>
+      <p>{text}</p>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link className="main-catalog-card main-catalog-feature-card main-catalog-card--link" to={href}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <article className="main-catalog-card main-catalog-feature-card">{content}</article>;
+};
 
 const CatalogMockup = ({ compact = false }: { compact?: boolean }) => (
   <div

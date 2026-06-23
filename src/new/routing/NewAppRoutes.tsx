@@ -99,7 +99,7 @@ const RouteSeo = () => {
       };
     }
 
-    if (pathname === "/RavekhBoutique") {
+    if (pathname === "/RavekhBoutique" || pathname === "/ravekhBoutique") {
       return {
         title: "Ravekh Boutique | Catálogo digital para boutiques",
         description: "Presenta tus productos en un catálogo elegante, comparte un link y recibe pedidos claros por WhatsApp.",
@@ -173,6 +173,7 @@ export const NewAppRoutes = () => {
         <Route path="/" element={<LandingPageRavekhPage />} />
         <Route path="/maincatalogo" element={<MainCatalogPage />} />
         <Route path="/RavekhBoutique" element={<RavekhBoutiquePage />} />
+        <Route path="/ravekhBoutique" element={<RavekhBoutiquePage />} />
         <Route path="/RavekhPerfumeria" element={<RavekhPerfumeriaPage />} />
         <Route path="/RavekhRefacciones" element={<RavekhRefaccionesPage />} />
 
