@@ -107,6 +107,15 @@ const RouteSeo = () => {
       };
     }
 
+    if (pathname === "/RavekhRefacciones") {
+      return {
+        title: "Ravekh Refacciones | Catálogo digital para refacciones",
+        description: "Presenta tus productos en un catálogo elegante, comparte un link y recibe pedidos claros por WhatsApp.",
+        robots: "index,follow,max-image-preview:large",
+      };
+    }
+
+
     if (pathname.startsWith("/v2/catalogo") || pathname.startsWith("/catalogo")) {
       return {
         title: "Catálogo digital | Ravekh",
