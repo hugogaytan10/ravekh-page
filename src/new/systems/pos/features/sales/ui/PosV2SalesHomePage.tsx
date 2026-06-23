@@ -1,15 +1,39 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
-import { FiCreditCard, FiDollarSign, FiGrid, FiRepeat, FiShoppingBag, FiTrash2 } from "react-icons/fi";
+import {
+  FiCreditCard,
+  FiDollarSign,
+  FiGrid,
+  FiRepeat,
+  FiShoppingBag,
+  FiTrash2,
+} from "react-icons/fi";
 import { jwtDecode } from "jwt-decode";
 import { useNavigate } from "react-router-dom";
+import {
+  FeatureUnlockModal,
+  type UnlockFeature,
+} from "../../../shared/ui/FeatureUnlockModal";
 import "./PosV2SalesHomePage.css";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
-import { POS_SESSION_STORAGE_KEYS, readPosSessionSnapshot } from "../../../shared/config/posSession";
-import { getDefaultPosPrinter, readPosPrinters } from "../../../shared/config/posPrinters";
-import { hasPosDynamicVisitsQrModule, hasPosLoyaltyModule, normalizePosCouponsPlan } from "../../../shared/config/posLoyaltyPlan";
-import { PosBusinessFeatureResponse, readPosBusinessFeatures } from "../../../shared/config/posFeatureFlags";
+import {
+  POS_SESSION_STORAGE_KEYS,
+  readPosSessionSnapshot,
+} from "../../../shared/config/posSession";
+import {
+  getDefaultPosPrinter,
+  readPosPrinters,
+} from "../../../shared/config/posPrinters";
+import {
+  hasPosDynamicVisitsQrModule,
+  hasPosLoyaltyModule,
+  normalizePosCouponsPlan,
+} from "../../../shared/config/posLoyaltyPlan";
+import {
+  PosBusinessFeatureResponse,
+  readPosBusinessFeatures,
+} from "../../../shared/config/posFeatureFlags";
 import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
 
 const ALL_PRODUCTS_SEARCH_DEBOUNCE_MS = 450;
@@ -52,7 +76,13 @@ type CartItemVm = {
   sizeLabel: string | null;
 };
 
-type PaymentMethod = "EFECTIVO" | "TARJETA DE DEBITO" | "TARJETA DE CREDITO" | "MONEDERO" | "LINK DE PAGO" | "OTROS";
+type PaymentMethod =
+  | "EFECTIVO"
+  | "TARJETA DE DEBITO"
+  | "TARJETA DE CREDITO"
+  | "MONEDERO"
+  | "LINK DE PAGO"
+  | "OTROS";
 type MobileStep = "catalog" | "cart" | "checkout";
 type CompletedSaleLine = {
   name: string;
@@ -103,13 +133,19 @@ const getIsoDate = (offsetDays = 0): string => {
 };
 
 const isMobileDevice = (): boolean =>
-  /Android|iPhone|iPad|iPod|Windows Phone|webOS/i.test(window.navigator.userAgent || "");
+  /Android|iPhone|iPad|iPod|Windows Phone|webOS/i.test(
+    window.navigator.userAgent || "",
+  );
 
 const printHtmlDocument = (title: string, html: string): boolean => {
   const previewBlob = new Blob([html], { type: "text/html;charset=utf-8" });
   const previewUrl = URL.createObjectURL(previewBlob);
   const mobile = isMobileDevice();
-  const targetWindow = window.open(previewUrl, "_blank", mobile ? undefined : "noopener,noreferrer,width=820,height=960");
+  const targetWindow = window.open(
+    previewUrl,
+    "_blank",
+    mobile ? undefined : "noopener,noreferrer,width=820,height=960",
+  );
 
   if (targetWindow) {
     targetWindow.focus();
@@ -248,7 +284,9 @@ const toAbsoluteImageUrl = (image?: string | null): string | undefined => {
     return candidate;
   }
 
-  const normalizedPath = candidate.startsWith("/") ? candidate.slice(1) : candidate;
+  const normalizedPath = candidate.startsWith("/")
+    ? candidate.slice(1)
+    : candidate;
 
   try {
     return new URL(normalizedPath, API_BASE_URL).toString();
@@ -262,7 +300,8 @@ const toCartKey = (
   variantId: number | null,
   colorId: number | null = null,
   sizeId: number | null = null,
-): string => `${productId}:${variantId ?? "base"}:${colorId ?? "none"}:${sizeId ?? "none"}`;
+): string =>
+  `${productId}:${variantId ?? "base"}:${colorId ?? "none"}:${sizeId ?? "none"}`;
 
 const toVariantLabel = (variant: SaleVariantVm): string => {
   const label = variant.description.trim();
@@ -276,7 +315,9 @@ export const PosV2SalesHomePage = () => {
   const [isGrid, setIsGrid] = useState(true);
   const [products, setProducts] = useState<SaleItemVm[]>([]);
   const [categories, setCategories] = useState<CategoryVm[]>([]);
-  const [availableCategoryIds, setAvailableCategoryIds] = useState<number[]>([]);
+  const [availableCategoryIds, setAvailableCategoryIds] = useState<number[]>(
+    [],
+  );
   const [loadingProducts, setLoadingProducts] = useState(true);
   const [searchingGlobalCatalog, setSearchingGlobalCatalog] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
@@ -286,14 +327,25 @@ export const PosV2SalesHomePage = () => {
   const [ticket, setTicket] = useState<string | null>(null);
   const [mobileStep, setMobileStep] = useState<MobileStep>("catalog");
   const [validationError, setValidationError] = useState<string | null>(null);
-  const [planUpgradePrompt, setPlanUpgradePrompt] = useState<PlanUpgradePromptState | null>(null);
+  const [planUpgradePrompt, setPlanUpgradePrompt] =
+    useState<PlanUpgradePromptState | null>(null);
+  const [salesPlanUnlockModal, setSalesPlanUnlockModal] = useState<{
+    title: string;
+    message: string;
+    buttonText: string;
+    unlockFeature?: UnlockFeature;
+  } | null>(null);
   const [isCompletingSale, setIsCompletingSale] = useState(false);
   const [tables, setTables] = useState<TableVm[]>([]);
   const [tableZones, setTableZones] = useState<TableZoneVm[]>([]);
-  const [tablesByZone, setTablesByZone] = useState<Record<number, TableVm[]>>({});
+  const [tablesByZone, setTablesByZone] = useState<Record<number, TableVm[]>>(
+    {},
+  );
   const [selectedTableZoneId, setSelectedTableZoneId] = useState<string>("");
   const [selectedTableId, setSelectedTableId] = useState<string>("");
-  const [completedSale, setCompletedSale] = useState<CompletedSale | null>(null);
+  const [completedSale, setCompletedSale] = useState<CompletedSale | null>(
+    null,
+  );
   const [quoteBusinessName, setQuoteBusinessName] = useState("Mi negocio");
   const [quoteClientName, setQuoteClientName] = useState("");
   const [quoteLogoUrl, setQuoteLogoUrl] = useState("");
@@ -324,11 +376,19 @@ export const PosV2SalesHomePage = () => {
     selectedSizeId: number | null;
     quantities: Record<string, number>;
   } | null>(null);
-  const [extrasCache, setExtrasCache] = useState<Record<number, ProductExtrasVm>>({});
-  const [variantsCache, setVariantsCache] = useState<Record<number, SaleVariantVm[]>>({});
-  const [imageLoadErrors, setImageLoadErrors] = useState<Record<number, true>>({});
+  const [extrasCache, setExtrasCache] = useState<
+    Record<number, ProductExtrasVm>
+  >({});
+  const [variantsCache, setVariantsCache] = useState<
+    Record<number, SaleVariantVm[]>
+  >({});
+  const [imageLoadErrors, setImageLoadErrors] = useState<Record<number, true>>(
+    {},
+  );
   const [uiMessage, setUiMessage] = useState<string>("");
-  const [variantModalError, setVariantModalError] = useState<string | null>(null);
+  const [variantModalError, setVariantModalError] = useState<string | null>(
+    null,
+  );
   const loadingTableDraftRef = useRef(false);
   const skippingDraftSyncRef = useRef(false);
   const keepCartForNextTableSelectionRef = useRef(false);
@@ -339,28 +399,26 @@ export const PosV2SalesHomePage = () => {
     }
   };
 
-  const toSaleItemVm = (
-    item: {
-      id: number;
-      name: string;
-      price: number;
-      stock: number | null;
-      categoryId: number | null;
-      categoryName: string | null;
+  const toSaleItemVm = (item: {
+    id: number;
+    name: string;
+    price: number;
+    stock: number | null;
+    categoryId: number | null;
+    categoryName: string | null;
+    color: string | null;
+    image: string | null;
+    images: string[];
+    variants: Array<{
+      id: number | null;
+      description: string;
       color: string | null;
-      image: string | null;
-      images: string[];
-      variants: Array<{
-        id: number | null;
-        description: string;
-        color: string | null;
-        size: string | null;
-        price: number | null;
-        promotionPrice: number | null;
-        stock: number | null;
-      }>;
-    },
-  ): SaleItemVm => ({
+      size: string | null;
+      price: number | null;
+      promotionPrice: number | null;
+      stock: number | null;
+    }>;
+  }): SaleItemVm => ({
     id: item.id,
     name: item.name,
     price: item.price,
@@ -370,9 +428,10 @@ export const PosV2SalesHomePage = () => {
     color: item.color?.trim() || null,
     image: toAbsoluteImageUrl(item.image || item.images?.find(Boolean)),
     variants: item.variants.map((variant) => {
-      const variantPrice = typeof variant.promotionPrice === "number" && variant.promotionPrice > 0
-        ? variant.promotionPrice
-        : variant.price ?? item.price;
+      const variantPrice =
+        typeof variant.promotionPrice === "number" && variant.promotionPrice > 0
+          ? variant.promotionPrice
+          : (variant.price ?? item.price);
 
       return {
         id: variant.id,
@@ -401,21 +460,36 @@ export const PosV2SalesHomePage = () => {
     setSelectedTableId(normalized);
   };
 
-  const isFreePlanOrderLimitError = (responseData: SaleMutationResponse | null): boolean => {
+  const isFreePlanOrderLimitError = (
+    responseData: SaleMutationResponse | null,
+  ): boolean => {
     const code = String(responseData?.code ?? "").trim();
-    const message = String(responseData?.message ?? responseData?.error ?? "").toLowerCase();
+    const message = String(
+      responseData?.message ?? responseData?.error ?? "",
+    ).toLowerCase();
 
-    return code === FREE_PLAN_ORDER_LIMIT_CODE
-      || (message.includes("plan gratuito") && message.includes("50") && message.includes("venta"));
+    return (
+      code === FREE_PLAN_ORDER_LIMIT_CODE ||
+      (message.includes("plan gratuito") &&
+        message.includes("50") &&
+        message.includes("venta"))
+    );
   };
 
   const openPlanUpgradePrompt = (responseData: SaleMutationResponse | null) => {
     const rawLimit = Number(responseData?.details?.limit);
     const rawTotalOrders = Number(responseData?.details?.totalOrdersThisMonth);
-    const limit = Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : FREE_PLAN_SALES_LIMIT;
-    const totalOrdersThisMonth = Number.isFinite(rawTotalOrders) && rawTotalOrders >= 0 ? rawTotalOrders : null;
-    const message = responseData?.message?.trim()
-      || `Tu plan gratuito permite hasta ${limit} ventas al mes. Actualiza tu plan para seguir registrando ventas.`;
+    const limit =
+      Number.isFinite(rawLimit) && rawLimit > 0
+        ? rawLimit
+        : FREE_PLAN_SALES_LIMIT;
+    const totalOrdersThisMonth =
+      Number.isFinite(rawTotalOrders) && rawTotalOrders >= 0
+        ? rawTotalOrders
+        : null;
+    const message =
+      responseData?.message?.trim() ||
+      `Tu plan gratuito permite hasta ${limit} ventas al mes. Actualiza tu plan para seguir registrando ventas.`;
 
     setValidationError(null);
     setPlanUpgradePrompt({
@@ -425,18 +499,17 @@ export const PosV2SalesHomePage = () => {
     });
     setMobileStep("checkout");
   };
-
-  const handleGoToUpgradePlan = () => {
-    const params = new URLSearchParams({
-      requiredPlan: "START",
-      feature: "ventas mensuales",
-      from: `${window.location.pathname}${window.location.search}`,
-    });
-
+  const handleOpenSalesPlanCheckout = () => {
     setPlanUpgradePrompt(null);
-    navigate(`${POS_UPGRADE_PLAN_PATH}?${params.toString()}`);
-  };
 
+    setSalesPlanUnlockModal({
+      title: "Activa START",
+      message:
+        "Completa el pago para activar tu plan y seguir registrando ventas este mes.",
+      buttonText: "Continuar al pago",
+      unlockFeature: "Pos",
+    });
+  };
   useEffect(() => {
     const { token, businessId } = getCurrentSession();
     const categoryId = categoryKey === "all" ? null : Number(categoryKey);
@@ -444,7 +517,9 @@ export const PosV2SalesHomePage = () => {
     if (!token || !businessId) {
       setProducts([]);
       setLoadingProducts(false);
-      setProductsError("No encontramos sesión activa de negocio para cargar productos.");
+      setProductsError(
+        "No encontramos sesión activa de negocio para cargar productos.",
+      );
       return;
     }
 
@@ -459,15 +534,28 @@ export const PosV2SalesHomePage = () => {
     setLoadingProducts(true);
     setProductsError(null);
     productService
-      .getSellableProductsPaginated(businessId, token, planLimit, currentPage, Number.isFinite(categoryId) ? categoryId : null)
+      .getSellableProductsPaginated(
+        businessId,
+        token,
+        planLimit,
+        currentPage,
+        Number.isFinite(categoryId) ? categoryId : null,
+      )
       .then((response) => {
-        const mapped: SaleItemVm[] = response.products.map((item) => toSaleItemVm(item));
+        const mapped: SaleItemVm[] = response.products.map((item) =>
+          toSaleItemVm(item),
+        );
 
         setProducts(mapped);
         setCurrentPage(response.pagination.page);
         setTotalPages(response.pagination.totalPages);
-        setHasNextPage(response.pagination.hasNext || response.pagination.page < response.pagination.totalPages);
-        setHasPrevPage(response.pagination.hasPrev || response.pagination.page > 1);
+        setHasNextPage(
+          response.pagination.hasNext ||
+            response.pagination.page < response.pagination.totalPages,
+        );
+        setHasPrevPage(
+          response.pagination.hasPrev || response.pagination.page > 1,
+        );
 
         if (categoryId === null) {
           setAvailableCategoryIds(response.pagination.categoryIds);
@@ -476,7 +564,11 @@ export const PosV2SalesHomePage = () => {
       .catch((error) => {
         setProducts([]);
         setGlobalSearchProducts([]);
-        setProductsError(error instanceof Error ? error.message : "No pudimos cargar tus productos.");
+        setProductsError(
+          error instanceof Error
+            ? error.message
+            : "No pudimos cargar tus productos.",
+        );
       })
       .finally(() => setLoadingProducts(false));
   }, [categoryKey, currentPage, isPlanLimitReady, planLimit]);
@@ -496,13 +588,16 @@ export const PosV2SalesHomePage = () => {
       .then((settings) => {
         const normalizedPlan = (settings.plan ?? "").trim();
         const storedPlan = (window.localStorage.getItem("plan") ?? "").trim();
-        const resolvedPlan = normalizedPlan || storedPlan || DEFAULT_SALES_LIMIT;
+        const resolvedPlan =
+          normalizedPlan || storedPlan || DEFAULT_SALES_LIMIT;
 
         setPlanLimit(resolvedPlan);
         window.localStorage.setItem("plan", resolvedPlan);
       })
       .catch(() => {
-        const fallbackPlan = (window.localStorage.getItem("plan") ?? "").trim() || DEFAULT_SALES_LIMIT;
+        const fallbackPlan =
+          (window.localStorage.getItem("plan") ?? "").trim() ||
+          DEFAULT_SALES_LIMIT;
         setPlanLimit(fallbackPlan);
       })
       .finally(() => setIsPlanLimitReady(true));
@@ -520,14 +615,31 @@ export const PosV2SalesHomePage = () => {
       },
     })
       .then((response) => (response.ok ? response.json() : null))
-      .then((payload: ({ Name?: string; name?: string; Logo?: string; logo?: string } & PosBusinessFeatureResponse) | null) => {
-        if (!payload) return;
-        const businessName = String(payload.Name ?? payload.name ?? "").trim();
-        const logoUrl = String(payload.Logo ?? payload.logo ?? "").trim();
-        if (businessName) setQuoteBusinessName(businessName);
-        if (logoUrl) setQuoteLogoUrl(logoUrl);
-        setCouponsPlan(normalizePosCouponsPlan(readPosBusinessFeatures(payload).fidelity ?? 0));
-      })
+      .then(
+        (
+          payload:
+            | ({
+                Name?: string;
+                name?: string;
+                Logo?: string;
+                logo?: string;
+              } & PosBusinessFeatureResponse)
+            | null,
+        ) => {
+          if (!payload) return;
+          const businessName = String(
+            payload.Name ?? payload.name ?? "",
+          ).trim();
+          const logoUrl = String(payload.Logo ?? payload.logo ?? "").trim();
+          if (businessName) setQuoteBusinessName(businessName);
+          if (logoUrl) setQuoteLogoUrl(logoUrl);
+          setCouponsPlan(
+            normalizePosCouponsPlan(
+              readPosBusinessFeatures(payload).fidelity ?? 0,
+            ),
+          );
+        },
+      )
       .catch(() => {
         setCouponsPlan(0);
       });
@@ -568,7 +680,11 @@ export const PosV2SalesHomePage = () => {
       .catch((cause) => {
         setSalesTax(null);
         setApplyTax(false);
-        setTaxError(cause instanceof Error ? cause.message : "No fue posible cargar impuesto de venta.");
+        setTaxError(
+          cause instanceof Error
+            ? cause.message
+            : "No fue posible cargar impuesto de venta.",
+        );
       });
   }, []);
 
@@ -586,19 +702,28 @@ export const PosV2SalesHomePage = () => {
     customerService
       .listCustomers(businessId, token)
       .then((items) => {
-        const mapped = items.map((customer) => ({ id: customer.id, name: customer.name.trim() || `Cliente #${customer.id}` }));
+        const mapped = items.map((customer) => ({
+          id: customer.id,
+          name: customer.name.trim() || `Cliente #${customer.id}`,
+        }));
         setCustomers(mapped);
         setCustomersError(null);
       })
       .catch((cause) => {
         setCustomers([]);
-        setCustomersError(cause instanceof Error ? cause.message : "No fue posible cargar clientes.");
+        setCustomersError(
+          cause instanceof Error
+            ? cause.message
+            : "No fue posible cargar clientes.",
+        );
       });
   }, []);
 
   useEffect(() => {
     if (!selectedCustomerId) return;
-    const selectedCustomer = customers.find((customer) => String(customer.id) === selectedCustomerId);
+    const selectedCustomer = customers.find(
+      (customer) => String(customer.id) === selectedCustomerId,
+    );
     if (selectedCustomer?.name) {
       setQuoteClientName(selectedCustomer.name);
     }
@@ -622,19 +747,30 @@ export const PosV2SalesHomePage = () => {
 
     setLoadingTables(true);
 
-    fetch(new URL(`table_zones/business/${businessId}`, API_BASE_URL).toString(), { headers })
+    fetch(
+      new URL(`table_zones/business/${businessId}`, API_BASE_URL).toString(),
+      { headers },
+    )
       .then(async (zonesResponse) => {
         if (!zonesResponse.ok) {
-          throw new Error(`No se pudieron cargar zonas (${zonesResponse.status}).`);
+          throw new Error(
+            `No se pudieron cargar zonas (${zonesResponse.status}).`,
+          );
         }
 
-        const zonesPayload = (await zonesResponse.json().catch(() => null)) as TableZoneApiResponse[] | null;
+        const zonesPayload = (await zonesResponse.json().catch(() => null)) as
+          | TableZoneApiResponse[]
+          | null;
         const rawZones = Array.isArray(zonesPayload) ? zonesPayload : [];
         const normalizedZones = rawZones
           .map((zone) => ({
             id: Number(zone.Id ?? 0),
             name: String(zone.Name ?? "").trim(),
-            isActive: zone.Active === true || zone.Active === 1 || zone.Active === "1" || zone.Active === "true",
+            isActive:
+              zone.Active === true ||
+              zone.Active === 1 ||
+              zone.Active === "1" ||
+              zone.Active === "true",
           }))
           .filter((zone) => zone.id > 0 && zone.name.length > 0)
           .sort((a, b) => a.id - b.id);
@@ -649,10 +785,20 @@ export const PosV2SalesHomePage = () => {
             .map((table) => ({
               id: Number(table.Id ?? 0),
               name: String(table.Name ?? "").trim(),
-              isAvailable: table.IsAvailable === true || table.IsAvailable === 1,
-              zoneId: Number(table.Table_Zone_Id ?? table.TableZoneId ?? table.Zone_Id ?? zoneId) || zoneId,
+              isAvailable:
+                table.IsAvailable === true || table.IsAvailable === 1,
+              zoneId:
+                Number(
+                  table.Table_Zone_Id ??
+                    table.TableZoneId ??
+                    table.Zone_Id ??
+                    zoneId,
+                ) || zoneId,
             }))
-            .filter((table) => table.id > 0 && table.name.length > 0 && table.isAvailable)
+            .filter(
+              (table) =>
+                table.id > 0 && table.name.length > 0 && table.isAvailable,
+            )
             .map(({ id, name, zoneId }) => ({ id, name, zoneId }))
             .sort((a, b) => a.id - b.id);
         });
@@ -660,7 +806,10 @@ export const PosV2SalesHomePage = () => {
         return { normalizedZones, preloadedTables };
       })
       .then(({ normalizedZones, preloadedTables }) => {
-        debugLog("Zonas cargadas desde endpoint /table_zones/business/:businessId", normalizedZones);
+        debugLog(
+          "Zonas cargadas desde endpoint /table_zones/business/:businessId",
+          normalizedZones,
+        );
         setTableZones(normalizedZones);
         setTablesByZone(preloadedTables);
         setTablesError(null);
@@ -670,7 +819,11 @@ export const PosV2SalesHomePage = () => {
         setTables([]);
         setTableZones([]);
         setTablesByZone({});
-        setTablesError(error instanceof Error ? error.message : "No se pudieron cargar zonas.");
+        setTablesError(
+          error instanceof Error
+            ? error.message
+            : "No se pudieron cargar zonas.",
+        );
       })
       .finally(() => setLoadingTables(false));
   }, []);
@@ -696,7 +849,11 @@ export const PosV2SalesHomePage = () => {
     }
 
     const currentZoneId = Number(selectedTableZoneId);
-    if (Number.isFinite(currentZoneId) && currentZoneId > 0 && tablesByZone[currentZoneId]) {
+    if (
+      Number.isFinite(currentZoneId) &&
+      currentZoneId > 0 &&
+      tablesByZone[currentZoneId]
+    ) {
       setTables(tablesByZone[currentZoneId] ?? []);
       return;
     }
@@ -708,26 +865,40 @@ export const PosV2SalesHomePage = () => {
     };
 
     setLoadingTables(true);
-    fetch(new URL(`tables/zone/${selectedTableZoneId}`, API_BASE_URL).toString(), { headers })
+    fetch(
+      new URL(`tables/zone/${selectedTableZoneId}`, API_BASE_URL).toString(),
+      { headers },
+    )
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(`No se pudieron cargar mesas (${response.status}).`);
         }
 
-        const tablesPayload = (await response.json().catch(() => null)) as TableApiResponse[] | null;
+        const tablesPayload = (await response.json().catch(() => null)) as
+          | TableApiResponse[]
+          | null;
         return (Array.isArray(tablesPayload) ? tablesPayload : [])
           .map((table) => ({
             id: Number(table.Id ?? 0),
             name: String(table.Name ?? "").trim(),
             isAvailable: table.IsAvailable === true || table.IsAvailable === 1,
-            zoneId: Number(table.Table_Zone_Id ?? table.TableZoneId ?? table.Zone_Id ?? 0) || null,
+            zoneId:
+              Number(
+                table.Table_Zone_Id ?? table.TableZoneId ?? table.Zone_Id ?? 0,
+              ) || null,
           }))
-          .filter((table) => table.id > 0 && table.name.length > 0 && table.isAvailable)
+          .filter(
+            (table) =>
+              table.id > 0 && table.name.length > 0 && table.isAvailable,
+          )
           .map(({ id, name, zoneId }) => ({ id, name, zoneId }))
           .sort((a, b) => a.id - b.id);
       })
       .then((zoneTables) => {
-        debugLog(`Mesas cargadas desde endpoint /tables/zone/${selectedTableZoneId}`, zoneTables);
+        debugLog(
+          `Mesas cargadas desde endpoint /tables/zone/${selectedTableZoneId}`,
+          zoneTables,
+        );
         setTables(zoneTables);
         setTablesByZone((current) => ({
           ...current,
@@ -738,7 +909,11 @@ export const PosV2SalesHomePage = () => {
       .catch((error) => {
         console.error("[POS-V2-SALES] Error al cargar mesas por zona", error);
         setTables([]);
-        setTablesError(error instanceof Error ? error.message : "No se pudieron cargar mesas.");
+        setTablesError(
+          error instanceof Error
+            ? error.message
+            : "No se pudieron cargar mesas.",
+        );
       })
       .finally(() => setLoadingTables(false));
   }, [selectedTableZoneId, tablesByZone]);
@@ -769,13 +944,22 @@ export const PosV2SalesHomePage = () => {
 
     productService
       .getBusinessCategories(businessId, token)
-      .then((rows) => setCategories(rows.map((row) => ({ id: row.id, name: row.name }))))
+      .then((rows) =>
+        setCategories(rows.map((row) => ({ id: row.id, name: row.name }))),
+      )
       .catch(() => setCategories([]));
   }, []);
 
   const categoryOptions = useMemo(() => {
-    const dynamic = categories.filter((item) => availableCategoryIds.length === 0 || availableCategoryIds.includes(item.id));
-    return [{ key: "all", label: "Todas" }, ...dynamic.map((item) => ({ key: String(item.id), label: item.name }))];
+    const dynamic = categories.filter(
+      (item) =>
+        availableCategoryIds.length === 0 ||
+        availableCategoryIds.includes(item.id),
+    );
+    return [
+      { key: "all", label: "Todas" },
+      ...dynamic.map((item) => ({ key: String(item.id), label: item.name })),
+    ];
   }, [availableCategoryIds, categories]);
 
   useEffect(() => {
@@ -792,7 +976,9 @@ export const PosV2SalesHomePage = () => {
 
   const filteredProducts = useMemo(() => {
     const normalized = search.trim().toLowerCase();
-    return products.filter((product) => product.name.toLowerCase().includes(normalized));
+    return products.filter((product) =>
+      product.name.toLowerCase().includes(normalized),
+    );
   }, [products, search]);
 
   useEffect(() => {
@@ -825,7 +1011,9 @@ export const PosV2SalesHomePage = () => {
   const hasTableSelection = tableZones.length > 0 && visibleTables.length > 0;
   const hasCustomers = customers.length > 0;
   const selectedTableName = useMemo(
-    () => visibleTables.find((table) => String(table.id) === selectedTableId)?.name ?? "Sin mesa",
+    () =>
+      visibleTables.find((table) => String(table.id) === selectedTableId)
+        ?.name ?? "Sin mesa",
     [visibleTables, selectedTableId],
   );
 
@@ -835,25 +1023,43 @@ export const PosV2SalesHomePage = () => {
   ): CartItemVm | null => {
     const directProductId = Number(row.Product_Id ?? row.ProductId ?? 0);
     const fallbackId = Number(row.Id ?? 0);
-    const productId = Number.isFinite(directProductId) && directProductId > 0
-      ? directProductId
-      : Number.isFinite(fallbackId) && fallbackId > 0
-        ? fallbackId
-        : 0;
+    const productId =
+      Number.isFinite(directProductId) && directProductId > 0
+        ? directProductId
+        : Number.isFinite(fallbackId) && fallbackId > 0
+          ? fallbackId
+          : 0;
     if (!Number.isFinite(productId) || productId <= 0) return null;
 
     const variantIdCandidate = Number(row.Variant_Id);
-    const variantId = Number.isFinite(variantIdCandidate) && variantIdCandidate > 0 ? variantIdCandidate : null;
+    const variantId =
+      Number.isFinite(variantIdCandidate) && variantIdCandidate > 0
+        ? variantIdCandidate
+        : null;
     const quantityCandidate = Number(row.Quantity ?? 1);
-    const quantity = Number.isFinite(quantityCandidate) && quantityCandidate > 0 ? Math.floor(quantityCandidate) : 1;
+    const quantity =
+      Number.isFinite(quantityCandidate) && quantityCandidate > 0
+        ? Math.floor(quantityCandidate)
+        : 1;
 
-    const variantFromCatalog = variantId !== null
-      ? productCatalog?.variants.find((item) => item.id === variantId) ?? null
-      : null;
+    const variantFromCatalog =
+      variantId !== null
+        ? (productCatalog?.variants.find((item) => item.id === variantId) ??
+          null)
+        : null;
 
     const fallbackName = String(row.ProductName ?? row.Name ?? "").trim();
-    const fallbackVariantLabel = String(row.VariantName ?? row.Description ?? "").trim();
-    const rawPrice = Number(row.VariantPrice ?? row.Price ?? row.Price1 ?? row.ProductPrice ?? productCatalog?.price ?? 0);
+    const fallbackVariantLabel = String(
+      row.VariantName ?? row.Description ?? "",
+    ).trim();
+    const rawPrice = Number(
+      row.VariantPrice ??
+        row.Price ??
+        row.Price1 ??
+        row.ProductPrice ??
+        productCatalog?.price ??
+        0,
+    );
     const safePrice = Number.isFinite(rawPrice) && rawPrice >= 0 ? rawPrice : 0;
     const variantLabel = variantFromCatalog
       ? toVariantLabel(variantFromCatalog)
@@ -898,29 +1104,47 @@ export const PosV2SalesHomePage = () => {
     loadingTableDraftRef.current = true;
     skippingDraftSyncRef.current = true;
 
-    fetch(new URL(`table_products/products/${tableId}`, API_BASE_URL).toString(), { headers })
+    fetch(
+      new URL(`table_products/products/${tableId}`, API_BASE_URL).toString(),
+      { headers },
+    )
       .then(async (response) => {
         if (!response.ok) {
-          throw new Error(`No se pudo cargar borrador de mesa (${response.status}).`);
+          throw new Error(
+            `No se pudo cargar borrador de mesa (${response.status}).`,
+          );
         }
 
-        const payload = (await response.json().catch(() => [])) as TableProductDetailApiResponse[] | null;
+        const payload = (await response.json().catch(() => [])) as
+          | TableProductDetailApiResponse[]
+          | null;
         const rows = Array.isArray(payload) ? payload : [];
 
-        const nextCart = rows.reduce<Record<string, CartItemVm>>((accumulator, row) => {
-          const productId = Number(row.Product_Id ?? row.ProductId ?? row.Id ?? 0);
-          const productCatalog = products.find((item) => item.id === productId);
-          const parsed = resolveCartItemFromTableDraft(row, productCatalog);
-          if (!parsed) return accumulator;
-          accumulator[parsed.cartKey] = parsed;
-          return accumulator;
-        }, {});
+        const nextCart = rows.reduce<Record<string, CartItemVm>>(
+          (accumulator, row) => {
+            const productId = Number(
+              row.Product_Id ?? row.ProductId ?? row.Id ?? 0,
+            );
+            const productCatalog = products.find(
+              (item) => item.id === productId,
+            );
+            const parsed = resolveCartItemFromTableDraft(row, productCatalog);
+            if (!parsed) return accumulator;
+            accumulator[parsed.cartKey] = parsed;
+            return accumulator;
+          },
+          {},
+        );
 
         setCart(nextCart);
       })
       .catch((error) => {
         console.error("[POS-V2-SALES] Error al cargar borrador de mesa", error);
-        setValidationError(error instanceof Error ? error.message : "No se pudo recuperar el borrador de la mesa.");
+        setValidationError(
+          error instanceof Error
+            ? error.message
+            : "No se pudo recuperar el borrador de la mesa.",
+        );
       })
       .finally(() => {
         loadingTableDraftRef.current = false;
@@ -932,7 +1156,12 @@ export const PosV2SalesHomePage = () => {
 
   useEffect(() => {
     const { token } = getCurrentSession();
-    if (!token || !selectedTableId || loadingTableDraftRef.current || skippingDraftSyncRef.current) {
+    if (
+      !token ||
+      !selectedTableId ||
+      loadingTableDraftRef.current ||
+      skippingDraftSyncRef.current
+    ) {
       return;
     }
 
@@ -954,46 +1183,67 @@ export const PosV2SalesHomePage = () => {
       }));
 
       if (payload.length === 0) {
-        const existingResponse = await fetch(new URL(`table_products/table/${tableId}`, API_BASE_URL).toString(), { headers });
-        const existingPayload = (await existingResponse.json().catch(() => [])) as TableProductApiResponse[] | null;
-        const existingRows = Array.isArray(existingPayload) ? existingPayload : [];
+        const existingResponse = await fetch(
+          new URL(`table_products/table/${tableId}`, API_BASE_URL).toString(),
+          { headers },
+        );
+        const existingPayload = (await existingResponse
+          .json()
+          .catch(() => [])) as TableProductApiResponse[] | null;
+        const existingRows = Array.isArray(existingPayload)
+          ? existingPayload
+          : [];
         await Promise.all(
           existingRows
             .map((row) => Number(row.Id))
             .filter((id) => Number.isFinite(id) && id > 0)
-            .map((id) => fetch(new URL(`table_products/${id}`, API_BASE_URL).toString(), {
-              method: "DELETE",
-              headers,
-            })),
+            .map((id) =>
+              fetch(new URL(`table_products/${id}`, API_BASE_URL).toString(), {
+                method: "DELETE",
+                headers,
+              }),
+            ),
         );
         return;
       }
 
-      const response = await fetch(new URL("table_products", API_BASE_URL).toString(), {
-        method: "POST",
-        headers,
-        body: JSON.stringify(payload),
-      });
+      const response = await fetch(
+        new URL("table_products", API_BASE_URL).toString(),
+        {
+          method: "POST",
+          headers,
+          body: JSON.stringify(payload),
+        },
+      );
 
       if (!response.ok) {
-        throw new Error(`No se pudo guardar borrador en mesa (${response.status}).`);
+        throw new Error(
+          `No se pudo guardar borrador en mesa (${response.status}).`,
+        );
       }
     };
 
     syncDraft().catch((error) => {
-      console.error("[POS-V2-SALES] Error al sincronizar borrador de mesa", error);
+      console.error(
+        "[POS-V2-SALES] Error al sincronizar borrador de mesa",
+        error,
+      );
     });
   }, [cart, selectedTableId]);
 
   const totals = useMemo(() => {
-    const subtotal = cartItems.reduce((acc, item) => acc + item.price * item.quantity, 0);
+    const subtotal = cartItems.reduce(
+      (acc, item) => acc + item.price * item.quantity,
+      0,
+    );
     const discount = subtotal * (Number(discountPercent) / 100);
     const taxableBase = Math.max(0, subtotal - discount);
-    const taxAmount = salesTax && applyTax
-      ? salesTax.isPercent
-        ? taxableBase * (salesTax.value / 100)
-        : salesTax.value
-      : 0;
+    const taxAmount =
+      salesTax && applyTax
+        ? salesTax.isPercent
+          ? taxableBase * (salesTax.value / 100)
+          : salesTax.value
+        : 0;
     const total = Math.max(0, taxableBase + taxAmount);
     const items = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
@@ -1028,7 +1278,9 @@ export const PosV2SalesHomePage = () => {
     [totals.items],
   );
 
-  const loadProductExtras = async (productId: number): Promise<ProductExtrasVm> => {
+  const loadProductExtras = async (
+    productId: number,
+  ): Promise<ProductExtrasVm> => {
     if (Object.prototype.hasOwnProperty.call(extrasCache, productId)) {
       return extrasCache[productId];
     }
@@ -1039,39 +1291,56 @@ export const PosV2SalesHomePage = () => {
     }
 
     try {
-      const response = await fetch(new URL(`extras/product/${productId}`, API_BASE_URL).toString(), {
-        headers: {
-          "Content-Type": "application/json",
-          token,
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        new URL(`extras/product/${productId}`, API_BASE_URL).toString(),
+        {
+          headers: {
+            "Content-Type": "application/json",
+            token,
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
 
       if (!response.ok) {
         throw new Error("No se pudieron cargar extras.");
       }
 
-      const data = (await response.json().catch(() => null)) as { COLOR?: unknown; TALLA?: unknown } | null;
+      const data = (await response.json().catch(() => null)) as {
+        COLOR?: unknown;
+        TALLA?: unknown;
+      } | null;
       const normalized: ProductExtrasVm = {
         COLOR: Array.isArray(data?.COLOR)
-          ? data.COLOR
-            .map((item) => ({
+          ? data.COLOR.map((item) => ({
               id: Number((item as { Id?: number }).Id),
-              description: String((item as { Description?: string }).Description ?? "").trim(),
-            }))
-            .filter((item) => Number.isFinite(item.id) && item.id > 0 && item.description.length > 0)
+              description: String(
+                (item as { Description?: string }).Description ?? "",
+              ).trim(),
+            })).filter(
+              (item) =>
+                Number.isFinite(item.id) &&
+                item.id > 0 &&
+                item.description.length > 0,
+            )
           : [],
         TALLA: Array.isArray(data?.TALLA)
-          ? data.TALLA
-            .map((item) => ({
+          ? data.TALLA.map((item) => ({
               id: Number((item as { Id?: number }).Id),
-              description: String((item as { Description?: string }).Description ?? "").trim(),
-            }))
-            .filter((item) => Number.isFinite(item.id) && item.id > 0 && item.description.length > 0)
+              description: String(
+                (item as { Description?: string }).Description ?? "",
+              ).trim(),
+            })).filter(
+              (item) =>
+                Number.isFinite(item.id) &&
+                item.id > 0 &&
+                item.description.length > 0,
+            )
           : [],
       };
 
-      const sanitized = normalized.COLOR.length || normalized.TALLA.length ? normalized : null;
+      const sanitized =
+        normalized.COLOR.length || normalized.TALLA.length ? normalized : null;
       setExtrasCache((current) => ({ ...current, [productId]: sanitized }));
       return sanitized;
     } catch {
@@ -1080,7 +1349,9 @@ export const PosV2SalesHomePage = () => {
     }
   };
 
-  const loadProductVariants = async (product: SaleItemVm): Promise<SaleVariantVm[]> => {
+  const loadProductVariants = async (
+    product: SaleItemVm,
+  ): Promise<SaleVariantVm[]> => {
     if (Object.prototype.hasOwnProperty.call(variantsCache, product.id)) {
       return variantsCache[product.id];
     }
@@ -1091,39 +1362,57 @@ export const PosV2SalesHomePage = () => {
     }
 
     try {
-      const response = await fetch(new URL(`variants/product/${product.id}`, API_BASE_URL).toString(), {
-        headers: {
-          "Content-Type": "application/json",
-          token,
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        new URL(`variants/product/${product.id}`, API_BASE_URL).toString(),
+        {
+          headers: {
+            "Content-Type": "application/json",
+            token,
+            Authorization: `Bearer ${token}`,
+          },
         },
-      });
+      );
 
       if (!response.ok) {
         throw new Error("No se pudieron cargar variantes.");
       }
 
-      const payload = (await response.json().catch(() => [])) as VariantApiResponse[] | null;
+      const payload = (await response.json().catch(() => [])) as
+        | VariantApiResponse[]
+        | null;
       const normalized = Array.isArray(payload)
         ? payload.map((variant) => ({
-          id: typeof variant.Id === "number" && Number.isFinite(variant.Id) ? variant.Id : null,
-          description: (variant.Description ?? "").trim() || "Variante",
-          color: variant.Color?.trim() || null,
-          size: variant.Size?.trim() || variant.Talla?.trim() || null,
-          price: typeof variant.PromotionPrice === "number" && variant.PromotionPrice > 0
-            ? variant.PromotionPrice
-            : typeof variant.Price === "number" && Number.isFinite(variant.Price)
-              ? variant.Price
-              : product.price,
-          stock: typeof variant.Stock === "number" && Number.isFinite(variant.Stock) ? variant.Stock : null,
-        }))
+            id:
+              typeof variant.Id === "number" && Number.isFinite(variant.Id)
+                ? variant.Id
+                : null,
+            description: (variant.Description ?? "").trim() || "Variante",
+            color: variant.Color?.trim() || null,
+            size: variant.Size?.trim() || variant.Talla?.trim() || null,
+            price:
+              typeof variant.PromotionPrice === "number" &&
+              variant.PromotionPrice > 0
+                ? variant.PromotionPrice
+                : typeof variant.Price === "number" &&
+                    Number.isFinite(variant.Price)
+                  ? variant.Price
+                  : product.price,
+            stock:
+              typeof variant.Stock === "number" &&
+              Number.isFinite(variant.Stock)
+                ? variant.Stock
+                : null,
+          }))
         : [];
 
       const resolved = normalized.length > 0 ? normalized : product.variants;
       setVariantsCache((current) => ({ ...current, [product.id]: resolved }));
       return resolved;
     } catch {
-      setVariantsCache((current) => ({ ...current, [product.id]: product.variants }));
+      setVariantsCache((current) => ({
+        ...current,
+        [product.id]: product.variants,
+      }));
       return product.variants;
     }
   };
@@ -1135,10 +1424,16 @@ export const PosV2SalesHomePage = () => {
     colorOption?: ProductExtraOptionVm | null,
     sizeOption?: ProductExtraOptionVm | null,
   ) => {
-    const cartKey = toCartKey(product.id, variant?.id ?? null, colorOption?.id ?? null, sizeOption?.id ?? null);
+    const cartKey = toCartKey(
+      product.id,
+      variant?.id ?? null,
+      colorOption?.id ?? null,
+      sizeOption?.id ?? null,
+    );
     const basePrice = variant?.price ?? product.price;
     const variantLabel = variant ? toVariantLabel(variant) : null;
-    const resolvedColorLabel = colorOption?.description ?? variant?.color ?? product.color ?? null;
+    const resolvedColorLabel =
+      colorOption?.description ?? variant?.color ?? product.color ?? null;
     const normalizedQuantity = Math.max(1, Math.floor(quantity));
     const itemName = product.name;
 
@@ -1178,28 +1473,36 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
-    const availableVariants = variants.filter((variant) => (variant.stock === null || variant.stock > 0) && variant.id !== null);
+    const availableVariants = variants.filter(
+      (variant) =>
+        (variant.stock === null || variant.stock > 0) && variant.id !== null,
+    );
     if (!availableVariants.length && !hasBaseStock) {
-      setValidationError("Este producto no tiene stock disponible ni en base ni en variantes.");
+      setValidationError(
+        "Este producto no tiene stock disponible ni en base ni en variantes.",
+      );
       return;
     }
 
     const modalVariants = hasBaseStock
       ? [
-        {
-          id: null,
-          description: product.name,
-          color: product.color ?? null,
-          size: null,
-          price: product.price,
-          stock: product.stock,
-        },
-        ...availableVariants,
-      ]
+          {
+            id: null,
+            description: product.name,
+            color: product.color ?? null,
+            size: null,
+            price: product.price,
+            stock: product.stock,
+          },
+          ...availableVariants,
+        ]
       : availableVariants;
 
     if (modalVariants.length === 1 && !hasExtraSize) {
-      addToCartEntry(product, modalVariants[0].id === null ? null : modalVariants[0]);
+      addToCartEntry(
+        product,
+        modalVariants[0].id === null ? null : modalVariants[0],
+      );
       return;
     }
 
@@ -1207,18 +1510,25 @@ export const PosV2SalesHomePage = () => {
       product,
       variants: modalVariants,
       extras,
-      selectedVariantKey: modalVariants[0] ? toCartKey(product.id, modalVariants[0].id) : null,
+      selectedVariantKey: modalVariants[0]
+        ? toCartKey(product.id, modalVariants[0].id)
+        : null,
       selectedSizeId: null,
-      quantities: modalVariants.reduce<Record<string, number>>((accumulator, variant) => {
-        accumulator[toCartKey(product.id, variant.id)] = 1;
-        return accumulator;
-      }, {}),
+      quantities: modalVariants.reduce<Record<string, number>>(
+        (accumulator, variant) => {
+          accumulator[toCartKey(product.id, variant.id)] = 1;
+          return accumulator;
+        },
+        {},
+      ),
     });
     setVariantModalError(null);
   };
 
   const setQuantity = (cartKey: string, quantity: number) => {
-    const safeQuantity = Number.isNaN(quantity) ? 0 : Math.max(0, Math.floor(quantity));
+    const safeQuantity = Number.isNaN(quantity)
+      ? 0
+      : Math.max(0, Math.floor(quantity));
 
     setCart((current) => {
       const target = current[cartKey];
@@ -1262,20 +1572,38 @@ export const PosV2SalesHomePage = () => {
   const confirmVariantSelection = () => {
     if (!variantSelection) return;
     const variant = variantSelection.selectedVariantKey
-      ? variantSelection.variants.find((item) => toCartKey(variantSelection.product.id, item.id) === variantSelection.selectedVariantKey) ?? null
+      ? (variantSelection.variants.find(
+          (item) =>
+            toCartKey(variantSelection.product.id, item.id) ===
+            variantSelection.selectedVariantKey,
+        ) ?? null)
       : null;
 
-    const selectedSize = variantSelection.extras?.TALLA.find((option) => option.id === variantSelection.selectedSizeId) ?? null;
+    const selectedSize =
+      variantSelection.extras?.TALLA.find(
+        (option) => option.id === variantSelection.selectedSizeId,
+      ) ?? null;
 
     const needsSize = (variantSelection.extras?.TALLA.length ?? 0) > 0;
     if (needsSize && !selectedSize) {
-      setVariantModalError("Debes seleccionar los campos obligatorios antes de agregar.");
+      setVariantModalError(
+        "Debes seleccionar los campos obligatorios antes de agregar.",
+      );
       return;
     }
 
     const selectedKey = variantSelection.selectedVariantKey ?? "";
-    const quantity = Math.max(1, Math.floor(variantSelection.quantities[selectedKey] ?? 1));
-    addToCartEntry(variantSelection.product, variant, quantity, null, selectedSize);
+    const quantity = Math.max(
+      1,
+      Math.floor(variantSelection.quantities[selectedKey] ?? 1),
+    );
+    addToCartEntry(
+      variantSelection.product,
+      variant,
+      quantity,
+      null,
+      selectedSize,
+    );
     setVariantSelection(null);
     setValidationError(null);
     setVariantModalError(null);
@@ -1302,7 +1630,12 @@ export const PosV2SalesHomePage = () => {
 
     try {
       const decoded = jwtDecode<TokenPayload>(token);
-      const decodedCandidate = decoded.employeeId ?? decoded.Employee_Id ?? decoded.Id ?? decoded.id ?? decoded.sub;
+      const decodedCandidate =
+        decoded.employeeId ??
+        decoded.Employee_Id ??
+        decoded.Id ??
+        decoded.id ??
+        decoded.sub;
       const parsedDecoded = Number(decodedCandidate);
       if (Number.isFinite(parsedDecoded) && parsedDecoded > 0) {
         window.localStorage.setItem(EMPLOYEE_ID_KEY, String(parsedDecoded));
@@ -1322,7 +1655,11 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
-    if (Number.isNaN(discountValue) || discountValue < 0 || discountValue > 100) {
+    if (
+      Number.isNaN(discountValue) ||
+      discountValue < 0 ||
+      discountValue > 100
+    ) {
       setValidationError("El descuento debe estar entre 0 y 100.");
       return;
     }
@@ -1335,7 +1672,9 @@ export const PosV2SalesHomePage = () => {
         hasToken: Boolean(token),
         storedEmployeeId: window.localStorage.getItem(EMPLOYEE_ID_KEY),
       });
-      setValidationError("No encontramos la sesión del empleado. Inicia sesión nuevamente para finalizar.");
+      setValidationError(
+        "No encontramos la sesión del empleado. Inicia sesión nuevamente para finalizar.",
+      );
       return;
     }
 
@@ -1374,16 +1713,16 @@ export const PosV2SalesHomePage = () => {
       const endpoint = selectedTableId ? "commands" : "orders";
       const payload = selectedTableId
         ? {
-          Command: {
-            ...payloadByTable,
-            Table_Id: Number(selectedTableId),
-          },
-          Commands_has_Products: lineItems,
-        }
+            Command: {
+              ...payloadByTable,
+              Table_Id: Number(selectedTableId),
+            },
+            Commands_has_Products: lineItems,
+          }
         : {
-          Order: payloadByTable,
-          OrderDetails: lineItems,
-        };
+            Order: payloadByTable,
+            OrderDetails: lineItems,
+          };
 
       const response = await fetch(new URL(endpoint, API_BASE_URL).toString(), {
         method: "POST",
@@ -1395,7 +1734,9 @@ export const PosV2SalesHomePage = () => {
         body: JSON.stringify(payload),
       });
 
-      const responseData = (await response.json().catch(() => null)) as SaleMutationResponse | null;
+      const responseData = (await response
+        .json()
+        .catch(() => null)) as SaleMutationResponse | null;
 
       if (!response.ok) {
         if (isFreePlanOrderLimitError(responseData)) {
@@ -1403,12 +1744,18 @@ export const PosV2SalesHomePage = () => {
           return;
         }
 
-        throw new Error(responseData?.message ?? responseData?.error ?? "No pudimos registrar la venta en la base de datos.");
+        throw new Error(
+          responseData?.message ??
+            responseData?.error ??
+            "No pudimos registrar la venta en la base de datos.",
+        );
       }
       debugLog("Venta registrada correctamente.", responseData);
 
       const folio = `RVK-${Date.now().toString().slice(-6)}`;
-      const paymentMethodLabel = PAYMENT_METHOD_OPTIONS.find((option) => option.value === paymentMethod)?.label ?? paymentMethod;
+      const paymentMethodLabel =
+        PAYMENT_METHOD_OPTIONS.find((option) => option.value === paymentMethod)
+          ?.label ?? paymentMethod;
       const printableItems: CompletedSaleLine[] = cartItems.map((item) => ({
         name: item.name,
         quantity: item.quantity,
@@ -1416,7 +1763,9 @@ export const PosV2SalesHomePage = () => {
         lineTotal: item.price * item.quantity,
       }));
 
-      setTicket(`Venta ${folio} · ${paymentMethodLabel} · ${selectedTableName} · Total $${totals.total.toFixed(2)}`);
+      setTicket(
+        `Venta ${folio} · ${paymentMethodLabel} · ${selectedTableName} · Total $${totals.total.toFixed(2)}`,
+      );
       setCompletedSale({
         folio,
         paymentMethodLabel,
@@ -1427,39 +1776,54 @@ export const PosV2SalesHomePage = () => {
         taxableBase: totals.taxableBase,
         taxDescription: salesTax?.description?.trim() || "Impuesto",
         total: totals.total,
-        customerName: customers.find((customer) => String(customer.id) === selectedCustomerId)?.name,
+        customerName: customers.find(
+          (customer) => String(customer.id) === selectedCustomerId,
+        )?.name,
         createdAt: new Date().toISOString(),
         items: printableItems,
       });
       if (selectedTableId) {
         const tableId = Number(selectedTableId);
         if (Number.isFinite(tableId) && tableId > 0) {
-          fetch(new URL(`table_products/table/${tableId}`, API_BASE_URL).toString(), {
-            headers: {
-              "Content-Type": "application/json",
-              token,
-              Authorization: `Bearer ${token}`,
+          fetch(
+            new URL(`table_products/table/${tableId}`, API_BASE_URL).toString(),
+            {
+              headers: {
+                "Content-Type": "application/json",
+                token,
+                Authorization: `Bearer ${token}`,
+              },
             },
-          })
+          )
             .then(async (response) => {
-              const payload = (await response.json().catch(() => [])) as TableProductApiResponse[] | null;
+              const payload = (await response.json().catch(() => [])) as
+                | TableProductApiResponse[]
+                | null;
               const rows = Array.isArray(payload) ? payload : [];
               await Promise.all(
                 rows
                   .map((row) => Number(row.Id))
                   .filter((id) => Number.isFinite(id) && id > 0)
-                  .map((id) => fetch(new URL(`table_products/${id}`, API_BASE_URL).toString(), {
-                    method: "DELETE",
-                    headers: {
-                      "Content-Type": "application/json",
-                      token,
-                      Authorization: `Bearer ${token}`,
-                    },
-                  })),
+                  .map((id) =>
+                    fetch(
+                      new URL(`table_products/${id}`, API_BASE_URL).toString(),
+                      {
+                        method: "DELETE",
+                        headers: {
+                          "Content-Type": "application/json",
+                          token,
+                          Authorization: `Bearer ${token}`,
+                        },
+                      },
+                    ),
+                  ),
               );
             })
             .catch((error) => {
-              console.error("[POS-V2-SALES] Error al limpiar borrador de mesa al finalizar venta", error);
+              console.error(
+                "[POS-V2-SALES] Error al limpiar borrador de mesa al finalizar venta",
+                error,
+              );
             });
         }
       }
@@ -1468,7 +1832,11 @@ export const PosV2SalesHomePage = () => {
       setPlanUpgradePrompt(null);
       setMobileStep("catalog");
     } catch (error) {
-      setValidationError(error instanceof Error ? error.message : "No pudimos registrar la venta en la base de datos.");
+      setValidationError(
+        error instanceof Error
+          ? error.message
+          : "No pudimos registrar la venta en la base de datos.",
+      );
     } finally {
       setIsCompletingSale(false);
     }
@@ -1485,63 +1853,88 @@ export const PosV2SalesHomePage = () => {
     const { token, businessId } = getCurrentSession();
     if (!token || !businessId || !hasPosLoyaltyModule(couponsPlan)) return null;
 
-    const couponsDomain = WEB_COUPONS_DOMAIN.trim().replace(/\/$/, "") || (typeof window !== "undefined" ? window.location.origin : "https://ravekh.com");
+    const couponsDomain =
+      WEB_COUPONS_DOMAIN.trim().replace(/\/$/, "") ||
+      (typeof window !== "undefined"
+        ? window.location.origin
+        : "https://ravekh.com");
 
     if (hasPosDynamicVisitsQrModule(couponsPlan)) {
-      const dynamicResponse = await fetch(new URL("visits/qr/dynamic/next", API_BASE_URL).toString(), {
+      const dynamicResponse = await fetch(
+        new URL("visits/qr/dynamic/next", API_BASE_URL).toString(),
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            token,
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({ businessId, domain: couponsDomain }),
+        },
+      );
+
+      const dynamicPayload = (await dynamicResponse
+        .json()
+        .catch(() => null)) as {
+        qrUrl?: string;
+        data?: { qrUrl?: string };
+      } | null;
+
+      const dynamicQrUrl = String(
+        dynamicPayload?.qrUrl ?? dynamicPayload?.data?.qrUrl ?? "",
+      ).trim();
+      if (!dynamicResponse.ok || !dynamicQrUrl) {
+        throw new Error(
+          "No fue posible generar el QR dinámico de visita para este ticket.",
+        );
+      }
+
+      return dynamicQrUrl;
+    }
+
+    const response = await fetch(
+      new URL("visits/qr/generate", API_BASE_URL).toString(),
+      {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
           token,
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ businessId, domain: couponsDomain }),
-      });
-
-      const dynamicPayload = (await dynamicResponse.json().catch(() => null)) as
-        | { qrUrl?: string; data?: { qrUrl?: string } }
-        | null;
-
-      const dynamicQrUrl = String(dynamicPayload?.qrUrl ?? dynamicPayload?.data?.qrUrl ?? "").trim();
-      if (!dynamicResponse.ok || !dynamicQrUrl) {
-        throw new Error("No fue posible generar el QR dinámico de visita para este ticket.");
-      }
-
-      return dynamicQrUrl;
-    }
-
-    const response = await fetch(new URL("visits/qr/generate", API_BASE_URL).toString(), {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        token,
-        Authorization: `Bearer ${token}`,
+        body: JSON.stringify({
+          businessId,
+          quantity: 1,
+          ttlMinutes: 60,
+          domain: couponsDomain,
+        }),
       },
-      body: JSON.stringify({
-        businessId,
-        quantity: 1,
-        ttlMinutes: 60,
-        domain: couponsDomain,
-      }),
-    });
+    );
 
-    const payload = (await response.json().catch(() => null)) as
-      | { tokens?: Array<{ token?: string; qrUrl?: string; url?: string }>; data?: { tokens?: Array<{ token?: string; qrUrl?: string; url?: string }> } }
-      | null;
+    const payload = (await response.json().catch(() => null)) as {
+      tokens?: Array<{ token?: string; qrUrl?: string; url?: string }>;
+      data?: {
+        tokens?: Array<{ token?: string; qrUrl?: string; url?: string }>;
+      };
+    } | null;
     const firstToken = payload?.tokens?.[0] ?? payload?.data?.tokens?.[0];
     const qrUrl = String(firstToken?.qrUrl ?? firstToken?.url ?? "").trim();
     const tokenValue = String(firstToken?.token ?? "").trim();
     if (!response.ok) {
-      throw new Error("No fue posible generar el QR de visita para este ticket.");
+      throw new Error(
+        "No fue posible generar el QR de visita para este ticket.",
+      );
     }
     if (qrUrl) return qrUrl;
-    if (tokenValue) return `${couponsDomain}/coupons/visits/redeem?token=${encodeURIComponent(tokenValue)}`;
+    if (tokenValue)
+      return `${couponsDomain}/coupons/visits/redeem?token=${encodeURIComponent(tokenValue)}`;
     return null;
   };
 
   const handlePrintSaleTicket = async (sale: CompletedSale) => {
     if (!hasPrintableSaleData(sale)) {
-      setValidationError("La venta no tiene datos suficientes para imprimir ticket (folio, items y total).");
+      setValidationError(
+        "La venta no tiene datos suficientes para imprimir ticket (folio, items y total).",
+      );
       return;
     }
 
@@ -1549,16 +1942,23 @@ export const PosV2SalesHomePage = () => {
     const defaultPrinter = getDefaultPosPrinter(configuredPrinters);
     const resolvedPaper = defaultPrinter?.paperMm ?? "80";
     if (!defaultPrinter) {
-      setUiMessage("No hay impresora predeterminada registrada. Se usa formato estándar de 80 mm para imprimir.");
+      setUiMessage(
+        "No hay impresora predeterminada registrada. Se usa formato estándar de 80 mm para imprimir.",
+      );
     }
 
     const pageWidth = `${resolvedPaper}mm`;
     const printableLines = sale.items
-      .map((item) => `<li><span>${item.name} x${item.quantity}</span><strong>$${item.lineTotal.toFixed(2)}</strong></li>`)
+      .map(
+        (item) =>
+          `<li><span>${item.name} x${item.quantity}</span><strong>$${item.lineTotal.toFixed(2)}</strong></li>`,
+      )
       .join("");
     const storeName = quoteBusinessName.trim() || "Mi negocio";
     const saleDate = new Date(sale.createdAt);
-    const safeSaleDate = Number.isNaN(saleDate.getTime()) ? new Date() : saleDate;
+    const safeSaleDate = Number.isNaN(saleDate.getTime())
+      ? new Date()
+      : saleDate;
     const saleDateLabel = safeSaleDate.toLocaleDateString("es-MX");
     const saleTimeLabel = safeSaleDate.toLocaleTimeString("es-MX");
     const printDate = new Date();
@@ -1568,7 +1968,11 @@ export const PosV2SalesHomePage = () => {
       try {
         visitQrUrl = await resolveVisitQrUrlForTicket();
       } catch (error) {
-        setUiMessage(error instanceof Error ? error.message : "No se pudo generar el QR de visitas para este ticket.");
+        setUiMessage(
+          error instanceof Error
+            ? error.message
+            : "No se pudo generar el QR de visitas para este ticket.",
+        );
       }
     }
 
@@ -1631,17 +2035,23 @@ export const PosV2SalesHomePage = () => {
 
     const opened = printHtmlDocument(`Ticket ${sale.folio}`, html);
     if (!opened) {
-      setValidationError("No pudimos abrir la ventana de impresión. Verifica permisos del navegador.");
+      setValidationError(
+        "No pudimos abrir la ventana de impresión. Verifica permisos del navegador.",
+      );
     }
   };
 
   const handleGenerateQuotePdf = () => {
     if (!quoteClientName.trim()) {
-      setValidationError("Agrega el nombre del cliente para generar la cotización.");
+      setValidationError(
+        "Agrega el nombre del cliente para generar la cotización.",
+      );
       return;
     }
     if (cartItems.length === 0) {
-      setValidationError("Agrega productos al carrito para generar la cotización.");
+      setValidationError(
+        "Agrega productos al carrito para generar la cotización.",
+      );
       return;
     }
 
@@ -1650,7 +2060,8 @@ export const PosV2SalesHomePage = () => {
     const tax = totals.taxAmount;
     const total = totals.total;
     const rows = cartItems
-      .map((item, index) => `
+      .map(
+        (item, index) => `
         <tr>
           <td>${index + 1}</td>
           <td>${item.name}</td>
@@ -1658,7 +2069,8 @@ export const PosV2SalesHomePage = () => {
           <td>$${item.price.toFixed(2)}</td>
           <td>$${(item.price * item.quantity).toFixed(2)}</td>
         </tr>
-      `)
+      `,
+      )
       .join("");
     const logoMarkup = quoteLogoUrl.trim()
       ? `<img src="${quoteLogoUrl.trim()}" alt="Logo negocio" style="max-height:68px;max-width:160px;object-fit:contain;" />`
@@ -1725,16 +2137,24 @@ export const PosV2SalesHomePage = () => {
 
     const opened = printHtmlDocument(`Cotización ${quoteNumber}`, html);
     if (!opened) {
-      setValidationError("No pudimos abrir la ventana para generar PDF de cotización.");
+      setValidationError(
+        "No pudimos abrir la ventana para generar PDF de cotización.",
+      );
       return;
     }
-    setUiMessage(`Cotización ${quoteNumber} lista. En la ventana de impresión selecciona “Guardar como PDF”.`);
+    setUiMessage(
+      `Cotización ${quoteNumber} lista. En la ventana de impresión selecciona “Guardar como PDF”.`,
+    );
   };
 
   return (
     <PosV2Shell title="Ravekh">
       <section className="pos-v2-sales-home pos-v2-sales-layout">
-        <div className="pos-v2-sales-home__mobile-steps" role="tablist" aria-label="Flujo de venta">
+        <div
+          className="pos-v2-sales-home__mobile-steps"
+          role="tablist"
+          aria-label="Flujo de venta"
+        >
           {mobileSteps.map(({ key, label, helper, Icon }) => {
             const active = mobileStep === key;
 
@@ -1746,22 +2166,33 @@ export const PosV2SalesHomePage = () => {
                 onClick={() => setMobileStep(key)}
                 aria-current={active ? "step" : undefined}
               >
-                <span className="pos-v2-sales-home__mobile-step-icon" aria-hidden="true">
+                <span
+                  className="pos-v2-sales-home__mobile-step-icon"
+                  aria-hidden="true"
+                >
                   <Icon active={active} />
                 </span>
-                <span className="pos-v2-sales-home__mobile-step-label">{label}</span>
+                <span className="pos-v2-sales-home__mobile-step-label">
+                  {label}
+                </span>
                 {helper ? <small>{helper}</small> : null}
               </button>
             );
           })}
         </div>
 
-        <section className={`pos-v2-sales-home__catalog ${mobileStep === "catalog" ? "is-mobile-active" : ""}`}>
-
-
+        <section
+          className={`pos-v2-sales-home__catalog ${mobileStep === "catalog" ? "is-mobile-active" : ""}`}
+        >
           <div className="pos-v2-sales-home__toolbar">
             <div className="pos-v2-sales-home__toolbar-actions">
-              <button type="button" className="pos-v2-sales-home__back-main" onClick={() => navigate(-1)}>← Regresar</button>
+              <button
+                type="button"
+                className="pos-v2-sales-home__back-main"
+                onClick={() => navigate(-1)}
+              >
+                ← Regresar
+              </button>
             </div>
 
             <div className="pos-v2-sales-home__search">
@@ -1772,17 +2203,27 @@ export const PosV2SalesHomePage = () => {
               />
             </div>
 
-            <div className="pos-v2-sales-home__view-switch" role="group" aria-label="Tipo de vista">
-              <button type="button" className={isGrid ? "is-active" : ""} onClick={() => setIsGrid(true)}>
+            <div
+              className="pos-v2-sales-home__view-switch"
+              role="group"
+              aria-label="Tipo de vista"
+            >
+              <button
+                type="button"
+                className={isGrid ? "is-active" : ""}
+                onClick={() => setIsGrid(true)}
+              >
                 Grid
               </button>
-              <button type="button" className={!isGrid ? "is-active" : ""} onClick={() => setIsGrid(false)}>
+              <button
+                type="button"
+                className={!isGrid ? "is-active" : ""}
+                onClick={() => setIsGrid(false)}
+              >
                 Lista
               </button>
             </div>
           </div>
-
-        
 
           <div className="pos-v2-sales-home__categories">
             {categoryOptions.map((item) => {
@@ -1801,17 +2242,31 @@ export const PosV2SalesHomePage = () => {
             })}
           </div>
 
-          {loadingProducts ? <p className="pos-v2-sales-home__empty">Cargando productos…</p> : null}
-          {!loadingProducts && searchingGlobalCatalog ? (
-            <p className="pos-v2-sales-home__empty">Buscando en todo el catálogo…</p>
+          {loadingProducts ? (
+            <p className="pos-v2-sales-home__empty">Cargando productos…</p>
           ) : null}
-          {productsError ? <p className="pos-v2-sales-home__error">{productsError}</p> : null}
-          <div className={`pos-v2-sales-home__products ${isGrid ? "is-grid" : "is-list"}`}>
+          {!loadingProducts && searchingGlobalCatalog ? (
+            <p className="pos-v2-sales-home__empty">
+              Buscando en todo el catálogo…
+            </p>
+          ) : null}
+          {productsError ? (
+            <p className="pos-v2-sales-home__error">{productsError}</p>
+          ) : null}
+          <div
+            className={`pos-v2-sales-home__products ${isGrid ? "is-grid" : "is-list"}`}
+          >
             {filteredProducts.map((product) => {
-              const sellableVariants = product.variants.filter((variant) => variant.stock === null || variant.stock > 0);
+              const sellableVariants = product.variants.filter(
+                (variant) => variant.stock === null || variant.stock > 0,
+              );
               const hasBaseStock = product.stock === null || product.stock > 0;
-              const hasBlockedVariants = !hasBaseStock && product.variants.length > 0 && sellableVariants.length === 0;
-              const shouldShowImage = Boolean(product.image) && !imageLoadErrors[product.id];
+              const hasBlockedVariants =
+                !hasBaseStock &&
+                product.variants.length > 0 &&
+                sellableVariants.length === 0;
+              const shouldShowImage =
+                Boolean(product.image) && !imageLoadErrors[product.id];
 
               return (
                 <article
@@ -1826,41 +2281,65 @@ export const PosV2SalesHomePage = () => {
                       loading="lazy"
                       decoding="async"
                       onError={() => {
-                        setImageLoadErrors((current) => ({ ...current, [product.id]: true }));
+                        setImageLoadErrors((current) => ({
+                          ...current,
+                          [product.id]: true,
+                        }));
                       }}
                     />
                   ) : (
-                    <div className="pos-v2-sales-home__product-image-placeholder" aria-hidden="true">
+                    <div
+                      className="pos-v2-sales-home__product-image-placeholder"
+                      aria-hidden="true"
+                    >
                       {product.name.slice(0, 1).toUpperCase()}
                     </div>
                   )}
                   <div className="pos-v2-sales-home__product-content">
-                    <p className="pos-v2-sales-home__product-category">{product.category}</p>
+                    <p className="pos-v2-sales-home__product-category">
+                      {product.category}
+                    </p>
                     <h3>{product.name}</h3>
                     {product.variants.length > 0 ? (
                       <small className="pos-v2-sales-home__variant-badge">
-                        {sellableVariants.length}/{product.variants.length} variantes disponibles
+                        {sellableVariants.length}/{product.variants.length}{" "}
+                        variantes disponibles
                       </small>
                     ) : null}
                   </div>
                   <div className="pos-v2-sales-home__product-side">
                     <strong>${product.price.toFixed(2)}</strong>
-                    <button type="button" onClick={() => void addToCart(product)} disabled={hasBlockedVariants}>
-                      {product.variants.length > 0 ? "Elegir variante" : "Agregar"}
+                    <button
+                      type="button"
+                      onClick={() => void addToCart(product)}
+                      disabled={hasBlockedVariants}
+                    >
+                      {product.variants.length > 0
+                        ? "Elegir variante"
+                        : "Agregar"}
                     </button>
                   </div>
                 </article>
               );
             })}
 
-            {!loadingProducts && !productsError && filteredProducts.length === 0 ? (
-              <p className="pos-v2-sales-home__empty">No encontramos productos para esta categoría.</p>
+            {!loadingProducts &&
+            !productsError &&
+            filteredProducts.length === 0 ? (
+              <p className="pos-v2-sales-home__empty">
+                No encontramos productos para esta categoría.
+              </p>
             ) : null}
           </div>
 
           {!loadingProducts && !productsError && totalPages > 1 ? (
-            <nav className="pos-v2-sales-home__pagination" aria-label="Paginación de productos">
-              {search.trim().length >= 2 ? <span>Búsqueda global activa</span> : null}
+            <nav
+              className="pos-v2-sales-home__pagination"
+              aria-label="Paginación de productos"
+            >
+              {search.trim().length >= 2 ? (
+                <span>Búsqueda global activa</span>
+              ) : null}
               <button
                 type="button"
                 onClick={() => {
@@ -1871,7 +2350,9 @@ export const PosV2SalesHomePage = () => {
               >
                 Anterior
               </button>
-              <span>Página {currentPage} de {totalPages}</span>
+              <span>
+                Página {currentPage} de {totalPages}
+              </span>
               <label className="pos-v2-sales-home__pagination-goto">
                 Ir a
                 <input
@@ -1888,7 +2369,13 @@ export const PosV2SalesHomePage = () => {
                   }}
                   disabled={search.trim().length >= 2}
                 />
-                <button type="button" onClick={goToPage} disabled={search.trim().length >= 2}>Ir</button>
+                <button
+                  type="button"
+                  onClick={goToPage}
+                  disabled={search.trim().length >= 2}
+                >
+                  Ir
+                </button>
               </label>
               <button
                 type="button"
@@ -1904,18 +2391,29 @@ export const PosV2SalesHomePage = () => {
           ) : null}
         </section>
 
-        <aside className={`pos-v2-sales-home__cart-panel ${mobileStep === "cart" || mobileStep === "checkout" ? "is-mobile-active" : ""}`}>
-          
-          <div className={`pos-v2-sales-home__cart-content ${mobileStep === "cart" ? "is-mobile-active" : ""}`}>
+        <aside
+          className={`pos-v2-sales-home__cart-panel ${mobileStep === "cart" || mobileStep === "checkout" ? "is-mobile-active" : ""}`}
+        >
+          <div
+            className={`pos-v2-sales-home__cart-content ${mobileStep === "cart" ? "is-mobile-active" : ""}`}
+          >
             <div className="pos-v2-sales-home__cart-mobile-actions">
-              <button type="button" className="pos-v2-sales-home__back" onClick={() => setMobileStep("catalog")}>
+              <button
+                type="button"
+                className="pos-v2-sales-home__back"
+                onClick={() => setMobileStep("catalog")}
+              >
                 Regresar
               </button>
             </div>
 
             <h2>Mesa · {selectedTableName}</h2>
 
-            {cartItems.length === 0 ? <p className="pos-v2-sales-home__empty">No hay productos agregados.</p> : null}
+            {cartItems.length === 0 ? (
+              <p className="pos-v2-sales-home__empty">
+                No hay productos agregados.
+              </p>
+            ) : null}
 
             {cartItems.length > 0 ? (
               <ul className="pos-v2-sales-home__cart-list">
@@ -1928,7 +2426,9 @@ export const PosV2SalesHomePage = () => {
                           item.variantLabel,
                           item.colorLabel ? `Color ${item.colorLabel}` : null,
                           item.sizeLabel ? `Talla ${item.sizeLabel}` : null,
-                        ].filter(Boolean).join(" · ") || "Sin variante"}
+                        ]
+                          .filter(Boolean)
+                          .join(" · ") || "Sin variante"}
                       </small>
                     </div>
                     <div className="pos-v2-sales-home__qty-controls">
@@ -1936,19 +2436,34 @@ export const PosV2SalesHomePage = () => {
                         type="button"
                         className="is-danger flex items-center justify-center"
                         onClick={() => updateQuantity(item.cartKey, -1)}
-                        aria-label={item.quantity > 1 ? `Quitar una pieza de ${item.name}` : `Eliminar ${item.name} del carrito`}
+                        aria-label={
+                          item.quantity > 1
+                            ? `Quitar una pieza de ${item.name}`
+                            : `Eliminar ${item.name} del carrito`
+                        }
                       >
-                        {item.quantity > 1 ? "-1" : <FiTrash2 size={14} color="#b91c1c" />}
+                        {item.quantity > 1 ? (
+                          "-1"
+                        ) : (
+                          <FiTrash2 size={14} color="#b91c1c" />
+                        )}
                       </button>
                       <input
                         type="number"
                         min="0"
                         className="flex items-center justify-center"
                         value={item.quantity}
-                        onChange={(event) => setQuantity(item.cartKey, Number(event.target.value))}
+                        onChange={(event) =>
+                          setQuantity(item.cartKey, Number(event.target.value))
+                        }
                         aria-label={`Cantidad de ${item.name}`}
                       />
-                      <button type="button" onClick={() => updateQuantity(item.cartKey, 1)}>+1</button>
+                      <button
+                        type="button"
+                        onClick={() => updateQuantity(item.cartKey, 1)}
+                      >
+                        +1
+                      </button>
                     </div>
                   </li>
                 ))}
@@ -1956,12 +2471,24 @@ export const PosV2SalesHomePage = () => {
             ) : null}
 
             <div className="pos-v2-sales-home__totals">
-              <p><span>Subtotal</span><strong>${totals.subtotal.toFixed(2)}</strong></p>
-              <p><span>Descuento</span><strong>-${totals.discount.toFixed(2)}</strong></p>
+              <p>
+                <span>Subtotal</span>
+                <strong>${totals.subtotal.toFixed(2)}</strong>
+              </p>
+              <p>
+                <span>Descuento</span>
+                <strong>-${totals.discount.toFixed(2)}</strong>
+              </p>
               {salesTax && applyTax ? (
-                <p><span>{salesTax.description}</span><strong>${totals.taxAmount.toFixed(2)}</strong></p>
+                <p>
+                  <span>{salesTax.description}</span>
+                  <strong>${totals.taxAmount.toFixed(2)}</strong>
+                </p>
               ) : null}
-              <p className="is-total"><span>Total</span><strong>${totals.total.toFixed(2)}</strong></p>
+              <p className="is-total">
+                <span>Total</span>
+                <strong>${totals.total.toFixed(2)}</strong>
+              </p>
             </div>
 
             <button
@@ -1974,7 +2501,9 @@ export const PosV2SalesHomePage = () => {
             </button>
           </div>
 
-          <div className={`pos-v2-sales-home__checkout pos-v2-sales-home__checkout-content ${mobileStep === "checkout" ? "is-mobile-active" : ""}`}>
+          <div
+            className={`pos-v2-sales-home__checkout pos-v2-sales-home__checkout-content ${mobileStep === "checkout" ? "is-mobile-active" : ""}`}
+          >
             <h3>Cobro</h3>
             <label>
               Descuento (%)
@@ -1990,7 +2519,11 @@ export const PosV2SalesHomePage = () => {
               />
             </label>
 
-            <div className="pos-v2-sales-home__payment-methods" role="radiogroup" aria-label="Selecciona método de pago">
+            <div
+              className="pos-v2-sales-home__payment-methods"
+              role="radiogroup"
+              aria-label="Selecciona método de pago"
+            >
               {PAYMENT_METHOD_OPTIONS.map(({ value, label, Icon }) => {
                 const isActive = paymentMethod === value;
                 return (
@@ -2011,19 +2544,35 @@ export const PosV2SalesHomePage = () => {
 
             <label>
               Zona de mesas
-              <select value={selectedTableZoneId} onChange={(event) => setSelectedTableZoneId(event.target.value)} disabled={loadingTables}>
-                {tableZones.length === 0 ? <option value="">Sin zonas activas</option> : tableZones.map((zone) => (
-                  <option key={zone.id} value={zone.id}>{zone.name}</option>
-                ))}
+              <select
+                value={selectedTableZoneId}
+                onChange={(event) => setSelectedTableZoneId(event.target.value)}
+                disabled={loadingTables}
+              >
+                {tableZones.length === 0 ? (
+                  <option value="">Sin zonas activas</option>
+                ) : (
+                  tableZones.map((zone) => (
+                    <option key={zone.id} value={zone.id}>
+                      {zone.name}
+                    </option>
+                  ))
+                )}
               </select>
             </label>
 
             <label>
               Mesa
-              <select value={selectedTableId} onChange={(event) => handleSelectTable(event.target.value)} disabled={loadingTables || !selectedTableZoneId}>
+              <select
+                value={selectedTableId}
+                onChange={(event) => handleSelectTable(event.target.value)}
+                disabled={loadingTables || !selectedTableZoneId}
+              >
                 <option value="">Sin mesa (orden directa)</option>
                 {visibleTables.map((table) => (
-                  <option key={table.id} value={table.id}>{table.name}</option>
+                  <option key={table.id} value={table.id}>
+                    {table.name}
+                  </option>
                 ))}
               </select>
             </label>
@@ -2031,43 +2580,84 @@ export const PosV2SalesHomePage = () => {
             {hasCustomers ? (
               <label>
                 Cliente (opcional)
-                <select value={selectedCustomerId} onChange={(event) => setSelectedCustomerId(event.target.value)}>
+                <select
+                  value={selectedCustomerId}
+                  onChange={(event) =>
+                    setSelectedCustomerId(event.target.value)
+                  }
+                >
                   <option value="">Venta general</option>
                   {customers.map((customer) => (
-                    <option key={customer.id} value={customer.id}>{customer.name}</option>
+                    <option key={customer.id} value={customer.id}>
+                      {customer.name}
+                    </option>
                   ))}
                 </select>
               </label>
             ) : null}
-            {!customersError && hasCustomers ? <small className="pos-v2-sales-home__customer-hint">Puedes vincular la venta a cliente para historial y recompensas.</small> : null}
+            {!customersError && hasCustomers ? (
+              <small className="pos-v2-sales-home__customer-hint">
+                Puedes vincular la venta a cliente para historial y recompensas.
+              </small>
+            ) : null}
             {salesTax ? (
-              <section className="pos-v2-sales-home__tax-card" aria-label="Impuesto de venta">
+              <section
+                className="pos-v2-sales-home__tax-card"
+                aria-label="Impuesto de venta"
+              >
                 <div>
                   <strong>{salesTax.description}</strong>
-                  <small>{salesTax.isPercent ? `${salesTax.value}%` : `$${salesTax.value.toFixed(2)}`}</small>
+                  <small>
+                    {salesTax.isPercent
+                      ? `${salesTax.value}%`
+                      : `$${salesTax.value.toFixed(2)}`}
+                  </small>
                 </div>
                 {salesTax.canBeRemovedAtSale ? (
                   <label className="pos-v2-sales-home__tax-toggle">
                     <span>Aplicar impuesto</span>
                     <span className="pos-v2-sales-home__toggle">
-                      <input type="checkbox" checked={applyTax} onChange={(event) => setApplyTax(event.target.checked)} />
-                      <span className="pos-v2-sales-home__toggle-slider" aria-hidden="true" />
+                      <input
+                        type="checkbox"
+                        checked={applyTax}
+                        onChange={(event) => setApplyTax(event.target.checked)}
+                      />
+                      <span
+                        className="pos-v2-sales-home__toggle-slider"
+                        aria-hidden="true"
+                      />
                     </span>
                   </label>
                 ) : (
-                  <span className="pos-v2-sales-home__tax-lock">Impuesto obligatorio</span>
+                  <span className="pos-v2-sales-home__tax-lock">
+                    Impuesto obligatorio
+                  </span>
                 )}
               </section>
             ) : null}
-            {taxError ? <small className="pos-v2-sales-home__tax-error">{taxError}</small> : null}
+            {taxError ? (
+              <small className="pos-v2-sales-home__tax-error">{taxError}</small>
+            ) : null}
 
             <div className="pos-v2-sales-home__totals">
-              <p><span>Subtotal</span><strong>${totals.subtotal.toFixed(2)}</strong></p>
-              <p><span>Descuento</span><strong>-${totals.discount.toFixed(2)}</strong></p>
+              <p>
+                <span>Subtotal</span>
+                <strong>${totals.subtotal.toFixed(2)}</strong>
+              </p>
+              <p>
+                <span>Descuento</span>
+                <strong>-${totals.discount.toFixed(2)}</strong>
+              </p>
               {salesTax && applyTax ? (
-                <p><span>{salesTax.description}</span><strong>${totals.taxAmount.toFixed(2)}</strong></p>
+                <p>
+                  <span>{salesTax.description}</span>
+                  <strong>${totals.taxAmount.toFixed(2)}</strong>
+                </p>
               ) : null}
-              <p className="is-total"><span>Total</span><strong>${totals.total.toFixed(2)}</strong></p>
+              <p className="is-total">
+                <span>Total</span>
+                <strong>${totals.total.toFixed(2)}</strong>
+              </p>
             </div>
 
             <div className="pos-v2-sales-home__checkout-actions">
@@ -2080,55 +2670,106 @@ export const PosV2SalesHomePage = () => {
                 {isCompletingSale ? "Finalizando..." : "Finalizar venta"}
               </button>
 
-              <button type="button" className="pos-v2-sales-home__back" onClick={() => setMobileStep("cart")}>
+              <button
+                type="button"
+                className="pos-v2-sales-home__back"
+                onClick={() => setMobileStep("cart")}
+              >
                 Regresar al carrito
               </button>
             </div>
 
-            <section className="pos-v2-sales-home__quote-card" aria-label="Generador de cotización">
+            <section
+              className="pos-v2-sales-home__quote-card"
+              aria-label="Generador de cotización"
+            >
               <h4>Cotización (PDF)</h4>
               <label>
                 Nombre del cliente
-                <input value={quoteClientName} onChange={(event) => setQuoteClientName(event.target.value)} placeholder="Ej. María López" />
+                <input
+                  value={quoteClientName}
+                  onChange={(event) => setQuoteClientName(event.target.value)}
+                  placeholder="Ej. María López"
+                />
               </label>
               <small className="pos-v2-sales-home__customer-hint">
-                Negocio: <strong>{quoteBusinessName || "Mi negocio"}</strong>{quoteLogoUrl ? " · Logo cargado" : " · Sin logo configurado"}
+                Negocio: <strong>{quoteBusinessName || "Mi negocio"}</strong>
+                {quoteLogoUrl ? " · Logo cargado" : " · Sin logo configurado"}
               </small>
               <div className="pos-v2-sales-home__quote-dates">
                 <label>
                   Fecha de emisión
-                  <input type="date" value={quoteIssueDate} onChange={(event) => setQuoteIssueDate(event.target.value)} />
+                  <input
+                    type="date"
+                    value={quoteIssueDate}
+                    onChange={(event) => setQuoteIssueDate(event.target.value)}
+                  />
                 </label>
                 <label>
                   Vigencia de cotización
-                  <input type="date" value={quoteValidUntil} onChange={(event) => setQuoteValidUntil(event.target.value)} />
+                  <input
+                    type="date"
+                    value={quoteValidUntil}
+                    onChange={(event) => setQuoteValidUntil(event.target.value)}
+                  />
                 </label>
               </div>
-              <button type="button" className="pos-v2-sales-home__quote-btn" onClick={handleGenerateQuotePdf} disabled={cartItems.length === 0}>
+              <button
+                type="button"
+                className="pos-v2-sales-home__quote-btn"
+                onClick={handleGenerateQuotePdf}
+                disabled={cartItems.length === 0}
+              >
                 Generar cotización PDF
               </button>
             </section>
 
-            {validationError ? <p className="pos-v2-sales-home__error">{validationError}</p> : null}
-            {ticket ? <p className="pos-v2-sales-home__ticket">{ticket}</p> : null}
+            {validationError ? (
+              <p className="pos-v2-sales-home__error">{validationError}</p>
+            ) : null}
+            {ticket ? (
+              <p className="pos-v2-sales-home__ticket">{ticket}</p>
+            ) : null}
           </div>
         </aside>
       </section>
 
-      {uiMessage ? <p className="pos-v2-sales-home__info" role="status" aria-live="polite">{uiMessage}</p> : null}
+      {uiMessage ? (
+        <p className="pos-v2-sales-home__info" role="status" aria-live="polite">
+          {uiMessage}
+        </p>
+      ) : null}
 
       {variantSelection ? (
-        <section className="pos-v2-sales-home__variant-modal" role="dialog" aria-modal="true" aria-label="Seleccionar variante" onClick={() => setVariantSelection(null)}>
-          <article className="pos-v2-sales-home__variant-modal-card" onClick={(event) => event.stopPropagation()}>
+        <section
+          className="pos-v2-sales-home__variant-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Seleccionar variante"
+          onClick={() => setVariantSelection(null)}
+        >
+          <article
+            className="pos-v2-sales-home__variant-modal-card"
+            onClick={(event) => event.stopPropagation()}
+          >
             <header>
               <h3>{variantSelection.product.name}</h3>
-              <p>Selecciona variante y extras para enviar la venta con el detalle correcto.</p>
+              <p>
+                Selecciona variante y extras para enviar la venta con el detalle
+                correcto.
+              </p>
             </header>
 
             <div className="pos-v2-sales-home__variant-summary">
-              <span>{variantSelection.variants.length} opciones de variante</span>
+              <span>
+                {variantSelection.variants.length} opciones de variante
+              </span>
               <span>El color se toma del producto/variante</span>
-              <span>{(variantSelection.extras?.TALLA.length ?? 0) > 0 ? "Talla requerida" : "Sin talla obligatoria"}</span>
+              <span>
+                {(variantSelection.extras?.TALLA.length ?? 0) > 0
+                  ? "Talla requerida"
+                  : "Sin talla obligatoria"}
+              </span>
             </div>
 
             {variantSelection.extras ? (
@@ -2139,14 +2780,22 @@ export const PosV2SalesHomePage = () => {
                     <select
                       value={variantSelection.selectedSizeId ?? ""}
                       onChange={(event) => {
-                        const value = event.target.value ? Number(event.target.value) : null;
-                        setVariantSelection((current) => (current ? { ...current, selectedSizeId: value } : null));
+                        const value = event.target.value
+                          ? Number(event.target.value)
+                          : null;
+                        setVariantSelection((current) =>
+                          current
+                            ? { ...current, selectedSizeId: value }
+                            : null,
+                        );
                         setVariantModalError(null);
                       }}
                     >
                       <option value="">Selecciona talla</option>
                       {variantSelection.extras.TALLA.map((size) => (
-                        <option key={size.id} value={size.id}>{size.description}</option>
+                        <option key={size.id} value={size.id}>
+                          {size.description}
+                        </option>
                       ))}
                     </select>
                   </label>
@@ -2154,15 +2803,33 @@ export const PosV2SalesHomePage = () => {
               </div>
             ) : null}
 
-            <p className="pos-v2-sales-home__variant-section-label">Variantes disponibles</p>
-            <div className="pos-v2-sales-home__variant-options" role="radiogroup" aria-label="Variantes disponibles">
-              {variantSelection.variants.length > 0 ? variantSelection.variants
-                .map((variant) => {
-                  const optionKey = toCartKey(variantSelection.product.id, variant.id);
-                  const isActive = optionKey === variantSelection.selectedVariantKey;
-                  const quantity = Math.max(1, Math.floor(variantSelection.quantities[optionKey] ?? 1));
-                  const chips = [variant.color, variant.size].filter(Boolean).join(" · ");
-                  const stockLabel = variant.stock == null ? "Stock abierto" : `Stock ${variant.stock}`;
+            <p className="pos-v2-sales-home__variant-section-label">
+              Variantes disponibles
+            </p>
+            <div
+              className="pos-v2-sales-home__variant-options"
+              role="radiogroup"
+              aria-label="Variantes disponibles"
+            >
+              {variantSelection.variants.length > 0 ? (
+                variantSelection.variants.map((variant) => {
+                  const optionKey = toCartKey(
+                    variantSelection.product.id,
+                    variant.id,
+                  );
+                  const isActive =
+                    optionKey === variantSelection.selectedVariantKey;
+                  const quantity = Math.max(
+                    1,
+                    Math.floor(variantSelection.quantities[optionKey] ?? 1),
+                  );
+                  const chips = [variant.color, variant.size]
+                    .filter(Boolean)
+                    .join(" · ");
+                  const stockLabel =
+                    variant.stock == null
+                      ? "Stock abierto"
+                      : `Stock ${variant.stock}`;
 
                   return (
                     <label
@@ -2175,7 +2842,11 @@ export const PosV2SalesHomePage = () => {
                         checked={isActive}
                         onChange={() => {
                           if (isActive) return;
-                          setVariantSelection((current) => (current ? { ...current, selectedVariantKey: optionKey } : null));
+                          setVariantSelection((current) =>
+                            current
+                              ? { ...current, selectedVariantKey: optionKey }
+                              : null,
+                          );
                           setVariantModalError(null);
                         }}
                         aria-label={`Seleccionar variante ${variant.description || "Variante"}`}
@@ -2185,7 +2856,11 @@ export const PosV2SalesHomePage = () => {
                         className={isActive ? "is-active" : ""}
                         onClick={() => {
                           if (isActive) return;
-                          setVariantSelection((current) => (current ? { ...current, selectedVariantKey: optionKey } : null));
+                          setVariantSelection((current) =>
+                            current
+                              ? { ...current, selectedVariantKey: optionKey }
+                              : null,
+                          );
                           setVariantModalError(null);
                         }}
                       >
@@ -2194,14 +2869,20 @@ export const PosV2SalesHomePage = () => {
                         <small>{stockLabel}</small>
                         <span>${variant.price.toFixed(2)}</span>
                       </button>
-                      <div className="pos-v2-sales-home__variant-row-qty" aria-label={`Cantidad para ${variant.description || "variante"}`}>
+                      <div
+                        className="pos-v2-sales-home__variant-row-qty"
+                        aria-label={`Cantidad para ${variant.description || "variante"}`}
+                      >
                         <button
                           type="button"
                           className="is-secondary"
                           onClick={() => {
                             setVariantSelection((current) => {
                               if (!current) return null;
-                              const currentQty = Math.max(1, Math.floor(current.quantities[optionKey] ?? 1));
+                              const currentQty = Math.max(
+                                1,
+                                Math.floor(current.quantities[optionKey] ?? 1),
+                              );
                               return {
                                 ...current,
                                 selectedVariantKey: optionKey,
@@ -2228,7 +2909,10 @@ export const PosV2SalesHomePage = () => {
                                 selectedVariantKey: optionKey,
                                 quantities: {
                                   ...current.quantities,
-                                  [optionKey]: Number.isFinite(value) && value > 0 ? Math.floor(value) : 1,
+                                  [optionKey]:
+                                    Number.isFinite(value) && value > 0
+                                      ? Math.floor(value)
+                                      : 1,
                                 },
                               };
                             });
@@ -2240,7 +2924,10 @@ export const PosV2SalesHomePage = () => {
                           onClick={() => {
                             setVariantSelection((current) => {
                               if (!current) return null;
-                              const currentQty = Math.max(1, Math.floor(current.quantities[optionKey] ?? 1));
+                              const currentQty = Math.max(
+                                1,
+                                Math.floor(current.quantities[optionKey] ?? 1),
+                              );
                               return {
                                 ...current,
                                 selectedVariantKey: optionKey,
@@ -2257,32 +2944,57 @@ export const PosV2SalesHomePage = () => {
                       </div>
                     </label>
                   );
-                }) : <p className="pos-v2-sales-home__empty">Sin variantes: se agregará el producto base.</p>}
+                })
+              ) : (
+                <p className="pos-v2-sales-home__empty">
+                  Sin variantes: se agregará el producto base.
+                </p>
+              )}
             </div>
 
             <p className="pos-v2-sales-home__variant-selected">
-              Variante elegida: <strong>
-                {variantSelection.variants.find((item) => toCartKey(variantSelection.product.id, item.id) === variantSelection.selectedVariantKey)?.description ?? "Sin seleccionar"}
+              Variante elegida:{" "}
+              <strong>
+                {variantSelection.variants.find(
+                  (item) =>
+                    toCartKey(variantSelection.product.id, item.id) ===
+                    variantSelection.selectedVariantKey,
+                )?.description ?? "Sin seleccionar"}
               </strong>
             </p>
 
             <footer>
-              <button type="button" className="is-secondary" onClick={() => setVariantSelection(null)}>Cancelar</button>
+              <button
+                type="button"
+                className="is-secondary"
+                onClick={() => setVariantSelection(null)}
+              >
+                Cancelar
+              </button>
               <button
                 type="button"
                 onClick={confirmVariantSelection}
-                disabled={variantSelection.variants.length > 0 && !variantSelection.selectedVariantKey}
+                disabled={
+                  variantSelection.variants.length > 0 &&
+                  !variantSelection.selectedVariantKey
+                }
               >
                 Confirmar y agregar
               </button>
             </footer>
-            {variantModalError ? <p className="pos-v2-sales-home__error">{variantModalError}</p> : null}
+            {variantModalError ? (
+              <p className="pos-v2-sales-home__error">{variantModalError}</p>
+            ) : null}
           </article>
         </section>
       ) : null}
 
       {totals.items > 0 ? (
-        <button type="button" className="pos-v2-sales-home__mobile-order-resume" onClick={() => setMobileStep("cart")}>
+        <button
+          type="button"
+          className="pos-v2-sales-home__mobile-order-resume"
+          onClick={() => setMobileStep("cart")}
+        >
           <span>{totals.items} prod.</span>
           <strong>${totals.total.toFixed(2)}</strong>
           <em>Ver mesa</em>
@@ -2290,10 +3002,18 @@ export const PosV2SalesHomePage = () => {
       ) : null}
 
       {hasTableSelection ? (
-        <div className="pos-v2-sales-home__tables-bar" aria-label="Barra de mesas">
+        <div
+          className="pos-v2-sales-home__tables-bar"
+          aria-label="Barra de mesas"
+        >
           {loadingTables ? (
-            <div className="pos-v2-sales-home__tables-skeleton" aria-hidden="true">
-              {Array.from({ length: 4 }).map((_, index) => <span key={`tables-skeleton-${index}`} />)}
+            <div
+              className="pos-v2-sales-home__tables-skeleton"
+              aria-hidden="true"
+            >
+              {Array.from({ length: 4 }).map((_, index) => (
+                <span key={`tables-skeleton-${index}`} />
+              ))}
             </div>
           ) : (
             <>
@@ -2325,42 +3045,67 @@ export const PosV2SalesHomePage = () => {
       ) : null}
 
       <div className="pos-v2-sales-home__mobile-summary-dock">
-        {hasTableSelection ? <button type="button" onClick={() => setIsMobileTablesOpen(true)}>Mesas</button> : null}
-        <button type="button" className="is-summary" onClick={() => setMobileStep("cart")}>
+        {hasTableSelection ? (
+          <button type="button" onClick={() => setIsMobileTablesOpen(true)}>
+            Mesas
+          </button>
+        ) : null}
+        <button
+          type="button"
+          className="is-summary"
+          onClick={() => setMobileStep("cart")}
+        >
           {totals.items.toFixed(2)}x Items = ${totals.total.toFixed(2)}
         </button>
       </div>
 
       {isMobileTablesOpen && hasTableSelection ? (
-        <div className="pos-v2-sales-home__tables-modal" role="dialog" aria-modal="true" aria-label="Seleccionar mesa">
+        <div
+          className="pos-v2-sales-home__tables-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Seleccionar mesa"
+        >
           <div className="pos-v2-sales-home__tables-modal-card">
             <div className="pos-v2-sales-home__tables-modal-header">
               <h3>Selecciona mesa</h3>
-              <button type="button" onClick={() => setIsMobileTablesOpen(false)}>Cerrar</button>
+              <button
+                type="button"
+                onClick={() => setIsMobileTablesOpen(false)}
+              >
+                Cerrar
+              </button>
             </div>
 
             <div className="pos-v2-sales-home__tables-modal-grid">
               {loadingTables ? (
-                <div className="pos-v2-sales-home__tables-skeleton" aria-hidden="true">
-                  {Array.from({ length: 6 }).map((_, index) => <span key={`modal-table-skeleton-${index}`} />)}
+                <div
+                  className="pos-v2-sales-home__tables-skeleton"
+                  aria-hidden="true"
+                >
+                  {Array.from({ length: 6 }).map((_, index) => (
+                    <span key={`modal-table-skeleton-${index}`} />
+                  ))}
                 </div>
-              ) : visibleTables.map((table) => {
-                const isActive = String(table.id) === selectedTableId;
-                return (
-                  <button
-                    key={table.id}
-                    type="button"
-                    className={isActive ? "is-active" : ""}
-                    onClick={() => {
-                      handleSelectTable(String(table.id));
-                      setIsMobileTablesOpen(false);
-                      setMobileStep("catalog");
-                    }}
-                  >
-                    {table.name}
-                  </button>
-                );
-              })}
+              ) : (
+                visibleTables.map((table) => {
+                  const isActive = String(table.id) === selectedTableId;
+                  return (
+                    <button
+                      key={table.id}
+                      type="button"
+                      className={isActive ? "is-active" : ""}
+                      onClick={() => {
+                        handleSelectTable(String(table.id));
+                        setIsMobileTablesOpen(false);
+                        setMobileStep("catalog");
+                      }}
+                    >
+                      {table.name}
+                    </button>
+                  );
+                })
+              )}
               {!loadingTables ? (
                 <button
                   type="button"
@@ -2379,7 +3124,9 @@ export const PosV2SalesHomePage = () => {
         </div>
       ) : null}
 
-      {tablesError ? <p className="pos-v2-sales-home__error">{tablesError}</p> : null}
+      {tablesError ? (
+        <p className="pos-v2-sales-home__error">{tablesError}</p>
+      ) : null}
 
       {planUpgradePrompt ? (
         <section
@@ -2389,9 +3136,16 @@ export const PosV2SalesHomePage = () => {
           aria-labelledby="pos-v2-sales-home-plan-title"
           onClick={() => setPlanUpgradePrompt(null)}
         >
-          <article className="pos-v2-sales-home__plan-modal-card" onClick={(event) => event.stopPropagation()}>
-            <span className="pos-v2-sales-home__plan-eyebrow">Límite mensual alcanzado</span>
-            <h3 id="pos-v2-sales-home-plan-title">Necesitas subir de plan para seguir vendiendo</h3>
+          <article
+            className="pos-v2-sales-home__plan-modal-card"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <span className="pos-v2-sales-home__plan-eyebrow">
+              Límite mensual alcanzado
+            </span>
+            <h3 id="pos-v2-sales-home-plan-title">
+              Necesitas subir de plan para seguir vendiendo
+            </h3>
             <p>{planUpgradePrompt.message}</p>
 
             <div className="pos-v2-sales-home__plan-stats">
@@ -2401,38 +3155,92 @@ export const PosV2SalesHomePage = () => {
               </article>
               <article>
                 <span>Ventas usadas</span>
-                <strong>{planUpgradePrompt.totalOrdersThisMonth ?? planUpgradePrompt.limit}/{planUpgradePrompt.limit}</strong>
+                <strong>
+                  {planUpgradePrompt.totalOrdersThisMonth ??
+                    planUpgradePrompt.limit}
+                  /{planUpgradePrompt.limit}
+                </strong>
               </article>
             </div>
 
-            <p className="pos-v2-sales-home__plan-note">La venta no se registró ni se descontó stock. Sube de plan para continuar con la misma venta.</p>
+            <p className="pos-v2-sales-home__plan-note">
+              La venta no se registró ni se descontó stock. Sube de plan para
+              continuar con la misma venta.
+            </p>
 
             <div className="pos-v2-sales-home__plan-actions">
-              <button type="button" className="is-secondary" onClick={() => setPlanUpgradePrompt(null)}>Ahora no</button>
-              <button type="button" onClick={handleGoToUpgradePlan}>Ver planes</button>
+              <button
+                type="button"
+                className="is-secondary"
+                onClick={() => setPlanUpgradePrompt(null)}
+              >
+                Ahora no
+              </button>
+              <button type="button" onClick={handleOpenSalesPlanCheckout}>
+                Actualizar plan
+              </button>
             </div>
           </article>
         </section>
       ) : null}
 
+      <FeatureUnlockModal
+        open={Boolean(salesPlanUnlockModal)}
+        onClose={() => setSalesPlanUnlockModal(null)}
+        title={salesPlanUnlockModal?.title}
+        message={salesPlanUnlockModal?.message}
+        buttonText={salesPlanUnlockModal?.buttonText}
+        unlockFeature={salesPlanUnlockModal?.unlockFeature}
+        onPaymentSuccess={() => {
+          setSalesPlanUnlockModal(null);
+        }}
+      />
+
       {completedSale ? (
-        <div className="pos-v2-sales-home__sale-modal" role="dialog" aria-modal="true" aria-label="Venta finalizada">
+        <div
+          className="pos-v2-sales-home__sale-modal"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Venta finalizada"
+        >
           <div className="pos-v2-sales-home__sale-modal-card">
             <h3>✅ Venta finalizada</h3>
-            <p>Folio: <strong>{completedSale.folio}</strong></p>
-            <p>Mesa: <strong>{completedSale.table}</strong></p>
-            <p>Método: <strong>{completedSale.paymentMethodLabel}</strong></p>
-            <p>Cliente: <strong>{completedSale.customerName ?? "General"}</strong></p>
-            <p>Total: <strong>${completedSale.total.toFixed(2)}</strong></p>
+            <p>
+              Folio: <strong>{completedSale.folio}</strong>
+            </p>
+            <p>
+              Mesa: <strong>{completedSale.table}</strong>
+            </p>
+            <p>
+              Método: <strong>{completedSale.paymentMethodLabel}</strong>
+            </p>
+            <p>
+              Cliente:{" "}
+              <strong>{completedSale.customerName ?? "General"}</strong>
+            </p>
+            <p>
+              Total: <strong>${completedSale.total.toFixed(2)}</strong>
+            </p>
 
             <div className="pos-v2-sales-home__sale-modal-actions">
-              <button type="button" onClick={() => handlePrintSaleTicket(completedSale)}>Imprimir ticket</button>
-              <button type="button" className="is-secondary" onClick={() => setCompletedSale(null)}>Cerrar</button>
+              <button
+                type="button"
+                onClick={() => handlePrintSaleTicket(completedSale)}
+              >
+                Imprimir ticket
+              </button>
+              <button
+                type="button"
+                className="is-secondary"
+                onClick={() => setCompletedSale(null)}
+              >
+                Cerrar
+              </button>
             </div>
           </div>
         </div>
       ) : null}
-
     </PosV2Shell>
   );
 };
+

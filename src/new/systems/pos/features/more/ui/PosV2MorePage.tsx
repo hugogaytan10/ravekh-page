@@ -695,7 +695,17 @@ export const PosV2MorePage = () => {
           requiredPlan={blockedAction?.requiredPlan}
           ctaLabel={blockedAction?.ctaLabel}
           onClose={closeBlockedActionModal}
-          onUpgrade={goToUpgradePlan}
+          onUpgrade={() => {
+            closeBlockedActionModal();
+
+            setUnlockModal({
+              title: `Activa ${blockedAction?.requiredPlan ?? "tu plan"}`,
+              message:
+                "Completa el pago para activar el paquete seleccionado y desbloquear esta función.",
+              buttonText: "Continuar al pago",
+              unlockFeature: "Catalog",
+            });
+          }}
         />
 
         <FeatureUnlockModal
