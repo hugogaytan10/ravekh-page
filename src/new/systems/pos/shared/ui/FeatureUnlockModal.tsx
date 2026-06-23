@@ -1,10 +1,11 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { emitPosBusinessUpdated } from "../config/posBusinessEvents";
 import { getPosApiBaseUrl } from "../config/posEnv";
 import { clearPendingPosUpgradeContext, readPendingPosUpgradeContext, readPosSessionSnapshot } from "../config/posSession";
 import "./FeatureUnlockModal.css";
 
 export type UnlockFeature = "Pos" | "Catalog" | "Fidelity" | "DynamicQr";
+export type UnlockPlanKey = "START" | "PRO" | "MAX";
 
 export type UnlockModalProps = {
   open: boolean;
@@ -15,9 +16,14 @@ export type UnlockModalProps = {
   onUpgrade?: () => void;
   onPaymentSuccess?: () => void;
   unlockFeature?: UnlockFeature;
+  initialPlan?: {
+    amount: number;
+    plan: UnlockPlanKey;
+    label?: string;
+  };
 };
 
-type PlanKey = "INICIAL" | "BASICO" | "INTERMEDIO" | "EMPRESARIAL" | "VIP" | "EMPRENDEDOR";
+type PlanKey = UnlockPlanKey;
 type PlanFeature = "Catalog" | "Pos";
 
 type PaymentSelection = {
@@ -25,9 +31,8 @@ type PaymentSelection = {
   label: string;
   description: string;
   amount: number;
-  kind: "PLAN" | "MODULES";
+  kind: "PLAN";
   plan?: PlanKey;
-  moduleName?: "Fidelity";
   planFeatures?: PlanFeature[];
 };
 
@@ -36,7 +41,7 @@ type PlanSelection = {
   plan: PlanKey;
 };
 
-type CheckoutStep = "intro" | "plans" | "features" | "payment" | "success" | "error";
+type CheckoutStep = "plans" | "payment" | "success" | "error";
 
 type PaymentIntentResponse = {
   publishableKey?: string;
@@ -64,36 +69,19 @@ declare global {
 }
 
 const PLAN_CONFIG: Record<PlanKey, PlanSelection> = {
-  INICIAL: { amount: 200, plan: "INICIAL" },
-  BASICO: { amount: 300, plan: "BASICO" },
-  INTERMEDIO: { amount: 700, plan: "INTERMEDIO" },
-  EMPRESARIAL: { amount: 850, plan: "EMPRESARIAL" },
-  VIP: { amount: 1050, plan: "VIP" },
-  EMPRENDEDOR: { amount: 500, plan: "EMPRENDEDOR" },
+  START: { amount: 299, plan: "START" },
+  PRO: { amount: 599, plan: "PRO" },
+  MAX: { amount: 1299, plan: "MAX" },
 };
 
-const MODULE_ADDON_AMOUNT = 50;
-
 const PLAN_CHOICES: PlanSelection[] = [
-  PLAN_CONFIG.INICIAL,
-  PLAN_CONFIG.BASICO,
-  PLAN_CONFIG.EMPRENDEDOR,
-  PLAN_CONFIG.INTERMEDIO,
-  PLAN_CONFIG.EMPRESARIAL,
-  PLAN_CONFIG.VIP,
+  PLAN_CONFIG.START,
+  PLAN_CONFIG.PRO,
+  PLAN_CONFIG.MAX,
 ];
 
 const STRIPE_JS_SRC = "https://js.stripe.com/v3/";
 const stripeScriptPromise: { current: Promise<void> | null } = { current: null };
-
-const normalizePlanName = (plan: unknown): PlanKey | null => {
-  const normalizedPlan = String(plan || "")
-    .trim()
-    .toUpperCase()
-    .replace(/^PLAN\s+/, "");
-
-  return normalizedPlan in PLAN_CONFIG ? (normalizedPlan as PlanKey) : null;
-};
 
 const logUnlockCheckout = (_event: string, _payload: Record<string, unknown> = {}) => {
   void _event;
@@ -225,75 +213,28 @@ const getPaymentStatus = (value: unknown): string => {
   return String(record.status ?? record.Status ?? record.paymentStatus ?? record.PaymentStatus ?? "").toLowerCase();
 };
 
-const getCurrentPlan = (): PlanKey | null => {
-  const storedBusiness = getStoredObject("business") ?? getStoredObject("Business");
-  return normalizePlanName(window.localStorage.getItem("plan") ?? storedBusiness?.Plan ?? storedBusiness?.plan);
+const getPlanDisplayName = (plan: PlanKey): string => {
+  const labels: Record<PlanKey, string> = {
+    START: "Start",
+    PRO: "Pro",
+    MAX: "Max",
+  };
+
+  return labels[plan];
 };
 
-const isPaidCurrentPlan = (plan: PlanKey | null): plan is PlanKey => Boolean(plan && plan !== "INICIAL");
+const getRequestedPlanFeature = (unlockFeature?: UnlockFeature): PlanFeature =>
+  unlockFeature === "Pos" ? "Pos" : "Catalog";
 
-const getRequestedFeature = (unlockFeature?: UnlockFeature): UnlockFeature | null => unlockFeature ?? null;
-
-const buildDirectPaymentSelections = (unlockFeature?: UnlockFeature): PaymentSelection[] => {
-  const requestedFeature = getRequestedFeature(unlockFeature);
-  if (requestedFeature === "Fidelity" || requestedFeature === "DynamicQr") {
-    return [{
-      id: requestedFeature === "Fidelity" ? "fidelity-module" : "dynamic-qr-module",
-      label: requestedFeature === "Fidelity" ? "Fidelity" : "QR dinámico",
-      description: requestedFeature === "Fidelity"
-        ? "Activa cupones, visitas y fidelidad."
-        : "Activa QR dinámico como feature extra de fidelidad.",
-      amount: MODULE_ADDON_AMOUNT,
-      kind: "MODULES",
-      moduleName: "Fidelity",
-    }];
-  }
-
-  const currentPlan = getCurrentPlan();
-  if ((requestedFeature === "Catalog" || requestedFeature === "Pos") && isPaidCurrentPlan(currentPlan)) {
-    return [{
-      id: `${requestedFeature.toLowerCase()}-addon`,
-      label: `Agregar ${requestedFeature === "Catalog" ? "Catálogo" : "POS"}`,
-      description: `Desbloquea ${requestedFeature === "Catalog" ? "el catálogo" : "el POS"} en tu plan actual por $50 MXN.`,
-      amount: MODULE_ADDON_AMOUNT,
-      kind: "PLAN",
-      plan: currentPlan,
-      planFeatures: [requestedFeature],
-    }];
-  }
-
-  return [];
-};
-
-const buildPlanFeatureSelections = (selectedPlan: PlanSelection): PaymentSelection[] => [
-  {
-    id: `${selectedPlan.plan.toLowerCase()}-catalog`,
-    label: "Catálogo",
-    description: `Contrata ${selectedPlan.plan} y activa solo catálogo.`,
-    amount: selectedPlan.amount,
-    kind: "PLAN",
-    plan: selectedPlan.plan,
-    planFeatures: ["Catalog"],
-  },
-  {
-    id: `${selectedPlan.plan.toLowerCase()}-pos`,
-    label: "POS",
-    description: `Contrata ${selectedPlan.plan} y activa solo POS.`,
-    amount: selectedPlan.amount,
-    kind: "PLAN",
-    plan: selectedPlan.plan,
-    planFeatures: ["Pos"],
-  },
-  {
-    id: `${selectedPlan.plan.toLowerCase()}-catalog-pos`,
-    label: "Catálogo + POS",
-    description: `Contrata ${selectedPlan.plan} con Catálogo y POS (+$50 MXN).`,
-    amount: selectedPlan.amount + MODULE_ADDON_AMOUNT,
-    kind: "PLAN",
-    plan: selectedPlan.plan,
-    planFeatures: ["Catalog", "Pos"],
-  },
-];
+const buildPlanPaymentSelection = (selectedPlan: PlanSelection, unlockFeature?: UnlockFeature, label?: string): PaymentSelection => ({
+  id: selectedPlan.plan.toLowerCase(),
+  label: label ?? getPlanDisplayName(selectedPlan.plan),
+  description: `Plan ${label ?? getPlanDisplayName(selectedPlan.plan)}.`,
+  amount: selectedPlan.amount,
+  kind: "PLAN",
+  plan: selectedPlan.plan,
+  planFeatures: [getRequestedPlanFeature(unlockFeature)],
+});
 
 export const FeatureUnlockModal = ({
   open,
@@ -304,32 +245,42 @@ export const FeatureUnlockModal = ({
   onUpgrade,
   onPaymentSuccess,
   unlockFeature,
+  initialPlan,
 }: UnlockModalProps) => {
-  const [step, setStep] = useState<CheckoutStep>("intro");
+  const [step, setStep] = useState<CheckoutStep>(initialPlan ? "payment" : "plans");
   const [selectedSelection, setSelectedSelection] = useState<PaymentSelection | null>(null);
-  const [selectedPlan, setSelectedPlan] = useState<PlanSelection | null>(null);
   const [payment, setPayment] = useState<PaymentIntentResponse | null>(null);
   const [stripe, setStripe] = useState<StripeInstance | null>(null);
   const [elements, setElements] = useState<StripeElements | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const paymentElementRef = useRef<HTMLDivElement | null>(null);
-
-  const directPaymentSelections = useMemo(() => buildDirectPaymentSelections(unlockFeature), [unlockFeature, open]);
-  const featureSelections = useMemo(() => selectedPlan ? buildPlanFeatureSelections(selectedPlan) : [], [selectedPlan]);
+  const autoCheckoutKeyRef = useRef("");
 
   useEffect(() => {
     if (!open) {
-      setStep("intro");
+      setStep(initialPlan ? "payment" : "plans");
       setSelectedSelection(null);
-      setSelectedPlan(null);
       setPayment(null);
       setStripe(null);
       setElements(null);
       setLoading(false);
       setError("");
+      autoCheckoutKeyRef.current = "";
     }
-  }, [open]);
+  }, [initialPlan, open]);
+
+
+  useEffect(() => {
+    if (!open || !initialPlan) return;
+
+    const checkoutKey = `${initialPlan.plan}-${initialPlan.amount}-${initialPlan.label ?? ""}`;
+    if (autoCheckoutKeyRef.current === checkoutKey) return;
+
+    autoCheckoutKeyRef.current = checkoutKey;
+    setStep("payment");
+    void createPayment(buildPlanPaymentSelection(initialPlan, unlockFeature, initialPlan.label));
+  }, [initialPlan, open, unlockFeature]);
 
   useEffect(() => {
     if (step !== "payment" || !payment?.publishableKey || !payment.clientSecret || !paymentElementRef.current) return;
@@ -386,18 +337,16 @@ export const FeatureUnlockModal = ({
   };
 
   const selectPlan = (plan: PlanSelection) => {
-    setSelectedPlan(plan);
     setError("");
-    setStep("features");
+    void createPayment(buildPlanPaymentSelection(plan, unlockFeature));
   };
 
-  const createPayment = async (selection: PaymentSelection) => {
+  async function createPayment(selection: PaymentSelection) {
     logUnlockCheckout("payment:create:start", {
       selected: selection.label,
       kind: selection.kind,
       amount: selection.amount,
       plan: selection.plan ?? null,
-      moduleName: selection.moduleName ?? null,
       planFeatures: selection.planFeatures ?? null,
     });
 
@@ -412,22 +361,14 @@ export const FeatureUnlockModal = ({
     setLoading(true);
     setError("");
     try {
-      const payload = selection.kind === "MODULES"
-        ? {
-            businessId: context.businessId,
-            kind: "MODULES",
-            moduleName: selection.moduleName,
-            amount: selection.amount,
-            currency: "MXN",
-          }
-        : {
-            businessId: context.businessId,
-            kind: "PLAN",
-            amount: selection.amount,
-            planName: selection.plan,
-            currency: "MXN",
-            planFeatures: selection.planFeatures ?? [],
-          };
+      const payload = {
+        businessId: context.businessId,
+        kind: "PLAN",
+        amount: selection.amount,
+        planName: selection.plan,
+        currency: "MXN",
+        planFeatures: selection.planFeatures ?? [],
+      };
 
       const { response, data } = await postJson<PaymentIntentResponse>("createGeneralPayment", payload, context.token);
 
@@ -462,7 +403,7 @@ export const FeatureUnlockModal = ({
     } finally {
       setLoading(false);
     }
-  };
+  }
 
   const confirmPaymentInBackend = async (paymentIntentId: string, token: string) => {
     const payload = { paymentIntentId };
@@ -525,36 +466,19 @@ export const FeatureUnlockModal = ({
   };
 
   const renderBody = () => {
-    if (step === "plans") {
-      if (directPaymentSelections.length > 0) {
-        return (
-          <>
-            <span className="pos-feature-unlock__badge">Selecciona qué desbloquear</span>
-            <h3>Elige la función</h3>
-            <p>Esta función se desbloquea como extra independiente por $50 MXN.</p>
-            <div className="pos-feature-unlock__plans">
-              {directPaymentSelections.map((selection) => (
-                <button key={selection.id} type="button" onClick={() => void createPayment(selection)} disabled={loading}>
-                  <strong>{selection.label}</strong>
-                  <small>{selection.description}</small>
-                  <span>${selection.amount} MXN</span>
-                </button>
-              ))}
-            </div>
-          </>
-        );
-      }
+    const currentStep = initialPlan && step === "plans" ? "payment" : step;
 
+    if (currentStep === "plans") {
       return (
         <>
           <span className="pos-feature-unlock__badge">Selecciona un plan</span>
           <h3>Elige el plan</h3>
-          <p>Primero selecciona el plan que quieres contratar. Después eliges si agregas Catálogo, POS o ambos.</p>
+          <p>Selecciona Start, Pro o Max con los precios mensuales del catálogo.</p>
           <div className="pos-feature-unlock__plans">
             {PLAN_CHOICES.map((plan) => (
               <button key={plan.plan} type="button" onClick={() => selectPlan(plan)} disabled={loading}>
-                <strong>{plan.plan}</strong>
-                <small>Plan mensual base</small>
+                <strong>{getPlanDisplayName(plan.plan)}</strong>
+                <small>Plan mensual</small>
                 <span>${plan.amount} MXN</span>
               </button>
             ))}
@@ -563,44 +487,25 @@ export const FeatureUnlockModal = ({
       );
     }
 
-    if (step === "features") {
-      return (
-        <>
-          <span className="pos-feature-unlock__badge">Selecciona funciones</span>
-          <h3>¿Qué quieres activar con {selectedPlan?.plan}?</h3>
-          <p>Catálogo o POS mantienen el precio del plan. Si eliges ambos, se agrega $50 MXN extra.</p>
-          <div className="pos-feature-unlock__plans">
-            {featureSelections.map((selection) => (
-              <button key={selection.id} type="button" onClick={() => void createPayment(selection)} disabled={loading}>
-                <strong>{selection.label}</strong>
-                <small>{selection.description}</small>
-                <span>${selection.amount} MXN</span>
-              </button>
-            ))}
-          </div>
-          <div className="pos-feature-unlock__actions pos-feature-unlock__actions--single">
-            <button type="button" className="is-secondary" onClick={() => setStep("plans")}>Cambiar plan</button>
-          </div>
-        </>
-      );
-    }
+    if (currentStep === "payment") {
+      const isPreparingCheckout = !payment?.clientSecret || !selectedSelection;
 
-    if (step === "payment") {
       return (
         <>
           <span className="pos-feature-unlock__badge">Pago seguro</span>
-          <h3>Checkout Stripe · {selectedSelection?.label}</h3>
-          <p>Completa el pago de ${selectedSelection?.amount} MXN para activar {selectedSelection?.label}.</p>
+          <h3>Checkout Stripe · {selectedSelection?.label ?? initialPlan?.label ?? "plan seleccionado"}</h3>
+          <p>Completa el pago de ${selectedSelection?.amount ?? initialPlan?.amount ?? 0} MXN para activar {selectedSelection?.label ?? initialPlan?.label ?? "tu plan"}.</p>
+          {isPreparingCheckout ? <p>Preparando checkout de Stripe...</p> : null}
           <form className="pos-feature-unlock__payment" onSubmit={confirmStripePayment} autoComplete="off">
             <div ref={paymentElementRef} className="pos-feature-unlock__payment-element" />
             {error ? <p className="pos-feature-unlock__error">{error}</p> : null}
-            <button type="submit" disabled={loading || !stripe || !elements}>{loading ? "Confirmando..." : "Pagar y activar"}</button>
+            <button type="submit" disabled={loading || !stripe || !elements || isPreparingCheckout}>{loading ? "Confirmando..." : "Pagar y activar"}</button>
           </form>
         </>
       );
     }
 
-    if (step === "success") {
+    if (currentStep === "success") {
       return (
         <>
           <span className="pos-feature-unlock__badge">Pago exitoso</span>
@@ -613,7 +518,7 @@ export const FeatureUnlockModal = ({
       );
     }
 
-    if (step === "error") {
+    if (currentStep === "error") {
       return (
         <>
           <span className="pos-feature-unlock__badge">Revisa el pago</span>
@@ -627,17 +532,7 @@ export const FeatureUnlockModal = ({
       );
     }
 
-    return (
-      <>
-        <span className="pos-feature-unlock__badge">Función premium</span>
-        <h3>{title}</h3>
-        <p>{message}</p>
-        <div className="pos-feature-unlock__actions">
-          <button type="button" className="is-secondary" onClick={onClose}>Ahora no</button>
-          <button type="button" onClick={startUpgrade}>{buttonText}</button>
-        </div>
-      </>
-    );
+return null;
   };
 
   return (
