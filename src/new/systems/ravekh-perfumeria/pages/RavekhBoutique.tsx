@@ -1,4 +1,17 @@
 import { useState, useEffect } from "react";
+import { FreeCatalogLoginModal } from "../../main-catalog/components/FreeCatalogLoginModal";
+import { FeatureUnlockModal } from "../../pos/shared/ui/FeatureUnlockModal";
+import { trackMetaEvent } from "../../../../../scripts/metaPixel";
+import {
+  billingCycleCopy,
+  buildCatalogCheckoutPlan,
+  catalogPlans,
+  FREE_CATALOG_PLAN_NAME,
+  hasStoredPosSession,
+  LOGIN_POS_PATH,
+  type BillingCycle,
+  type CatalogCheckoutPlan,
+} from "./catalogPricingShared";
 
 /* ─── tokens ────────────────────────────────────────────────── */
 const C = {
@@ -376,128 +389,39 @@ function Social() {
 
 /* ─── PLANES ────────────────────────────────────────────────── */
 function Pricing() {
-  const plans = [
-    {
-      name:"Básico",
-      tagline:"Para empezar a ordenar tu catálogo",
-      price:"$XXX",
-      period:"/mes",
-      features:[
-        "Catálogo digital con link único",
-        "Hasta XX productos",
-        "Categorías básicas",
-        "Botón de WhatsApp en cada prenda",
-        "Carga inicial de productos",
-      ],
-      cta:"Comenzar",
-      highlight:false,
-    },
-    {
-      name:"Pro",
-      tagline:"Para boutiques con más movimiento",
-      price:"$XXX",
-      period:"/mes",
-      features:[
-        "Todo lo del plan Básico",
-        "Productos ilimitados",
-        "Variantes de talla y color",
-        "Prendas destacadas",
-        "Acompañamiento para compartir mejor",
-        "Actualizaciones prioritarias",
-      ],
-      cta:"Comenzar Pro",
-      highlight:true,
-    },
-    {
-      name:"POS + Catálogo",
-      tagline:"Catálogo + control de ventas",
-      price:"$XXX",
-      period:"/mes",
-      features:[
-        "Todo lo del plan Pro",
-        "Control de ventas e inventario",
-        "Registro de pedidos",
-        "Reportes básicos",
-        "Soporte dedicado",
-      ],
-      cta:"Hablar con ventas",
-      highlight:false,
-    },
-  ];
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
+  const [loginModalPlan, setLoginModalPlan] = useState<CatalogCheckoutPlan | null>(null);
+  const [unlockModalPlan, setUnlockModalPlan] = useState<CatalogCheckoutPlan | null>(null);
+  const activeBilling = billingCycleCopy[billingCycle];
+
   return (
     <section id="planes" style={{ background:C.bgAlt, padding:"100px 64px" }}>
-      <div style={{ maxWidth:1080, margin:"0 auto" }}>
-        <div style={{ textAlign:"center", marginBottom:72 }}>
+      <div style={{ maxWidth:1180, margin:"0 auto" }}>
+        <div style={{ textAlign:"center", marginBottom:42 }}>
           <Tag>Planes</Tag>
-          <h2 style={{ fontFamily:"'Cormorant Garamond', serif", fontSize:"clamp(32px, 3.5vw, 56px)", color:C.ink, fontWeight:300, margin:"0 0 16px", lineHeight:1.1 }}>
-            Empieza cuando quieras.<br/>
-            <em style={{ fontStyle:"italic", color:C.terra }}>Crece a tu ritmo.</em>
-          </h2>
+          <h2 style={{ fontFamily:"'Cormorant Garamond', serif", fontSize:"clamp(32px, 3.5vw, 56px)", color:C.ink, fontWeight:300, margin:"0 0 16px", lineHeight:1.1 }}>Empieza cuando quieras.<br/><em style={{ fontStyle:"italic", color:C.terra }}>Crece a tu ritmo.</em></h2>
           <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:C.muted, margin:0, fontWeight:300 }}>Sin contratos largos. Sin compromisos.</p>
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))", gap:16 }}>
-          {plans.map(p=>(
-            <div key={p.name} style={{
-              padding:"44px 32px",
-              background: p.highlight ? C.ink : C.card,
-              border: p.highlight ? "none" : `1px solid ${C.border}`,
-              display:"flex", flexDirection:"column",
-              position:"relative",
-            }}>
-              {p.highlight && (
-                <div style={{
-                  position:"absolute", top:0, left:0, right:0, height:3,
-                  background:C.terra,
-                }}/>
-              )}
-              <Tag light={p.highlight}>{p.name}</Tag>
-              <h3 style={{
-                fontFamily:"'Cormorant Garamond', serif", fontSize:22,
-                color: p.highlight ? C.white : C.ink,
-                fontWeight:300, margin:"0 0 24px", lineHeight:1.3,
-              }}>{p.tagline}</h3>
-              <div style={{ display:"flex", alignItems:"baseline", gap:4, margin:"0 0 32px" }}>
-                <span style={{ fontFamily:"'Cormorant Garamond', serif", fontSize:44, color: p.highlight ? C.terra : C.ink, fontWeight:300 }}>{p.price}</span>
-                <span style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:C.muted, fontWeight:300 }}>{p.period}</span>
-              </div>
-              <ul style={{ margin:"0 0 36px", padding:0, listStyle:"none", display:"flex", flexDirection:"column", gap:14, flex:1 }}>
-                {p.features.map(f=>(
-                  <li key={f} style={{ display:"flex", gap:12, alignItems:"flex-start" }}>
-                    <span style={{ color:C.terra, fontSize:12, marginTop:2, flexShrink:0 }}>✦</span>
-                    <span style={{
-                      fontFamily:"Inter, sans-serif", fontSize:13, fontWeight:300,
-                      color: p.highlight ? "#B0A8A4" : C.muted, lineHeight:1.5,
-                    }}>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <a href="#" style={{
-                display:"block", textAlign:"center",
-                padding:"14px 0",
-                background: p.highlight ? C.terra : "transparent",
-                border: p.highlight ? "none" : `1px solid ${C.border}`,
-                color: p.highlight ? C.white : C.muted,
-                fontFamily:"Inter, sans-serif", fontSize:11, fontWeight:500,
-                letterSpacing:2, textTransform:"uppercase", textDecoration:"none",
-                transition:"all .2s",
-              }}
-              onMouseEnter={e=>{
-                if(p.highlight){ e.currentTarget.style.background=C.terraLt; }
-                else { e.currentTarget.style.borderColor=C.terra; e.currentTarget.style.color=C.ink; }
-              }}
-              onMouseLeave={e=>{
-                if(p.highlight){ e.currentTarget.style.background=C.terra; }
-                else { e.currentTarget.style.borderColor=C.border; e.currentTarget.style.color=C.muted; }
-              }}
-              >{p.cta}</a>
+        <div role="group" aria-label="Seleccionar forma de pago" style={{ display:"flex", justifyContent:"center", gap:8, marginBottom:12 }}>{(Object.keys(billingCycleCopy) as BillingCycle[]).map(cycle=><button key={cycle} type="button" aria-pressed={billingCycle===cycle} onClick={()=>setBillingCycle(cycle)} style={{ padding:"10px 22px", border:`1px solid ${billingCycle===cycle ? C.terra : C.border}`, background:billingCycle===cycle ? C.terra : "transparent", color:billingCycle===cycle ? C.white : C.muted, fontFamily:"Inter, sans-serif", fontSize:11, fontWeight:500, letterSpacing:2, textTransform:"uppercase", cursor:"pointer" }}>{billingCycleCopy[cycle].label}</button>)}</div>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:C.muted, textAlign:"center", margin:"0 0 36px", fontWeight:300 }}>{activeBilling.helper}</p>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(250px, 1fr))", gap:16 }}>
+          {catalogPlans.map(p=>(
+            <div key={p.name} style={{ padding:"44px 28px", background:p.recommended ? C.ink : C.card, border:p.recommended ? "none" : `1px solid ${C.border}`, display:"flex", flexDirection:"column", position:"relative" }}>
+              {p.recommended && <div style={{ position:"absolute", top:0, left:0, right:0, height:3, background:C.terra }}/>}<Tag light={p.recommended}>{p.name}</Tag>
+              <h3 style={{ fontFamily:"'Cormorant Garamond', serif", fontSize:22, color:p.recommended ? C.white : C.ink, fontWeight:300, margin:"0 0 24px", lineHeight:1.3 }}>{p.limit}</h3>
+              <div style={{ display:"flex", alignItems:"baseline", gap:4, margin:"0 0 8px" }}><span style={{ fontFamily:"'Cormorant Garamond', serif", fontSize:42, color:p.recommended ? C.terra : C.ink, fontWeight:300 }}>{p.prices[billingCycle]}</span><span style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:C.muted, fontWeight:300 }}>{p.periodLabel[billingCycle]}</span></div>
+              {billingCycle==="annual" && p.annualNote && <p style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:C.terra, margin:"0 0 18px" }}>{p.annualNote}</p>}
+              <ul style={{ margin:"18px 0 36px", padding:0, listStyle:"none", display:"flex", flexDirection:"column", gap:14, flex:1 }}>{p.benefits.map(f=><li key={f} style={{ display:"flex", gap:12, alignItems:"flex-start" }}><span style={{ color:C.terra, fontSize:12, marginTop:2, flexShrink:0 }}>✦</span><span style={{ fontFamily:"Inter, sans-serif", fontSize:13, fontWeight:300, color:p.recommended ? "#B0A8A4" : C.muted, lineHeight:1.5 }}>{f}</span></li>)}</ul>
+              <a href={p.name===FREE_CATALOG_PLAN_NAME ? LOGIN_POS_PATH : "#planes"} onClick={(event)=>{ trackMetaEvent("Contact", { content_name:p.name, plan_price:p.prices[billingCycle] }); if(p.name!==FREE_CATALOG_PLAN_NAME){ event.preventDefault(); const checkoutPlan=buildCatalogCheckoutPlan(p,billingCycle); if(!checkoutPlan)return; if(!hasStoredPosSession()){ setLoginModalPlan(checkoutPlan); return; } setUnlockModalPlan(checkoutPlan); } }} style={{ display:"block", textAlign:"center", padding:"14px 0", background:p.recommended ? C.terra : "transparent", border:p.recommended ? "none" : `1px solid ${C.border}`, color:p.recommended ? C.white : C.muted, fontFamily:"Inter, sans-serif", fontSize:11, fontWeight:500, letterSpacing:2, textTransform:"uppercase", textDecoration:"none", transition:"all .2s" }}>Elegir plan</a>
             </div>
           ))}
         </div>
       </div>
+      <FreeCatalogLoginModal open={Boolean(loginModalPlan)} planName={loginModalPlan?.name} onAuthenticated={() => { setUnlockModalPlan(loginModalPlan); setLoginModalPlan(null); }} onClose={()=>setLoginModalPlan(null)} />
+      <FeatureUnlockModal open={Boolean(unlockModalPlan)} onClose={()=>setUnlockModalPlan(null)} title={`Activa ${unlockModalPlan?.name ?? "tu plan"}`} message="Completa el pago para activar el paquete seleccionado y entrar al punto de venta." buttonText="Continuar al pago" unlockFeature="Catalog" initialPlan={unlockModalPlan ? { amount:unlockModalPlan.amount, plan:unlockModalPlan.plan, label:unlockModalPlan.name } : undefined} onPaymentSuccess={() => { window.location.href = "/MainSales"; }} />
     </section>
   );
 }
-
 /* ─── FAQ ───────────────────────────────────────────────────── */
 function FAQ() {
   const [open, setOpen] = useState(null);
