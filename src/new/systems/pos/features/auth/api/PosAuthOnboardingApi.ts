@@ -7,6 +7,7 @@ import {
   LoginCredentials,
   ResetPasswordPayload,
   SecurityQuestion,
+  SecurityQuestionStatus,
   SignUpPayload,
 } from "../model/AuthSession";
 
@@ -46,10 +47,16 @@ type QuestionsResponse =
   | SecurityQuestionResponse[]
   | { Questions?: SecurityQuestionResponse[]; questions?: SecurityQuestionResponse[] };
 
+const DEFAULT_SIGN_UP_PLAN = "GRATUITO";
 
 export class PosAuthOnboardingApi implements IAuthOnboardingRepository {
   constructor(private readonly httpClient: HttpClient) {}
-
+async getSecurityQuestionStatus(employeeId: number): Promise<SecurityQuestionStatus> {
+  return this.httpClient.request<SecurityQuestionStatus>({
+    method: "GET",
+    path: `security-questions/status/${employeeId}`,
+  });
+}
   async login(credentials: LoginCredentials): Promise<AuthSession> {
     const response = await this.httpClient.request<LoginResponse>({
       method: "POST",
@@ -85,6 +92,7 @@ export class PosAuthOnboardingApi implements IAuthOnboardingRepository {
           Logo: payload.business.logo,
           Color: payload.business.color,
           References: payload.business.references,
+          Plan: payload.business.plan?.trim() || DEFAULT_SIGN_UP_PLAN,
         },
         Employee: {
           Name: payload.employee.name,

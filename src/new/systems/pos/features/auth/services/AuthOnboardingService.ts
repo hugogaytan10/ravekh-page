@@ -6,12 +6,19 @@ import {
   LoginCredentials,
   ResetPasswordPayload,
   SecurityQuestion,
+  SecurityQuestionStatus,
   SignUpPayload,
 } from "../model/AuthSession";
 
 export class AuthOnboardingService {
   constructor(private readonly repository: IAuthOnboardingRepository) {}
+async getSecurityQuestionStatus(employeeId: number): Promise<SecurityQuestionStatus> {
+  if (!Number.isFinite(employeeId) || employeeId <= 0) {
+    throw new Error("Employee ID inválido para validar preguntas de seguridad.");
+  }
 
+  return this.repository.getSecurityQuestionStatus(employeeId);
+}
   async signIn(credentials: LoginCredentials): Promise<AuthSession> {
     this.ensureCredentials(credentials);
 

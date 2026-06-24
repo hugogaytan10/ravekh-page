@@ -76,7 +76,7 @@ export const readPosBusinessFeatures = (payload?: PosBusinessFeatureResponse | n
 
 export const isPosFeatureBlocked = (value: PosFeatureLevel | null | undefined): boolean => value === 0;
 
-export const isOfflinePosPlan = (plan: string | null | undefined): boolean => String(plan ?? "").trim().toUpperCase() === "OFFLINE";
+export const isOfflinePosPlan = (plan: string | null | undefined): boolean => String(plan ?? "").trim().toUpperCase() === "GRATUITO";
 
 export const isPosModuleBlocked = (features: PosBusinessFeatures): boolean => isOfflinePosPlan(features.plan) || isPosFeatureBlocked(features.pos);
 

@@ -150,6 +150,26 @@ export class PosProductsApi implements IProductsRepository {
     return rows.map((product) => this.toDomain(product));
   }
 
+  async listReallyAllByBusiness(businessId: number, token: string): Promise<ManagedProduct[]> {
+    const products = await this.httpClient.request<
+      ProductResponse[] | { data?: ProductResponse[]; Data?: ProductResponse[]; Products?: ProductResponse[]; products?: ProductResponse[] }
+    >({
+      method: "GET",
+      path: POS_ENDPOINTS.productsReallyAll(businessId),
+      token,
+    });
+
+    const rows = Array.isArray(products)
+      ? products
+      : products?.data ??
+        products?.Data ??
+        products?.Products ??
+        products?.products ??
+        [];
+
+    return rows.map((product) => this.toDomain(product));
+  }
+
   private async listProductsFromPath(path: string, token: string): Promise<ManagedProduct[]> {
     const products = await this.httpClient.request<ProductResponse[] | { data?: ProductResponse[]; Data?: ProductResponse[]; Products?: ProductResponse[] }>({
       method: "GET",
