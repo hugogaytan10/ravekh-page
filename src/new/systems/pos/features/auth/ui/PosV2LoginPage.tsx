@@ -5,16 +5,8 @@ import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import {
   clearPendingPosUpgradeContext,
-  clearPosSessionSnapshot,
   POS_SESSION_STORAGE_KEYS,
-  readPendingPosUpgradeContext,
-  storePendingPosUpgradeContext,
 } from "../../../shared/config/posSession";
-import {
-  fetchPosBusinessFeatures,
-  isOfflinePosPlan,
-} from "../../../shared/config/posFeatureFlags";
-import { FeatureUnlockModal } from "../../../shared/ui/FeatureUnlockModal";
 import "./PosV2LoginPage.css";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 
@@ -87,7 +79,6 @@ export const PosV2LoginPage = () => {
 
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [showOfflineUpgrade, setShowOfflineUpgrade] = useState(false);
   const [pendingSecurityPrompt, setPendingSecurityPrompt] = useState<{
     source: "login" | "signup";
   } | null>(null);
@@ -122,16 +113,7 @@ export const PosV2LoginPage = () => {
       setSignUpStep("account");
     }
 
-    if (searchParams.get("reason") === "offline") {
-      setError(
-        "Tu plan actual no incluye acceso al POS. Actualiza tu plan para iniciar sesión.",
-      );
-      setShowOfflineUpgrade(Boolean(readPendingPosUpgradeContext()));
-      return;
-    }
-
     clearPendingPosUpgradeContext();
-    setShowOfflineUpgrade(false);
   }, [location.search, navigate]);
 
   const goToSignIn = () => {
@@ -189,21 +171,6 @@ export const PosV2LoginPage = () => {
         email: signInEmail,
         password: signInPassword,
       });
-      const features = await fetchPosBusinessFeatures(
-        session.businessId,
-        session.token,
-        API_BASE_URL,
-      );
-      if (isOfflinePosPlan(features.plan)) {
-        storePendingPosUpgradeContext(session);
-        clearPosSessionSnapshot();
-        setError(
-          "Tu plan actual no incluye acceso al POS. Actualiza tu plan para iniciar sesión.",
-        );
-        setShowOfflineUpgrade(true);
-        return;
-      }
-
       await finishAuthenticatedFlow(session, "login");
     } catch (cause) {
       setError(
@@ -457,15 +424,6 @@ await finishAuthenticatedFlow(session, "signup");
             {error && mode === "signin" ? (
               <span className="pos-v2-error">{error}</span>
             ) : null}
-            {readPendingPosUpgradeContext() ? (
-              <button
-                type="button"
-                className="pos-v2-btn"
-                onClick={() => setShowOfflineUpgrade(true)}
-              >
-                Actualizar plan
-              </button>
-            ) : null}
             <button
               type="button"
               className="pos-v2-forgot-link"
@@ -557,13 +515,6 @@ await finishAuthenticatedFlow(session, "signup");
     </section>
   </div>
 ) : null}
-      <FeatureUnlockModal
-        open={showOfflineUpgrade}
-        onClose={() => setShowOfflineUpgrade(false)}
-        title="Actualiza tu plan"
-        message="Tu plan actual no cubre esta función. Elige un plan para recuperar el acceso al POS."
-        buttonText="Actualizar plan"
-      />
     </div>
   );
 };

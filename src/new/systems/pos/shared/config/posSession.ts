@@ -7,7 +7,6 @@ export const POS_SESSION_STORAGE_KEYS = {
 } as const;
 
 const POS_PENDING_UPGRADE_CONTEXT_KEY = "pos-v2-pending-upgrade-context";
-const POS_OFFLINE_PLAN_PROMPT_KEY = "pos-v2-offline-plan-prompt-shown";
 
 export type PosPendingUpgradeContext = {
   token: string;
@@ -129,16 +128,7 @@ export const clearPendingPosUpgradeContext = (): void => {
   }
 };
 
-export const resetOfflinePlanPrompt = (): void => {
-  try {
-    window.sessionStorage.removeItem(POS_OFFLINE_PLAN_PROMPT_KEY);
-  } catch {
-    // ignore sessionStorage failures in constrained environments
-  }
-};
-
 export const clearPosSessionSnapshot = (): void => {
-  resetOfflinePlanPrompt();
   try {
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.token);
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.businessId);

@@ -24,7 +24,6 @@ export type PlanActionRule = {
 };
 
 export const POS_PLAN_LEVELS: Record<PosPlan, number> = {
-  OFFLINE: 0,
   GRATUITO: 1,
   START: 2,
   PRO: 3,
@@ -118,13 +117,11 @@ export const POS_PLAN_ACTION_RULES: Record<PlanProtectedAction, PlanActionRule> 
 export const normalizePosPlan = (rawPlan?: string | null): PosPlan => {
   const normalized = String(rawPlan ?? "").trim().toUpperCase();
   if (!normalized) return "GRATUITO";
-  if (normalized === "OFFLINE") return "OFFLINE";
   if (normalized === "GRATUITO" || normalized === "START" || normalized === "PRO" || normalized === "MAX") return normalized;
   return POS_PLAN_ALIASES[normalized] ?? "GRATUITO";
 };
 
 export const hasRequiredPlan = (currentPlan: PosPlan, requiredPlan: PosPlan): boolean => {
-if (currentPlan === "GRATUITO") return requiredPlan === "GRATUITO";
   return POS_PLAN_LEVELS[currentPlan] >= POS_PLAN_LEVELS[requiredPlan];
 };
 

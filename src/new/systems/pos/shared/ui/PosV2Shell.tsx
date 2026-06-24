@@ -1,9 +1,9 @@
 import { MouseEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import { FiBarChart2, FiBox, FiDollarSign, FiMoreHorizontal, FiShoppingCart } from "react-icons/fi";
-import { clearPosSessionSnapshot, isSalesOnlyOperator, readPosSessionSnapshot, storePendingPosUpgradeContext } from "../config/posSession";
+import { isSalesOnlyOperator, readPosSessionSnapshot } from "../config/posSession";
 import { POS_V2_PATHS } from "../../routing/PosV2Paths";
-import { fetchPosBusinessFeatures, isOfflinePosPlan, isPosModuleBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../config/posFeatureFlags";
+import { fetchPosBusinessFeatures, isPosModuleBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../config/posFeatureFlags";
 import { onPosBusinessUpdated } from "../config/posBusinessEvents";
 import { FeatureUnlockModal } from "./FeatureUnlockModal";
 import "./PosV2Shell.css";
@@ -50,15 +50,7 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
 
     const loadFeatures = () => {
       fetchPosBusinessFeatures(session.businessId, session.token)
-        .then((nextFeatures) => {
-          if (isOfflinePosPlan(nextFeatures.plan)) {
-            storePendingPosUpgradeContext(session);
-            clearPosSessionSnapshot();
-            navigate(`${POS_V2_PATHS.login}?reason=offline`, { replace: true });
-            return;
-          }
-          setFeatures(nextFeatures);
-        })
+        .then((nextFeatures) => setFeatures(nextFeatures))
         .catch(() => setFeatures(POS_FEATURES_UNKNOWN));
     };
 

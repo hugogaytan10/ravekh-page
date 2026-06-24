@@ -76,9 +76,9 @@ export const readPosBusinessFeatures = (payload?: PosBusinessFeatureResponse | n
 
 export const isPosFeatureBlocked = (value: PosFeatureLevel | null | undefined): boolean => value === 0;
 
-export const isOfflinePosPlan = (plan: string | null | undefined): boolean => String(plan ?? "").trim().toUpperCase() === "GRATUITO";
+export const isFreePosPlan = (plan: string | null | undefined): boolean => String(plan ?? "").trim().toUpperCase() === "GRATUITO";
 
-export const isPosModuleBlocked = (features: PosBusinessFeatures): boolean => isOfflinePosPlan(features.plan) || isPosFeatureBlocked(features.pos);
+export const isPosModuleBlocked = (features: PosBusinessFeatures): boolean => isPosFeatureBlocked(features.pos);
 
 export const fetchPosBusinessFeatures = async (businessId: number, token: string, apiBaseUrl = getPosApiBaseUrl()): Promise<PosBusinessFeatures> => {
   if (!businessId || !token) return POS_FEATURES_UNKNOWN;
