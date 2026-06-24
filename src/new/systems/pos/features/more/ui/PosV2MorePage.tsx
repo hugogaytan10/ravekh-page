@@ -94,10 +94,6 @@ export const PosV2MorePage = () => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
     return factory.createPosProductsService();
   }, []);
-  const businessSettingsService = useMemo(() => {
-    const factory = new ModernSystemsFactory(API_BASE_URL);
-    return factory.createPosBusinessSettingsService();
-  }, []);
   const sessionSnapshot = useMemo(() => readPosSessionSnapshot(), []);
   const isSalesOnlyUser = useMemo(
     () => isSalesOnlyOperator(sessionSnapshot.token),
@@ -273,16 +269,9 @@ export const PosV2MorePage = () => {
       setActionMessage("Preparando PDF de productos...");
 
       try {
-        const settings = await businessSettingsService.getSettings(
+        const products = await productsService.listReallyAllProducts(
           sessionSnapshot.businessId,
           sessionSnapshot.token,
-        );
-        const storedPlan = window.localStorage.getItem("plan")?.trim() ?? "";
-        const limit = (settings.plan ?? "").trim() || storedPlan || "VIP";
-        const products = await productsService.listAllProducts(
-          sessionSnapshot.businessId,
-          sessionSnapshot.token,
-          limit,
         );
         if (products.length === 0) {
           setActionMessage(
