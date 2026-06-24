@@ -12,6 +12,10 @@ export class ProductsService {
     return this.repository.listAllByBusiness(businessId, token, limit);
   }
 
+  async listReallyAllProducts(businessId: number, token: string): Promise<ManagedProduct[]> {
+    return this.repository.listReallyAllByBusiness(businessId, token);
+  }
+
   async listProductsPaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult> {
     return this.repository.listByBusinessPaginated(businessId, token, page, limit);
   }

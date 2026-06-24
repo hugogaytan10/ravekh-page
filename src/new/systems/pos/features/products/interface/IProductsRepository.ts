@@ -15,6 +15,7 @@ export type ProductsPaginatedResult = {
 export interface IProductsRepository {
   listByBusiness(businessId: number, token: string): Promise<ManagedProduct[]>;
   listAllByBusiness(businessId: number, token: string, limit: string): Promise<ManagedProduct[]>;
+  listReallyAllByBusiness(businessId: number, token: string): Promise<ManagedProduct[]>;
   listByBusinessPaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult>;
   listByBusinessAllForSearch(businessId: number, token: string, limit: string | number): Promise<ManagedProduct[]>;
   getById(productId: number, token: string): Promise<ManagedProduct | null>;
