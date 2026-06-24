@@ -24,6 +24,7 @@ export interface BusinessRegistration {
   logo: string;
   color: string;
   references: string;
+  plan?: string;
 }
 
 export interface EmployeeRegistration {

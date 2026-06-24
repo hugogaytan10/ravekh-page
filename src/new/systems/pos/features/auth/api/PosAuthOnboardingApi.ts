@@ -47,6 +47,7 @@ type QuestionsResponse =
   | SecurityQuestionResponse[]
   | { Questions?: SecurityQuestionResponse[]; questions?: SecurityQuestionResponse[] };
 
+const DEFAULT_SIGN_UP_PLAN = "GRATUITO";
 
 export class PosAuthOnboardingApi implements IAuthOnboardingRepository {
   constructor(private readonly httpClient: HttpClient) {}
@@ -91,6 +92,7 @@ async getSecurityQuestionStatus(employeeId: number): Promise<SecurityQuestionSta
           Logo: payload.business.logo,
           Color: payload.business.color,
           References: payload.business.references,
+          Plan: payload.business.plan?.trim() || DEFAULT_SIGN_UP_PLAN,
         },
         Employee: {
           Name: payload.employee.name,
