@@ -1,4 +1,4 @@
-export type PosPlan = "OFFLINE" | "GRATUITO" | "START" | "PRO" | "MAX";
+export type PosPlan =  "GRATUITO" | "START" | "PRO" | "MAX";
 
 export type PlanProtectedAction =
   | "products.printPdf"
@@ -124,7 +124,7 @@ export const normalizePosPlan = (rawPlan?: string | null): PosPlan => {
 };
 
 export const hasRequiredPlan = (currentPlan: PosPlan, requiredPlan: PosPlan): boolean => {
-  if (currentPlan === "OFFLINE") return requiredPlan === "OFFLINE";
+if (currentPlan === "GRATUITO") return requiredPlan === "GRATUITO";
   return POS_PLAN_LEVELS[currentPlan] >= POS_PLAN_LEVELS[requiredPlan];
 };
 
