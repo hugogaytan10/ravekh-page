@@ -43,6 +43,7 @@ const ProductCard = memo(({
   const handleAdd = () => {
     onAdd(product);
   };
+
   const handleQuantityChange = (value: string) => {
     let parsed = Math.floor(Number(value));
     if (Number.isNaN(parsed)) parsed = 1;
@@ -51,19 +52,31 @@ const ProductCard = memo(({
   };
 
   const basePrice = useMemo(() => getCatalogPriceValue(product.price), [product.price]);
+  const promotionPrice = useMemo(() => getCatalogPriceValue(product.promotionPrice), [product.promotionPrice]);
+  const wholesalePrice = useMemo(() => getCatalogPriceValue(product.wholesalePrice), [product.wholesalePrice]);
+  const wholesaleMinQuantity = useMemo(
+    () => Math.floor(Number(product.wholesaleMinQuantity ?? 0)),
+    [product.wholesaleMinQuantity],
+  );
+
   const formattedBase = useMemo(() => formatCatalogPrice(product.price, formatPrice), [formatPrice, product.price]);
   const formattedPromo = useMemo(
-    () => (getCatalogPriceValue(product.promotionPrice) ? formatCatalogPrice(product.promotionPrice, formatPrice) : null),
-    [formatPrice, product.promotionPrice],
+    () => (promotionPrice ? formatCatalogPrice(product.promotionPrice, formatPrice) : null),
+    [formatPrice, product.promotionPrice, promotionPrice],
   );
   const formattedWholesale = useMemo(
-    () => (getCatalogPriceValue(product.wholesalePrice) && product.wholesaleMinQuantity ? formatCatalogPrice(product.wholesalePrice, formatPrice) : null),
-    [formatPrice, product.wholesaleMinQuantity, product.wholesalePrice],
+    () => (wholesalePrice && wholesaleMinQuantity > 0 ? formatCatalogPrice(product.wholesalePrice, formatPrice) : null),
+    [formatPrice, product.wholesalePrice, wholesaleMinQuantity, wholesalePrice],
   );
+
   const shouldShowPrice = product.showPrice !== false;
+  const hasWholesaleRule = Boolean(formattedWholesale && wholesaleMinQuantity > 0);
+  const isWholesaleActive = hasWholesaleRule && qty >= wholesaleMinQuantity;
+  const remainingForWholesale = hasWholesaleRule ? Math.max(wholesaleMinQuantity - qty, 0) : 0;
+  const priceLabel = formattedPromo ? "Promo" : "Precio";
 
   return (
-    <article className="catalog-v2-grid__card group">
+    <article className={`catalog-v2-grid__card group${isWholesaleActive ? " is-wholesale-active" : ""}`}>
       <div className="catalog-v2-grid__media">
         <NavLink to={`/catalogo/producto/${product.id}/${phone ?? ""}`} className="catalog-v2-grid__link" aria-label={`Ver detalle de ${product.name}`}>
           {product.image ? <img src={product.image} alt={product.name} loading="lazy" decoding="async" /> : <div className="catalog-v2-grid__placeholder">Sin imagen</div>}
@@ -74,7 +87,6 @@ const ProductCard = memo(({
             <FiEye />
           </button>
         ) : null}
-
       </div>
 
       <div className="catalog-v2-grid__meta">
@@ -83,22 +95,50 @@ const ProductCard = memo(({
             {product.name}
           </NavLink>
         </h2>
+
         <div className="catalog-v2-grid__bottom">
           <div className="catalog-v2-grid__price-slot" aria-hidden={!shouldShowPrice}>
             {shouldShowPrice ? (
-              formattedPromo ? (
-                <div className="catalog-v2-grid__prices">
-                  <span>{formattedPromo}</span>
-                  {basePrice ? <small>{formattedBase}</small> : null}
-                </div>
-              ) : (
-                <p>{formattedBase}</p>
-              )
+              <div className="catalog-v2-grid__price-stack">
+                <small className="catalog-v2-grid__price-label">{priceLabel}</small>
+                {formattedPromo ? (
+                  <div className="catalog-v2-grid__prices">
+                    <span>{formattedPromo}</span>
+                    {basePrice ? <small>{formattedBase}</small> : null}
+                  </div>
+                ) : (
+                  <p>{formattedBase}</p>
+                )}
+              </div>
             ) : null}
-            {formattedWholesale ? <small>Mayoreo: {formattedWholesale} desde {product.wholesaleMinQuantity} pzas.</small> : null}
           </div>
-          <button type="button" onClick={handleAdd} aria-label={`Agregar ${product.name}`}><FiShoppingCart /></button>
+
+          <button type="button" onClick={handleAdd} aria-label={`Agregar ${product.name}`}>
+            <FiShoppingCart />
+          </button>
         </div>
+
+        {hasWholesaleRule && formattedWholesale ? (
+          <div
+            className={`catalog-v2-grid__wholesale-note${isWholesaleActive ? " is-active" : ""}`}
+            aria-label={isWholesaleActive
+              ? `Precio de mayoreo aplicado desde ${wholesaleMinQuantity} piezas`
+              : `Precio de mayoreo ${formattedWholesale} desde ${wholesaleMinQuantity} piezas`}
+          >
+            <div className="catalog-v2-grid__wholesale-note-head">
+              <span>
+                {isWholesaleActive
+                  ? "Activo"
+                  : hasInCart
+                    ? `Faltan ${remainingForWholesale}`
+                    : "Mayoreo"}
+              </span>
+              <strong>{formattedWholesale}</strong>
+              <small>c/u</small>
+            </div>
+            <p>{isWholesaleActive ? `Aplicado desde ${wholesaleMinQuantity} pzas.` : `Desde ${wholesaleMinQuantity} pzas.`}</p>
+          </div>
+        ) : null}
       </div>
 
       {hasInCart ? (
