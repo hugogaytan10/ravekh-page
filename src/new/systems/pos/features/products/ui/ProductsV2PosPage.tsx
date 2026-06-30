@@ -10,7 +10,6 @@ import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import {
   fetchPosBusinessFeatures,
-  isFreePosPlan,
   isPosFeatureBlocked,
   isPosModuleBlocked,
   POS_FEATURES_UNKNOWN,
@@ -301,8 +300,8 @@ export const ProductsV2PosPage = () => {
 
   const openPosFeatureUnlock = () => setShowPosFeatureUnlock(true);
 
-  const blockFreeProductMutation = (): boolean => {
-    if (!isFreePosPlan(features.plan)) return false;
+  const blockBlockedProductModuleMutation = (): boolean => {
+    if (!isPosModuleBlocked(features)) return false;
     openPosFeatureUnlock();
     return true;
   };
@@ -399,7 +398,7 @@ export const ProductsV2PosPage = () => {
   };
 
   const openCreateModal = () => {
-    if (blockFreeProductMutation()) return;
+    if (blockBlockedProductModuleMutation()) return;
     if (blockFreeProductCreation()) return;
     resetForm();
     setSaveResult(null);
@@ -761,7 +760,7 @@ export const ProductsV2PosPage = () => {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
-    if (blockFreeProductMutation()) {
+    if (blockBlockedProductModuleMutation()) {
       closeFormModal();
       return;
     }
@@ -1074,7 +1073,7 @@ export const ProductsV2PosPage = () => {
   });
 
   const handleRestore = async (productId: number) => {
-    if (blockFreeProductMutation()) return;
+    if (blockBlockedProductModuleMutation()) return;
     if (!token) {
       setToast({
         type: "error",
@@ -1111,7 +1110,7 @@ export const ProductsV2PosPage = () => {
   };
 
   const handleEdit = async (productId: number) => {
-    if (blockFreeProductMutation()) return;
+    if (blockBlockedProductModuleMutation()) return;
     if (!token) {
       setError("Token es obligatorio para editar.");
       return;
@@ -1216,13 +1215,13 @@ export const ProductsV2PosPage = () => {
   };
 
   const requestArchive = (productId: number, productName: string) => {
-    if (blockFreeProductMutation()) return;
+    if (blockBlockedProductModuleMutation()) return;
     setArchiveDialog({ id: productId, name: productName });
   };
 
   const handleArchive = async () => {
     if (!archiveDialog) return;
-    if (blockFreeProductMutation()) {
+    if (blockBlockedProductModuleMutation()) {
       setArchiveDialog(null);
       return;
     }
@@ -1523,7 +1522,7 @@ export const ProductsV2PosPage = () => {
   };
 
   const openImportProducts = () => {
-    if (blockFreeProductMutation()) return;
+    if (blockBlockedProductModuleMutation()) return;
     excelInputRef.current?.click();
   };
 

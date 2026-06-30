@@ -22,6 +22,16 @@ type ShippingOptions = {
   PaymentMetod: boolean;
 };
 
+type CatalogOrderPayload = Parameters<CatalogStorefrontApi["createCatalogOrder"]>[0];
+
+type PendingStripeCatalogOrder = {
+  businessId: number;
+  orderPayload: CatalogOrderPayload;
+};
+
+const getPendingStripeOrderKey = (businessId: number) => `catalog-v2-pending-stripe-order:${businessId}`;
+const processingStripeOrderKeys = new Set<string>();
+
 type CartItem = {
   cartKey?: string;
   productId: number;
@@ -81,6 +91,7 @@ export const CatalogOrderInfoPage = () => {
   const [cardEnabled, setCardEnabled] = useState(false);
   const [shippingOptions, setShippingOptions] = useState<ShippingOptions>(defaultShippingOptions);
   const [openSection, setOpenSection] = useState<OpenSection>("contact");
+  const [stripeReturnHandled, setStripeReturnHandled] = useState(false);
 
   const [errors, setErrors] = useState<{
     name?: string;
@@ -139,6 +150,52 @@ export const CatalogOrderInfoPage = () => {
 
     void run();
   }, [api, businessId]);
+
+  useEffect(() => {
+    if (!businessId || stripeReturnHandled) return;
+
+    const params = new URLSearchParams(window.location.search);
+    const isStripeSuccess = params.get("stripe_checkout") === "success";
+    if (!isStripeSuccess) return;
+
+    const stripeSessionId = params.get("session_id") || "without-session";
+    const processingKey = `${businessId}:${stripeSessionId}`;
+    if (processingStripeOrderKeys.has(processingKey)) return;
+
+    processingStripeOrderKeys.add(processingKey);
+    setStripeReturnHandled(true);
+
+    const completeStripeOrder = async () => {
+      setSubmitting(true);
+      setGeneralError(null);
+
+      try {
+        const pendingOrderKey = getPendingStripeOrderKey(businessId);
+        const pendingRaw = window.localStorage.getItem(pendingOrderKey);
+        window.localStorage.removeItem(pendingOrderKey);
+        const pending = pendingRaw ? (JSON.parse(pendingRaw) as PendingStripeCatalogOrder) : null;
+
+        if (!pending?.orderPayload || pending.businessId !== businessId) {
+          throw new Error("No encontramos la información del pedido pagado con tarjeta.");
+        }
+
+        const orderResult = await api.createCatalogOrder(pending.orderPayload);
+        if (!orderResult) {
+          throw new Error("El pago fue exitoso, pero no se pudo registrar el pedido en el servidor.");
+        }
+
+        window.localStorage.removeItem(`catalog-v2-cart:${businessId}`);
+        navigate(`/v2/catalogo/${businessId}`, { replace: true });
+      } catch (e: any) {
+        setGeneralError(e?.message || "El pago fue exitoso, pero no se pudo registrar el pedido.");
+      } finally {
+        processingStripeOrderKeys.delete(processingKey);
+        setSubmitting(false);
+      }
+    };
+
+    void completeStripeOrder();
+  }, [api, businessId, navigate, stripeReturnHandled]);
 
   useEffect(() => {
     if (openSection) return;
@@ -270,7 +327,7 @@ export const CatalogOrderInfoPage = () => {
             quantity: item.quantity,
           })),
           ui_mode: "embedded",
-          return_url: `${window.location.origin}/v2/catalogo/${businessId}`,
+          return_url: `${window.location.origin}/catalogo/pedido-info?stripe_checkout=success&session_id={CHECKOUT_SESSION_ID}`,
           connectedAccountId: businessConfig.stripeAccountId,
           businessId,
           customer_email: email || undefined,
@@ -285,9 +342,15 @@ export const CatalogOrderInfoPage = () => {
           throw new Error(session?.message || "No se pudo iniciar el pago con Stripe.");
         }
 
+        window.localStorage.setItem(
+          getPendingStripeOrderKey(businessId),
+          JSON.stringify({ businessId, orderPayload } satisfies PendingStripeCatalogOrder),
+        );
+
         const stripe = await getStripe(stripeConfig.publishableKey);
         const result = await stripe.redirectToCheckout({ sessionId: session.sessionId });
         if (result?.error?.message) {
+          window.localStorage.removeItem(getPendingStripeOrderKey(businessId));
           throw new Error(result.error.message);
         }
 
