@@ -363,10 +363,6 @@ export const CatalogProductDetailPage = () => {
   const remainingWholesalePieces = hasWholesaleOffer
     ? Math.max(0, selectedWholesaleMinQuantityValue - quantity)
     : 0;
-  const wholesalePriceTone = isWholesaleActive
-    ? "border-emerald-300 bg-emerald-50 shadow-[0_18px_35px_rgba(16,185,129,0.18)]"
-    : "border-[var(--border-default)] bg-[var(--bg-subtle)]";
-
   return (
     <main className="mx-auto grid max-w-5xl gap-4 p-4">
       <button
@@ -487,7 +483,7 @@ export const CatalogProductDetailPage = () => {
             </p>
           </header>
           <div
-            className={`rounded-2xl border p-3 ${wholesalePriceTone}`}
+            className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-subtle)] p-3"
             aria-live="polite"
           >
             <div className="flex items-center justify-between gap-3">
@@ -496,9 +492,7 @@ export const CatalogProductDetailPage = () => {
                   {isWholesaleActive ? "Precio mayoreo" : "Precio menudeo"}
                 </p>
                 <div className="mt-1 flex flex-wrap items-baseline gap-2">
-                  <strong
-                    className={`text-3xl font-extrabold ${isWholesaleActive ? "text-emerald-700" : "text-[var(--text-primary)]"}`}
-                  >
+                  <strong className="text-3xl font-extrabold text-[var(--text-primary)]">
                     {formatCatalogPrice(effectivePrice, money)}
                   </strong>
                   {getCatalogPriceValue(baseDisplayPrice) &&
@@ -514,15 +508,9 @@ export const CatalogProductDetailPage = () => {
             {hasWholesaleOffer ? (
               <div className="relative mt-3 grid gap-2">
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
-                  <span
-                    className={
-                      isWholesaleActive
-                        ? "text-emerald-700"
-                        : "text-[var(--text-secondary)]"
-                    }
-                  >
+                  <span className="text-[var(--text-secondary)]">
                     {isWholesaleActive
-                      ? `Mayoreo activado desde ${selectedWholesaleMinQuantityValue} pzas.`
+                      ? `Ya tienes el mejor precio`
                       : `Agrega ${remainingWholesalePieces} ${remainingWholesalePieces === 1 ? "pieza" : "piezas"} más para activar el precio de mayoreo.`}
                   </span>
                   <span className="rounded-full bg-white px-2 py-1 text-[var(--text-primary)] shadow-sm">
