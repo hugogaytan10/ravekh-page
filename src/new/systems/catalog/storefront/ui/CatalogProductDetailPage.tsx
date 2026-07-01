@@ -1,5 +1,5 @@
 import type React from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
@@ -72,11 +72,6 @@ export const CatalogProductDetailPage = () => {
     yPercent: 50,
   });
   const [showMagnifier, setShowMagnifier] = useState(false);
-  const [wholesaleSwitchState, setWholesaleSwitchState] = useState<
-    "idle" | "activated" | "deactivated"
-  >("idle");
-  const lastWholesaleActiveRef = useRef(false);
-  const wholesaleWatcherReadyRef = useRef(false);
 
   const pageLogic = useMemo(() => {
     const repository = new CatalogStorefrontApi(getPosApiBaseUrl());
@@ -124,65 +119,7 @@ export const CatalogProductDetailPage = () => {
     setSelectedSizeId(null);
     setQuantity(1);
     setDetailError(null);
-    setWholesaleSwitchState("idle");
-    lastWholesaleActiveRef.current = false;
-    wholesaleWatcherReadyRef.current = false;
   }, [productId]);
-
-  useEffect(() => {
-    if (!product) {
-      lastWholesaleActiveRef.current = false;
-      wholesaleWatcherReadyRef.current = false;
-      setWholesaleSwitchState("idle");
-      return;
-    }
-
-    const currentColor =
-      colors.find((color) => color.id === selectedColorId) ?? null;
-    const currentVisibleVariants = variants.filter((variant) =>
-      variantMatchesColor(variant, currentColor),
-    );
-    const currentVariant =
-      currentVisibleVariants.find(
-        (variant) => variant.id === selectedVariantId,
-      ) ?? null;
-    const currentWholesalePrice = currentVariant
-      ? currentVariant.wholesalePrice
-      : product.wholesalePrice;
-    const currentWholesaleMinQuantity = Number(
-      currentVariant
-        ? currentVariant.wholesaleMinQuantity
-        : product.wholesaleMinQuantity,
-    );
-    const hasWholesaleRule =
-      getCatalogPriceValue(currentWholesalePrice) !== null &&
-      Number.isFinite(currentWholesaleMinQuantity) &&
-      currentWholesaleMinQuantity > 0;
-    const isWholesaleActive =
-      hasWholesaleRule && quantity >= currentWholesaleMinQuantity;
-
-    if (!wholesaleWatcherReadyRef.current) {
-      wholesaleWatcherReadyRef.current = true;
-      lastWholesaleActiveRef.current = isWholesaleActive;
-      return;
-    }
-
-    if (
-      hasWholesaleRule &&
-      lastWholesaleActiveRef.current !== isWholesaleActive
-    ) {
-      setWholesaleSwitchState(isWholesaleActive ? "activated" : "deactivated");
-      lastWholesaleActiveRef.current = isWholesaleActive;
-
-      const timeout = window.setTimeout(() => {
-        setWholesaleSwitchState("idle");
-      }, 1200);
-
-      return () => window.clearTimeout(timeout);
-    }
-
-    lastWholesaleActiveRef.current = isWholesaleActive;
-  }, [colors, product, quantity, selectedColorId, selectedVariantId, variants]);
 
   const openPreview = useCallback((src: string | null, alt: string) => {
     if (!src) return;
@@ -426,36 +363,9 @@ export const CatalogProductDetailPage = () => {
   const remainingWholesalePieces = hasWholesaleOffer
     ? Math.max(0, selectedWholesaleMinQuantityValue - quantity)
     : 0;
-  const wholesaleProgressPercent = hasWholesaleOffer
-    ? Math.min(
-        100,
-        Math.max(10, (quantity / selectedWholesaleMinQuantityValue) * 100),
-      )
-    : 0;
-  const wholesaleSwitchTone = isWholesaleActive
+  const wholesalePriceTone = isWholesaleActive
     ? "border-emerald-300 bg-emerald-50 shadow-[0_18px_35px_rgba(16,185,129,0.18)]"
     : "border-[var(--border-default)] bg-[var(--bg-subtle)]";
-  const wholesalePulseTone =
-    wholesaleSwitchState === "activated"
-      ? "scale-[1.02] ring-4 ring-emerald-300/40"
-      : wholesaleSwitchState === "deactivated"
-        ? "scale-[1.01] ring-4 ring-amber-300/35"
-        : "";
-
-  const wholesaleTargetQuantity = hasWholesaleOffer
-    ? Math.max(1, Math.min(999, Math.ceil(selectedWholesaleMinQuantityValue)))
-    : 1;
-
-  const handleWholesaleSwitchClick = () => {
-    if (!hasWholesaleOffer || isWholesaleActive) return;
-
-    setQuantity((currentQuantity) =>
-      currentQuantity >= wholesaleTargetQuantity
-        ? currentQuantity
-        : wholesaleTargetQuantity,
-    );
-    setWholesaleSwitchState("activated");
-  };
 
   return (
     <main className="mx-auto grid max-w-5xl gap-4 p-4">
@@ -577,20 +487,17 @@ export const CatalogProductDetailPage = () => {
             </p>
           </header>
           <div
-            className={`relative overflow-hidden rounded-2xl border p-3 transition-all duration-300 ${wholesaleSwitchTone} ${wholesalePulseTone}`}
+            className={`rounded-2xl border p-3 ${wholesalePriceTone}`}
             aria-live="polite"
           >
-            <span
-              className={`pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.24),transparent_46%)] transition-opacity duration-500 ${wholesaleSwitchState === "activated" ? "opacity-100" : "opacity-0"}`}
-            />
-            <div className="relative flex items-center justify-between gap-3">
+            <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--text-muted)]">
                   {isWholesaleActive ? "Precio mayoreo" : "Precio menudeo"}
                 </p>
                 <div className="mt-1 flex flex-wrap items-baseline gap-2">
                   <strong
-                    className={`text-3xl font-extrabold transition-all duration-300 ${isWholesaleActive ? "text-emerald-700" : "text-[var(--text-primary)]"}`}
+                    className={`text-3xl font-extrabold ${isWholesaleActive ? "text-emerald-700" : "text-[var(--text-primary)]"}`}
                   >
                     {formatCatalogPrice(effectivePrice, money)}
                   </strong>
@@ -602,49 +509,10 @@ export const CatalogProductDetailPage = () => {
                   ) : null}
                 </div>
               </div>
-
-              {hasWholesaleOffer ? (
-                <div className="grid justify-items-end gap-1">
-                  <button
-                    type="button"
-                    onClick={handleWholesaleSwitchClick}
-                    disabled={isWholesaleActive}
-                    aria-pressed={isWholesaleActive}
-                    aria-label={
-                      isWholesaleActive
-                        ? "Mayoreo activado"
-                        : `Activar mayoreo con ${wholesaleTargetQuantity} piezas`
-                    }
-                    title={
-                      isWholesaleActive
-                        ? "Mayoreo activado"
-                        : `Tomar ${wholesaleTargetQuantity} piezas para mayoreo`
-                    }
-                    className={`relative h-8 w-16 rounded-full p-1 shadow-inner transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-emerald-300/40 disabled:cursor-default ${isWholesaleActive ? "bg-emerald-500" : "bg-slate-300 hover:bg-emerald-300 active:scale-95"}`}
-                  >
-                    <span
-                      className={`block h-6 w-6 rounded-full bg-white shadow-lg transition-transform duration-300 ${isWholesaleActive ? "translate-x-8" : "translate-x-0"}`}
-                    />
-                  </button>
-                  <span
-                    className={`text-right text-[0.68rem] font-black uppercase tracking-wide ${isWholesaleActive ? "text-emerald-700" : "text-[var(--text-muted)]"}`}
-                  >
-                    {isWholesaleActive
-                      ? "Activo"
-                      : `Tomar ${wholesaleTargetQuantity} pzas.`}
-                  </span>
-                </div>
-              ) : null}
             </div>
 
             {hasWholesaleOffer ? (
               <div className="relative mt-3 grid gap-2">
-                <div className="h-2 overflow-hidden rounded-full bg-white/80">
-                  <span
-                    className={`block h-full rounded-full transition-all duration-500 ${isWholesaleActive ? "bg-emerald-500" : "bg-slate-400"}`}
-                    style={{ width: `${wholesaleProgressPercent}%` }}
-                  />
-                </div>
                 <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
                   <span
                     className={
@@ -655,7 +523,7 @@ export const CatalogProductDetailPage = () => {
                   >
                     {isWholesaleActive
                       ? `Mayoreo activado desde ${selectedWholesaleMinQuantityValue} pzas.`
-                      : `Agrega ${remainingWholesalePieces} ${remainingWholesalePieces === 1 ? "pieza" : "piezas"} más o toca el switch para tomar ${wholesaleTargetQuantity} pzas.`}
+                      : `Agrega ${remainingWholesalePieces} ${remainingWholesalePieces === 1 ? "pieza" : "piezas"} más para activar el precio de mayoreo.`}
                   </span>
                   <span className="rounded-full bg-white px-2 py-1 text-[var(--text-primary)] shadow-sm">
                     {formatCatalogPrice(selectedWholesalePrice, money)} / pza.
