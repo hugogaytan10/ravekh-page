@@ -33,26 +33,12 @@ import {
   type UnlockFeature,
 } from "../../../shared/ui/FeatureUnlockModal";
 import { usePlanActionGuard } from "../../../shared/hooks/usePlanActionGuard";
-import { type PlanProtectedAction } from "../../../shared/config/posPlanAccess";
 import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
 import { downloadProductsCatalogPdf } from "./productCatalogPdf";
 import "./PosV2MorePage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
 const FAVORITES_KEY = POS_SESSION_STORAGE_KEYS.moreFavorites;
-
-const MORE_MODULE_PLAN_ACTIONS: Partial<Record<string, PlanProtectedAction>> = {
-  "table-zones": "settings.tableZones",
-  tables: "settings.tableZones",
-  tableZones: "settings.tableZones",
-  exports: "reports.export",
-  reports: "reports.export",
-  customers: "customers.manage",
-  employees: "employees.manage",
-  coupons: "loyalty.coupons",
-  visits: "loyalty.visits",
-  loyalty: "loyalty.coupons",
-};
 
 export const PosV2MorePage = () => {
   const navigate = useNavigate();
@@ -406,13 +392,6 @@ export const PosV2MorePage = () => {
   };
 
   const openModule = async (item: MoreModuleLink) => {
-    const planAction = MORE_MODULE_PLAN_ACTIONS[item.id];
-
-    if (planAction) {
-      await runWithPlanAccess(planAction, () => openAllowedModule(item));
-      return;
-    }
-
     await openAllowedModule(item);
   };
 

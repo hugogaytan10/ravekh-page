@@ -3,6 +3,8 @@ import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
+import { usePlanActionGuard } from "../../../shared/hooks/usePlanActionGuard";
+import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
 import "./PosV2CashClosingPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -65,6 +67,7 @@ export const PosV2CashClosingPage = () => {
   const [toast, setToast] = useState<string>("");
   const canCloseCash = useMemo(() => getOwnerCapability(session.token), [session.token]);
   const hasSalesToClose = currentTotal > 0;
+  const { runWithPlanAccess, blockedAction, closeBlockedActionModal, goToUpgradePlan, checkingPlanAccess } = usePlanActionGuard();
 
   const page = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
@@ -179,25 +182,27 @@ export const PosV2CashClosingPage = () => {
       return;
     }
 
-    setSaving(true);
-    setError(null);
+    await runWithPlanAccess("cashClosing.create", async () => {
+      setSaving(true);
+      setError(null);
 
-    try {
-      const totalBeforeClosing = await page.loadCurrentTotal(employeeId, session.token);
-      const normalizedTotal = Number(totalBeforeClosing || 0);
-      if (!Number.isFinite(normalizedTotal) || normalizedTotal <= 0) {
-        setCurrentTotal(0);
-        setError("No hay ventas acumuladas para cerrar caja.");
-        return;
+      try {
+        const totalBeforeClosing = await page.loadCurrentTotal(employeeId, session.token);
+        const normalizedTotal = Number(totalBeforeClosing || 0);
+        if (!Number.isFinite(normalizedTotal) || normalizedTotal <= 0) {
+          setCurrentTotal(0);
+          setError("No hay ventas acumuladas para cerrar caja.");
+          return;
+        }
+        await page.register({ employeeId }, session.token);
+        setToast(`Corte registrado por ${moneyFormatter.format(normalizedTotal)}.`);
+        await refreshEmployeeData(employeeId, session.token);
+      } catch {
+        setError("No fue posible registrar el corte de caja.");
+      } finally {
+        setSaving(false);
       }
-      await page.register({ employeeId }, session.token);
-      setToast(`Corte registrado por ${moneyFormatter.format(normalizedTotal)}.`);
-      await refreshEmployeeData(employeeId, session.token);
-    } catch {
-      setError("No fue posible registrar el corte de caja.");
-    } finally {
-      setSaving(false);
-    }
+    });
   };
 
   return (
@@ -208,7 +213,7 @@ export const PosV2CashClosingPage = () => {
             <h2>Cierre de turno</h2>
             <p>Calcula el total del día por empleado y confirma el corte contra el endpoint histórico desacoplado.</p>
           </div>
-          <button type="button" onClick={refreshData} disabled={loading || saving}>Actualizar</button>
+          <button type="button" onClick={refreshData} disabled={loading || saving || checkingPlanAccess}>Actualizar</button>
         </header>
 
         {!session.hasSession ? <p className="pos-v2-cash-closing__error">No hay sesión activa. Inicia sesión para gestionar cierres.</p> : null}
@@ -224,7 +229,7 @@ export const PosV2CashClosingPage = () => {
           <form onSubmit={handleSubmit} className="pos-v2-cash-closing__form">
             <label>
               Empleado
-              <select value={selectedEmployeeId} onChange={(event) => setSelectedEmployeeId(event.target.value)} disabled={loading || saving || employees.length === 0}>
+              <select value={selectedEmployeeId} onChange={(event) => setSelectedEmployeeId(event.target.value)} disabled={loading || saving || checkingPlanAccess || employees.length === 0}>
                 <option value="">Selecciona...</option>
                 {employees.map((employee) => (
                   <option key={employee.id} value={String(employee.id)}>{employee.fullName}</option>
@@ -234,7 +239,7 @@ export const PosV2CashClosingPage = () => {
             <p className="pos-v2-cash-closing__hint">
               Total calculado por backend para cierre actual: <strong>{moneyFormatter.format(currentTotal)}</strong>
             </p>
-            <button type="submit" disabled={saving || loading || !canCloseCash || !hasSalesToClose}>{saving ? "Guardando..." : "Confirmar corte"}</button>
+            <button type="submit" disabled={saving || loading || checkingPlanAccess || !canCloseCash || !hasSalesToClose}>{saving ? "Guardando..." : checkingPlanAccess ? "Validando plan..." : "Confirmar corte"}</button>
           </form>
         </section>
 
@@ -267,6 +272,17 @@ export const PosV2CashClosingPage = () => {
           </article>
         </section>
       </section>
+      {blockedAction ? (
+        <PlanUpgradeModal
+          open
+          title={blockedAction.title}
+          message={blockedAction.message}
+          requiredPlan={blockedAction.requiredPlan}
+          ctaLabel={blockedAction.ctaLabel}
+          onClose={closeBlockedActionModal}
+          onUpgrade={goToUpgradePlan}
+        />
+      ) : null}
     </PosV2Shell>
   );
 };

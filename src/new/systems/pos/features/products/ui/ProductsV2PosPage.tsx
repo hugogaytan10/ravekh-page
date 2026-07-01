@@ -357,6 +357,38 @@ export const ProductsV2PosPage = () => {
     });
   };
 
+  const openProductVariantUpgradeModal = () => {
+    setProductPlanUnlockModal({
+      title: "Activa START",
+      message:
+        "Actualiza tu plan para agregar variantes, tallas o colores a tus productos.",
+      buttonText: "Continuar al pago",
+      unlockFeature: "Catalog",
+    });
+  };
+
+  const canAddProductVariants = (): boolean => {
+    if (!isFreePlan) return true;
+    openProductVariantUpgradeModal();
+    return false;
+  };
+
+  const openWholesaleUpgradeModal = () => {
+    setProductPlanUnlockModal({
+      title: "Activa START",
+      message:
+        "Actualiza tu plan para capturar precios de mayoreo en tus productos.",
+      buttonText: "Continuar al pago",
+      unlockFeature: "Catalog",
+    });
+  };
+
+  const canEditWholesalePrices = (): boolean => {
+    if (!isFreePlan) return true;
+    openWholesaleUpgradeModal();
+    return false;
+  };
+
   const getProductLimitPayload = (
     cause: unknown,
   ): {
@@ -717,6 +749,45 @@ export const ProductsV2PosPage = () => {
     setter: React.Dispatch<React.SetStateAction<string[]>>,
   ) => {
     setter((current) => current.filter((_, index) => index !== indexToRemove));
+  };
+
+
+  const addVariantDraft = () => {
+    if (!canAddProductVariants()) return;
+    setVariants((current) => [...current, createVariantDraft()]);
+  };
+
+  const addSizeTag = () => {
+    if (!canAddProductVariants()) return;
+    pushUniqueTag(sizeDraft, setSizes, setSizeDraft);
+  };
+
+  const addColorTag = () => {
+    if (!canAddProductVariants()) return;
+    pushUniqueTag(colorDraft, setColors, setColorDraft);
+  };
+
+
+  const handleWholesalePriceChange = (value: string) => {
+    if (!canEditWholesalePrices()) return;
+    setWholesalePrice(value);
+    if (value.trim() === "") {
+      setWholesaleMinQuantity("");
+    }
+  };
+
+  const handleWholesaleMinQuantityChange = (value: string) => {
+    if (!canEditWholesalePrices()) return;
+    setWholesaleMinQuantity(value);
+  };
+
+  const handleVariantWholesaleChange = (
+    key: string,
+    field: "wholesalePrice" | "wholesaleMinQuantity",
+    value: string,
+  ) => {
+    if (!canEditWholesalePrices()) return;
+    updateVariant(key, field, value);
   };
 
   const formImagePreviews = useMemo(() => {
@@ -2325,13 +2396,14 @@ export const ProductsV2PosPage = () => {
                       step="0.01"
                       inputMode="decimal"
                       value={wholesalePrice}
-                      onChange={(event) => {
-                        setWholesalePrice(event.target.value);
-                        if (event.target.value.trim() === "") {
-                          setWholesaleMinQuantity("");
-                        }
+                      onFocus={() => {
+                        if (isFreePlan) openWholesaleUpgradeModal();
                       }}
+                      onChange={(event) =>
+                        handleWholesalePriceChange(event.target.value)
+                      }
                       placeholder="Ej. 80"
+                      readOnly={isFreePlan}
                     />
                   </label>
                   <label>
@@ -2342,10 +2414,14 @@ export const ProductsV2PosPage = () => {
                       step="1"
                       inputMode="numeric"
                       value={wholesaleMinQuantity}
+                      onFocus={() => {
+                        if (isFreePlan) openWholesaleUpgradeModal();
+                      }}
                       onChange={(event) =>
-                        setWholesaleMinQuantity(event.target.value)
+                        handleWholesaleMinQuantityChange(event.target.value)
                       }
                       placeholder="Ej. 3"
+                      readOnly={isFreePlan}
                     />
                   </label>
                   <label>
@@ -2502,12 +2578,7 @@ export const ProductsV2PosPage = () => {
                     <h4>Variantes</h4>
                     <button
                       type="button"
-                      onClick={() =>
-                        setVariants((current) => [
-                          ...current,
-                          createVariantDraft(),
-                        ])
-                      }
+                      onClick={addVariantDraft}
                     >
                       + Agregar variante
                     </button>
@@ -2665,8 +2736,11 @@ export const ProductsV2PosPage = () => {
                         />
                         <input
                           value={variant.wholesalePrice}
+                          onFocus={() => {
+                            if (isFreePlan) openWholesaleUpgradeModal();
+                          }}
                           onChange={(event) =>
-                            updateVariant(
+                            handleVariantWholesaleChange(
                               variant.key,
                               "wholesalePrice",
                               event.target.value,
@@ -2678,11 +2752,15 @@ export const ProductsV2PosPage = () => {
                           step="0.01"
                           inputMode="decimal"
                           aria-label={`Precio por mayoreo de variante ${index + 1}`}
+                          readOnly={isFreePlan}
                         />
                         <input
                           value={variant.wholesaleMinQuantity}
+                          onFocus={() => {
+                            if (isFreePlan) openWholesaleUpgradeModal();
+                          }}
                           onChange={(event) =>
-                            updateVariant(
+                            handleVariantWholesaleChange(
                               variant.key,
                               "wholesaleMinQuantity",
                               event.target.value,
@@ -2694,6 +2772,7 @@ export const ProductsV2PosPage = () => {
                           step="1"
                           inputMode="numeric"
                           aria-label={`Cantidad mínima para mayoreo de variante ${index + 1}`}
+                          readOnly={isFreePlan}
                         />
                         <input
                           value={variant.costPerItem}
@@ -2795,7 +2874,7 @@ export const ProductsV2PosPage = () => {
                           onKeyDown={(event) => {
                             if (event.key === "Enter") {
                               event.preventDefault();
-                              pushUniqueTag(sizeDraft, setSizes, setSizeDraft);
+                              addSizeTag();
                             }
                           }}
                           placeholder="Ej. S"
@@ -2803,9 +2882,7 @@ export const ProductsV2PosPage = () => {
                         />
                         <button
                           type="button"
-                          onClick={() =>
-                            pushUniqueTag(sizeDraft, setSizes, setSizeDraft)
-                          }
+                          onClick={addSizeTag}
                         >
                           Agregar
                         </button>
@@ -2848,11 +2925,7 @@ export const ProductsV2PosPage = () => {
                           onKeyDown={(event) => {
                             if (event.key === "Enter") {
                               event.preventDefault();
-                              pushUniqueTag(
-                                colorDraft,
-                                setColors,
-                                setColorDraft,
-                              );
+                              addColorTag();
                             }
                           }}
                           placeholder="Ej. Azul"
@@ -2860,9 +2933,7 @@ export const ProductsV2PosPage = () => {
                         />
                         <button
                           type="button"
-                          onClick={() =>
-                            pushUniqueTag(colorDraft, setColors, setColorDraft)
-                          }
+                          onClick={addColorTag}
                         >
                           Agregar
                         </button>

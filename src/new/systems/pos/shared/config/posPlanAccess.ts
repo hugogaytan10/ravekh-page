@@ -14,7 +14,9 @@ export type PlanProtectedAction =
   | "loyalty.visits"
   | "loyalty.createCoupon"
   | "catalog.advancedCustomization"
-  | "cashClosing.export";
+  | "cashClosing.export"
+  | "cashClosing.create"
+  | "salesTax.save";
 
 export type PlanActionRule = {
   requiredPlan: PosPlan;
@@ -111,6 +113,16 @@ export const POS_PLAN_ACTION_RULES: Record<PlanProtectedAction, PlanActionRule> 
     requiredPlan: "START",
     title: "Exportación de corte bloqueada",
     message: "Actualiza tu plan para acceder a esta función. La exportación de cortes está disponible desde el plan START.",
+  },
+  "cashClosing.create": {
+    requiredPlan: "START",
+    title: "Corte de caja bloqueado",
+    message: "Actualiza tu plan para registrar cortes de caja. Esta función está disponible desde el plan START.",
+  },
+  "salesTax.save": {
+    requiredPlan: "START",
+    title: "Impuesto de venta bloqueado",
+    message: "Actualiza tu plan para guardar impuestos de venta. Esta configuración está disponible desde el plan START.",
   },
 };
 

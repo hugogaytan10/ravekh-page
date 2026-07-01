@@ -246,6 +246,7 @@ const PAYMENT_METHOD_OPTIONS: Array<{
 const API_BASE_URL = getPosApiBaseUrl();
 const EMPLOYEE_ID_KEY = POS_SESSION_STORAGE_KEYS.employeeId;
 const DEFAULT_SALES_LIMIT = "EMPRENDEDOR";
+const FREE_SALES_PLAN_VALUES = new Set(["GRATUITO", "PRUEBA", "GRATUITO ONLINE"]);
 const DEBUG_KEY = "pos-v2-debug";
 type TableZoneVm = {
   id: number;
@@ -367,6 +368,8 @@ export const PosV2SalesHomePage = () => {
   const [hasPrevPage, setHasPrevPage] = useState(false);
   const [planLimit, setPlanLimit] = useState("");
   const [isPlanLimitReady, setIsPlanLimitReady] = useState(false);
+  const isFreeSalesPlan = FREE_SALES_PLAN_VALUES.has(planLimit.trim().toUpperCase());
+  const areSalesRelationSelectorsLocked = !isPlanLimitReady;
   const [couponsPlan, setCouponsPlan] = useState<0 | 1 | 2>(0);
   const [variantSelection, setVariantSelection] = useState<{
     product: SaleItemVm;
@@ -446,6 +449,16 @@ export const PosV2SalesHomePage = () => {
 
   const getCurrentSession = () => readPosSessionSnapshot();
   const handleSelectTable = (nextTableId: string) => {
+    if (areSalesRelationSelectorsLocked) {
+      setSelectedTableId("");
+      return;
+    }
+
+    if (isFreeSalesPlan && String(nextTableId ?? "").trim()) {
+      openSalesRelationUpgradeModal();
+      return;
+    }
+
     const normalized = String(nextTableId ?? "").trim();
     const comingFromNoTable = !selectedTableId;
     const movingToSpecificTable = normalized.length > 0;
@@ -506,6 +519,16 @@ export const PosV2SalesHomePage = () => {
       title: "Activa START",
       message:
         "Completa el pago para activar tu plan y seguir registrando ventas este mes.",
+      buttonText: "Continuar al pago",
+      unlockFeature: "Pos",
+    });
+  };
+
+  const openSalesRelationUpgradeModal = () => {
+    setSalesPlanUnlockModal({
+      title: "Activa START",
+      message:
+        "Actualiza tu plan para seleccionar mesas, zonas o clientes en ventas.",
       buttonText: "Continuar al pago",
       unlockFeature: "Pos",
     });
@@ -572,6 +595,13 @@ export const PosV2SalesHomePage = () => {
       })
       .finally(() => setLoadingProducts(false));
   }, [categoryKey, currentPage, isPlanLimitReady, planLimit]);
+
+
+  useEffect(() => {
+    if (!isFreeSalesPlan) return;
+    setSelectedTableId("");
+    setSelectedCustomerId("");
+  }, [isFreeSalesPlan]);
 
   useEffect(() => {
     const { token, businessId } = getCurrentSession();
@@ -829,7 +859,7 @@ export const PosV2SalesHomePage = () => {
   }, []);
 
   useEffect(() => {
-    if (tableZones.length === 0) {
+    if (isFreeSalesPlan || tableZones.length === 0) {
       setSelectedTableZoneId("");
       setSelectedTableId("");
       return;
@@ -839,11 +869,11 @@ export const PosV2SalesHomePage = () => {
       setSelectedTableZoneId(String(tableZones[0]?.id ?? ""));
       setSelectedTableId("");
     }
-  }, [tableZones, selectedTableZoneId]);
+  }, [isFreeSalesPlan, tableZones, selectedTableZoneId]);
 
   useEffect(() => {
     const { token } = getCurrentSession();
-    if (!token || !selectedTableZoneId) {
+    if (isFreeSalesPlan || !token || !selectedTableZoneId) {
       setTables([]);
       return;
     }
@@ -916,9 +946,17 @@ export const PosV2SalesHomePage = () => {
         );
       })
       .finally(() => setLoadingTables(false));
-  }, [selectedTableZoneId, tablesByZone]);
+  }, [isFreeSalesPlan, selectedTableZoneId, tablesByZone]);
 
-  const visibleTables = useMemo(() => tables, [tables]);
+  const visibleTables = useMemo(() => {
+    if (!isFreeSalesPlan || tables.length > 0) return tables;
+
+    const uniqueTables = new Map<number, TableVm>();
+    Object.values(tablesByZone)
+      .flat()
+      .forEach((table) => uniqueTables.set(table.id, table));
+    return Array.from(uniqueTables.values());
+  }, [isFreeSalesPlan, tables, tablesByZone]);
 
   useEffect(() => {
     if (visibleTables.length === 0) {
@@ -2546,8 +2584,14 @@ export const PosV2SalesHomePage = () => {
               Zona de mesas
               <select
                 value={selectedTableZoneId}
-                onChange={(event) => setSelectedTableZoneId(event.target.value)}
-                disabled={loadingTables}
+                onChange={(event) => {
+                  if (isFreeSalesPlan) {
+                    openSalesRelationUpgradeModal();
+                    return;
+                  }
+                  setSelectedTableZoneId(event.target.value);
+                }}
+                disabled={areSalesRelationSelectorsLocked || loadingTables}
               >
                 {tableZones.length === 0 ? (
                   <option value="">Sin zonas activas</option>
@@ -2566,7 +2610,7 @@ export const PosV2SalesHomePage = () => {
               <select
                 value={selectedTableId}
                 onChange={(event) => handleSelectTable(event.target.value)}
-                disabled={loadingTables || !selectedTableZoneId}
+                disabled={areSalesRelationSelectorsLocked || loadingTables || (!isFreeSalesPlan && !selectedTableZoneId)}
               >
                 <option value="">Sin mesa (orden directa)</option>
                 {visibleTables.map((table) => (
@@ -2582,9 +2626,15 @@ export const PosV2SalesHomePage = () => {
                 Cliente (opcional)
                 <select
                   value={selectedCustomerId}
-                  onChange={(event) =>
-                    setSelectedCustomerId(event.target.value)
-                  }
+                  onChange={(event) => {
+                    if (areSalesRelationSelectorsLocked) return;
+                    if (isFreeSalesPlan && event.target.value) {
+                      openSalesRelationUpgradeModal();
+                      return;
+                    }
+                    setSelectedCustomerId(event.target.value);
+                  }}
+                  disabled={areSalesRelationSelectorsLocked}
                 >
                   <option value="">Venta general</option>
                   {customers.map((customer) => (
@@ -2595,7 +2645,11 @@ export const PosV2SalesHomePage = () => {
                 </select>
               </label>
             ) : null}
-            {!customersError && hasCustomers ? (
+            {isFreeSalesPlan ? (
+              <small className="pos-v2-sales-home__customer-hint">
+                Mesas, zonas y clientes están disponibles desde un plan superior.
+              </small>
+            ) : !customersError && hasCustomers ? (
               <small className="pos-v2-sales-home__customer-hint">
                 Puedes vincular la venta a cliente para historial y recompensas.
               </small>
@@ -3021,6 +3075,7 @@ export const PosV2SalesHomePage = () => {
                 type="button"
                 className={!selectedTableId ? "is-active" : ""}
                 onClick={() => handleSelectTable("")}
+                disabled={areSalesRelationSelectorsLocked}
               >
                 Sin mesa
               </button>
@@ -3034,6 +3089,7 @@ export const PosV2SalesHomePage = () => {
                     type="button"
                     className={`${isActive ? "is-active" : ""} ${isOccupied ? "is-occupied" : ""}`.trim()}
                     onClick={() => handleSelectTable(String(table.id))}
+                    disabled={areSalesRelationSelectorsLocked}
                   >
                     {table.name}
                   </button>
@@ -3046,7 +3102,7 @@ export const PosV2SalesHomePage = () => {
 
       <div className="pos-v2-sales-home__mobile-summary-dock">
         {hasTableSelection ? (
-          <button type="button" onClick={() => setIsMobileTablesOpen(true)}>
+          <button type="button" onClick={() => setIsMobileTablesOpen(true)} disabled={areSalesRelationSelectorsLocked}>
             Mesas
           </button>
         ) : null}
@@ -3100,6 +3156,7 @@ export const PosV2SalesHomePage = () => {
                         setIsMobileTablesOpen(false);
                         setMobileStep("catalog");
                       }}
+                      disabled={areSalesRelationSelectorsLocked}
                     >
                       {table.name}
                     </button>
@@ -3115,6 +3172,7 @@ export const PosV2SalesHomePage = () => {
                     setIsMobileTablesOpen(false);
                     setMobileStep("catalog");
                   }}
+                  disabled={areSalesRelationSelectorsLocked}
                 >
                   Sin mesa (orden directa)
                 </button>

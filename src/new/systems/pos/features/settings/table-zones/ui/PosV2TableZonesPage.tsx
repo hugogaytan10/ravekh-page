@@ -2,6 +2,8 @@ import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../../shared/ui/PosV2Shell";
 import { POS_SESSION_STORAGE_KEYS } from "../../../../shared/config/posSession";
+import { usePlanActionGuard } from "../../../../shared/hooks/usePlanActionGuard";
+import { PlanUpgradeModal } from "../../../../shared/ui/PlanUpgradeModal";
 import "./PosV2TableZonesPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -90,6 +92,7 @@ export const PosV2TableZonesPage = () => {
   const [isQuickModalOpen, setIsQuickModalOpen] = useState(false);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const { runWithPlanAccess, blockedAction, closeBlockedActionModal, goToUpgradePlan, checkingPlanAccess } = usePlanActionGuard();
 
   const businessId = Number(businessIdInput);
   const cleanToken = token.trim();
@@ -245,11 +248,12 @@ export const PosV2TableZonesPage = () => {
       return;
     }
 
-    setSaving(true);
-    setError(null);
+    await runWithPlanAccess("settings.tableZones", async () => {
+      setSaving(true);
+      setError(null);
 
-    try {
-      const nextValue = !isTableOrderEnabled;
+      try {
+        const nextValue = !isTableOrderEnabled;
       const response = await fetch(new URL(`table_zones/active/${businessId}`, API_BASE_URL).toString(), {
         method: "PUT",
         headers,
@@ -264,9 +268,10 @@ export const PosV2TableZonesPage = () => {
       await loadZones();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo actualizar el estado de mesas.");
-    } finally {
-      setSaving(false);
-    }
+      } finally {
+        setSaving(false);
+      }
+    });
   };
 
   const handleSubmitZone = async (event: FormEvent) => {
@@ -283,11 +288,12 @@ export const PosV2TableZonesPage = () => {
       return;
     }
 
-    setSaving(true);
-    setError(null);
+    await runWithPlanAccess("settings.tableZones", async () => {
+      setSaving(true);
+      setError(null);
 
-    try {
-      const endpoint = zoneEditId ? `table_zones/${zoneEditId}` : "table_zones";
+      try {
+        const endpoint = zoneEditId ? `table_zones/${zoneEditId}` : "table_zones";
       const response = await fetch(new URL(endpoint, API_BASE_URL).toString(), {
         method: zoneEditId ? "PUT" : "POST",
         headers,
@@ -305,9 +311,10 @@ export const PosV2TableZonesPage = () => {
       await loadZones();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo guardar la zona.");
-    } finally {
-      setSaving(false);
-    }
+      } finally {
+        setSaving(false);
+      }
+    });
   };
 
   const handleCreateZoneWithTables = async (event: FormEvent) => {
@@ -330,10 +337,11 @@ export const PosV2TableZonesPage = () => {
       return;
     }
 
-    setSaving(true);
-    setError(null);
-    try {
-      const response = await fetch(new URL(`table_zones/zone/${businessId}`, API_BASE_URL).toString(), {
+    await runWithPlanAccess("settings.tableZones", async () => {
+      setSaving(true);
+      setError(null);
+      try {
+        const response = await fetch(new URL(`table_zones/zone/${businessId}`, API_BASE_URL).toString(), {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -354,9 +362,10 @@ export const PosV2TableZonesPage = () => {
       await loadZones();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo crear zona con mesas.");
-    } finally {
-      setSaving(false);
-    }
+      } finally {
+        setSaving(false);
+      }
+    });
   };
 
   const handleSubmitTable = async (event: FormEvent) => {
@@ -384,11 +393,12 @@ export const PosV2TableZonesPage = () => {
       return;
     }
 
-    setSaving(true);
-    setError(null);
+    await runWithPlanAccess("settings.tableZones", async () => {
+      setSaving(true);
+      setError(null);
 
-    try {
-      const endpoint = tableEditId ? `tables/${tableEditId}` : "tables";
+      try {
+        const endpoint = tableEditId ? `tables/${tableEditId}` : "tables";
       const response = await fetch(new URL(endpoint, API_BASE_URL).toString(), {
         method: tableEditId ? "PUT" : "POST",
         headers,
@@ -412,9 +422,10 @@ export const PosV2TableZonesPage = () => {
       await loadTablesByZone(Number(selectedZoneId));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo guardar la mesa.");
-    } finally {
-      setSaving(false);
-    }
+      } finally {
+        setSaving(false);
+      }
+    });
   };
 
   const handleDeleteZone = async (zoneId: number) => {
@@ -423,11 +434,12 @@ export const PosV2TableZonesPage = () => {
       return;
     }
 
-    setSaving(true);
-    setError(null);
+    await runWithPlanAccess("settings.tableZones", async () => {
+      setSaving(true);
+      setError(null);
 
-    try {
-      const response = await fetch(new URL(`table_zones/${zoneId}`, API_BASE_URL).toString(), {
+      try {
+        const response = await fetch(new URL(`table_zones/${zoneId}`, API_BASE_URL).toString(), {
         method: "DELETE",
         headers,
       });
@@ -442,9 +454,10 @@ export const PosV2TableZonesPage = () => {
       await loadZones();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo eliminar la zona.");
-    } finally {
-      setSaving(false);
-    }
+      } finally {
+        setSaving(false);
+      }
+    });
   };
 
   const handleDeleteTable = async (tableId: number) => {
@@ -453,11 +466,12 @@ export const PosV2TableZonesPage = () => {
       return;
     }
 
-    setSaving(true);
-    setError(null);
+    await runWithPlanAccess("settings.tableZones", async () => {
+      setSaving(true);
+      setError(null);
 
-    try {
-      const response = await fetch(new URL(`tables/${tableId}`, API_BASE_URL).toString(), {
+      try {
+        const response = await fetch(new URL(`tables/${tableId}`, API_BASE_URL).toString(), {
         method: "DELETE",
         headers,
       });
@@ -470,9 +484,10 @@ export const PosV2TableZonesPage = () => {
       await loadTablesByZone(Number(selectedZoneId));
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo eliminar la mesa.");
-    } finally {
-      setSaving(false);
-    }
+      } finally {
+        setSaving(false);
+      }
+    });
   };
 
   const isLoading = loadingZones || loadingTables;
@@ -565,7 +580,7 @@ export const PosV2TableZonesPage = () => {
                     {selectedZoneId === String(zone.id) ? "Seleccionada" : "Ver mesas"}
                   </button>
                   <button type="button" className="is-secondary-chip" onClick={() => { setZoneEditId(zone.id); setZoneName(zone.name); setIsZoneModalOpen(true); }}>Editar</button>
-                  <button type="button" className="is-danger" onClick={() => setDeleteTarget({ kind: "zone", id: zone.id, name: zone.name })} disabled={saving}>Eliminar</button>
+                  <button type="button" className="is-danger" onClick={() => setDeleteTarget({ kind: "zone", id: zone.id, name: zone.name })} disabled={saving || checkingPlanAccess}>Eliminar</button>
                 </div>
               </li>
             ))}
@@ -614,7 +629,7 @@ export const PosV2TableZonesPage = () => {
                   >
                     Editar
                   </button>
-                  <button type="button" className="is-danger" onClick={() => setDeleteTarget({ kind: "table", id: table.id, name: table.name })} disabled={saving}>Eliminar</button>
+                  <button type="button" className="is-danger" onClick={() => setDeleteTarget({ kind: "table", id: table.id, name: table.name })} disabled={saving || checkingPlanAccess}>Eliminar</button>
                 </div>
               </li>
             ))}
@@ -633,7 +648,7 @@ export const PosV2TableZonesPage = () => {
               </label>
               <div className="pos-v2-table-zones__modal-actions">
                 <button type="button" className="is-secondary-chip" onClick={() => setIsZoneModalOpen(false)}>Cancelar</button>
-                <button type="submit" disabled={saving || !hasSession}>{saving ? "Guardando..." : "Guardar zona"}</button>
+                <button type="submit" disabled={saving || checkingPlanAccess || !hasSession}>{saving ? "Guardando..." : checkingPlanAccess ? "Validando plan..." : "Guardar zona"}</button>
               </div>
             </form>
           </section>
@@ -654,7 +669,7 @@ export const PosV2TableZonesPage = () => {
               </label>
               <div className="pos-v2-table-zones__modal-actions">
                 <button type="button" className="is-secondary-chip" onClick={() => setIsQuickModalOpen(false)}>Cancelar</button>
-                <button type="submit" disabled={saving || !hasSession}>{saving ? "Creando..." : "Crear zona con mesas"}</button>
+                <button type="submit" disabled={saving || checkingPlanAccess || !hasSession}>{saving ? "Creando..." : checkingPlanAccess ? "Validando plan..." : "Crear zona con mesas"}</button>
               </div>
             </form>
           </section>
@@ -682,7 +697,7 @@ export const PosV2TableZonesPage = () => {
               </label>
               <div className="pos-v2-table-zones__modal-actions">
                 <button type="button" className="is-secondary-chip" onClick={() => setIsTableModalOpen(false)}>Cancelar</button>
-                <button type="submit" disabled={saving || !hasSession}>{saving ? "Guardando..." : "Guardar mesa"}</button>
+                <button type="submit" disabled={saving || checkingPlanAccess || !hasSession}>{saving ? "Guardando..." : checkingPlanAccess ? "Validando plan..." : "Guardar mesa"}</button>
               </div>
             </form>
           </section>
@@ -697,14 +712,25 @@ export const PosV2TableZonesPage = () => {
               </p>
               <div className="pos-v2-table-zones__modal-actions">
                 <button type="button" className="is-secondary-chip" onClick={() => setDeleteTarget(null)}>Cancelar</button>
-                <button type="button" className="is-danger" onClick={handleConfirmDelete} disabled={saving}>
-                  {saving ? "Eliminando..." : "Sí, eliminar"}
+                <button type="button" className="is-danger" onClick={handleConfirmDelete} disabled={saving || checkingPlanAccess}>
+                  {saving ? "Eliminando..." : checkingPlanAccess ? "Validando plan..." : "Sí, eliminar"}
                 </button>
               </div>
             </article>
           </section>
         ) : null}
       </section>
+      {blockedAction ? (
+        <PlanUpgradeModal
+          open
+          title={blockedAction.title}
+          message={blockedAction.message}
+          requiredPlan={blockedAction.requiredPlan}
+          ctaLabel={blockedAction.ctaLabel}
+          onClose={closeBlockedActionModal}
+          onUpgrade={goToUpgradePlan}
+        />
+      ) : null}
     </PosV2Shell>
   );
 };
