@@ -1,12 +1,16 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../../shared/ui/PosV2Shell";
 import { POS_SESSION_STORAGE_KEYS } from "../../../../shared/config/posSession";
 import { usePlanActionGuard } from "../../../../shared/hooks/usePlanActionGuard";
 import { PlanUpgradeModal } from "../../../../shared/ui/PlanUpgradeModal";
+import { POS_V2_PATHS } from "../../../../routing/PosV2Paths";
 import "./PosV2TableZonesPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
+const START_TABLE_LIMIT = 4;
+const START_TABLE_PLAN_VALUES = new Set(["START", "EMPRENDEDOR", "EMPRESARIAL", "INICIAL", "BASICO"]);
 const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
 const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 
@@ -64,6 +68,7 @@ const toTableVm = (row: TableApiResponse): TableVm => ({
 });
 
 export const PosV2TableZonesPage = () => {
+  const navigate = useNavigate();
   const [token] = useState(() => window.localStorage.getItem(TOKEN_KEY) ?? "");
   const [businessIdInput] = useState(() => window.localStorage.getItem(BUSINESS_ID_KEY) ?? "");
 
@@ -92,11 +97,16 @@ export const PosV2TableZonesPage = () => {
   const [isQuickModalOpen, setIsQuickModalOpen] = useState(false);
   const [isTableModalOpen, setIsTableModalOpen] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [currentPlan, setCurrentPlan] = useState(() => (window.localStorage.getItem("plan") ?? "").trim());
+  const [knownTablesCount, setKnownTablesCount] = useState(0);
+  const [showTableLimitUpgrade, setShowTableLimitUpgrade] = useState(false);
   const { runWithPlanAccess, blockedAction, closeBlockedActionModal, goToUpgradePlan, checkingPlanAccess } = usePlanActionGuard();
 
   const businessId = Number(businessIdInput);
   const cleanToken = token.trim();
   const hasSession = Boolean(cleanToken) && Number.isFinite(businessId) && businessId > 0;
+  const isStartPlan = START_TABLE_PLAN_VALUES.has(currentPlan.trim().toUpperCase());
+  const totalKnownTables = Math.max(knownTablesCount, tables.length);
 
   const headers = useMemo(
     () => ({
@@ -106,6 +116,44 @@ export const PosV2TableZonesPage = () => {
     }),
     [cleanToken],
   );
+
+  useEffect(() => {
+    if (!hasSession) return;
+
+    fetch(new URL(`business/${businessId}`, API_BASE_URL).toString(), { headers })
+      .then(async (response) => {
+        if (!response.ok) return;
+        const payload = (await response.json().catch(() => null)) as Record<string, unknown> | null;
+        const plan = String(payload?.Plan ?? payload?.plan ?? "").trim();
+        if (plan) {
+          setCurrentPlan(plan);
+          window.localStorage.setItem("plan", plan);
+        }
+      })
+      .catch(() => {
+        // Keep the stored plan if business details cannot be refreshed.
+      });
+  }, [businessId, hasSession, headers]);
+
+  const openTableLimitUpgradeModal = () => setShowTableLimitUpgrade(true);
+
+  const goToTableLimitUpgrade = () => {
+    setShowTableLimitUpgrade(false);
+    const params = new URLSearchParams({
+      requiredPlan: "PRO",
+      feature: "settings.tableZones",
+      from: POS_V2_PATHS.tableZones,
+    });
+    navigate(`${POS_V2_PATHS.upgradePlan}?${params.toString()}`);
+  };
+
+  const canRegisterAdditionalTables = (requestedTables: number): boolean => {
+    if (!isStartPlan) return true;
+    const safeRequestedTables = Math.max(0, requestedTables);
+    if (totalKnownTables + safeRequestedTables <= START_TABLE_LIMIT) return true;
+    openTableLimitUpgradeModal();
+    return false;
+  };
 
   const loadZones = useCallback(async () => {
     if (!hasSession) {
@@ -123,7 +171,15 @@ export const PosV2TableZonesPage = () => {
       }
 
       const payload = (await response.json().catch(() => null)) as ZoneApiResponse[] | null;
-      const zoneRows = (Array.isArray(payload) ? payload : [])
+      const rawZones = Array.isArray(payload) ? payload : [];
+      const preloadedTablesCount = rawZones.reduce(
+        (count, zone) => count + (Array.isArray(zone.Tables) ? zone.Tables.length : 0),
+        0,
+      );
+      if (preloadedTablesCount > 0) {
+        setKnownTablesCount(preloadedTablesCount);
+      }
+      const zoneRows = rawZones
         .map(toZoneVm)
         .filter((zone) => zone.id > 0 && zone.name.length > 0)
         .sort((a, b) => a.id - b.id);
@@ -159,6 +215,7 @@ export const PosV2TableZonesPage = () => {
         .sort((a, b) => a.id - b.id);
 
       setTables(tableRows);
+      setKnownTablesCount((current) => Math.max(current, tableRows.length));
     } catch (cause) {
       setTables([]);
       setError(cause instanceof Error ? cause.message : "No se pudieron cargar las mesas.");
@@ -337,6 +394,8 @@ export const PosV2TableZonesPage = () => {
       return;
     }
 
+    if (!canRegisterAdditionalTables(numTables)) return;
+
     await runWithPlanAccess("settings.tableZones", async () => {
       setSaving(true);
       setError(null);
@@ -357,6 +416,7 @@ export const PosV2TableZonesPage = () => {
 
       setQuickZoneName("");
       setQuickNumTables("4");
+      setKnownTablesCount((current) => current + numTables);
       setSuccessMessage(`Zona "${zoneName}" creada con ${numTables} mesas.`);
       setIsQuickModalOpen(false);
       await loadZones();
@@ -393,6 +453,8 @@ export const PosV2TableZonesPage = () => {
       return;
     }
 
+    if (!tableEditId && !canRegisterAdditionalTables(1)) return;
+
     await runWithPlanAccess("settings.tableZones", async () => {
       setSaving(true);
       setError(null);
@@ -414,6 +476,9 @@ export const PosV2TableZonesPage = () => {
         throw new Error(`No se pudo guardar la mesa (${response.status}).`);
       }
 
+      if (!tableEditId) {
+        setKnownTablesCount((current) => current + 1);
+      }
       setTableName("");
       setTableChairs("4");
       setTableEditId(null);
@@ -731,6 +796,15 @@ export const PosV2TableZonesPage = () => {
           onUpgrade={goToUpgradePlan}
         />
       ) : null}
+      <PlanUpgradeModal
+        open={showTableLimitUpgrade}
+        title="Límite de mesas alcanzado"
+        message={`Tu plan START permite hasta ${START_TABLE_LIMIT} mesas. Actualiza tu plan para registrar más mesas.`}
+        requiredPlan="PRO"
+        ctaLabel="Actualizar plan"
+        onClose={() => setShowTableLimitUpgrade(false)}
+        onUpgrade={goToTableLimitUpgrade}
+      />
     </PosV2Shell>
   );
 };

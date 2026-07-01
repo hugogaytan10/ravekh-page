@@ -38,10 +38,18 @@ const ACCEPTED_IMAGE_TYPES = new Set([
   "image/webp",
 ]);
 const FREE_PRODUCT_LIMIT = 20;
+const START_PRODUCT_VARIANT_LIMIT = 2;
 const FREE_PRODUCT_PLAN_VALUES = new Set([
   "GRATUITO",
   "PRUEBA",
   "GRATUITO ONLINE",
+]);
+const START_PRODUCT_PLAN_VALUES = new Set([
+  "START",
+  "EMPRENDEDOR",
+  "EMPRESARIAL",
+  "INICIAL",
+  "BASICO",
 ]);
 
 type ProductLimitUpgradeState = {
@@ -320,6 +328,15 @@ export const ProductsV2PosPage = () => {
     );
   }, [features.plan, productsLimit]);
 
+  const isStartPlan = useMemo(() => {
+    const rawProductsLimit = normalizePlanValue(productsLimit);
+    const rawFeaturePlan = normalizePlanValue(features.plan);
+    return (
+      START_PRODUCT_PLAN_VALUES.has(rawProductsLimit) ||
+      START_PRODUCT_PLAN_VALUES.has(rawFeaturePlan)
+    );
+  }, [features.plan, productsLimit]);
+
   const productLimitCount = Math.max(totalItems, products.length);
   const freeProductLimitReached =
     isFreePlan && productLimitCount >= FREE_PRODUCT_LIMIT;
@@ -367,10 +384,27 @@ export const ProductsV2PosPage = () => {
     });
   };
 
+  const openStartVariantLimitUpgradeModal = () => {
+    setProductPlanUnlockModal({
+      title: "Activa PRO",
+      message: `Tu plan START permite hasta ${START_PRODUCT_VARIANT_LIMIT} variantes por producto. Actualiza tu plan para agregar más variantes.`,
+      buttonText: "Continuar al pago",
+      unlockFeature: "Catalog",
+    });
+  };
+
   const canAddProductVariants = (): boolean => {
-    if (!isFreePlan) return true;
-    openProductVariantUpgradeModal();
-    return false;
+    if (isFreePlan) {
+      openProductVariantUpgradeModal();
+      return false;
+    }
+
+    if (isStartPlan && variants.length >= START_PRODUCT_VARIANT_LIMIT) {
+      openStartVariantLimitUpgradeModal();
+      return false;
+    }
+
+    return true;
   };
 
   const openWholesaleUpgradeModal = () => {
