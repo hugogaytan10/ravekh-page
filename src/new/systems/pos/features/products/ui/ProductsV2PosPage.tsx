@@ -10,7 +10,6 @@ import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import {
   fetchPosBusinessFeatures,
-  isOfflinePosPlan,
   isPosFeatureBlocked,
   isPosModuleBlocked,
   POS_FEATURES_UNKNOWN,
@@ -39,10 +38,18 @@ const ACCEPTED_IMAGE_TYPES = new Set([
   "image/webp",
 ]);
 const FREE_PRODUCT_LIMIT = 20;
+const START_PRODUCT_VARIANT_LIMIT = 2;
 const FREE_PRODUCT_PLAN_VALUES = new Set([
   "GRATUITO",
   "PRUEBA",
   "GRATUITO ONLINE",
+]);
+const START_PRODUCT_PLAN_VALUES = new Set([
+  "START",
+  "EMPRENDEDOR",
+  "EMPRESARIAL",
+  "INICIAL",
+  "BASICO",
 ]);
 
 type ProductLimitUpgradeState = {
@@ -301,8 +308,8 @@ export const ProductsV2PosPage = () => {
 
   const openPosFeatureUnlock = () => setShowPosFeatureUnlock(true);
 
-  const blockOfflineProductMutation = (): boolean => {
-    if (!isOfflinePosPlan(features.plan)) return false;
+  const blockBlockedProductModuleMutation = (): boolean => {
+    if (!isPosModuleBlocked(features)) return false;
     openPosFeatureUnlock();
     return true;
   };
@@ -318,6 +325,15 @@ export const ProductsV2PosPage = () => {
     return (
       FREE_PRODUCT_PLAN_VALUES.has(rawProductsLimit) ||
       FREE_PRODUCT_PLAN_VALUES.has(rawFeaturePlan)
+    );
+  }, [features.plan, productsLimit]);
+
+  const isStartPlan = useMemo(() => {
+    const rawProductsLimit = normalizePlanValue(productsLimit);
+    const rawFeaturePlan = normalizePlanValue(features.plan);
+    return (
+      START_PRODUCT_PLAN_VALUES.has(rawProductsLimit) ||
+      START_PRODUCT_PLAN_VALUES.has(rawFeaturePlan)
     );
   }, [features.plan, productsLimit]);
 
@@ -356,6 +372,55 @@ export const ProductsV2PosPage = () => {
       buttonText: "Continuar al pago",
       unlockFeature: "Catalog",
     });
+  };
+
+  const openProductVariantUpgradeModal = () => {
+    setProductPlanUnlockModal({
+      title: "Activa START",
+      message:
+        "Actualiza tu plan para agregar variantes, tallas o colores a tus productos.",
+      buttonText: "Continuar al pago",
+      unlockFeature: "Catalog",
+    });
+  };
+
+  const openStartVariantLimitUpgradeModal = () => {
+    setProductPlanUnlockModal({
+      title: "Activa PRO",
+      message: `Tu plan START permite hasta ${START_PRODUCT_VARIANT_LIMIT} variantes por producto. Actualiza tu plan para agregar más variantes.`,
+      buttonText: "Continuar al pago",
+      unlockFeature: "Catalog",
+    });
+  };
+
+  const canAddProductVariants = (): boolean => {
+    if (isFreePlan) {
+      openProductVariantUpgradeModal();
+      return false;
+    }
+
+    if (isStartPlan && variants.length >= START_PRODUCT_VARIANT_LIMIT) {
+      openStartVariantLimitUpgradeModal();
+      return false;
+    }
+
+    return true;
+  };
+
+  const openWholesaleUpgradeModal = () => {
+    setProductPlanUnlockModal({
+      title: "Activa START",
+      message:
+        "Actualiza tu plan para capturar precios de mayoreo en tus productos.",
+      buttonText: "Continuar al pago",
+      unlockFeature: "Catalog",
+    });
+  };
+
+  const canEditWholesalePrices = (): boolean => {
+    if (!isFreePlan) return true;
+    openWholesaleUpgradeModal();
+    return false;
   };
 
   const getProductLimitPayload = (
@@ -399,7 +464,7 @@ export const ProductsV2PosPage = () => {
   };
 
   const openCreateModal = () => {
-    if (blockOfflineProductMutation()) return;
+    if (blockBlockedProductModuleMutation()) return;
     if (blockFreeProductCreation()) return;
     resetForm();
     setSaveResult(null);
@@ -720,6 +785,45 @@ export const ProductsV2PosPage = () => {
     setter((current) => current.filter((_, index) => index !== indexToRemove));
   };
 
+
+  const addVariantDraft = () => {
+    if (!canAddProductVariants()) return;
+    setVariants((current) => [...current, createVariantDraft()]);
+  };
+
+  const addSizeTag = () => {
+    if (!canAddProductVariants()) return;
+    pushUniqueTag(sizeDraft, setSizes, setSizeDraft);
+  };
+
+  const addColorTag = () => {
+    if (!canAddProductVariants()) return;
+    pushUniqueTag(colorDraft, setColors, setColorDraft);
+  };
+
+
+  const handleWholesalePriceChange = (value: string) => {
+    if (!canEditWholesalePrices()) return;
+    setWholesalePrice(value);
+    if (value.trim() === "") {
+      setWholesaleMinQuantity("");
+    }
+  };
+
+  const handleWholesaleMinQuantityChange = (value: string) => {
+    if (!canEditWholesalePrices()) return;
+    setWholesaleMinQuantity(value);
+  };
+
+  const handleVariantWholesaleChange = (
+    key: string,
+    field: "wholesalePrice" | "wholesaleMinQuantity",
+    value: string,
+  ) => {
+    if (!canEditWholesalePrices()) return;
+    updateVariant(key, field, value);
+  };
+
   const formImagePreviews = useMemo(() => {
     const remote = storedImages
       .map((img, index) => ({
@@ -761,7 +865,7 @@ export const ProductsV2PosPage = () => {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
-    if (blockOfflineProductMutation()) {
+    if (blockBlockedProductModuleMutation()) {
       closeFormModal();
       return;
     }
@@ -1074,7 +1178,7 @@ export const ProductsV2PosPage = () => {
   });
 
   const handleRestore = async (productId: number) => {
-    if (blockOfflineProductMutation()) return;
+    if (blockBlockedProductModuleMutation()) return;
     if (!token) {
       setToast({
         type: "error",
@@ -1111,7 +1215,7 @@ export const ProductsV2PosPage = () => {
   };
 
   const handleEdit = async (productId: number) => {
-    if (blockOfflineProductMutation()) return;
+    if (blockBlockedProductModuleMutation()) return;
     if (!token) {
       setError("Token es obligatorio para editar.");
       return;
@@ -1216,13 +1320,13 @@ export const ProductsV2PosPage = () => {
   };
 
   const requestArchive = (productId: number, productName: string) => {
-    if (blockOfflineProductMutation()) return;
+    if (blockBlockedProductModuleMutation()) return;
     setArchiveDialog({ id: productId, name: productName });
   };
 
   const handleArchive = async () => {
     if (!archiveDialog) return;
-    if (blockOfflineProductMutation()) {
+    if (blockBlockedProductModuleMutation()) {
       setArchiveDialog(null);
       return;
     }
@@ -1523,7 +1627,7 @@ export const ProductsV2PosPage = () => {
   };
 
   const openImportProducts = () => {
-    if (blockOfflineProductMutation()) return;
+    if (blockBlockedProductModuleMutation()) return;
     excelInputRef.current?.click();
   };
 
@@ -2326,13 +2430,14 @@ export const ProductsV2PosPage = () => {
                       step="0.01"
                       inputMode="decimal"
                       value={wholesalePrice}
-                      onChange={(event) => {
-                        setWholesalePrice(event.target.value);
-                        if (event.target.value.trim() === "") {
-                          setWholesaleMinQuantity("");
-                        }
+                      onFocus={() => {
+                        if (isFreePlan) openWholesaleUpgradeModal();
                       }}
+                      onChange={(event) =>
+                        handleWholesalePriceChange(event.target.value)
+                      }
                       placeholder="Ej. 80"
+                      readOnly={isFreePlan}
                     />
                   </label>
                   <label>
@@ -2343,10 +2448,14 @@ export const ProductsV2PosPage = () => {
                       step="1"
                       inputMode="numeric"
                       value={wholesaleMinQuantity}
+                      onFocus={() => {
+                        if (isFreePlan) openWholesaleUpgradeModal();
+                      }}
                       onChange={(event) =>
-                        setWholesaleMinQuantity(event.target.value)
+                        handleWholesaleMinQuantityChange(event.target.value)
                       }
                       placeholder="Ej. 3"
+                      readOnly={isFreePlan}
                     />
                   </label>
                   <label>
@@ -2503,12 +2612,7 @@ export const ProductsV2PosPage = () => {
                     <h4>Variantes</h4>
                     <button
                       type="button"
-                      onClick={() =>
-                        setVariants((current) => [
-                          ...current,
-                          createVariantDraft(),
-                        ])
-                      }
+                      onClick={addVariantDraft}
                     >
                       + Agregar variante
                     </button>
@@ -2666,8 +2770,11 @@ export const ProductsV2PosPage = () => {
                         />
                         <input
                           value={variant.wholesalePrice}
+                          onFocus={() => {
+                            if (isFreePlan) openWholesaleUpgradeModal();
+                          }}
                           onChange={(event) =>
-                            updateVariant(
+                            handleVariantWholesaleChange(
                               variant.key,
                               "wholesalePrice",
                               event.target.value,
@@ -2679,11 +2786,15 @@ export const ProductsV2PosPage = () => {
                           step="0.01"
                           inputMode="decimal"
                           aria-label={`Precio por mayoreo de variante ${index + 1}`}
+                          readOnly={isFreePlan}
                         />
                         <input
                           value={variant.wholesaleMinQuantity}
+                          onFocus={() => {
+                            if (isFreePlan) openWholesaleUpgradeModal();
+                          }}
                           onChange={(event) =>
-                            updateVariant(
+                            handleVariantWholesaleChange(
                               variant.key,
                               "wholesaleMinQuantity",
                               event.target.value,
@@ -2695,6 +2806,7 @@ export const ProductsV2PosPage = () => {
                           step="1"
                           inputMode="numeric"
                           aria-label={`Cantidad mínima para mayoreo de variante ${index + 1}`}
+                          readOnly={isFreePlan}
                         />
                         <input
                           value={variant.costPerItem}
@@ -2796,7 +2908,7 @@ export const ProductsV2PosPage = () => {
                           onKeyDown={(event) => {
                             if (event.key === "Enter") {
                               event.preventDefault();
-                              pushUniqueTag(sizeDraft, setSizes, setSizeDraft);
+                              addSizeTag();
                             }
                           }}
                           placeholder="Ej. S"
@@ -2804,9 +2916,7 @@ export const ProductsV2PosPage = () => {
                         />
                         <button
                           type="button"
-                          onClick={() =>
-                            pushUniqueTag(sizeDraft, setSizes, setSizeDraft)
-                          }
+                          onClick={addSizeTag}
                         >
                           Agregar
                         </button>
@@ -2849,11 +2959,7 @@ export const ProductsV2PosPage = () => {
                           onKeyDown={(event) => {
                             if (event.key === "Enter") {
                               event.preventDefault();
-                              pushUniqueTag(
-                                colorDraft,
-                                setColors,
-                                setColorDraft,
-                              );
+                              addColorTag();
                             }
                           }}
                           placeholder="Ej. Azul"
@@ -2861,9 +2967,7 @@ export const ProductsV2PosPage = () => {
                         />
                         <button
                           type="button"
-                          onClick={() =>
-                            pushUniqueTag(colorDraft, setColors, setColorDraft)
-                          }
+                          onClick={addColorTag}
                         >
                           Agregar
                         </button>

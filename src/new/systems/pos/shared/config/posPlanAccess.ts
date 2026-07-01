@@ -14,7 +14,9 @@ export type PlanProtectedAction =
   | "loyalty.visits"
   | "loyalty.createCoupon"
   | "catalog.advancedCustomization"
-  | "cashClosing.export";
+  | "cashClosing.export"
+  | "cashClosing.create"
+  | "salesTax.save";
 
 export type PlanActionRule = {
   requiredPlan: PosPlan;
@@ -24,7 +26,6 @@ export type PlanActionRule = {
 };
 
 export const POS_PLAN_LEVELS: Record<PosPlan, number> = {
-  OFFLINE: 0,
   GRATUITO: 1,
   START: 2,
   PRO: 3,
@@ -113,18 +114,26 @@ export const POS_PLAN_ACTION_RULES: Record<PlanProtectedAction, PlanActionRule> 
     title: "Exportación de corte bloqueada",
     message: "Actualiza tu plan para acceder a esta función. La exportación de cortes está disponible desde el plan START.",
   },
+  "cashClosing.create": {
+    requiredPlan: "START",
+    title: "Corte de caja bloqueado",
+    message: "Actualiza tu plan para registrar cortes de caja. Esta función está disponible desde el plan START.",
+  },
+  "salesTax.save": {
+    requiredPlan: "START",
+    title: "Impuesto de venta bloqueado",
+    message: "Actualiza tu plan para guardar impuestos de venta. Esta configuración está disponible desde el plan START.",
+  },
 };
 
 export const normalizePosPlan = (rawPlan?: string | null): PosPlan => {
   const normalized = String(rawPlan ?? "").trim().toUpperCase();
   if (!normalized) return "GRATUITO";
-  if (normalized === "OFFLINE") return "OFFLINE";
   if (normalized === "GRATUITO" || normalized === "START" || normalized === "PRO" || normalized === "MAX") return normalized;
   return POS_PLAN_ALIASES[normalized] ?? "GRATUITO";
 };
 
 export const hasRequiredPlan = (currentPlan: PosPlan, requiredPlan: PosPlan): boolean => {
-if (currentPlan === "GRATUITO") return requiredPlan === "GRATUITO";
   return POS_PLAN_LEVELS[currentPlan] >= POS_PLAN_LEVELS[requiredPlan];
 };
 

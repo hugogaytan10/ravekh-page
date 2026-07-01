@@ -11,6 +11,8 @@ import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
 import { emitPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
+import { usePlanActionGuard } from "../../../shared/hooks/usePlanActionGuard";
+import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
 import "./PosV2ModulePreviewPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -148,6 +150,7 @@ export const PosV2ModulePreviewPage = () => {
     references: "",
   });
 
+  const { runWithPlanAccess, blockedAction, closeBlockedActionModal, goToUpgradePlan, checkingPlanAccess } = usePlanActionGuard();
   const session = useMemo(() => readPosSessionSnapshot(), []);
   const token = session.token;
   const businessIdInput = String(session.businessId || "");
@@ -483,28 +486,31 @@ export const PosV2ModulePreviewPage = () => {
   const saveTax = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const businessId = Number(businessIdInput);
-    setTaxSaving(true);
     setTaxError("");
     setTaxSuccess("");
 
-    try {
-      if (!taxForm.enabled) {
-        await factory.createPosSalesTaxPage().disableSalesTax(businessId, token);
-      } else {
-        await factory.createPosSalesTaxPage().saveSalesTax(token, {
-          businessId,
-          description: taxForm.description,
-          value: Number(taxForm.value),
-          isPercent: taxForm.isPercent,
-          canBeRemovedAtSale: taxForm.canBeRemovedAtSale,
-        });
+    await runWithPlanAccess("salesTax.save", async () => {
+      setTaxSaving(true);
+
+      try {
+        if (!taxForm.enabled) {
+          await factory.createPosSalesTaxPage().disableSalesTax(businessId, token);
+        } else {
+          await factory.createPosSalesTaxPage().saveSalesTax(token, {
+            businessId,
+            description: taxForm.description,
+            value: Number(taxForm.value),
+            isPercent: taxForm.isPercent,
+            canBeRemovedAtSale: taxForm.canBeRemovedAtSale,
+          });
+        }
+        setTaxSuccess("Impuestos guardados correctamente.");
+      } catch (cause) {
+        setTaxError(cause instanceof Error ? cause.message : "No se pudo guardar la configuración de impuesto.");
+      } finally {
+        setTaxSaving(false);
       }
-      setTaxSuccess("Impuestos guardados correctamente.");
-    } catch (cause) {
-      setTaxError(cause instanceof Error ? cause.message : "No se pudo guardar la configuración de impuesto.");
-    } finally {
-      setTaxSaving(false);
-    }
+    });
   };
 
   const saveSocialNetworks = async (event: FormEvent<HTMLFormElement>) => {
@@ -838,7 +844,7 @@ export const PosV2ModulePreviewPage = () => {
                 </label>
                 {taxError ? <p className="pos-v2-module-preview__error">{taxError}</p> : null}
                 {taxSuccess ? <p className="pos-v2-module-preview__ok">{taxSuccess}</p> : null}
-                <button type="submit" disabled={taxSaving}>{taxSaving ? "Guardando..." : "Guardar cambios"}</button>
+                <button type="submit" disabled={taxSaving || checkingPlanAccess}>{taxSaving ? "Guardando..." : checkingPlanAccess ? "Validando plan..." : "Guardar cambios"}</button>
               </form>
             ) : null}
           </section>
@@ -1013,6 +1019,17 @@ export const PosV2ModulePreviewPage = () => {
           <button type="button" onClick={() => navigate(POS_V2_PATHS.more)}>Ir a Más</button>
         </div>
       </section>
+      {blockedAction ? (
+        <PlanUpgradeModal
+          open
+          title={blockedAction.title}
+          message={blockedAction.message}
+          requiredPlan={blockedAction.requiredPlan}
+          ctaLabel={blockedAction.ctaLabel}
+          onClose={closeBlockedActionModal}
+          onUpgrade={goToUpgradePlan}
+        />
+      ) : null}
     </PosV2Shell>
   );
 };

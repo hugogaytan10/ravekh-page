@@ -9,7 +9,7 @@ import {
 import { Link, useNavigate } from "react-router-dom";
 import { FreeCatalogLoginModal } from "../components/FreeCatalogLoginModal";
 import { POS_SESSION_STORAGE_KEYS } from "../../pos/shared/config/posSession";
-import { FeatureUnlockModal } from "../../pos/shared/ui/FeatureUnlockModal";
+import { FeatureUnlockModal, type UnlockPlanKey } from "../../pos/shared/ui/FeatureUnlockModal";
 import "./MainCatalogPage.css";
 import { trackMetaEvent, trackMetaCustomEvent } from "../../../../../scripts/metaPixel";
 
@@ -25,6 +25,7 @@ type CardItem = {
   icon: ReactNode;
   title: string;
   text: string;
+  href?: string;
 };
 
 type BillingCycle = "monthly" | "annual";
@@ -37,6 +38,13 @@ type Plan = {
   benefits: string[];
   recommended?: boolean;
   annualNote?: string;
+  checkoutPlanKey?: UnlockPlanKey;
+};
+
+type CatalogCheckoutPlan = {
+  name: string;
+  amount: number;
+  plan: UnlockPlanKey;
 };
 
 const IconSvg = ({ children, ...props }: SVGProps<SVGSVGElement>) => (
@@ -324,16 +332,19 @@ const businessTypes: CardItem[] = [
     icon: <BagIcon />,
     title: "Ropa y calzado",
     text: "Tallas, estilos y temporadas en un solo lugar.",
+    href: "/ravekhBoutique",
   },
   {
     icon: <ToolIcon />,
     title: "Refacciones",
     text: "Muestra piezas y variantes sin perder conversaciones.",
+    href: "/RavekhRefacciones",
   },
   {
     icon: <BottleIcon />,
     title: "Perfumes",
     text: "Organiza aromas, presentaciones y promociones.",
+    href: "/RavekhPerfumeria",
   },
   {
     icon: <UtensilsIcon />,
@@ -421,6 +432,7 @@ const plans: Plan[] = [
     ],
     recommended: true,
     annualNote: "Equivale a $249 MXN al mes",
+    checkoutPlanKey: "START",
   },
   {
     name: "Catálogo Intermedio",
@@ -434,6 +446,7 @@ const plans: Plan[] = [
       "Preparado para crecer a POS",
     ],
     annualNote: "Equivale a $499 MXN al mes",
+    checkoutPlanKey: "PRO",
   },
   {
     name: "Catálogo Pro",
@@ -447,8 +460,27 @@ const plans: Plan[] = [
       "100 Facturas timbradas al mes ante el SAT",
     ],
     annualNote: "Equivale a $1,149 MXN al mes",
+    checkoutPlanKey: "MAX",
   },
 ];
+
+
+const parsePlanAmount = (price: string) => {
+  const amount = Number(price.replace(/[^0-9.]/g, ""));
+  return Number.isFinite(amount) ? amount : 0;
+};
+
+const buildCatalogCheckoutPlan = (plan: Plan, billingCycle: BillingCycle): CatalogCheckoutPlan | null => {
+  if (!plan.checkoutPlanKey) {
+    return null;
+  }
+
+  return {
+    name: plan.name,
+    amount: parsePlanAmount(plan.prices[billingCycle]),
+    plan: plan.checkoutPlanKey,
+  };
+};
 
 const testimonials = [
   {
@@ -558,15 +590,27 @@ const BenefitCard = ({ icon, title, text }: CardItem) => (
   </article>
 );
 
-const FeatureCard = ({ icon, title, text }: CardItem) => (
-  <article className="main-catalog-card main-catalog-feature-card">
-    <span className="main-catalog-icon" aria-hidden="true">
-      {icon}
-    </span>
-    <h3>{title}</h3>
-    <p>{text}</p>
-  </article>
-);
+const FeatureCard = ({ icon, title, text, href }: CardItem) => {
+  const content = (
+    <>
+      <span className="main-catalog-icon" aria-hidden="true">
+        {icon}
+      </span>
+      <h3>{title}</h3>
+      <p>{text}</p>
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link className="main-catalog-card main-catalog-feature-card main-catalog-card--link" to={href}>
+        {content}
+      </Link>
+    );
+  }
+
+  return <article className="main-catalog-card main-catalog-feature-card">{content}</article>;
+};
 
 const CatalogMockup = ({ compact = false }: { compact?: boolean }) => (
   <div
@@ -737,8 +781,8 @@ const MetricsSection = () => (
 const PricingSection = () => {
   const navigate = useNavigate();
   const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
-  const [loginModalPlan, setLoginModalPlan] = useState<string | null>(null);
-  const [unlockModalPlan, setUnlockModalPlan] = useState<string | null>(null);
+  const [loginModalPlan, setLoginModalPlan] = useState<CatalogCheckoutPlan | null>(null);
+  const [unlockModalPlan, setUnlockModalPlan] = useState<CatalogCheckoutPlan | null>(null);
   const activeBilling = billingCycleCopy[billingCycle];
 
   const hasStoredPosSession = () =>
@@ -821,12 +865,17 @@ const PricingSection = () => {
                   if (plan.name !== FREE_CATALOG_PLAN_NAME) {
                     event.preventDefault();
 
-                    if (!hasStoredPosSession()) {
-                      setLoginModalPlan(plan.name);
+                    const checkoutPlan = buildCatalogCheckoutPlan(plan, billingCycle);
+                    if (!checkoutPlan) {
                       return;
                     }
 
-                    setUnlockModalPlan(plan.name);
+                    if (!hasStoredPosSession()) {
+                      setLoginModalPlan(checkoutPlan);
+                      return;
+                    }
+
+                    setUnlockModalPlan(checkoutPlan);
                   }
                 }}
                 aria-label={`Elegir ${plan.name} ${billingCycleCopy[billingCycle].label.toLowerCase()}`}
@@ -839,7 +888,7 @@ const PricingSection = () => {
       </div>
       <FreeCatalogLoginModal
         open={Boolean(loginModalPlan)}
-        planName={loginModalPlan ?? undefined}
+        planName={loginModalPlan?.name}
         onAuthenticated={() => {
           setUnlockModalPlan(loginModalPlan);
           setLoginModalPlan(null);
@@ -849,10 +898,15 @@ const PricingSection = () => {
       <FeatureUnlockModal
         open={Boolean(unlockModalPlan)}
         onClose={() => setUnlockModalPlan(null)}
-        title={`Activa ${unlockModalPlan ?? "tu plan"}`}
+        title={`Activa ${unlockModalPlan?.name ?? "tu plan"}`}
         message="Completa el pago para activar el paquete seleccionado y entrar al punto de venta."
         buttonText="Continuar al pago"
         unlockFeature="Catalog"
+        initialPlan={unlockModalPlan ? {
+          amount: unlockModalPlan.amount,
+          plan: unlockModalPlan.plan,
+          label: unlockModalPlan.name,
+        } : undefined}
         onPaymentSuccess={() => navigate(MAIN_SALES_PATH)}
       />
     </section>

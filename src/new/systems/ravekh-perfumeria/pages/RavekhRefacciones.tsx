@@ -1,4 +1,17 @@
 import { useState, useEffect } from "react";
+import { FreeCatalogLoginModal } from "../../main-catalog/components/FreeCatalogLoginModal";
+import { FeatureUnlockModal } from "../../pos/shared/ui/FeatureUnlockModal";
+import { trackMetaEvent } from "../../../../../scripts/metaPixel";
+import {
+  billingCycleCopy,
+  buildCatalogCheckoutPlan,
+  catalogPlans,
+  FREE_CATALOG_PLAN_NAME,
+  hasStoredPosSession,
+  LOGIN_POS_PATH,
+  type BillingCycle,
+  type CatalogCheckoutPlan,
+} from "./catalogPricingShared";
 
 /* ─── tokens ─────────────────────────────────────────────── */
 const C = {
@@ -441,133 +454,24 @@ function Social() {
 
 /* ─── PLANES ───────────────────────────────────────────────── */
 function Pricing() {
-  const plans = [
-    {
-      name:"Básico",
-      tagline:"Para empezar a ordenar tu catálogo",
-      price:"$XXX",
-      period:"/mes",
-      features:[
-        "Catálogo digital con link único",
-        "Hasta XX productos",
-        "Categorías básicas",
-        "Botón de WhatsApp en cada pieza",
-        "Carga inicial de productos",
-      ],
-      cta:"Comenzar",
-      highlight:false,
-    },
-    {
-      name:"Pro",
-      tagline:"Para refaccionarias con más volumen",
-      price:"$XXX",
-      period:"/mes",
-      features:[
-        "Todo lo del plan Básico",
-        "Productos ilimitados",
-        "Búsqueda por número de parte",
-        "Variantes y aplicaciones",
-        "Productos destacados",
-        "Acompañamiento incluido",
-      ],
-      cta:"Comenzar Pro",
-      highlight:true,
-    },
-    {
-      name:"POS + Catálogo",
-      tagline:"Catálogo + control de inventario",
-      price:"$XXX",
-      period:"/mes",
-      features:[
-        "Todo lo del plan Pro",
-        "Control de ventas e inventario",
-        "Registro de pedidos",
-        "Reportes básicos",
-        "Soporte dedicado",
-      ],
-      cta:"Hablar con ventas",
-      highlight:false,
-    },
-  ];
+  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
+  const [loginModalPlan, setLoginModalPlan] = useState<CatalogCheckoutPlan | null>(null);
+  const [unlockModalPlan, setUnlockModalPlan] = useState<CatalogCheckoutPlan | null>(null);
+  const activeBilling = billingCycleCopy[billingCycle];
+
   return (
     <section id="planes" style={{ background:C.bg, padding:"100px 64px" }}>
-      <div style={{ maxWidth:1080, margin:"0 auto" }}>
-        <div style={{ marginBottom:64 }}>
-          <Label orange>Planes</Label>
-          <h2 style={{
-            fontFamily:"Inter, sans-serif", fontWeight:900,
-            fontSize:"clamp(30px, 3.5vw, 52px)",
-            color:C.ink, lineHeight:1, margin:"0 0 12px",
-            textTransform:"uppercase", letterSpacing:-2,
-          }}>
-            EMPIEZA HOY.<br/>
-            <span style={{ color:C.orange }}>SIN COMPROMISOS.</span>
-          </h2>
-          <p style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:C.muted, margin:0 }}>Sin contratos largos. Cancela cuando quieras.</p>
-        </div>
-        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))", gap:0, border:`2px solid ${C.ink}` }}>
-          {plans.map((p,i)=>(
-            <div key={p.name} style={{
-              padding:"40px 32px",
-              background: p.highlight ? C.ink : C.bg,
-              borderRight: i < 2 ? `1px solid ${p.highlight ? C.borderDk : C.border}` : "none",
-              display:"flex", flexDirection:"column",
-              position:"relative",
-            }}>
-              {p.highlight && (
-                <div style={{ position:"absolute", top:0, left:0, right:0, height:4, background:C.orange }} />
-              )}
-              <span style={{
-                fontFamily:"Inter, sans-serif", fontSize:9, fontWeight:800,
-                letterSpacing:4, textTransform:"uppercase",
-                color: p.highlight ? C.orange : C.muted,
-                display:"block", marginBottom:8,
-              }}>{p.name}</span>
-              <h3 style={{
-                fontFamily:"Inter, sans-serif", fontSize:15, fontWeight:700,
-                color: p.highlight ? C.white : C.ink,
-                margin:"0 0 24px", textTransform:"uppercase", letterSpacing:.5, lineHeight:1.3,
-              }}>{p.tagline}</h3>
-              <div style={{ display:"flex", alignItems:"baseline", gap:4, margin:"0 0 28px" }}>
-                <span style={{ fontFamily:"Inter, sans-serif", fontSize:48, fontWeight:900, color: p.highlight ? C.orange : C.ink, letterSpacing:-2 }}>{p.price}</span>
-                <span style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:C.muted }}>{p.period}</span>
-              </div>
-              <div style={{ height:2, background: p.highlight ? C.borderDk : C.border, marginBottom:24 }} />
-              <ul style={{ margin:"0 0 32px", padding:0, listStyle:"none", display:"flex", flexDirection:"column", gap:12, flex:1 }}>
-                {p.features.map(f=>(
-                  <li key={f} style={{ display:"flex", gap:10, alignItems:"flex-start" }}>
-                    <span style={{ color:C.orange, fontSize:10, fontWeight:900, marginTop:3, flexShrink:0 }}>►</span>
-                    <span style={{ fontFamily:"Inter, sans-serif", fontSize:13, color: p.highlight ? "rgba(248,248,246,.6)" : C.muted, lineHeight:1.5 }}>{f}</span>
-                  </li>
-                ))}
-              </ul>
-              <a href="#" style={{
-                display:"block", textAlign:"center",
-                padding:"14px 0",
-                background: p.highlight ? C.orange : "transparent",
-                border: p.highlight ? "none" : `2px solid ${C.ink}`,
-                color: p.highlight ? C.white : C.ink,
-                fontFamily:"Inter, sans-serif", fontSize:11, fontWeight:800,
-                letterSpacing:3, textTransform:"uppercase", textDecoration:"none",
-                transition:"all .15s",
-              }}
-              onMouseEnter={e=>{
-                if(p.highlight){ e.currentTarget.style.background=C.orangeLt; }
-                else { e.currentTarget.style.background=C.ink; e.currentTarget.style.color=C.white; }
-              }}
-              onMouseLeave={e=>{
-                if(p.highlight){ e.currentTarget.style.background=C.orange; }
-                else { e.currentTarget.style.background="transparent"; e.currentTarget.style.color=C.ink; }
-              }}
-              >{p.cta}</a>
-            </div>
-          ))}
-        </div>
+      <div style={{ maxWidth:1180, margin:"0 auto" }}>
+        <div style={{ marginBottom:42 }}><Label orange>Planes</Label><h2 style={{ fontFamily:"Inter, sans-serif", fontWeight:900, fontSize:"clamp(30px, 3.5vw, 52px)", color:C.ink, lineHeight:1, margin:"0 0 12px", textTransform:"uppercase", letterSpacing:-2 }}>EMPIEZA HOY.<br/><span style={{ color:C.orange }}>SIN COMPROMISOS.</span></h2><p style={{ fontFamily:"Inter, sans-serif", fontSize:14, color:C.muted, margin:0 }}>Sin contratos largos. Cancela cuando quieras.</p></div>
+        <div role="group" aria-label="Seleccionar forma de pago" style={{ display:"flex", gap:8, marginBottom:12 }}>{(Object.keys(billingCycleCopy) as BillingCycle[]).map(cycle=><button key={cycle} type="button" aria-pressed={billingCycle===cycle} onClick={()=>setBillingCycle(cycle)} style={{ padding:"10px 22px", border:`2px solid ${billingCycle===cycle ? C.orange : C.ink}`, background:billingCycle===cycle ? C.orange : "transparent", color:billingCycle===cycle ? C.white : C.ink, fontFamily:"Inter, sans-serif", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", cursor:"pointer" }}>{billingCycleCopy[cycle].label}</button>)}</div>
+        <p style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:C.muted, margin:"0 0 36px" }}>{activeBilling.helper}</p>
+        <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(250px, 1fr))", gap:0, border:`2px solid ${C.ink}` }}>{catalogPlans.map((p,i)=><div key={p.name} style={{ padding:"40px 28px", background:p.recommended ? C.ink : C.bg, borderRight:i < catalogPlans.length-1 ? `1px solid ${p.recommended ? C.borderDk : C.border}` : "none", display:"flex", flexDirection:"column", position:"relative" }}>{p.recommended && <div style={{ position:"absolute", top:0, left:0, right:0, height:4, background:C.orange }} />}<span style={{ fontFamily:"Inter, sans-serif", fontSize:9, fontWeight:800, letterSpacing:4, textTransform:"uppercase", color:p.recommended ? C.orange : C.muted, display:"block", marginBottom:8 }}>{p.name}</span><h3 style={{ fontFamily:"Inter, sans-serif", fontSize:15, fontWeight:700, color:p.recommended ? C.white : C.ink, margin:"0 0 24px", textTransform:"uppercase", letterSpacing:.5, lineHeight:1.3 }}>{p.limit}</h3><div style={{ display:"flex", alignItems:"baseline", gap:4, margin:"0 0 8px" }}><span style={{ fontFamily:"Inter, sans-serif", fontSize:42, fontWeight:900, color:p.recommended ? C.orange : C.ink, letterSpacing:-2 }}>{p.prices[billingCycle]}</span><span style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:C.muted }}>{p.periodLabel[billingCycle]}</span></div>{billingCycle==="annual" && p.annualNote && <p style={{ fontFamily:"Inter, sans-serif", fontSize:12, color:C.orange, margin:"0 0 18px" }}>{p.annualNote}</p>}<div style={{ height:2, background:p.recommended ? C.borderDk : C.border, marginBottom:24 }} /><ul style={{ margin:"0 0 32px", padding:0, listStyle:"none", display:"flex", flexDirection:"column", gap:12, flex:1 }}>{p.benefits.map(f=><li key={f} style={{ display:"flex", gap:10, alignItems:"flex-start" }}><span style={{ color:C.orange, fontSize:10, fontWeight:900, marginTop:3, flexShrink:0 }}>►</span><span style={{ fontFamily:"Inter, sans-serif", fontSize:13, color:p.recommended ? "rgba(248,248,246,.6)" : C.muted, lineHeight:1.5 }}>{f}</span></li>)}</ul><a href={p.name===FREE_CATALOG_PLAN_NAME ? LOGIN_POS_PATH : "#planes"} onClick={(event)=>{ trackMetaEvent("Contact", { content_name:p.name, plan_price:p.prices[billingCycle] }); if(p.name!==FREE_CATALOG_PLAN_NAME){ event.preventDefault(); const checkoutPlan=buildCatalogCheckoutPlan(p,billingCycle); if(!checkoutPlan)return; if(!hasStoredPosSession()){ setLoginModalPlan(checkoutPlan); return; } setUnlockModalPlan(checkoutPlan); } }} style={{ display:"block", textAlign:"center", padding:"14px 0", background:p.recommended ? C.orange : "transparent", border:p.recommended ? "none" : `2px solid ${C.ink}`, color:p.recommended ? C.white : C.ink, fontFamily:"Inter, sans-serif", fontSize:11, fontWeight:800, letterSpacing:3, textTransform:"uppercase", textDecoration:"none", transition:"all .15s" }}>Elegir plan</a></div>)}</div>
       </div>
+      <FreeCatalogLoginModal open={Boolean(loginModalPlan)} planName={loginModalPlan?.name} onAuthenticated={() => { setUnlockModalPlan(loginModalPlan); setLoginModalPlan(null); }} onClose={()=>setLoginModalPlan(null)} />
+      <FeatureUnlockModal open={Boolean(unlockModalPlan)} onClose={()=>setUnlockModalPlan(null)} title={`Activa ${unlockModalPlan?.name ?? "tu plan"}`} message="Completa el pago para activar el paquete seleccionado y entrar al punto de venta." buttonText="Continuar al pago" unlockFeature="Catalog" initialPlan={unlockModalPlan ? { amount:unlockModalPlan.amount, plan:unlockModalPlan.plan, label:unlockModalPlan.name } : undefined} onPaymentSuccess={() => { window.location.href = "/MainSales"; }} />
     </section>
   );
 }
-
 /* ─── FAQ ──────────────────────────────────────────────────── */
 function FAQ() {
   const [open, setOpen] = useState(null);
