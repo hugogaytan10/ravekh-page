@@ -1645,7 +1645,6 @@ export const ProductsV2PosPage = () => {
   };
 
   const openImportModal = () => {
-    if (blockFreeProductCreation()) return;
     setImportResult(null);
     setImportError(null);
     setIsImportModalOpen(true);
@@ -1681,12 +1680,6 @@ export const ProductsV2PosPage = () => {
       return;
     }
 
-    if (blockFreeProductCreation()) {
-      setImportError(
-        "Tu plan gratuito permite hasta 20 productos. Actualiza a START para importar más productos.",
-      );
-      return;
-    }
 
     setImporting(true);
     setImportError(null);
@@ -1717,12 +1710,6 @@ export const ProductsV2PosPage = () => {
       return;
     }
 
-    if (blockFreeProductCreation()) {
-      setImportError(
-        "Tu plan gratuito permite hasta 20 productos. Actualiza a START para importar más productos.",
-      );
-      return;
-    }
 
     setImporting(true);
     setImportError(null);

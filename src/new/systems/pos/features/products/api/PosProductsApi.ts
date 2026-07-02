@@ -128,6 +128,28 @@ type CategoryResponse = {
   color?: string;
 };
 
+type ImportLogRegistrationResponse = {
+  message?: string;
+  error?: string;
+  code?: string;
+  allowed?: boolean;
+  businessId?: number;
+  plan?: string;
+  type?: "Importacion";
+  currentImports?: number;
+  limit?: number | null;
+};
+
+export class ProductImportPlanLimitError extends Error {
+  constructor(
+    message: string,
+    public readonly payload?: ImportLogRegistrationResponse,
+  ) {
+    super(message);
+    this.name = "ProductImportPlanLimitError";
+  }
+}
+
 export class PosProductsApi implements IProductsRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
@@ -439,6 +461,7 @@ export class PosProductsApi implements IProductsRepository {
       throw new Error("El archivo no contiene registros válidos para importar.");
     }
 
+    await this.registerImportLogAttempt(businessId, token);
     await this.ensureImportCategories(businessId, rows, token);
 
     const response = await this.httpClient.request<{ imported?: number; message?: string; total?: number; created?: number; updated?: number; errors?: string[] }>({
@@ -465,6 +488,8 @@ export class PosProductsApi implements IProductsRepository {
       throw new Error("Selecciona un archivo .zip con productos.csv e imágenes.");
     }
 
+    await this.registerImportLogAttempt(businessId, token);
+
     const formData = new FormData();
     formData.append("file", file);
 
@@ -484,6 +509,74 @@ export class PosProductsApi implements IProductsRepository {
       message: response?.message ?? "Importación completada.",
       errors: Array.isArray(response?.errors) ? response.errors : [],
     };
+  }
+
+  private async registerImportLogAttempt(businessId: number, token: string): Promise<ImportLogRegistrationResponse | null> {
+    try {
+      const response = await this.httpClient.request<ImportLogRegistrationResponse | null>({
+        method: "POST",
+        path: "logs/importations",
+        token,
+        body: { Business_Id: businessId },
+      });
+
+      if (response?.allowed === false) {
+        throw this.buildImportLogError(response);
+      }
+
+      return response;
+    } catch (cause) {
+      const payload = this.extractImportLogPayload(cause);
+      if (payload) {
+        throw this.buildImportLogError(payload, cause);
+      }
+
+      throw cause;
+    }
+  }
+
+  private buildImportLogError(payload: ImportLogRegistrationResponse, cause?: unknown): ProductImportPlanLimitError {
+    const fallbackMessage =
+      payload.code === "IMPORT_LOG_PLAN_REQUIRED"
+        ? "Tu plan gratuito no permite importar productos. Actualiza a START para usar importaciones."
+        : payload.code === "IMPORT_LOG_LIMIT_REACHED"
+          ? "Has alcanzado el límite mensual de importaciones de tu plan."
+          : "Tu plan no permite realizar esta importación.";
+
+    const message =
+      payload.message ||
+      payload.error ||
+      (cause instanceof Error ? cause.message : "") ||
+      fallbackMessage;
+
+    return new ProductImportPlanLimitError(message, payload);
+  }
+
+  private extractImportLogPayload(cause: unknown): ImportLogRegistrationResponse | null {
+    if (!cause || typeof cause !== "object") return null;
+
+    const record = cause as {
+      payload?: unknown;
+      data?: unknown;
+      response?: { data?: unknown };
+    };
+
+    const candidates = [record.payload, record.data, record.response?.data];
+
+    for (const candidate of candidates) {
+      if (!candidate || typeof candidate !== "object") continue;
+
+      const payload = candidate as ImportLogRegistrationResponse;
+      if (
+        payload.code === "IMPORT_LOG_PLAN_REQUIRED" ||
+        payload.code === "IMPORT_LOG_LIMIT_REACHED" ||
+        payload.allowed === false
+      ) {
+        return payload;
+      }
+    }
+
+    return null;
   }
 
   private parseCsvRows(csvText: string): Record<string, string>[] {
