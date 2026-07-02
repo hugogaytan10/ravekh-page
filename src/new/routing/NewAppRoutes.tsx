@@ -14,6 +14,9 @@ import { MainCatalogPage } from "../systems/main-catalog/pages/MainCatalogPage";
 import { RavekhPerfumeriaPage } from "../systems/ravekh-perfumeria/pages/RavekhPerfumeriaPage";
 import { RavekhBoutiquePage } from "../systems/ravekh-perfumeria/pages/RavekhBoutique";
 import { RavekhRefaccionesPage } from "../systems/ravekh-perfumeria/pages/RavekhRefacciones";
+import { RavekhAbarrotesPage } from "../systems/ravekh-perfumeria/pages/ravekhAbarrotesPage";
+import { RavekhAccesoriosPage } from "../systems/ravekh-perfumeria/pages/RavekhAccesoriosPage";
+import { RavekhComidaPage } from "../systems/ravekh-perfumeria/pages/RavekhComidaPage";
 const LegacyCatalogRedirect = () => {
   const { idBusiness } = useParams<{ idBusiness: string }>();
   return <Navigate to={`/v2/catalogo/${idBusiness ?? ""}`} replace />;
@@ -176,7 +179,9 @@ export const NewAppRoutes = () => {
         <Route path="/ravekhBoutique" element={<RavekhBoutiquePage />} />
         <Route path="/RavekhPerfumeria" element={<RavekhPerfumeriaPage />} />
         <Route path="/RavekhRefacciones" element={<RavekhRefaccionesPage />} />
-
+        <Route path="/RavekhAbarrotes" element={<RavekhAbarrotesPage />} />
+        <Route path="/RavekhAccesorios" element={<RavekhAccesoriosPage />} />
+        <Route path="/RavekhComida" element={<RavekhComidaPage />} />
       {/* Catálogo v2 moderno y desacoplado */}
         <Route path="/v2/catalogo/:Id" element={<CatalogStorefrontPage />} />
         <Route path="/catalogo/producto/:productId/:phone" element={<CatalogProductDetailPage />} />
