@@ -271,6 +271,17 @@ const normalizeProductsPage = (
   };
 };
 
+export const CATALOG_VISIT_LIMIT_REACHED_CODE = "CATALOG_VISIT_LIMIT_REACHED";
+
+export class CatalogVisitLimitReachedError extends Error {
+  code = CATALOG_VISIT_LIMIT_REACHED_CODE;
+
+  constructor(message = "Este catálogo no esta disponible, por favor contacta al dueño del negocio") {
+    super(message);
+    this.name = "CatalogVisitLimitReachedError";
+  }
+}
+
 export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
   constructor(private readonly baseUrl: string) {}
 
@@ -358,8 +369,22 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ Business_Id: normalizedBusinessId }),
       });
+
+      const payload = await response.json().catch(() => null) as {
+        message?: string;
+        code?: string;
+      } | null;
+
+      if (response.status === 403 && payload?.code === CATALOG_VISIT_LIMIT_REACHED_CODE) {
+        throw new CatalogVisitLimitReachedError(payload.message);
+      }
+
       return response.ok;
-    } catch {
+    } catch (cause) {
+      if (cause instanceof CatalogVisitLimitReachedError) {
+        throw cause;
+      }
+
       return false;
     }
   }

@@ -3,7 +3,13 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { FiMessageCircle, FiSearch, FiShoppingCart, FiSliders, FiX } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
-import { CatalogStorefrontApi, StorefrontCategory, StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
+import {
+  CatalogStorefrontApi,
+  CatalogVisitLimitReachedError,
+  StorefrontCategory,
+  StorefrontProductExtra,
+  StorefrontVariant,
+} from "../api/CatalogStorefrontApi";
 import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExperiencePage";
 import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontBusiness, StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
@@ -114,6 +120,7 @@ export const CatalogStorefrontPage = () => {
   const [colorOptions, setColorOptions] = useState<StorefrontProductExtra[]>([]);
   const [sizeOptions, setSizeOptions] = useState<StorefrontProductExtra[]>([]);
   const [cartReady, setCartReady] = useState(false);
+  const [visitLimitReached, setVisitLimitReached] = useState(false);
   const businessContextRequestRef = useRef(0);
   const catalogSearchRequestRef = useRef(0);
   const catalogTitle = store?.name ? `${store.name} | Catálogo digital` : "Catálogo digital | Ravekh";
@@ -129,8 +136,11 @@ export const CatalogStorefrontPage = () => {
     return new CatalogStorefrontExperiencePage(service);
   }, []);
   const catalogUnavailable = useMemo(
-    () => isOfflinePlan(store?.plan) || isCatalogFeatureDisabled(store?.catalogFeature),
-    [store?.catalogFeature, store?.plan],
+    () =>
+      visitLimitReached ||
+      isOfflinePlan(store?.plan) ||
+      isCatalogFeatureDisabled(store?.catalogFeature),
+    [store?.catalogFeature, store?.plan, visitLimitReached],
   );
   const whatsappUrl = useMemo(() => buildWhatsAppUrl(store?.phone), [store?.phone]);
 
@@ -141,6 +151,7 @@ export const CatalogStorefrontPage = () => {
     setPriceMin(minBound);
     setPriceMax(DEFAULT_PRICE_MAX_BOUND);
     setPriceCeiling(DEFAULT_PRICE_MAX_BOUND);
+    setVisitLimitReached(false);
   }, [businessId]);
 
   useEffect(() => {
@@ -155,7 +166,25 @@ export const CatalogStorefrontPage = () => {
 
   useEffect(() => {
     if (!businessId) return;
-    void pageLogic.registerVisit(businessId, "always");
+
+    let cancelled = false;
+
+    pageLogic.registerVisit(businessId, "always").catch((cause) => {
+      if (cancelled) return;
+
+      if (cause instanceof CatalogVisitLimitReachedError) {
+        setVisitLimitReached(true);
+        setProducts([]);
+        setGlobalSearchProducts([]);
+        setTotalPages(1);
+        setError(null);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [businessId, pageLogic]);
 
   useEffect(() => {
