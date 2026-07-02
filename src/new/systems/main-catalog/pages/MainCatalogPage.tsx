@@ -350,6 +350,7 @@ const businessTypes: CardItem[] = [
     icon: <UtensilsIcon />,
     title: "Comida",
     text: "Comparte menús, combos y productos por temporada.",
+    href: "/RavekhComida",
   },
   {
     icon: <BalloonIcon />,
@@ -360,11 +361,13 @@ const businessTypes: CardItem[] = [
     icon: <GlassesIcon />,
     title: "Accesorios",
     text: "Haz que tu cliente explore modelos sin pedir foto por foto.",
+    href: "/RavekhAccesorios",
   },
   {
     icon: <CartIcon />,
     title: "Abarrotes",
     text: "Ordena productos de alta rotación para pedidos más rápidos.",
+    href: "/RavekhAbarrotes",
   },
   {
     icon: <GiftIcon />,
