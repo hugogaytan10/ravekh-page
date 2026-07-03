@@ -129,7 +129,7 @@ export const ProductImportModal = ({
               <p>Name, Barcode, Category, Subcategory, Color, Price, CostPerItem, Stock, Description, Volume, ForSale, ShowInStore, Available, Image, PromotionPrice, ExpDate, MinStock, OptStock</p>
               <ul>
                 <li>Name es obligatorio.</li>
-                <li>Barcode es opcional, pero si ya existe para el mismo negocio, la fila dará error.</li>
+                <li>Barcode es opcional; si ya existe para el mismo negocio, se actualizará el producto existente.</li>
                 <li>Category se crea automáticamente si no existe.</li>
                 <li>Subcategory solo se usa cuando también existe Category.</li>
                 <li>El cliente solo sube el ZIP; el backend sube las imágenes a Cloudinary automáticamente.</li>
