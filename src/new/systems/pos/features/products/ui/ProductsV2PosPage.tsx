@@ -785,7 +785,6 @@ export const ProductsV2PosPage = () => {
     setter((current) => current.filter((_, index) => index !== indexToRemove));
   };
 
-
   const addVariantDraft = () => {
     if (!canAddProductVariants()) return;
     setVariants((current) => [...current, createVariantDraft()]);
@@ -800,7 +799,6 @@ export const ProductsV2PosPage = () => {
     if (!canAddProductVariants()) return;
     pushUniqueTag(colorDraft, setColors, setColorDraft);
   };
-
 
   const handleWholesalePriceChange = (value: string) => {
     if (!canEditWholesalePrices()) return;
@@ -1680,7 +1678,6 @@ export const ProductsV2PosPage = () => {
       return;
     }
 
-
     setImporting(true);
     setImportError(null);
     setImportResult(null);
@@ -1709,7 +1706,6 @@ export const ProductsV2PosPage = () => {
       setImportError("Conecta tu sesión para importar productos.");
       return;
     }
-
 
     setImporting(true);
     setImportError(null);
@@ -2597,10 +2593,7 @@ export const ProductsV2PosPage = () => {
                 >
                   <div className="pos-v2-products__variants-head">
                     <h4>Variantes</h4>
-                    <button
-                      type="button"
-                      onClick={addVariantDraft}
-                    >
+                    <button type="button" onClick={addVariantDraft}>
                       + Agregar variante
                     </button>
                   </div>
@@ -2668,19 +2661,23 @@ export const ProductsV2PosPage = () => {
                         ) : null}
                       </div>
                       <div className="pos-v2-products__variant-grid">
-                        <input
-                          value={variant.description}
-                          onChange={(event) =>
-                            updateVariant(
-                              variant.key,
-                              "description",
-                              event.target.value,
-                            )
-                          }
-                          placeholder="Descripción"
-                          aria-label={`Nombre de variante ${index + 1}`}
-                        />
-                        <label className="pos-v2-products__variant-color-field">
+                        <label className="pos-v2-products__variant-field">
+                          <span>Descripción</span>
+                          <input
+                            value={variant.description}
+                            onChange={(event) =>
+                              updateVariant(
+                                variant.key,
+                                "description",
+                                event.target.value,
+                              )
+                            }
+                            placeholder="Ej. Talla chica / Azul / 500ml"
+                            aria-label={`Nombre de variante ${index + 1}`}
+                          />
+                        </label>
+
+                        <label className="pos-v2-products__variant-field">
                           <span>Color de variante</span>
                           <select
                             value={variant.color}
@@ -2711,167 +2708,198 @@ export const ProductsV2PosPage = () => {
                             ) : null}
                           </select>
                         </label>
-                        <input
-                          value={variant.barcode}
-                          onChange={(event) =>
-                            updateVariant(
-                              variant.key,
-                              "barcode",
-                              event.target.value,
-                            )
-                          }
-                          placeholder="Código de barras"
-                          aria-label={`Código de barras de variante ${index + 1}`}
-                        />
-                        <input
-                          value={variant.price}
-                          onChange={(event) =>
-                            updateVariant(
-                              variant.key,
-                              "price",
-                              event.target.value,
-                            )
-                          }
-                          placeholder="Precio"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          inputMode="decimal"
-                          aria-label={`Precio de variante ${index + 1}`}
-                        />
-                        <input
-                          value={variant.promotionPrice}
-                          onChange={(event) =>
-                            updateVariant(
-                              variant.key,
-                              "promotionPrice",
-                              event.target.value,
-                            )
-                          }
-                          placeholder="Promoción"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          inputMode="decimal"
-                          aria-label={`Promoción de variante ${index + 1}`}
-                        />
-                        <input
-                          value={variant.wholesalePrice}
-                          onFocus={() => {
-                            if (isFreePlan) openWholesaleUpgradeModal();
-                          }}
-                          onChange={(event) =>
-                            handleVariantWholesaleChange(
-                              variant.key,
-                              "wholesalePrice",
-                              event.target.value,
-                            )
-                          }
-                          placeholder="Precio por mayoreo"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          inputMode="decimal"
-                          aria-label={`Precio por mayoreo de variante ${index + 1}`}
-                          readOnly={isFreePlan}
-                        />
-                        <input
-                          value={variant.wholesaleMinQuantity}
-                          onFocus={() => {
-                            if (isFreePlan) openWholesaleUpgradeModal();
-                          }}
-                          onChange={(event) =>
-                            handleVariantWholesaleChange(
-                              variant.key,
-                              "wholesaleMinQuantity",
-                              event.target.value,
-                            )
-                          }
-                          placeholder="Cantidad mínima para mayoreo"
-                          type="number"
-                          min="2"
-                          step="1"
-                          inputMode="numeric"
-                          aria-label={`Cantidad mínima para mayoreo de variante ${index + 1}`}
-                          readOnly={isFreePlan}
-                        />
-                        <input
-                          value={variant.costPerItem}
-                          onChange={(event) =>
-                            updateVariant(
-                              variant.key,
-                              "costPerItem",
-                              event.target.value,
-                            )
-                          }
-                          placeholder="Costo"
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          inputMode="decimal"
-                          aria-label={`Costo de variante ${index + 1}`}
-                        />
-                        <input
-                          value={variant.stock}
-                          onChange={(event) =>
-                            updateVariant(
-                              variant.key,
-                              "stock",
-                              event.target.value,
-                            )
-                          }
-                          placeholder="Stock"
-                          type="number"
-                          min="0"
-                          step="1"
-                          inputMode="numeric"
-                          aria-label={`Stock de variante ${index + 1}`}
-                        />
-                        <input
-                          value={variant.minStock}
-                          onChange={(event) =>
-                            updateVariant(
-                              variant.key,
-                              "minStock",
-                              event.target.value,
-                            )
-                          }
-                          placeholder="Stock mínimo"
-                          type="number"
-                          min="0"
-                          step="1"
-                          inputMode="numeric"
-                          aria-label={`Stock mínimo de variante ${index + 1}`}
-                        />
-                        <input
-                          value={variant.optStock}
-                          onChange={(event) =>
-                            updateVariant(
-                              variant.key,
-                              "optStock",
-                              event.target.value,
-                            )
-                          }
-                          placeholder="Stock óptimo"
-                          type="number"
-                          min="0"
-                          step="1"
-                          inputMode="numeric"
-                          aria-label={`Stock óptimo de variante ${index + 1}`}
-                        />
-                        <input
-                          value={variant.expDate}
-                          onChange={(event) =>
-                            updateVariant(
-                              variant.key,
-                              "expDate",
-                              event.target.value,
-                            )
-                          }
-                          placeholder="Fecha de caducidad"
-                          type="date"
-                          aria-label={`Fecha de caducidad de variante ${index + 1}`}
-                        />
+
+                        <label className="pos-v2-products__variant-field">
+                          <span>Código de barras</span>
+                          <input
+                            value={variant.barcode}
+                            onChange={(event) =>
+                              updateVariant(
+                                variant.key,
+                                "barcode",
+                                event.target.value,
+                              )
+                            }
+                            placeholder="Opcional"
+                            aria-label={`Código de barras de variante ${index + 1}`}
+                          />
+                        </label>
+
+                        <label className="pos-v2-products__variant-field">
+                          <span>Precio</span>
+                          <input
+                            value={variant.price}
+                            onChange={(event) =>
+                              updateVariant(
+                                variant.key,
+                                "price",
+                                event.target.value,
+                              )
+                            }
+                            placeholder="0.00"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            inputMode="decimal"
+                            aria-label={`Precio de variante ${index + 1}`}
+                          />
+                        </label>
+
+                        <label className="pos-v2-products__variant-field">
+                          <span>Precio de promoción</span>
+                          <input
+                            value={variant.promotionPrice}
+                            onChange={(event) =>
+                              updateVariant(
+                                variant.key,
+                                "promotionPrice",
+                                event.target.value,
+                              )
+                            }
+                            placeholder="0.00"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            inputMode="decimal"
+                            aria-label={`Promoción de variante ${index + 1}`}
+                          />
+                        </label>
+
+                        <label className="pos-v2-products__variant-field">
+                          <span>Precio por mayoreo</span>
+                          <input
+                            value={variant.wholesalePrice}
+                            onChange={(event) =>
+                              updateVariant(
+                                variant.key,
+                                "wholesalePrice",
+                                event.target.value,
+                              )
+                            }
+                            placeholder="0.00"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            inputMode="decimal"
+                            aria-label={`Precio por mayoreo de variante ${index + 1}`}
+                          />
+                        </label>
+
+                        <label className="pos-v2-products__variant-field">
+                          <span>Cantidad mínima para mayoreo</span>
+                          <input
+                            value={variant.wholesaleMinQuantity}
+                            onChange={(event) =>
+                              updateVariant(
+                                variant.key,
+                                "wholesaleMinQuantity",
+                                event.target.value,
+                              )
+                            }
+                            placeholder="Ej. 3"
+                            type="number"
+                            min="2"
+                            step="1"
+                            inputMode="numeric"
+                            aria-label={`Cantidad mínima para mayoreo de variante ${index + 1}`}
+                          />
+                        </label>
+
+                        <label className="pos-v2-products__variant-field">
+                          <span>Costo</span>
+                          <input
+                            value={variant.costPerItem}
+                            onChange={(event) =>
+                              updateVariant(
+                                variant.key,
+                                "costPerItem",
+                                event.target.value,
+                              )
+                            }
+                            placeholder="0.00"
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            inputMode="decimal"
+                            aria-label={`Costo de variante ${index + 1}`}
+                          />
+                        </label>
+
+                        <label className="pos-v2-products__variant-field">
+                          <span>Stock</span>
+                          <input
+                            value={variant.stock}
+                            onChange={(event) =>
+                              updateVariant(
+                                variant.key,
+                                "stock",
+                                event.target.value,
+                              )
+                            }
+                            placeholder="0"
+                            type="number"
+                            min="0"
+                            step="1"
+                            inputMode="numeric"
+                            aria-label={`Stock de variante ${index + 1}`}
+                          />
+                        </label>
+
+                        <label className="pos-v2-products__variant-field">
+                          <span>Stock mínimo</span>
+                          <input
+                            value={variant.minStock}
+                            onChange={(event) =>
+                              updateVariant(
+                                variant.key,
+                                "minStock",
+                                event.target.value,
+                              )
+                            }
+                            placeholder="0"
+                            type="number"
+                            min="0"
+                            step="1"
+                            inputMode="numeric"
+                            aria-label={`Stock mínimo de variante ${index + 1}`}
+                          />
+                        </label>
+
+                        <label className="pos-v2-products__variant-field">
+                          <span>Stock óptimo</span>
+                          <input
+                            value={variant.optStock}
+                            onChange={(event) =>
+                              updateVariant(
+                                variant.key,
+                                "optStock",
+                                event.target.value,
+                              )
+                            }
+                            placeholder="0"
+                            type="number"
+                            min="0"
+                            step="1"
+                            inputMode="numeric"
+                            aria-label={`Stock óptimo de variante ${index + 1}`}
+                          />
+                        </label>
+
+                        <label className="pos-v2-products__variant-field">
+                          <span>Fecha de caducidad</span>
+                          <input
+                            value={variant.expDate}
+                            onChange={(event) =>
+                              updateVariant(
+                                variant.key,
+                                "expDate",
+                                event.target.value,
+                              )
+                            }
+                            type="date"
+                            aria-label={`Fecha de caducidad de variante ${index + 1}`}
+                          />
+                        </label>
                       </div>
                     </article>
                   ))}
@@ -2901,10 +2929,7 @@ export const ProductsV2PosPage = () => {
                           placeholder="Ej. S"
                           aria-label="Agregar talla"
                         />
-                        <button
-                          type="button"
-                          onClick={addSizeTag}
-                        >
+                        <button type="button" onClick={addSizeTag}>
                           Agregar
                         </button>
                       </div>
@@ -2952,10 +2977,7 @@ export const ProductsV2PosPage = () => {
                           placeholder="Ej. Azul"
                           aria-label="Agregar color"
                         />
-                        <button
-                          type="button"
-                          onClick={addColorTag}
-                        >
+                        <button type="button" onClick={addColorTag}>
                           Agregar
                         </button>
                       </div>
