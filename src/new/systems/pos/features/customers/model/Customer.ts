@@ -54,6 +54,10 @@ export interface UpsertCustomerDto2 {
   }
 }
 
+export interface toApiInactivePayload {
+  businessId: number;
+  customerId: number;
+}
 
 export type CustomerSalesPeriod = "DAY" | "MONTH" | "YEAR";
 

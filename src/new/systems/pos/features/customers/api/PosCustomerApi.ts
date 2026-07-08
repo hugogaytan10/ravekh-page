@@ -96,8 +96,8 @@ export class PosCustomerApi implements ICustomerRepository {
 
   async delete(customerId: number, token: string): Promise<void> {
     await this.httpClient.request<void>({
-      method: "DELETE",
-      path: `customers/${customerId}`,
+      method: "PUT",
+      path: `customers/inactive/${customerId}`,
       token,
     });
   }
