@@ -199,7 +199,11 @@ export const PosV2CustomersPage = () => {
     if (!token || !deleteCandidate) return;
 
     try {
-      await page.deleteCustomer(deleteCandidate.id, token);
+      await page.deleteCustomer(
+        deleteCandidate.id,
+        { businessId, customerId: deleteCandidate.id },
+        token,
+      );
       setDeleteCandidate(null);
       await loadCustomers();
     } catch (cause) {

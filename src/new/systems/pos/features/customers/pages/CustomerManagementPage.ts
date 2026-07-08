@@ -1,4 +1,4 @@
-import { CustomerSalesPeriod, CustomerSex, UpsertCustomerDto, UpsertCustomerDto2 } from "../model/Customer";
+import { CustomerSalesPeriod, CustomerSex, UpsertCustomerDto2, toApiInactivePayload } from "../model/Customer";
 import { CustomerService } from "../services/CustomerService";
 
 type CustomerCardVm = {
@@ -72,7 +72,7 @@ export class CustomerManagementPage {
 
   }
 
-  async deleteCustomer(customerId: number, token: string): Promise<void> {
-    await this.service.removeCustomer(customerId, token);
+  async deleteCustomer(customerId: number, payload: toApiInactivePayload, token: string): Promise<void> {
+    await this.service.removeCustomer(customerId, payload, token);
   }
 }

@@ -1,6 +1,6 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { ICustomerRepository } from "../interface/ICustomerRepository";
-import { Customer, CustomerSale, CustomerSalesPeriod, CustomerSex, UpsertCustomerDto, UpsertCustomerDto2 } from "../model/Customer";
+import { Customer, CustomerSale, CustomerSalesPeriod, CustomerSex, UpsertCustomerDto2, toApiInactivePayload } from "../model/Customer";
 
 
 
@@ -94,11 +94,12 @@ export class PosCustomerApi implements ICustomerRepository {
     return this.toDomain(response);
   }
 
-  async delete(customerId: number, token: string): Promise<void> {
+  async delete(customerId: number, payload: toApiInactivePayload, token: string): Promise<void> {
     await this.httpClient.request<void>({
       method: "PUT",
       path: `customers/inactive/${customerId}`,
       token,
+      body: this.toApiInactivePayload(payload),
     });
   }
 
@@ -115,16 +116,11 @@ export class PosCustomerApi implements ICustomerRepository {
     return rows.map((row) => this.toSale(row));
   }
 
-  private toApiPayload(payload: UpsertCustomerDto): Record<string, unknown> {
+
+  private toApiInactivePayload(payload: toApiInactivePayload): Record<string, unknown> {
     return {
-      Business_Id: payload.businessId,
-      Name: payload.name,
-      PhoneNumber: payload.phoneNumber ?? null,
-      Email: payload.email ?? null,
-      Address: payload.address ?? null,
-      Notes: payload.notes ?? null,
-      CanPayLater: payload.canPayLater ? 1 : 0,
-      Sex: payload.sex ?? "M",
+      businessId: payload.businessId,
+      customerId: payload.customerId,
     };
   }
 

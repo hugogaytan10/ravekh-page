@@ -1,5 +1,5 @@
 import { ICustomerRepository } from "../interface/ICustomerRepository";
-import { Customer, CustomerSale, CustomerSalesPeriod, UpsertCustomerDto, UpsertCustomerDto2 } from "../model/Customer";
+import { Customer, CustomerSale, CustomerSalesPeriod, UpsertCustomerDto2, toApiInactivePayload } from "../model/Customer";
 
 export class CustomerService {
   constructor(private readonly repository: ICustomerRepository) {}
@@ -34,7 +34,7 @@ export class CustomerService {
     return this.repository.create(payload, token);
   }
 
-  async removeCustomer(customerId: number, token: string): Promise<void> {
-    await this.repository.delete(customerId, token);
+  async removeCustomer(customerId: number, payload: toApiInactivePayload, token: string): Promise<void> {
+    await this.repository.delete(customerId, payload, token);
   }
 }
