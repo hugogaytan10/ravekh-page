@@ -3,6 +3,15 @@ import { FiPlus, FiMinus, FiX } from "react-icons/fi";
 import { StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
 import { formatCatalogPrice, getCatalogPriceValue, getEffectiveCatalogPriceForQuantity } from "./catalogPrice";
 
+const normalizeOptionText = (value?: string | null) => value?.trim().toLowerCase() ?? "";
+
+const variantMatchesColor = (variant: StorefrontVariant, color: StorefrontProductExtra | null) => {
+  const variantColor = normalizeOptionText(variant.color);
+  if (!variantColor) return true;
+  if (!color) return false;
+  return variantColor === normalizeOptionText(color.description);
+};
+
 type Props = {
   open: boolean;
   productName: string;
@@ -47,11 +56,12 @@ export const VariantSelectionModalV2 = ({
     setQuantity(1);
   }, [open]);
 
-  const selectedVariant = useMemo(
-    () => variants.find((variant) => variant.id === selectedVariantId) || null,
-    [selectedVariantId, variants],
-  );
   const selectedColor = useMemo(() => colors.find((color) => color.id === selectedColorId) || null, [colors, selectedColorId]);
+  const visibleVariants = useMemo(() => variants.filter((variant) => variantMatchesColor(variant, selectedColor)), [selectedColor, variants]);
+  const selectedVariant = useMemo(
+    () => visibleVariants.find((variant) => variant.id === selectedVariantId) || null,
+    [selectedVariantId, visibleVariants],
+  );
   const selectedSize = useMemo(() => sizes.find((size) => size.id === selectedSizeId) || null, [selectedSizeId, sizes]);
 
   const isBaseSelected = selectedVariantId === "base";
@@ -108,12 +118,14 @@ export const VariantSelectionModalV2 = ({
                     ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
                     : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
                     }`}
-                  onClick={() => setSelectedVariantId("base")}
+                  onClick={() => {
+                    setSelectedVariantId("base");
+                  }}
                 >
                   {productName}
                 </button>
               ) : null}
-              {variants.map((variant) => (
+              {visibleVariants.map((variant) => (
                 <button
                   key={variant.id}
                   type="button"
@@ -140,7 +152,14 @@ export const VariantSelectionModalV2 = ({
                         ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
                         : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
                         }`}
-                      onClick={() => setSelectedColorId((current) => (current === color.id ? null : color.id))}
+                      onClick={() => {
+                        setSelectedColorId((current) => (current === color.id ? null : color.id));
+                        setSelectedVariantId((current) => {
+                          if (!current || current === "base") return current;
+                          const currentVariant = variants.find((variant) => variant.id === current) ?? null;
+                          return currentVariant && variantMatchesColor(currentVariant, color) ? current : null;
+                        });
+                      }}
                     >
                       {color.description}
                     </button>

@@ -1,5 +1,5 @@
 import { ICustomerRepository } from "../interface/ICustomerRepository";
-import { Customer, CustomerSale, CustomerSalesPeriod, UpsertCustomerDto } from "../model/Customer";
+import { Customer, CustomerSale, CustomerSalesPeriod, UpsertCustomerDto2, toApiInactivePayload } from "../model/Customer";
 
 export class CustomerService {
   constructor(private readonly repository: ICustomerRepository) {}
@@ -25,7 +25,8 @@ export class CustomerService {
     return this.repository.listSalesByPeriod(customerId, period, token);
   }
 
-  async saveCustomer(token: string, payload: UpsertCustomerDto, customerId?: number): Promise<Customer> {
+  async saveCustomer(token: string, payload: UpsertCustomerDto2, customerId?: number): Promise<Customer> {
+    console.log("Payload for saveCustomer:", payload);
     if (customerId) {
       return this.repository.update(customerId, payload, token);
     }
@@ -33,7 +34,7 @@ export class CustomerService {
     return this.repository.create(payload, token);
   }
 
-  async removeCustomer(customerId: number, token: string): Promise<void> {
-    await this.repository.delete(customerId, token);
+  async removeCustomer(customerId: number, payload: toApiInactivePayload, token: string): Promise<void> {
+    await this.repository.delete(customerId, payload, token);
   }
 }

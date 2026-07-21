@@ -3,6 +3,7 @@ import {
   LoginCredentials,
   ResetPasswordPayload,
   SecurityQuestion,
+  SecurityQuestionStatus,
   SignUpPayload,
 } from "../model/AuthSession";
 import { AuthOnboardingService } from "../services/AuthOnboardingService";
@@ -27,6 +28,10 @@ export class AuthOnboardingPage {
     const session = await this.authOnboardingService.signIn(credentials);
     return this.toViewModel(session);
   }
+  
+  async getSecurityQuestionStatus(employeeId: number): Promise<SecurityQuestionStatus> {
+  return this.authOnboardingService.getSecurityQuestionStatus(employeeId);
+}
 
   async signUp(payload: SignUpPayload): Promise<AuthSessionViewModel> {
     const session = await this.authOnboardingService.registerAndSignIn(payload);

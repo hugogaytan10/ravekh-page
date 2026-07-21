@@ -1,10 +1,10 @@
-import { Customer, CustomerSale, CustomerSalesPeriod, UpsertCustomerDto } from "../model/Customer";
+import { Customer, CustomerSale, CustomerSalesPeriod, UpsertCustomerDto2, toApiInactivePayload } from "../model/Customer";
 
 export interface ICustomerRepository {
   listByBusiness(businessId: number, token: string): Promise<Customer[]>;
   getById(customerId: number, token: string): Promise<Customer>;
-  create(payload: UpsertCustomerDto, token: string): Promise<Customer>;
-  update(customerId: number, payload: UpsertCustomerDto, token: string): Promise<Customer>;
-  delete(customerId: number, token: string): Promise<void>;
+  create(payload: UpsertCustomerDto2, token: string): Promise<Customer>;
+  update(customerId: number, payload: UpsertCustomerDto2, token: string): Promise<Customer>;
+  delete(customerId: number, payload: toApiInactivePayload, token: string): Promise<void>;
   listSalesByPeriod(customerId: number, period: CustomerSalesPeriod, token: string): Promise<CustomerSale[]>;
 }

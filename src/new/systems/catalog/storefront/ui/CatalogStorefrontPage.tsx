@@ -3,7 +3,13 @@ import { Link, useNavigate, useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { FiMessageCircle, FiSearch, FiShoppingCart, FiSliders, FiX } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
-import { CatalogStorefrontApi, StorefrontCategory, StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
+import {
+  CatalogStorefrontApi,
+  CatalogVisitLimitReachedError,
+  StorefrontCategory,
+  StorefrontProductExtra,
+  StorefrontVariant,
+} from "../api/CatalogStorefrontApi";
 import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExperiencePage";
 import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontBusiness, StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
@@ -66,6 +72,8 @@ const normalizePlan = (plan?: string | null) => String(plan ?? "").trim().toUppe
 
 const isOfflinePlan = (plan?: string | null): boolean => normalizePlan(plan) === "OFFLINE";
 
+const isCatalogFeatureDisabled = (catalogFeature?: number | null): boolean => catalogFeature === 0;
+
 const isPaidPlan = (plan?: string | null): boolean => {
   const normalized = normalizePlan(plan);
   if (!normalized || normalized === "OFFLINE") return false;
@@ -112,6 +120,7 @@ export const CatalogStorefrontPage = () => {
   const [colorOptions, setColorOptions] = useState<StorefrontProductExtra[]>([]);
   const [sizeOptions, setSizeOptions] = useState<StorefrontProductExtra[]>([]);
   const [cartReady, setCartReady] = useState(false);
+  const [visitLimitReached, setVisitLimitReached] = useState(false);
   const businessContextRequestRef = useRef(0);
   const catalogSearchRequestRef = useRef(0);
   const catalogTitle = store?.name ? `${store.name} | Catálogo digital` : "Catálogo digital | Ravekh";
@@ -126,7 +135,13 @@ export const CatalogStorefrontPage = () => {
     const service = new CatalogStorefrontService(repository);
     return new CatalogStorefrontExperiencePage(service);
   }, []);
-  const catalogOffline = useMemo(() => isOfflinePlan(store?.plan), [store?.plan]);
+  const catalogUnavailable = useMemo(
+    () =>
+      visitLimitReached ||
+      isOfflinePlan(store?.plan) ||
+      isCatalogFeatureDisabled(store?.catalogFeature),
+    [store?.catalogFeature, store?.plan, visitLimitReached],
+  );
   const whatsappUrl = useMemo(() => buildWhatsAppUrl(store?.phone), [store?.phone]);
 
   useEffect(() => {
@@ -136,6 +151,7 @@ export const CatalogStorefrontPage = () => {
     setPriceMin(minBound);
     setPriceMax(DEFAULT_PRICE_MAX_BOUND);
     setPriceCeiling(DEFAULT_PRICE_MAX_BOUND);
+    setVisitLimitReached(false);
   }, [businessId]);
 
   useEffect(() => {
@@ -150,7 +166,25 @@ export const CatalogStorefrontPage = () => {
 
   useEffect(() => {
     if (!businessId) return;
-    void pageLogic.registerVisit(businessId, "always");
+
+    let cancelled = false;
+
+    pageLogic.registerVisit(businessId, "always").catch((cause) => {
+      if (cancelled) return;
+
+      if (cause instanceof CatalogVisitLimitReachedError) {
+        setVisitLimitReached(true);
+        setProducts([]);
+        setGlobalSearchProducts([]);
+        setTotalPages(1);
+        setError(null);
+        setLoading(false);
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [businessId, pageLogic]);
 
   useEffect(() => {
@@ -198,7 +232,7 @@ export const CatalogStorefrontPage = () => {
   useEffect(() => {
     if (!businessContextLoaded || !businessId) return;
 
-    if (catalogOffline) {
+    if (catalogUnavailable) {
       setProducts([]);
       setGlobalSearchProducts([]);
       setTotalPages(1);
@@ -241,7 +275,7 @@ export const CatalogStorefrontPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [businessContextLoaded, businessId, page, pageLogic, selectedCategoryId, planLimit, catalogOffline]);
+  }, [businessContextLoaded, businessId, page, pageLogic, selectedCategoryId, planLimit, catalogUnavailable]);
 
   useEffect(() => {
     if (!businessId) return;
@@ -517,7 +551,7 @@ export const CatalogStorefrontPage = () => {
           </span>
           <h1>{store?.name || "Catálogo digital"}</h1>
         </div>
-        {!catalogOffline ? (
+        {!catalogUnavailable ? (
           <Link to="/catalogo/pedido" className="catalog-v2__cart-link" aria-label="Ver carrito">
             <FiShoppingCart />
             {totalItems > 0 ? <span>{totalItems}</span> : null}
@@ -526,7 +560,7 @@ export const CatalogStorefrontPage = () => {
       </header>
 
 
-      {catalogOffline ? (
+      {catalogUnavailable ? (
         <>
           <section className="catalog-v2__offline" aria-live="polite">
             <div>
@@ -678,7 +712,7 @@ export const CatalogStorefrontPage = () => {
         </>
       )}
 
-      {!catalogOffline && showFilters ? (
+      {!catalogUnavailable && showFilters ? (
         <div className="fixed inset-0 z-40 grid bg-black/55">
           <aside className="ml-auto grid h-full w-full max-w-[390px] content-start gap-4 overflow-y-auto border-l border-[var(--border-default)] bg-[var(--bg-surface)] p-4 text-[var(--text-primary)] sm:max-w-[420px] max-sm:mt-auto max-sm:h-auto max-sm:max-w-full max-sm:rounded-t-2xl max-sm:border-l-0 max-sm:border-t">
             <button
@@ -745,7 +779,7 @@ export const CatalogStorefrontPage = () => {
         onConfirm={addVariantToCart}
       />
 
-      {!catalogOffline && totalItems > 0 ? (
+      {!catalogUnavailable && totalItems > 0 ? (
         <Link to="/catalogo/pedido" className="catalog-v2__cart-fab">
           Ver carrito ({totalItems}) · {totalLabel}
         </Link>

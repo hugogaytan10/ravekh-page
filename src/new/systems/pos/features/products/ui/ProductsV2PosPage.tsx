@@ -8,6 +8,21 @@ import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
+import {
+  fetchPosBusinessFeatures,
+  isPosFeatureBlocked,
+  isPosModuleBlocked,
+  POS_FEATURES_UNKNOWN,
+  PosBusinessFeatures,
+} from "../../../shared/config/posFeatureFlags";
+import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
+import {
+  FeatureUnlockModal,
+  type UnlockFeature,
+} from "../../../shared/ui/FeatureUnlockModal";
+import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
+import type { PosPlan } from "../../../shared/config/posPlanAccess";
+import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import "./ProductsV2PosPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -15,6 +30,33 @@ const DEFAULT_BUSINESS_ID = Number(import.meta.env.VITE_POS_BUSINESS_ID ?? 0);
 const DEFAULT_PRODUCTS_LIMIT = "EMPRENDEDOR";
 const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
 const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
+const MAX_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
+const ACCEPTED_IMAGE_TYPES = new Set([
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+]);
+const FREE_PRODUCT_LIMIT = 20;
+const START_PRODUCT_VARIANT_LIMIT = 2;
+const FREE_PRODUCT_PLAN_VALUES = new Set([
+  "GRATUITO",
+  "PRUEBA",
+  "GRATUITO ONLINE",
+]);
+const START_PRODUCT_PLAN_VALUES = new Set([
+  "START",
+  "EMPRENDEDOR",
+  "EMPRESARIAL",
+  "INICIAL",
+  "BASICO",
+]);
+
+type ProductLimitUpgradeState = {
+  currentCount: number;
+  limit: number;
+  requiredPlan: PosPlan;
+};
 
 type ProductItemVm = {
   id: number;
@@ -60,6 +102,9 @@ type VariantFormVm = {
   optStock: string;
   expDate: string;
   barcode: string;
+  Image: string | null;
+  imageUploading: boolean;
+  imageError: string | null;
 };
 
 type ViewMode = "grid" | "list";
@@ -116,7 +161,18 @@ const createVariantDraft = (): VariantFormVm => ({
   optStock: "",
   expDate: "",
   barcode: "",
+  Image: null,
+  imageUploading: false,
+  imageError: null,
 });
+
+const validateImageFile = (file: File): string | null => {
+  if (!ACCEPTED_IMAGE_TYPES.has(file.type))
+    return "Solo se aceptan imágenes JPG, JPEG, PNG o WEBP.";
+  if (file.size > MAX_IMAGE_SIZE_BYTES)
+    return "La imagen no puede pesar más de 5MB.";
+  return null;
+};
 
 const toNullableNumber = (value: string): number | null => {
   const trimmed = value.trim();
@@ -178,7 +234,17 @@ export const ProductsV2PosPage = () => {
       (window.localStorage.getItem("plan") ?? "").trim() ||
       DEFAULT_PRODUCTS_LIMIT,
   );
-
+  const [features, setFeatures] =
+    useState<PosBusinessFeatures>(POS_FEATURES_UNKNOWN);
+  const [showPosFeatureUnlock, setShowPosFeatureUnlock] = useState(false);
+  const [productLimitUpgrade, setProductLimitUpgrade] =
+    useState<ProductLimitUpgradeState | null>(null);
+  const [productPlanUnlockModal, setProductPlanUnlockModal] = useState<{
+    title: string;
+    message: string;
+    buttonText: string;
+    unlockFeature?: UnlockFeature;
+  } | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
@@ -240,11 +306,179 @@ export const ProductsV2PosPage = () => {
     resetForm();
   };
 
+  const openPosFeatureUnlock = () => setShowPosFeatureUnlock(true);
+
+  const blockBlockedProductModuleMutation = (): boolean => {
+    if (!isPosModuleBlocked(features)) return false;
+    openPosFeatureUnlock();
+    return true;
+  };
+
+  const normalizePlanValue = (value?: string | null) =>
+    String(value ?? "")
+      .trim()
+      .toUpperCase();
+
+  const isFreePlan = useMemo(() => {
+    const rawProductsLimit = normalizePlanValue(productsLimit);
+    const rawFeaturePlan = normalizePlanValue(features.plan);
+    return (
+      FREE_PRODUCT_PLAN_VALUES.has(rawProductsLimit) ||
+      FREE_PRODUCT_PLAN_VALUES.has(rawFeaturePlan)
+    );
+  }, [features.plan, productsLimit]);
+
+  const isStartPlan = useMemo(() => {
+    const rawProductsLimit = normalizePlanValue(productsLimit);
+    const rawFeaturePlan = normalizePlanValue(features.plan);
+    return (
+      START_PRODUCT_PLAN_VALUES.has(rawProductsLimit) ||
+      START_PRODUCT_PLAN_VALUES.has(rawFeaturePlan)
+    );
+  }, [features.plan, productsLimit]);
+
+  const productLimitCount = Math.max(totalItems, products.length);
+  const freeProductLimitReached =
+    isFreePlan && productLimitCount >= FREE_PRODUCT_LIMIT;
+
+  const openProductLimitUpgradeModal = (
+    currentCount = productLimitCount,
+    limit = FREE_PRODUCT_LIMIT,
+  ) => {
+    setProductLimitUpgrade({
+      currentCount: Math.max(currentCount, limit),
+      limit,
+      requiredPlan: "START",
+    });
+  };
+
+  const blockFreeProductCreation = (): boolean => {
+    if (!freeProductLimitReached) return false;
+    openProductLimitUpgradeModal();
+    return true;
+  };
+
+  const closeProductLimitUpgradeModal = () => setProductLimitUpgrade(null);
+
+  const openProductPlanCheckout = () => {
+    const requiredPlan = productLimitUpgrade?.requiredPlan ?? "START";
+
+    setProductLimitUpgrade(null);
+
+    setProductPlanUnlockModal({
+      title: `Activa ${requiredPlan}`,
+      message:
+        "Completa el pago para activar el paquete seleccionado y seguir agregando productos a tu catálogo.",
+      buttonText: "Continuar al pago",
+      unlockFeature: "Catalog",
+    });
+  };
+
+  const openProductVariantUpgradeModal = () => {
+    setProductPlanUnlockModal({
+      title: "Activa START",
+      message:
+        "Actualiza tu plan para agregar variantes, tallas o colores a tus productos.",
+      buttonText: "Continuar al pago",
+      unlockFeature: "Catalog",
+    });
+  };
+
+  const openStartVariantLimitUpgradeModal = () => {
+    setProductPlanUnlockModal({
+      title: "Activa PRO",
+      message: `Tu plan START permite hasta ${START_PRODUCT_VARIANT_LIMIT} variantes por producto. Actualiza tu plan para agregar más variantes.`,
+      buttonText: "Continuar al pago",
+      unlockFeature: "Catalog",
+    });
+  };
+
+  const canAddProductVariants = (): boolean => {
+    if (isFreePlan) {
+      openProductVariantUpgradeModal();
+      return false;
+    }
+
+    if (isStartPlan && variants.length >= START_PRODUCT_VARIANT_LIMIT) {
+      openStartVariantLimitUpgradeModal();
+      return false;
+    }
+
+    return true;
+  };
+
+  const openWholesaleUpgradeModal = () => {
+    setProductPlanUnlockModal({
+      title: "Activa START",
+      message:
+        "Actualiza tu plan para capturar precios de mayoreo en tus productos.",
+      buttonText: "Continuar al pago",
+      unlockFeature: "Catalog",
+    });
+  };
+
+  const canEditWholesalePrices = (): boolean => {
+    if (!isFreePlan) return true;
+    openWholesaleUpgradeModal();
+    return false;
+  };
+
+  const getProductLimitPayload = (
+    cause: unknown,
+  ): {
+    currentCount?: number;
+    limit?: number;
+    requiredPlan?: PosPlan;
+  } | null => {
+    const error = cause as Error & {
+      payload?: {
+        code?: string;
+        message?: string;
+        error?: string;
+        currentCount?: number;
+        limit?: number;
+        requiredPlan?: PosPlan;
+      };
+    };
+    const code = error?.payload?.code;
+    const message = [
+      error?.payload?.message,
+      error?.payload?.error,
+      error?.message,
+    ]
+      .filter(Boolean)
+      .join(" ");
+
+    if (
+      code !== "FREE_PRODUCT_LIMIT_REACHED" &&
+      !/plan gratuito permite hasta 20 productos/i.test(message)
+    ) {
+      return null;
+    }
+
+    return {
+      currentCount: Number(error.payload?.currentCount ?? FREE_PRODUCT_LIMIT),
+      limit: Number(error.payload?.limit ?? FREE_PRODUCT_LIMIT),
+      requiredPlan: error.payload?.requiredPlan ?? "START",
+    };
+  };
+
   const openCreateModal = () => {
+    if (blockBlockedProductModuleMutation()) return;
+    if (blockFreeProductCreation()) return;
     resetForm();
     setSaveResult(null);
     setError(null);
     setIsFormOpen(true);
+  };
+
+  const openCategoryManager = () => {
+    if (isPosModuleBlocked(features)) {
+      openPosFeatureUnlock();
+      return;
+    }
+
+    setShowCategoryManager(true);
   };
 
   const resetCategoryForm = () => {
@@ -253,6 +487,23 @@ export const ProductsV2PosPage = () => {
     setCategoryColorInput("#4F46E5");
     setCategoryFormErrors({});
   };
+
+  useEffect(() => {
+    if (!businessId || !token) return;
+
+    const loadFeatures = () => {
+      fetchPosBusinessFeatures(businessId, token, API_BASE_URL)
+        .then(setFeatures)
+        .catch(() => setFeatures(POS_FEATURES_UNKNOWN));
+    };
+
+    loadFeatures();
+
+    return onPosBusinessUpdated((detail) => {
+      if (detail.businessId !== businessId) return;
+      loadFeatures();
+    });
+  }, [businessId, token]);
 
   useEffect(() => {
     if (!businessId || !token) return;
@@ -498,6 +749,7 @@ export const ProductsV2PosPage = () => {
         minStock: toNullableNumber(variant.minStock),
         optStock: toNullableNumber(variant.optStock),
         expDate: variant.expDate.trim() || null,
+        Image: variant.Image ?? null,
       }));
   };
 
@@ -531,6 +783,43 @@ export const ProductsV2PosPage = () => {
     setter: React.Dispatch<React.SetStateAction<string[]>>,
   ) => {
     setter((current) => current.filter((_, index) => index !== indexToRemove));
+  };
+
+  const addVariantDraft = () => {
+    if (!canAddProductVariants()) return;
+    setVariants((current) => [...current, createVariantDraft()]);
+  };
+
+  const addSizeTag = () => {
+    if (!canAddProductVariants()) return;
+    pushUniqueTag(sizeDraft, setSizes, setSizeDraft);
+  };
+
+  const addColorTag = () => {
+    if (!canAddProductVariants()) return;
+    pushUniqueTag(colorDraft, setColors, setColorDraft);
+  };
+
+  const handleWholesalePriceChange = (value: string) => {
+    if (!canEditWholesalePrices()) return;
+    setWholesalePrice(value);
+    if (value.trim() === "") {
+      setWholesaleMinQuantity("");
+    }
+  };
+
+  const handleWholesaleMinQuantityChange = (value: string) => {
+    if (!canEditWholesalePrices()) return;
+    setWholesaleMinQuantity(value);
+  };
+
+  const handleVariantWholesaleChange = (
+    key: string,
+    field: "wholesalePrice" | "wholesaleMinQuantity",
+    value: string,
+  ) => {
+    if (!canEditWholesalePrices()) return;
+    updateVariant(key, field, value);
   };
 
   const formImagePreviews = useMemo(() => {
@@ -574,6 +863,15 @@ export const ProductsV2PosPage = () => {
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
+    if (blockBlockedProductModuleMutation()) {
+      closeFormModal();
+      return;
+    }
+
+    if (!editingId && blockFreeProductCreation()) {
+      return;
+    }
+
     if (!businessId) {
       setError("Business ID es obligatorio.");
       return;
@@ -586,6 +884,11 @@ export const ProductsV2PosPage = () => {
 
     if (!name.trim()) {
       setError("El nombre del producto es obligatorio.");
+      return;
+    }
+
+    if (variants.some((variant) => variant.imageUploading)) {
+      setError("Espera a que terminen de subir las imágenes de variantes.");
       return;
     }
 
@@ -811,6 +1114,14 @@ export const ProductsV2PosPage = () => {
       });
       await loadProducts(currentPage);
     } catch (cause) {
+      const productLimitPayload = getProductLimitPayload(cause);
+      if (!editingId && productLimitPayload) {
+        setIsFormOpen(false);
+        openProductLimitUpgradeModal(
+          productLimitPayload.currentCount,
+          productLimitPayload.limit,
+        );
+      }
       setError(
         cause instanceof Error ? cause.message : "No se pudo guardar producto.",
       );
@@ -865,6 +1176,7 @@ export const ProductsV2PosPage = () => {
   });
 
   const handleRestore = async (productId: number) => {
+    if (blockBlockedProductModuleMutation()) return;
     if (!token) {
       setToast({
         type: "error",
@@ -901,6 +1213,7 @@ export const ProductsV2PosPage = () => {
   };
 
   const handleEdit = async (productId: number) => {
+    if (blockBlockedProductModuleMutation()) return;
     if (!token) {
       setError("Token es obligatorio para editar.");
       return;
@@ -979,6 +1292,9 @@ export const ProductsV2PosPage = () => {
           optStock: variant.optStock == null ? "" : String(variant.optStock),
           expDate: variant.expDate ?? "",
           barcode: variant.barcode ?? "",
+          Image: variant.Image ?? null,
+          imageUploading: false,
+          imageError: null,
         })),
       );
       setError(null);
@@ -1002,11 +1318,16 @@ export const ProductsV2PosPage = () => {
   };
 
   const requestArchive = (productId: number, productName: string) => {
+    if (blockBlockedProductModuleMutation()) return;
     setArchiveDialog({ id: productId, name: productName });
   };
 
   const handleArchive = async () => {
     if (!archiveDialog) return;
+    if (blockBlockedProductModuleMutation()) {
+      setArchiveDialog(null);
+      return;
+    }
 
     if (!token) {
       setError("Token es obligatorio para eliminar/archivar.");
@@ -1050,11 +1371,14 @@ export const ProductsV2PosPage = () => {
   };
 
   const handleImageInput = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []).filter((file) =>
-      file.type.startsWith("image/"),
-    );
-    if (files.length === 0) return;
-    setSelectedImageFiles((current) => [...current, ...files]);
+    const files = Array.from(event.target.files ?? []);
+    const validFiles = files.filter((file) => {
+      const validationError = validateImageFile(file);
+      if (validationError) setError(validationError);
+      return !validationError;
+    });
+    if (validFiles.length === 0) return;
+    setSelectedImageFiles((current) => [...current, ...validFiles]);
     event.target.value = "";
   };
 
@@ -1071,7 +1395,21 @@ export const ProductsV2PosPage = () => {
 
   const updateVariant = (
     key: string,
-    field: keyof VariantFormVm,
+    field: keyof Pick<
+      VariantFormVm,
+      | "description"
+      | "color"
+      | "price"
+      | "promotionPrice"
+      | "wholesalePrice"
+      | "wholesaleMinQuantity"
+      | "costPerItem"
+      | "stock"
+      | "minStock"
+      | "optStock"
+      | "expDate"
+      | "barcode"
+    >,
     value: string,
   ) => {
     setVariants((current) =>
@@ -1086,6 +1424,56 @@ export const ProductsV2PosPage = () => {
         };
       }),
     );
+  };
+
+  const updateVariantImageState = (
+    key: string,
+    patch: Partial<
+      Pick<VariantFormVm, "Image" | "imageUploading" | "imageError">
+    >,
+  ) => {
+    setVariants((current) =>
+      current.map((variant) =>
+        variant.key === key ? { ...variant, ...patch } : variant,
+      ),
+    );
+  };
+
+  const handleVariantImageInput = async (
+    key: string,
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const validationError = validateImageFile(file);
+    if (validationError) {
+      updateVariantImageState(key, { imageError: validationError });
+      return;
+    }
+
+    updateVariantImageState(key, { imageUploading: true, imageError: null });
+    try {
+      const imageUrl = await uploadImageToCloudinary(file);
+      updateVariantImageState(key, {
+        Image: imageUrl,
+        imageUploading: false,
+        imageError: null,
+      });
+    } catch (cause) {
+      updateVariantImageState(key, {
+        imageUploading: false,
+        imageError:
+          cause instanceof Error
+            ? cause.message
+            : "No se pudo subir la imagen de la variante.",
+      });
+    }
+  };
+
+  const removeVariantImage = (key: string) => {
+    updateVariantImageState(key, { Image: null, imageError: null });
   };
 
   const validateCategoryForm = (): boolean => {
@@ -1111,6 +1499,11 @@ export const ProductsV2PosPage = () => {
   };
 
   const saveCategory = async () => {
+    if (isPosModuleBlocked(features)) {
+      setShowCategoryManager(false);
+      openPosFeatureUnlock();
+      return;
+    }
     if (!token || !businessId) return;
     if (!validateCategoryForm()) {
       setToast({
@@ -1157,6 +1550,11 @@ export const ProductsV2PosPage = () => {
   };
 
   const editCategory = (category: ProductCategoryVm) => {
+    if (isPosModuleBlocked(features)) {
+      setShowCategoryManager(false);
+      openPosFeatureUnlock();
+      return;
+    }
     setEditingCategoryId(category.id);
     setCategoryNameInput(category.name);
     setCategoryColorInput(category.color || "#4F46E5");
@@ -1165,6 +1563,11 @@ export const ProductsV2PosPage = () => {
   };
 
   const deleteCategory = async (categoryId: number) => {
+    if (isPosModuleBlocked(features)) {
+      setShowCategoryManager(false);
+      openPosFeatureUnlock();
+      return;
+    }
     if (!token) return;
     try {
       await service.deleteCategory(categoryId, token);
@@ -1219,6 +1622,11 @@ export const ProductsV2PosPage = () => {
     if (!categoryCarouselRef.current) return;
     const offset = direction === "left" ? -220 : 220;
     categoryCarouselRef.current.scrollBy({ left: offset, behavior: "smooth" });
+  };
+
+  const openImportProducts = () => {
+    if (blockBlockedProductModuleMutation()) return;
+    excelInputRef.current?.click();
   };
 
   const getImportErrorMessage = (cause: unknown): string => {
@@ -1277,6 +1685,14 @@ export const ProductsV2PosPage = () => {
       const result = await service.importProducts(businessId, file, token);
       await finishImport(result);
     } catch (cause) {
+      const productLimitPayload = getProductLimitPayload(cause);
+      if (productLimitPayload) {
+        closeImportModal();
+        openProductLimitUpgradeModal(
+          productLimitPayload.currentCount,
+          productLimitPayload.limit,
+        );
+      }
       const message = getImportErrorMessage(cause);
       setImportError(message);
       setToast({ type: "error", message });
@@ -1298,6 +1714,14 @@ export const ProductsV2PosPage = () => {
       const result = await service.importProductsZip(businessId, file, token);
       await finishImport(result);
     } catch (cause) {
+      const productLimitPayload = getProductLimitPayload(cause);
+      if (productLimitPayload) {
+        closeImportModal();
+        openProductLimitUpgradeModal(
+          productLimitPayload.currentCount,
+          productLimitPayload.limit,
+        );
+      }
       const message = getImportErrorMessage(cause);
       setImportError(message);
       setToast({ type: "error", message });
@@ -1735,7 +2159,13 @@ export const ProductsV2PosPage = () => {
                       </div>
                       {/*{product.wholesalePrice != null ? (
                         <small className="pos-v2-products__simple-meta">
-                          Mayoreo: ${product.wholesalePrice.toFixed(2)} desde {product.wholesaleMinQuantity ?? "--"} pzas.
+                          Mayoreo: ${product.wholesalePrice.toFixed(2)} desde{" "}
+                          {product.wholesaleMinQuantity ?? "--"} pzas.
+                        </small>
+                      ) : null}
+                      {product.categoryName ? (
+                        <small className="pos-v2-products__simple-meta">
+                          Categoría: {product.categoryName}
                         </small>
                       ) : null}*/}
                       {product.categoryName ? (
@@ -1988,13 +2418,14 @@ export const ProductsV2PosPage = () => {
                       step="0.01"
                       inputMode="decimal"
                       value={wholesalePrice}
-                      onChange={(event) => {
-                        setWholesalePrice(event.target.value);
-                        if (event.target.value.trim() === "") {
-                          setWholesaleMinQuantity("");
-                        }
+                      onFocus={() => {
+                        if (isFreePlan) openWholesaleUpgradeModal();
                       }}
+                      onChange={(event) =>
+                        handleWholesalePriceChange(event.target.value)
+                      }
                       placeholder="Ej. 80"
+                      readOnly={isFreePlan}
                     />
                   </label>
                   <label>
@@ -2005,10 +2436,14 @@ export const ProductsV2PosPage = () => {
                       step="1"
                       inputMode="numeric"
                       value={wholesaleMinQuantity}
+                      onFocus={() => {
+                        if (isFreePlan) openWholesaleUpgradeModal();
+                      }}
                       onChange={(event) =>
-                        setWholesaleMinQuantity(event.target.value)
+                        handleWholesaleMinQuantityChange(event.target.value)
                       }
                       placeholder="Ej. 3"
+                      readOnly={isFreePlan}
                     />
                   </label>
                   <label>
@@ -2068,7 +2503,7 @@ export const ProductsV2PosPage = () => {
                   Fotos del producto
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/jpeg,image/jpg,image/png,image/webp"
                     multiple
                     onChange={handleImageInput}
                   />
@@ -2163,15 +2598,7 @@ export const ProductsV2PosPage = () => {
                 >
                   <div className="pos-v2-products__variants-head">
                     <h4>Variantes</h4>
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setVariants((current) => [
-                          ...current,
-                          createVariantDraft(),
-                        ])
-                      }
-                    >
+                    <button type="button" onClick={addVariantDraft}>
                       + Agregar variante
                     </button>
                   </div>
@@ -2196,6 +2623,47 @@ export const ProductsV2PosPage = () => {
                         >
                           Eliminar
                         </button>
+                      </div>
+                      <div className="pos-v2-products__variant-image">
+                        {variant.Image ? (
+                          <img
+                            src={toImageUrl(variant.Image) ?? variant.Image}
+                            alt={`Imagen de variante ${index + 1}`}
+                            loading="lazy"
+                          />
+                        ) : (
+                          <span>Sin imagen</span>
+                        )}
+                        <label className="pos-v2-products__variant-image-action">
+                          {variant.imageUploading
+                            ? "Subiendo..."
+                            : variant.Image
+                              ? "Cambiar imagen"
+                              : "Agregar imagen"}
+                          <input
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png,image/webp"
+                            onChange={(event) =>
+                              void handleVariantImageInput(variant.key, event)
+                            }
+                            disabled={variant.imageUploading || saving}
+                          />
+                        </label>
+                        {variant.Image ? (
+                          <button
+                            type="button"
+                            className="is-delete"
+                            onClick={() => removeVariantImage(variant.key)}
+                            disabled={variant.imageUploading || saving}
+                          >
+                            Quitar
+                          </button>
+                        ) : null}
+                        {variant.imageError ? (
+                          <small className="pos-v2-products__variant-image-error">
+                            {variant.imageError}
+                          </small>
+                        ) : null}
                       </div>
                       <div className="pos-v2-products__variant-grid">
                         <label className="pos-v2-products__variant-field">
@@ -2460,18 +2928,13 @@ export const ProductsV2PosPage = () => {
                           onKeyDown={(event) => {
                             if (event.key === "Enter") {
                               event.preventDefault();
-                              pushUniqueTag(sizeDraft, setSizes, setSizeDraft);
+                              addSizeTag();
                             }
                           }}
                           placeholder="Ej. S"
                           aria-label="Agregar talla"
                         />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            pushUniqueTag(sizeDraft, setSizes, setSizeDraft)
-                          }
-                        >
+                        <button type="button" onClick={addSizeTag}>
                           Agregar
                         </button>
                       </div>
@@ -2513,22 +2976,13 @@ export const ProductsV2PosPage = () => {
                           onKeyDown={(event) => {
                             if (event.key === "Enter") {
                               event.preventDefault();
-                              pushUniqueTag(
-                                colorDraft,
-                                setColors,
-                                setColorDraft,
-                              );
+                              addColorTag();
                             }
                           }}
                           placeholder="Ej. Azul"
                           aria-label="Agregar color"
                         />
-                        <button
-                          type="button"
-                          onClick={() =>
-                            pushUniqueTag(colorDraft, setColors, setColorDraft)
-                          }
-                        >
+                        <button type="button" onClick={addColorTag}>
                           Agregar
                         </button>
                       </div>
@@ -2570,13 +3024,18 @@ export const ProductsV2PosPage = () => {
                   <button
                     type="submit"
                     className="pos-v2-products__primary"
-                    disabled={saving}
+                    disabled={
+                      saving ||
+                      variants.some((variant) => variant.imageUploading)
+                    }
                   >
                     {saving
                       ? "Guardando..."
-                      : editingId
-                        ? "Guardar cambios"
-                        : "Guardar producto"}
+                      : variants.some((variant) => variant.imageUploading)
+                        ? "Subiendo imagen..."
+                        : editingId
+                          ? "Guardar cambios"
+                          : "Guardar producto"}
                   </button>
                 </div>
               </form>
@@ -2627,6 +3086,38 @@ export const ProductsV2PosPage = () => {
             </section>
           </div>
         ) : null}
+
+        <PlanUpgradeModal
+          open={Boolean(productLimitUpgrade)}
+          title="Límite de productos alcanzado"
+          message={`Tu plan gratuito permite hasta ${productLimitUpgrade?.limit ?? FREE_PRODUCT_LIMIT} productos. Actualmente tienes ${productLimitUpgrade?.currentCount ?? productLimitCount} producto(s) activos. Actualiza a START para agregar más productos a tu catálogo.`}
+          requiredPlan={productLimitUpgrade?.requiredPlan ?? "START"}
+          ctaLabel="Actualizar a START"
+          onClose={closeProductLimitUpgradeModal}
+          onUpgrade={openProductPlanCheckout}
+        />
+
+        <FeatureUnlockModal
+          open={Boolean(productPlanUnlockModal)}
+          onClose={() => setProductPlanUnlockModal(null)}
+          title={productPlanUnlockModal?.title}
+          message={productPlanUnlockModal?.message}
+          buttonText={productPlanUnlockModal?.buttonText}
+          unlockFeature={productPlanUnlockModal?.unlockFeature}
+          onPaymentSuccess={() => {
+            setProductPlanUnlockModal(null);
+            void loadProducts(currentPage);
+          }}
+        />
+
+        <FeatureUnlockModal
+          open={showPosFeatureUnlock}
+          onClose={() => setShowPosFeatureUnlock(false)}
+          title="Desbloquea esta función"
+          message="Esta función está bloqueada en tu plan actual. Desbloquéala contratando un plan para usarla sin límites."
+          buttonText="Desbloquear ahora"
+          unlockFeature="Pos"
+        />
 
         {showCategoryManager ? (
           <div

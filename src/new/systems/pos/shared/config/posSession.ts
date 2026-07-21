@@ -6,6 +6,13 @@ export const POS_SESSION_STORAGE_KEYS = {
   moreFavorites: "pos-v2-more-favorites",
 } as const;
 
+const POS_PENDING_UPGRADE_CONTEXT_KEY = "pos-v2-pending-upgrade-context";
+
+export type PosPendingUpgradeContext = {
+  token: string;
+  businessId: number;
+};
+
 export type PosSessionSnapshot = {
   token: string;
   businessId: number;
@@ -91,12 +98,43 @@ export const resolvePosOperatorRole = (token: string): PosOperatorRole => {
 
 export const isSalesOnlyOperator = (token: string): boolean => resolvePosOperatorRole(token) === "staff";
 
+export const storePendingPosUpgradeContext = ({ token, businessId }: PosPendingUpgradeContext): void => {
+  if (!token || !businessId) return;
+  try {
+    window.sessionStorage.setItem(POS_PENDING_UPGRADE_CONTEXT_KEY, JSON.stringify({ token, businessId }));
+  } catch {
+    // ignore sessionStorage failures in constrained environments
+  }
+};
+
+export const readPendingPosUpgradeContext = (): PosPendingUpgradeContext | null => {
+  try {
+    const raw = window.sessionStorage.getItem(POS_PENDING_UPGRADE_CONTEXT_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as Partial<PosPendingUpgradeContext>;
+    const token = String(parsed.token ?? "").trim();
+    const businessId = Number(parsed.businessId);
+    return token && Number.isFinite(businessId) && businessId > 0 ? { token, businessId } : null;
+  } catch {
+    return null;
+  }
+};
+
+export const clearPendingPosUpgradeContext = (): void => {
+  try {
+    window.sessionStorage.removeItem(POS_PENDING_UPGRADE_CONTEXT_KEY);
+  } catch {
+    // ignore sessionStorage failures in constrained environments
+  }
+};
+
 export const clearPosSessionSnapshot = (): void => {
   try {
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.token);
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.businessId);
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.employeeId);
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.email);
+    window.localStorage.removeItem("plan");
   } catch {
     // ignore localStorage failures in constrained environments
   }

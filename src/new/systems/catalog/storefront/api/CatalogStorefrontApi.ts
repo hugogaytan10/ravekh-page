@@ -1,6 +1,11 @@
 import { ICatalogStorefrontRepository } from "../interface/ICatalogStorefrontRepository";
 import { CatalogOrderPayload, StorefrontBusiness, StorefrontProduct } from "../model/CatalogStorefrontModels";
 
+type BusinessFeaturesResponse = {
+  Catalog?: number | string | null;
+  catalog?: number | string | null;
+};
+
 type BusinessResponse = {
   Id?: number;
   Name?: string;
@@ -9,6 +14,8 @@ type BusinessResponse = {
   plan?: string | null;
   Logo?: string | null;
   logo?: string | null;
+  Features?: BusinessFeaturesResponse | null;
+  features?: BusinessFeaturesResponse | null;
 };
 type CategoryResponse = { Id?: number; id?: number; Name?: string; name?: string };
 type ProductResponse = {
@@ -68,6 +75,7 @@ export type StorefrontVariant = {
   id: number;
   description: string;
   color?: string;
+  image: string;
   price: number;
   promotionPrice: number | null;
   wholesalePrice: number | null;
@@ -120,6 +128,13 @@ const normalizeBase = (value: string) => (value.endsWith("/") ? value : `${value
 const parseNumber = (value: unknown, fallback = 0) => {
   const next = Number(value);
   return Number.isFinite(next) ? next : fallback;
+};
+
+const asString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
+const normalizeOptionalNumber = (value: unknown): number | null => {
+  if (value == null) return null;
+  const next = Number(value);
+  return Number.isFinite(next) ? next : null;
 };
 
 const toBoolean = (value: unknown, fallback = true) => {
@@ -178,8 +193,6 @@ const normalizeImage = (rawImage: unknown, rawImages: unknown) => {
 };
 
 const normalizeImages = (rawImage: unknown, rawImages: unknown) => {
-  const asString = (value: unknown) => (typeof value === "string" ? value.trim() : "");
-
   const candidates: string[] = [];
   const single = asString(rawImage);
   if (single) candidates.push(single);
@@ -258,6 +271,17 @@ const normalizeProductsPage = (
   };
 };
 
+export const CATALOG_VISIT_LIMIT_REACHED_CODE = "CATALOG_VISIT_LIMIT_REACHED";
+
+export class CatalogVisitLimitReachedError extends Error {
+  code = CATALOG_VISIT_LIMIT_REACHED_CODE;
+
+  constructor(message = "Este catálogo no esta disponible, por favor contacta al dueño del negocio") {
+    super(message);
+    this.name = "CatalogVisitLimitReachedError";
+  }
+}
+
 export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
   constructor(private readonly baseUrl: string) {}
 
@@ -267,7 +291,8 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
     logCatalogDebug("business:response", { businessId, ok: response.ok, status: response.status });
     if (!response.ok) return null;
     const data = (await response.json()) as BusinessResponse;
-    logCatalogDebug("business:data", { businessId, plan: data.Plan ?? data.plan ?? null, name: data.Name ?? null });
+    const catalogFeature = normalizeOptionalNumber(data.Features?.Catalog ?? data.features?.catalog);
+    logCatalogDebug("business:data", { businessId, plan: data.Plan ?? data.plan ?? null, catalogFeature, name: data.Name ?? null });
 
     return {
       id: Number(data.Id ?? 0),
@@ -275,6 +300,7 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
       phone: data.PhoneNumber ?? null,
       plan: String(data.Plan ?? data.plan ?? "").trim() || null,
       logo: String(data.Logo ?? data.logo ?? "").trim() || null,
+      catalogFeature,
     };
   }
 
@@ -343,8 +369,22 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ Business_Id: normalizedBusinessId }),
       });
+
+      const payload = await response.json().catch(() => null) as {
+        message?: string;
+        code?: string;
+      } | null;
+
+      if (response.status === 403 && payload?.code === CATALOG_VISIT_LIMIT_REACHED_CODE) {
+        throw new CatalogVisitLimitReachedError(payload.message);
+      }
+
       return response.ok;
-    } catch {
+    } catch (cause) {
+      if (cause instanceof CatalogVisitLimitReachedError) {
+        throw cause;
+      }
+
       return false;
     }
   }
@@ -456,20 +496,21 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
   async getVariantsByProductId(productId: number): Promise<StorefrontVariant[]> {
     const response = await fetch(`${normalizeBase(this.baseUrl)}variants/product/${productId}`);
     if (!response.ok) return [];
-    const raw = (await response.json()) as Array<{ Id?: number; Description?: string; Color?: string; Price?: number | string; PromotionPrice?: number | string; WholesalePrice?: number | string | null; WholesaleMinQuantity?: number | string | null; CostPerItem?: number | string; Stock?: number | string }>;
+    const raw = (await response.json()) as Array<{ Id?: number; id?: number; Description?: string; description?: string; Color?: string; color?: string; Image?: string | null; image?: string | null; Price?: number | string; price?: number | string; PromotionPrice?: number | string; promotionPrice?: number | string; WholesalePrice?: number | string | null; wholesalePrice?: number | string | null; WholesaleMinQuantity?: number | string | null; wholesaleMinQuantity?: number | string | null; CostPerItem?: number | string; costPerItem?: number | string; Stock?: number | string; stock?: number | string }>;
     if (!Array.isArray(raw)) return [];
 
     return raw
       .map((item) => ({
-        id: parseNumber(item.Id),
-        description: (item.Description || "Variante").trim(),
-        color: item.Color?.trim() || "",
-        price: parseNumber(item.Price),
-        promotionPrice: item.PromotionPrice != null ? parseNumber(item.PromotionPrice) : null,
-        wholesalePrice: item.WholesalePrice != null ? parseNumber(item.WholesalePrice) : null,
-        wholesaleMinQuantity: item.WholesaleMinQuantity != null ? parseNumber(item.WholesaleMinQuantity) : null,
-        costPerItem: item.CostPerItem != null ? parseNumber(item.CostPerItem) : null,
-        stock: item.Stock != null ? parseNumber(item.Stock) : null,
+        id: parseNumber(item.Id ?? item.id),
+        description: (item.Description ?? item.description ?? "Variante").trim(),
+        color: (item.Color ?? item.color)?.trim() || "",
+        image: asString(item.Image ?? item.image),
+        price: parseNumber(item.Price ?? item.price),
+        promotionPrice: item.PromotionPrice != null || item.promotionPrice != null ? parseNumber(item.PromotionPrice ?? item.promotionPrice) : null,
+        wholesalePrice: item.WholesalePrice != null || item.wholesalePrice != null ? parseNumber(item.WholesalePrice ?? item.wholesalePrice) : null,
+        wholesaleMinQuantity: item.WholesaleMinQuantity != null || item.wholesaleMinQuantity != null ? parseNumber(item.WholesaleMinQuantity ?? item.wholesaleMinQuantity) : null,
+        costPerItem: item.CostPerItem != null || item.costPerItem != null ? parseNumber(item.CostPerItem ?? item.costPerItem) : null,
+        stock: item.Stock != null || item.stock != null ? parseNumber(item.Stock ?? item.stock) : null,
       }))
       .filter((item) => item.id > 0);
   }

@@ -11,7 +11,6 @@ type LoginResponse = {
 };
 
 type RegisterPayload = {
-  Role: "CLIENTE";
   Name: string;
   Email: string;
   Password: string;
@@ -224,7 +223,7 @@ const deleteCouponsAccount = async (userId: number, token: string): Promise<{ me
 };
 
 const loginCupones = async (payload: LoginPayload): Promise<LoginResponse> => {
-  const response = await fetch(`${COUPONS_API_URL}Login`, {
+  const response = await fetch(`${COUPONS_API_URL}Logincustomer`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -240,7 +239,7 @@ const loginCupones = async (payload: LoginPayload): Promise<LoginResponse> => {
 };
 
 const registerCupones = async (payload: RegisterPayload): Promise<RegisterResponse> => {
-  const response = await fetch(`${COUPONS_API_URL}employee`, {
+  const response = await fetch(`${COUPONS_API_URL}logupcustomer`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

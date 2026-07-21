@@ -19,8 +19,10 @@ import { PosV2InventoryPage } from "../features/inventory/ui/PosV2InventoryPage"
 import { PosV2LoyaltyPage } from "../features/loyalty/ui/PosV2LoyaltyPage";
 import { PosV2CatalogPage } from "../features/catalog/ui/PosV2CatalogPage";
 import { FacturaElectronicaPage } from "../features/factura-electronica/ui/FacturaElectronicaPage";
+import { PosV2UpgradePlanPage } from "../features/upgrade-plan/ui/PosV2UpgradePlanPage";
 import { PosV2RequireAuth } from "./PosV2RequireAuth";
 import { POS_V2_PATHS } from "./PosV2Paths";
+import { PosV2FeatureRouteGuard } from "./PosV2FeatureRouteGuard";
 
 const withAuth = (element: JSX.Element) => <PosV2RequireAuth>{element}</PosV2RequireAuth>;
 
@@ -28,7 +30,7 @@ export const POS_V2_APP_ROUTES = (
   <>
     <Route path={POS_V2_PATHS.login} element={<PosV2LoginPage />} />
     <Route path={POS_V2_PATHS.passwordRecovery} element={<PosV2PasswordRecoveryPage />} />
-    <Route path={POS_V2_PATHS.sales} element={withAuth(<PosV2SalesHomePage />)} />
+    <Route path={POS_V2_PATHS.sales} element={withAuth(<PosV2FeatureRouteGuard feature="pos"><PosV2SalesHomePage /></PosV2FeatureRouteGuard>)} />
     <Route path={POS_V2_PATHS.products} element={withAuth(<ProductsV2PosPage />)} />
     <Route path={POS_V2_PATHS.finances} element={withAuth(<PosV2FinancePage />)} />
     <Route path={POS_V2_PATHS.reports} element={withAuth(<PosV2ReportingPage />)} />
@@ -43,10 +45,11 @@ export const POS_V2_APP_ROUTES = (
     <Route path={POS_V2_PATHS.loyalty} element={withAuth(<PosV2LoyaltyPage />)} />
     <Route path={POS_V2_PATHS.customers} element={withAuth(<PosV2CustomersPage />)} />
     <Route path={POS_V2_PATHS.employees} element={withAuth(<PosV2EmployeesPage />)} />
-    <Route path={POS_V2_PATHS.onlineStore} element={withAuth(<PosV2OnlineOrdersPage />)} />
+    <Route path={POS_V2_PATHS.onlineStore} element={withAuth(<PosV2FeatureRouteGuard feature="catalog"><PosV2OnlineOrdersPage /></PosV2FeatureRouteGuard>)} />
     <Route path={POS_V2_PATHS.coupons} element={withAuth(<PosV2LoyaltyPage />)} />
     <Route path={POS_V2_PATHS.visits} element={withAuth(<PosV2LoyaltyPage />)} />
-    <Route path={POS_V2_PATHS.catalog} element={withAuth(<PosV2CatalogPage />)} />
+    <Route path={POS_V2_PATHS.catalog} element={withAuth(<PosV2FeatureRouteGuard feature="catalog"><PosV2CatalogPage /></PosV2FeatureRouteGuard>)} />
     <Route path={POS_V2_PATHS.health} element={withAuth(<PosHealthV2Screen />)} />
+    <Route path={POS_V2_PATHS.upgradePlan} element={withAuth(<PosV2UpgradePlanPage />)} />
   </>
 );

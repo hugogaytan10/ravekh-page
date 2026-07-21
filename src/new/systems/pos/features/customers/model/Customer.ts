@@ -37,6 +37,27 @@ export interface UpsertCustomerDto {
   sex?: CustomerSex;
 }
 
+export interface UpsertCustomerDto2 {
+  businessId: number;
+  business_customers: {
+    businessId: number;
+    notes?: string;
+    canPayLater?: boolean;
+  },
+  customer: {
+    id?: number;
+    name: string;
+    phoneNumber?: string;
+    email?: string;
+    address?: string;
+    sex?: CustomerSex;
+  }
+}
+
+export interface toApiInactivePayload {
+  businessId: number;
+  customerId: number;
+}
 
 export type CustomerSalesPeriod = "DAY" | "MONTH" | "YEAR";
 

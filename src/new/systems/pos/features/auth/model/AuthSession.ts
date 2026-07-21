@@ -24,6 +24,7 @@ export interface BusinessRegistration {
   logo: string;
   color: string;
   references: string;
+  plan?: string;
 }
 
 export interface EmployeeRegistration {
@@ -61,3 +62,9 @@ export type CompareSecurityQuestionResult = Record<string, unknown>;
 export interface ResetPasswordPayload {
   password: string;
 }
+
+export type SecurityQuestionStatus = {
+  configured: boolean;
+  answersCount: number;
+  shouldPrompt: boolean;
+};

@@ -3,26 +3,60 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
-import { CatalogStorefrontApi, StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
+import {
+  CatalogStorefrontApi,
+  StorefrontProductExtra,
+  StorefrontVariant,
+} from "../api/CatalogStorefrontApi";
 import { CatalogStorefrontExperiencePage } from "../pages/CatalogStorefrontExperiencePage";
 import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
-import { StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
+import {
+  StorefrontCartItem,
+  StorefrontProduct,
+} from "../model/CatalogStorefrontModels";
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
-import { formatCatalogPrice, getCatalogPriceValue, getEffectiveCatalogPrice, getEffectiveCatalogPriceForQuantity } from "./catalogPrice";
+import {
+  formatCatalogPrice,
+  getCatalogPriceValue,
+  getEffectiveCatalogPrice,
+  getEffectiveCatalogPriceForQuantity,
+} from "./catalogPrice";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
 const money = (value: number) =>
-  new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
+  new Intl.NumberFormat("es-MX", {
+    style: "currency",
+    currency: "MXN",
+    maximumFractionDigits: 2,
+  }).format(value);
+
+const normalizeOptionText = (value?: string | null) =>
+  value?.trim().toLowerCase() ?? "";
+
+const variantMatchesColor = (
+  variant: StorefrontVariant,
+  color: StorefrontProductExtra | null,
+) => {
+  const variantColor = normalizeOptionText(variant.color);
+  if (!variantColor) return true;
+  if (!color) return false;
+  return variantColor === normalizeOptionText(color.description);
+};
 
 export const CatalogProductDetailPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
-  const { productId = "", phone = "" } = useParams<{ productId: string; phone: string }>();
+  const { productId = "", phone = "" } = useParams<{
+    productId: string;
+    phone: string;
+  }>();
   const [product, setProduct] = useState<StorefrontProduct | null>(null);
   const [variants, setVariants] = useState<StorefrontVariant[]>([]);
   const [colors, setColors] = useState<StorefrontProductExtra[]>([]);
   const [sizes, setSizes] = useState<StorefrontProductExtra[]>([]);
-  const [selectedVariantId, setSelectedVariantId] = useState<number | "base" | null>(null);
+  const [selectedVariantId, setSelectedVariantId] = useState<
+    number | "base" | null
+  >(null);
   const [selectedColorId, setSelectedColorId] = useState<number | null>(null);
   const [selectedSizeId, setSelectedSizeId] = useState<number | null>(null);
   const [quantity, setQuantity] = useState(1);
@@ -52,7 +86,10 @@ export const CatalogProductDetailPage = () => {
         const response = await pageLogic.loadProductDetail(productId);
         setProduct(response);
         if (response) {
-          window.localStorage.setItem("idBusiness", String(response.businessId));
+          window.localStorage.setItem(
+            "idBusiness",
+            String(response.businessId),
+          );
           window.localStorage.setItem("telefono", phone);
           void pageLogic.registerVisit(String(response.businessId), "always");
           const [variantResponse, extrasResponse] = await Promise.all([
@@ -83,7 +120,6 @@ export const CatalogProductDetailPage = () => {
     setQuantity(1);
     setDetailError(null);
   }, [productId]);
-
 
   const openPreview = useCallback((src: string | null, alt: string) => {
     if (!src) return;
@@ -140,7 +176,7 @@ export const CatalogProductDetailPage = () => {
     const delta = event.deltaY > 0 ? -0.2 : 0.2;
 
     setZoomLevel((current) =>
-      Math.min(5, Math.max(1.5, Number((current + delta).toFixed(1))))
+      Math.min(5, Math.max(1.5, Number((current + delta).toFixed(1)))),
     );
   };
 
@@ -152,52 +188,87 @@ export const CatalogProductDetailPage = () => {
   const buildCartWithSelection = () => {
     if (!product) return;
     const isBaseSelected = selectedVariantId === "base";
-    const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? null;
-    const selectedColor = colors.find((color) => color.id === selectedColorId) ?? null;
-    const selectedSize = sizes.find((size) => size.id === selectedSizeId) ?? null;
+    const selectedVariant =
+      variants.find((variant) => variant.id === selectedVariantId) ?? null;
+    const selectedColor =
+      colors.find((color) => color.id === selectedColorId) ?? null;
+    const selectedSize =
+      sizes.find((size) => size.id === selectedSizeId) ?? null;
     if (variants.length > 0 && !selectedVariant && !isBaseSelected) {
       return null;
     }
-    const hasAnyOption = variants.length > 0 || colors.length > 0 || sizes.length > 0;
-    if (hasAnyOption && !isBaseSelected && !selectedVariant && !selectedColor && !selectedSize) {
+    const hasAnyOption =
+      variants.length > 0 || colors.length > 0 || sizes.length > 0;
+    if (
+      hasAnyOption &&
+      !isBaseSelected &&
+      !selectedVariant &&
+      !selectedColor &&
+      !selectedSize
+    ) {
       return null;
     }
 
-    const cartKey = [product.id, selectedVariant?.id ?? "base", selectedColor?.id ?? "nc", selectedSize?.id ?? "ns"].join("-");
+    const cartKey = [
+      product.id,
+      selectedVariant?.id ?? "base",
+      selectedColor?.id ?? "nc",
+      selectedSize?.id ?? "ns",
+    ].join("-");
     const productLabel = [
-      selectedVariant ? `${product.name} · ${selectedVariant.description}` : product.name,
+      selectedVariant
+        ? `${product.name} · ${selectedVariant.description}`
+        : product.name,
       selectedColor?.description ? `Color: ${selectedColor.description}` : "",
       selectedSize?.description ? `Talla: ${selectedSize.description}` : "",
-    ].filter(Boolean).join(" · ");
+    ]
+      .filter(Boolean)
+      .join(" · ");
     const priceToStore = selectedVariant
-      ? getEffectiveCatalogPrice(selectedVariant.price, selectedVariant.promotionPrice)
+      ? getEffectiveCatalogPrice(
+          selectedVariant.price,
+          selectedVariant.promotionPrice,
+        )
       : getEffectiveCatalogPrice(product.price, product.promotionPrice);
-    const wholesalePriceToStore = selectedVariant ? selectedVariant.wholesalePrice : product.wholesalePrice;
-    const wholesaleMinQuantityToStore = selectedVariant ? selectedVariant.wholesaleMinQuantity : product.wholesaleMinQuantity;
+    const wholesalePriceToStore = selectedVariant
+      ? selectedVariant.wholesalePrice
+      : product.wholesalePrice;
+    const wholesaleMinQuantityToStore = selectedVariant
+      ? selectedVariant.wholesaleMinQuantity
+      : product.wholesaleMinQuantity;
     const costToStore = selectedVariant?.costPerItem ?? undefined;
 
     const key = `catalog-v2-cart:${product.businessId}`;
     const raw = window.localStorage.getItem(key);
     const current = raw ? (JSON.parse(raw) as StorefrontCartItem[]) : [];
-    const existing = current.find((item) => (item.cartKey ?? String(item.productId)) === cartKey);
+    const existing = current.find(
+      (item) => (item.cartKey ?? String(item.productId)) === cartKey,
+    );
     const updated = existing
-      ? current.map((item) => ((item.cartKey ?? String(item.productId)) === cartKey ? { ...item, quantity: item.quantity + quantity } : item))
-      : [...current, {
-        cartKey,
-        productId: product.id,
-        variantId: selectedVariant?.id,
-        colorId: selectedColor?.id,
-        sizeId: selectedSize?.id,
-        colorName: selectedColor?.description,
-        sizeName: selectedSize?.description,
-        name: productLabel,
-        price: priceToStore,
-        wholesalePrice: wholesalePriceToStore,
-        wholesaleMinQuantity: wholesaleMinQuantityToStore,
-        cost: costToStore,
-        quantity,
-        image: product.image,
-      }];
+      ? current.map((item) =>
+          (item.cartKey ?? String(item.productId)) === cartKey
+            ? { ...item, quantity: item.quantity + quantity }
+            : item,
+        )
+      : [
+          ...current,
+          {
+            cartKey,
+            productId: product.id,
+            variantId: selectedVariant?.id,
+            colorId: selectedColor?.id,
+            sizeId: selectedSize?.id,
+            colorName: selectedColor?.description,
+            sizeName: selectedSize?.description,
+            name: productLabel,
+            price: priceToStore,
+            wholesalePrice: wholesalePriceToStore,
+            wholesaleMinQuantity: wholesaleMinQuantityToStore,
+            cost: costToStore,
+            quantity,
+            image: selectedVariant?.image || product.image,
+          },
+        ];
 
     window.localStorage.setItem(key, JSON.stringify(updated));
     return true;
@@ -224,19 +295,74 @@ export const CatalogProductDetailPage = () => {
     navigate("/catalogo/pedido");
   };
 
-  if (loading) return <main className="mx-auto grid max-w-5xl gap-4 p-4"><p className="text-[var(--text-secondary)]">Cargando producto...</p></main>;
-  if (!product) return <main className="mx-auto grid max-w-5xl gap-4 p-4"><p className="text-[var(--text-secondary)]">No encontramos este producto.</p></main>;
-  const images = Array.from(new Set([product.image, ...(product.images ?? [])].filter(Boolean)));
-  const currentImage = images[activeImage] ?? product.image;
+  if (loading)
+    return (
+      <main className="mx-auto grid max-w-5xl gap-4 p-4">
+        <p className="text-[var(--text-secondary)]">Cargando producto...</p>
+      </main>
+    );
+  if (!product)
+    return (
+      <main className="mx-auto grid max-w-5xl gap-4 p-4">
+        <p className="text-[var(--text-secondary)]">
+          No encontramos este producto.
+        </p>
+      </main>
+    );
+  const images = Array.from(
+    new Set([product.image, ...(product.images ?? [])].filter(Boolean)),
+  );
   const isBaseSelected = selectedVariantId === "base";
-  const selectedVariant = variants.find((variant) => variant.id === selectedVariantId) ?? null;
-  const selectedWholesalePrice = selectedVariant ? selectedVariant.wholesalePrice : product.wholesalePrice;
-  const selectedWholesaleMinQuantity = selectedVariant ? selectedVariant.wholesaleMinQuantity : product.wholesaleMinQuantity;
+  const selectedColor =
+    colors.find((color) => color.id === selectedColorId) ?? null;
+  const visibleVariants = variants.filter((variant) =>
+    variantMatchesColor(variant, selectedColor),
+  );
+  const selectedVariant =
+    visibleVariants.find((variant) => variant.id === selectedVariantId) ?? null;
+  const selectedVariantImage = selectedVariant?.image?.trim() || "";
+  const displayImages = selectedVariantImage ? [selectedVariantImage] : images;
+  const currentImage =
+    displayImages[activeImage] ?? displayImages[0] ?? product.image;
+  const selectedWholesalePrice = selectedVariant
+    ? selectedVariant.wholesalePrice
+    : product.wholesalePrice;
+  const selectedWholesaleMinQuantity = selectedVariant
+    ? selectedVariant.wholesaleMinQuantity
+    : product.wholesaleMinQuantity;
   const effectivePrice = selectedVariant
-    ? getEffectiveCatalogPriceForQuantity(selectedVariant.price, selectedVariant.promotionPrice, selectedVariant.wholesalePrice, selectedVariant.wholesaleMinQuantity, quantity)
-    : getEffectiveCatalogPriceForQuantity(product.price, product.promotionPrice, product.wholesalePrice, product.wholesaleMinQuantity, quantity);
-  const baseDisplayPrice = selectedVariant ? selectedVariant.price : product.price;
-
+    ? getEffectiveCatalogPriceForQuantity(
+        selectedVariant.price,
+        selectedVariant.promotionPrice,
+        selectedVariant.wholesalePrice,
+        selectedVariant.wholesaleMinQuantity,
+        quantity,
+      )
+    : getEffectiveCatalogPriceForQuantity(
+        product.price,
+        product.promotionPrice,
+        product.wholesalePrice,
+        product.wholesaleMinQuantity,
+        quantity,
+      );
+  const baseDisplayPrice = selectedVariant
+    ? selectedVariant.price
+    : product.price;
+  const selectedWholesalePriceValue = getCatalogPriceValue(
+    selectedWholesalePrice,
+  );
+  const selectedWholesaleMinQuantityValue = Number(
+    selectedWholesaleMinQuantity,
+  );
+  const hasWholesaleOffer =
+    selectedWholesalePriceValue !== null &&
+    Number.isFinite(selectedWholesaleMinQuantityValue) &&
+    selectedWholesaleMinQuantityValue > 0;
+  const isWholesaleActive =
+    hasWholesaleOffer && quantity >= selectedWholesaleMinQuantityValue;
+  const remainingWholesalePieces = hasWholesaleOffer
+    ? Math.max(0, selectedWholesaleMinQuantityValue - quantity)
+    : 0;
   return (
     <main className="mx-auto grid max-w-5xl gap-4 p-4">
       <button
@@ -253,7 +379,9 @@ export const CatalogProductDetailPage = () => {
             <div className="relative">
               <button
                 type="button"
-                onClick={() => openPreview(currentImage, product.name ?? "Producto")}
+                onClick={() =>
+                  openPreview(currentImage, product.name ?? "Producto")
+                }
                 className="group relative block w-full overflow-hidden rounded-xl"
                 aria-label="Ver imagen del producto en grande"
               >
@@ -266,99 +394,166 @@ export const CatalogProductDetailPage = () => {
                   Ver más
                 </span>
               </button>
-            {images.length > 1 ? (
-              <>
-                <button
-                  type="button"
-                  className="absolute left-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white"
-                  onClick={() => setActiveImage((prev) => (prev - 1 + images.length) % images.length)}
-                  aria-label="Imagen anterior"
-                >
-                  <FiChevronLeft />
-                </button>
-                <button
-                  type="button"
-                  className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white"
-                  onClick={() => setActiveImage((prev) => (prev + 1) % images.length)}
-                  aria-label="Imagen siguiente"
-                >
-                  <FiChevronRight />
-                </button>
-                <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
-                  {images.map((_, index) => (
-                    <button
-                      key={index}
-                      type="button"
-                      className={index === activeImage ? "h-2 w-5 rounded-full bg-white" : "h-2 w-2 rounded-full bg-white/65"}
-                      onClick={() => setActiveImage(index)}
-                      aria-label={`Ir a imagen ${index + 1}`}
-                    />
-                  ))}
-                </div>
-              </>
-            ) : null}
+              {displayImages.length > 1 ? (
+                <>
+                  <button
+                    type="button"
+                    className="absolute left-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white"
+                    onClick={() =>
+                      setActiveImage(
+                        (prev) =>
+                          (prev - 1 + displayImages.length) %
+                          displayImages.length,
+                      )
+                    }
+                    aria-label="Imagen anterior"
+                  >
+                    <FiChevronLeft />
+                  </button>
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/55 text-white"
+                    onClick={() =>
+                      setActiveImage(
+                        (prev) => (prev + 1) % displayImages.length,
+                      )
+                    }
+                    aria-label="Imagen siguiente"
+                  >
+                    <FiChevronRight />
+                  </button>
+                  <div className="absolute bottom-2 left-0 right-0 flex justify-center gap-1.5">
+                    {displayImages.map((_, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        className={
+                          index === activeImage
+                            ? "h-2 w-5 rounded-full bg-white"
+                            : "h-2 w-2 rounded-full bg-white/65"
+                        }
+                        onClick={() => setActiveImage(index)}
+                        aria-label={`Ir a imagen ${index + 1}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              ) : null}
             </div>
             <button
               type="button"
-              onClick={() => openPreview(currentImage, product.name ?? "Producto")}
+              onClick={() =>
+                openPreview(currentImage, product.name ?? "Producto")
+              }
               className="w-fit rounded-full border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 py-2 text-sm font-semibold text-[var(--text-primary)] shadow-sm transition hover:bg-[var(--bg-surface)]"
             >
               Ver más
             </button>
-            {images.length > 1 ? (
+            {displayImages.length > 1 ? (
               <div className="flex gap-2 overflow-x-auto pb-1">
-                {images.map((image, index) => (
+                {displayImages.map((image, index) => (
                   <button
                     key={`${image}-${index}`}
                     type="button"
                     onClick={() => setActiveImage(index)}
                     className={`overflow-hidden rounded-lg border ${index === activeImage ? "border-[var(--text-primary)]" : "border-[var(--border-default)]"}`}
                   >
-                    <img src={image} alt={`${product.name} ${index + 1}`} className="h-14 w-14 object-cover" />
+                    <img
+                      src={image}
+                      alt={`${product.name} ${index + 1}`}
+                      className="h-14 w-14 object-cover"
+                    />
                   </button>
                 ))}
               </div>
             ) : null}
           </div>
-        ) : <div className="grid h-[300px] place-items-center rounded-xl bg-[var(--bg-subtle)] text-[var(--text-muted)] md:h-[390px]">Sin imagen</div>}
+        ) : (
+          <div className="grid h-[300px] place-items-center rounded-xl bg-[var(--bg-subtle)] text-[var(--text-muted)] md:h-[390px]">
+            Sin imagen
+          </div>
+        )}
         <article className="grid content-start gap-4">
           <header className="space-y-1">
-            <h1 className="text-2xl font-bold leading-tight text-[var(--text-primary)]">{product.name}</h1>
-            <p className="text-sm text-[var(--text-secondary)]">{product.description || "Sin descripción."}</p>
-          </header>
-          <div className="flex items-center gap-2">
-            <strong className="text-2xl font-extrabold text-[var(--text-primary)]">{formatCatalogPrice(effectivePrice, money)}</strong>
-            {getCatalogPriceValue(baseDisplayPrice) && effectivePrice !== getCatalogPriceValue(baseDisplayPrice) ? <small className="text-sm text-[var(--text-muted)] line-through">{formatCatalogPrice(baseDisplayPrice, money)}</small> : null}
-          </div>
-          {getCatalogPriceValue(selectedWholesalePrice) && selectedWholesaleMinQuantity ? (
-            <p className="text-sm font-semibold text-[var(--text-secondary)]">
-              Mayoreo: {formatCatalogPrice(selectedWholesalePrice, money)} desde {selectedWholesaleMinQuantity} pzas.
+            <h1 className="text-2xl font-bold leading-tight text-[var(--text-primary)]">
+              {product.name}
+            </h1>
+            <p className="text-sm text-[var(--text-secondary)]">
+              {product.description || "Sin descripción."}
             </p>
-          ) : null}
+          </header>
+          <div
+            className="rounded-2xl border border-[var(--border-default)] bg-[var(--bg-subtle)] p-3"
+            aria-live="polite"
+          >
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0">
+                <p className="text-xs font-black uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                  {isWholesaleActive ? "Precio mayoreo" : "Precio menudeo"}
+                </p>
+                <div className="mt-1 flex flex-wrap items-baseline gap-2">
+                  <strong className="text-3xl font-extrabold text-[var(--text-primary)]">
+                    {formatCatalogPrice(effectivePrice, money)}
+                  </strong>
+                  {getCatalogPriceValue(baseDisplayPrice) &&
+                  effectivePrice !== getCatalogPriceValue(baseDisplayPrice) ? (
+                    <small className="text-sm font-semibold text-[var(--text-muted)] line-through">
+                      {formatCatalogPrice(baseDisplayPrice, money)}
+                    </small>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+
+            {hasWholesaleOffer ? (
+              <div className="relative mt-3 grid gap-2">
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
+                  <span className="text-[var(--text-secondary)]">
+                    {isWholesaleActive
+                      ? `Ya tienes el mejor precio`
+                      : `Agrega ${remainingWholesalePieces} ${remainingWholesalePieces === 1 ? "pieza" : "piezas"} más para activar el precio de mayoreo.`}
+                  </span>
+                  <span className="rounded-full bg-white px-2 py-1 text-[var(--text-primary)] shadow-sm">
+                    {formatCatalogPrice(selectedWholesalePrice, money)} / pza.
+                  </span>
+                </div>
+              </div>
+            ) : null}
+          </div>
           {variants.length > 0 ? (
             <div className="grid gap-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Variantes</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                Variantes
+              </h3>
               <div className="flex flex-wrap gap-2">
                 <button
                   key="base"
                   type="button"
-                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${isBaseSelected
-                    ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
-                    : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
-                    }`}
-                  onClick={() => setSelectedVariantId("base")}
+                  className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${
+                    isBaseSelected
+                      ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+                      : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                  }`}
+                  onClick={() => {
+                    setSelectedVariantId("base");
+                    setActiveImage(0);
+                  }}
                 >
                   {product.name}
                 </button>
-                {variants.map((variant) => (
+                {visibleVariants.map((variant) => (
                   <button
                     key={variant.id}
                     type="button"
-                    className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${selectedVariantId === variant.id
-                      ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
-                      : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
-                      }`}
-                    onClick={() => setSelectedVariantId(variant.id)}
+                    className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${
+                      selectedVariantId === variant.id
+                        ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+                        : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                    }`}
+                    onClick={() => {
+                      setSelectedVariantId(variant.id);
+                      setActiveImage(0);
+                    }}
                   >
                     {variant.description}
                   </button>
@@ -368,17 +563,34 @@ export const CatalogProductDetailPage = () => {
           ) : null}
           {colors.length > 0 ? (
             <div className="grid gap-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Color</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                Color
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {colors.map((color) => (
                   <button
                     key={color.id}
                     type="button"
-                    className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${selectedColorId === color.id
-                      ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
-                      : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
-                      }`}
-                    onClick={() => setSelectedColorId((current) => current === color.id ? null : color.id)}
+                    className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${
+                      selectedColorId === color.id
+                        ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+                        : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                    }`}
+                    onClick={() => {
+                      setSelectedColorId((current) =>
+                        current === color.id ? null : color.id,
+                      );
+                      setSelectedVariantId((current) => {
+                        if (!current || current === "base") return current;
+                        const currentVariant =
+                          variants.find((variant) => variant.id === current) ??
+                          null;
+                        return currentVariant &&
+                          variantMatchesColor(currentVariant, color)
+                          ? current
+                          : null;
+                      });
+                    }}
                   >
                     {color.description}
                   </button>
@@ -388,17 +600,24 @@ export const CatalogProductDetailPage = () => {
           ) : null}
           {sizes.length > 0 ? (
             <div className="grid gap-2">
-              <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">Talla</h3>
+              <h3 className="text-sm font-semibold uppercase tracking-wide text-[var(--text-muted)]">
+                Talla
+              </h3>
               <div className="flex flex-wrap gap-2">
                 {sizes.map((size) => (
                   <button
                     key={size.id}
                     type="button"
-                    className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${selectedSizeId === size.id
-                      ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
-                      : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
-                      }`}
-                    onClick={() => setSelectedSizeId((current) => current === size.id ? null : size.id)}
+                    className={`rounded-full border px-3 py-1.5 text-sm font-semibold ${
+                      selectedSizeId === size.id
+                        ? "border-[var(--text-primary)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"
+                        : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
+                    }`}
+                    onClick={() =>
+                      setSelectedSizeId((current) =>
+                        current === size.id ? null : size.id,
+                      )
+                    }
                   >
                     {size.description}
                   </button>
@@ -407,7 +626,13 @@ export const CatalogProductDetailPage = () => {
             </div>
           ) : null}
           <div className="flex items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] p-2">
-            <button className="grid h-9 w-9 place-items-center rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] text-lg text-[var(--text-primary)]" type="button" onClick={() => setQuantity((value) => Math.max(1, value - 1))}>−</button>
+            <button
+              className="grid h-9 w-9 place-items-center rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] text-lg text-[var(--text-primary)]"
+              type="button"
+              onClick={() => setQuantity((value) => Math.max(1, value - 1))}
+            >
+              −
+            </button>
             <input
               type="number"
               min={1}
@@ -421,12 +646,32 @@ export const CatalogProductDetailPage = () => {
               className="h-9 w-16 rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] text-center text-base font-bold text-[var(--text-primary)]"
               aria-label="Cantidad del producto"
             />
-            <button className="grid h-9 w-9 place-items-center rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] text-lg text-[var(--text-primary)]" type="button" onClick={() => setQuantity((value) => value + 1)}>+</button>
+            <button
+              className="grid h-9 w-9 place-items-center rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] text-lg text-[var(--text-primary)]"
+              type="button"
+              onClick={() => setQuantity((value) => value + 1)}
+            >
+              +
+            </button>
           </div>
-          {detailError ? <p className="text-sm font-medium text-red-500">{detailError}</p> : null}
+          {detailError ? (
+            <p className="text-sm font-medium text-red-500">{detailError}</p>
+          ) : null}
           <div className="grid gap-2 sm:grid-cols-2">
-            <button className="min-h-11 rounded-xl bg-[var(--text-primary)] px-4 text-sm font-bold text-[var(--text-inverse)]" type="button" onClick={addToCart}>Agregar al carrito</button>
-            <button className="min-h-11 rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 text-sm font-bold text-[var(--text-primary)]" type="button" onClick={buyNow}>Comprar ahora</button>
+            <button
+              className="min-h-11 rounded-xl bg-[var(--text-primary)] px-4 text-sm font-bold text-[var(--text-inverse)]"
+              type="button"
+              onClick={addToCart}
+            >
+              Agregar al carrito
+            </button>
+            <button
+              className="min-h-11 rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-4 text-sm font-bold text-[var(--text-primary)]"
+              type="button"
+              onClick={buyNow}
+            >
+              Comprar ahora
+            </button>
           </div>
         </article>
       </section>
@@ -458,7 +703,8 @@ export const CatalogProductDetailPage = () => {
             <div className="relative max-h-[80vh] w-full overflow-hidden rounded-2xl bg-zinc-900 p-4">
               <div className="mb-3 flex flex-wrap items-center justify-between gap-3 rounded-xl bg-black/30 px-3 py-2 text-white">
                 <p className="text-xs text-zinc-200">
-                  Pasa el mouse sobre la imagen y usa la rueda para controlar el zoom.
+                  Pasa el mouse sobre la imagen y usa la rueda para controlar el
+                  zoom.
                 </p>
 
                 <div className="flex flex-wrap items-center justify-end gap-2">
@@ -466,7 +712,7 @@ export const CatalogProductDetailPage = () => {
                     type="button"
                     onClick={() =>
                       setZoomLevel((current) =>
-                        Math.max(1.5, Number((current - 0.2).toFixed(1)))
+                        Math.max(1.5, Number((current - 0.2).toFixed(1))),
                       )
                     }
                     className="rounded-lg bg-zinc-700 px-3 py-1 text-xs text-white hover:bg-zinc-600"
@@ -482,7 +728,9 @@ export const CatalogProductDetailPage = () => {
                     max={5}
                     step={0.1}
                     value={zoomLevel}
-                    onChange={(event) => setZoomLevel(Number(event.target.value))}
+                    onChange={(event) =>
+                      setZoomLevel(Number(event.target.value))
+                    }
                     className="accent-indigo-400"
                   />
 
@@ -490,7 +738,7 @@ export const CatalogProductDetailPage = () => {
                     type="button"
                     onClick={() =>
                       setZoomLevel((current) =>
-                        Math.min(5, Number((current + 0.2).toFixed(1)))
+                        Math.min(5, Number((current + 0.2).toFixed(1))),
                       )
                     }
                     className="rounded-lg bg-zinc-700 px-3 py-1 text-xs text-white hover:bg-zinc-600"

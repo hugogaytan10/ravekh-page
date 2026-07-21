@@ -773,3 +773,59 @@
 :root[data-theme="dark"] .pos-v2-products__file-drop strong {
   color: #c4b5fd;
 }
+
+.pos-v2-products__variant-image {
+  display: flex;
+  align-items: center;
+  gap: .55rem;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.pos-v2-products__variant-image img,
+.pos-v2-products__variant-image > span {
+  width: 58px;
+  height: 58px;
+  border-radius: 12px;
+  border: 1px solid #e5e7eb;
+  background: #f3f4f6;
+  object-fit: cover;
+  color: #6b7280;
+  display: grid;
+  place-items: center;
+  font-size: .72rem;
+  text-align: center;
+  flex: 0 0 auto;
+}
+
+.pos-v2-products__variant-image-action {
+  position: relative;
+  overflow: hidden;
+  border-radius: 9999px;
+  background: #eef2ff;
+  color: #3730a3;
+  font-weight: 800;
+  padding: .45rem .8rem;
+  cursor: pointer;
+  min-height: 36px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.pos-v2-products__variant-image-action input {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.pos-v2-products__variant-image-action:has(input:disabled) {
+  opacity: .65;
+  cursor: not-allowed;
+}
+
+.pos-v2-products__variant-image-error {
+  flex-basis: 100%;
+  color: #b91c1c;
+  font-weight: 700;
+}

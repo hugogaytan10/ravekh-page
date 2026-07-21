@@ -8,14 +8,13 @@ type PosV2RequireAuthProps = {
 };
 
 export const PosV2RequireAuth = ({ children }: PosV2RequireAuthProps) => {
-  const { token } = readPosSessionSnapshot();
+  const session = readPosSessionSnapshot();
   const location = useLocation();
-
-  if (!token) {
+  if (!session.token || !session.businessId) {
     return <Navigate to={POS_V2_PATHS.login} replace />;
   }
 
-  if (isSalesOnlyOperator(token)) {
+  if (isSalesOnlyOperator(session.token)) {
     const allowedPaths = new Set([POS_V2_PATHS.sales, POS_V2_PATHS.more, POS_V2_PATHS.printers, POS_V2_PATHS.facturaElectronica]);
     if (!allowedPaths.has(location.pathname)) {
       return <Navigate to={POS_V2_PATHS.sales} replace />;

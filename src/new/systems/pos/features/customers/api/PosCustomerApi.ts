@@ -1,6 +1,6 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { ICustomerRepository } from "../interface/ICustomerRepository";
-import { Customer, CustomerSale, CustomerSalesPeriod, CustomerSex, UpsertCustomerDto } from "../model/Customer";
+import { Customer, CustomerSale, CustomerSalesPeriod, CustomerSex, UpsertCustomerDto2, toApiInactivePayload } from "../model/Customer";
 
 
 
@@ -29,6 +29,23 @@ type CustomerResponse = {
   Sex: string | null;
 };
 
+type CustomerResponse2 = {
+  businessId: number;
+  business_customers: {
+    Business_Id: number;
+    Notes?: string;
+    CanPayLater?: number | boolean;
+  },
+  customer: {
+    Id?: number;
+    Name: string;
+    PhoneNumber?: string;
+    Email?: string;
+    Address?: string;
+    Sex?: string;
+  }
+};
+
 export class PosCustomerApi implements ICustomerRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
@@ -55,33 +72,34 @@ export class PosCustomerApi implements ICustomerRepository {
     return this.toDomain(response);
   }
 
-  async create(payload: UpsertCustomerDto, token: string): Promise<Customer> {
+  async create(payload: UpsertCustomerDto2, token: string): Promise<Customer> {
     const response = await this.httpClient.request<CustomerResponse>({
       method: "POST",
       path: "customers",
       token,
-      body: this.toApiPayload(payload),
+      body: this.toApiPayload2(payload),
     });
 
     return this.toDomain(response);
   }
 
-  async update(customerId: number, payload: UpsertCustomerDto, token: string): Promise<Customer> {
-    const response = await this.httpClient.request<CustomerResponse>({
+  async update(customerId: number, payload: UpsertCustomerDto2, token: string): Promise<Customer> {
+    const response = await this.httpClient.request<CustomerResponse2>({
       method: "PUT",
       path: `customers/${customerId}`,
       token,
-      body: this.toApiPayload(payload),
+      body: this.toApiPayload2(payload),
     });
 
     return this.toDomain(response);
   }
 
-  async delete(customerId: number, token: string): Promise<void> {
+  async delete(customerId: number, payload: toApiInactivePayload, token: string): Promise<void> {
     await this.httpClient.request<void>({
-      method: "DELETE",
-      path: `customers/${customerId}`,
+      method: "PUT",
+      path: `customers/inactive/${customerId}`,
       token,
+      body: this.toApiInactivePayload(payload),
     });
   }
 
@@ -98,16 +116,30 @@ export class PosCustomerApi implements ICustomerRepository {
     return rows.map((row) => this.toSale(row));
   }
 
-  private toApiPayload(payload: UpsertCustomerDto): Record<string, unknown> {
+
+  private toApiInactivePayload(payload: toApiInactivePayload): Record<string, unknown> {
     return {
-      Business_Id: payload.businessId,
-      Name: payload.name,
-      PhoneNumber: payload.phoneNumber ?? null,
-      Email: payload.email ?? null,
-      Address: payload.address ?? null,
-      Notes: payload.notes ?? null,
-      CanPayLater: payload.canPayLater ? 1 : 0,
-      Sex: payload.sex ?? "M",
+      businessId: payload.businessId,
+      customerId: payload.customerId,
+    };
+  }
+
+  private toApiPayload2(payload: UpsertCustomerDto2): Record<string, unknown> {
+    return {
+      businessId: payload.businessId,
+      business_customers: {
+        Business_Id: payload.businessId,
+        CanPayLater: payload.business_customers.canPayLater ? 1 : 0,
+        Notes: payload.business_customers.notes ?? null,
+      },
+      customer: {
+        Id: payload.customer.id,
+        Name: payload.customer.name,
+        PhoneNumber: payload.customer.phoneNumber ?? null,
+        Address: payload.customer.address ?? null,
+        Email: payload.customer.email ?? null,
+        Sex: payload.customer.sex ?? "M",
+      }
     };
   }
 

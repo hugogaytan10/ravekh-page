@@ -2,6 +2,7 @@ export const POS_ENDPOINTS = {
   products: () => "products",
   productsByBusiness: (businessId: number) => `products/business/${businessId}`,
   productsAllByBusiness: (businessId: number) => `products/business/all/${businessId}`,
+  productsReallyAll: (businessId: number | string) => `products/really/all/${businessId}`,
   productsStockNull: (businessId: number) => `products/stocknull/${businessId}`,
   productsStockGtZero: (businessId: number) => `products/stockgtzero/${businessId}`,
   productsStockAvailableGtZero: (businessId: number) => `products/stock/availablegtzero/${businessId}`,

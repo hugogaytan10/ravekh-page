@@ -165,16 +165,25 @@ export const PosV2CustomersPage = () => {
     setSaving(true);
     setError(null);
     try {
-      await page.upsertCustomer(token, {
-        businessId,
-        name: name.trim(),
-        phoneNumber: phone.trim() || undefined,
-        email: email.trim() || undefined,
-        address: address.trim() || undefined,
-        notes: notes.trim() || undefined,
-        sex,
-        canPayLater,
-      }, editingId ?? undefined);
+      await page.upsertCustomer
+      (token, 
+        {
+          businessId: businessId, 
+          business_customers:  {
+            businessId: businessId,
+            notes: notes.trim() || undefined,
+            canPayLater: canPayLater,
+          },
+          customer: {
+            id: editingId ?? undefined,
+            name: name.trim(),
+            phoneNumber: phone.trim() || undefined,
+            email: email.trim() || undefined,
+            address: address.trim() || undefined,
+            sex: sex,
+          }
+        },
+      editingId ?? undefined);
 
       setOpenForm(false);
       resetForm();
@@ -190,7 +199,11 @@ export const PosV2CustomersPage = () => {
     if (!token || !deleteCandidate) return;
 
     try {
-      await page.deleteCustomer(deleteCandidate.id, token);
+      await page.deleteCustomer(
+        deleteCandidate.id,
+        { businessId, customerId: deleteCandidate.id },
+        token,
+      );
       setDeleteCandidate(null);
       await loadCustomers();
     } catch (cause) {
