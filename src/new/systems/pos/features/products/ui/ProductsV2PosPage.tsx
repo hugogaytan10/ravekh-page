@@ -4,6 +4,7 @@ import { ModernSystemsFactory } from "../../../../../index";
 import { ProductImportResult } from "../interface/IProductsRepository";
 import { ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 import { ProductImportModal } from "./ProductImportModal";
+import { CatalogAiImportWizard } from "./CatalogAiImportWizard";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
@@ -83,6 +84,7 @@ type ProductItemVm = {
   image: string | null;
   images: string[];
   variants: ProductVariant[];
+  variantsCount?: number;
   extras: Array<{ description: string; type: string }>;
 };
 
@@ -211,6 +213,7 @@ export const ProductsV2PosPage = () => {
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [importing, setImporting] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isAiImportOpen, setIsAiImportOpen] = useState(false);
   const [importResult, setImportResult] = useState<ProductImportResult | null>(
     null,
   );
@@ -565,6 +568,7 @@ export const ProductsV2PosPage = () => {
           image: product.image,
           images: product.images,
           variants: product.variants,
+          variantsCount: product.variantsCount,
           extras: product.extras,
         })),
       );
@@ -697,6 +701,7 @@ export const ProductsV2PosPage = () => {
             image: product.image,
             images: product.images,
             variants: product.variants,
+            variantsCount: product.variantsCount,
             extras: product.extras,
           }));
           setSearchCatalogProducts(mapped);
@@ -1624,11 +1629,6 @@ export const ProductsV2PosPage = () => {
     categoryCarouselRef.current.scrollBy({ left: offset, behavior: "smooth" });
   };
 
-  const openImportProducts = () => {
-    if (blockBlockedProductModuleMutation()) return;
-    excelInputRef.current?.click();
-  };
-
   const getImportErrorMessage = (cause: unknown): string => {
     if (cause instanceof Error) {
       const payload = (
@@ -1843,6 +1843,7 @@ export const ProductsV2PosPage = () => {
             image: product.image,
             images: product.images,
             variants: product.variants,
+            variantsCount: product.variantsCount,
             extras: product.extras,
           })),
         );
@@ -1946,6 +1947,18 @@ export const ProductsV2PosPage = () => {
             </button>
             <button
               type="button"
+              className="pos-v2-products__primary"
+              onClick={() => {
+                if (blockBlockedProductModuleMutation()) return;
+                if (blockFreeProductCreation()) return;
+                setIsAiImportOpen(true);
+              }}
+              disabled={!token || !businessId}
+            >
+              ✦ Importar con IA
+            </button>
+            <button
+              type="button"
               className="pos-v2-products__secondary"
               onClick={openImportModal}
               disabled={importing || !token || !businessId}
@@ -1970,6 +1983,21 @@ export const ProductsV2PosPage = () => {
             </button>
           </div>
         </header>
+
+        <CatalogAiImportWizard
+          open={isAiImportOpen}
+          businessId={businessId}
+          token={token}
+          onClose={() => setIsAiImportOpen(false)}
+          onCompleted={({ created }) => {
+            setIsAiImportOpen(false);
+            setToast({
+              type: "success",
+              message: `${created} producto(s) creados con IA.`,
+            });
+            void loadProducts(1);
+          }}
+        />
 
         <ProductImportModal
           open={isImportModalOpen}
