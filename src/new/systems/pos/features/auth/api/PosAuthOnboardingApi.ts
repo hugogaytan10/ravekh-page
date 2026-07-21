@@ -10,6 +10,7 @@ import {
   SecurityQuestionStatus,
   SignUpPayload,
 } from "../model/AuthSession";
+import { getSessionClosurePath, LoginSessionLimitPayload } from "../model/LoginSessionLimit";
 
 type LoginResponse = {
   Id?: number;
@@ -78,6 +79,13 @@ async getSecurityQuestionStatus(employeeId: number): Promise<SecurityQuestionSta
       response.Email ?? credentials.email,
       response.Token ?? "",
     );
+  }
+
+  async closeOtherSessions(payload: LoginSessionLimitPayload): Promise<void> {
+    await this.httpClient.request<void>({
+      method: "DELETE",
+      path: getSessionClosurePath(payload),
+    });
   }
 
   async signUp(payload: SignUpPayload): Promise<AuthSession> {

@@ -7,6 +7,7 @@ const projectRoot = process.cwd();
 const outDir = resolve(projectRoot, ".tmp-modern-tests");
 
 const suites = [
+  { name: "unit-login-session-limit", entry: "tests/new/pos/auth/login-session-limit.unit.ts" },
   { name: "unit-products-service", entry: "tests/new/pos/products/products.service.unit.ts" },
   { name: "integration-products-api-service-page", entry: "tests/new/pos/products/products.integration.ts" },
   { name: "integration-finance-api", entry: "tests/new/pos/finance/finance.api.integration.ts" },

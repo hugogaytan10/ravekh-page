@@ -9,6 +9,7 @@ import {
   SecurityQuestionStatus,
   SignUpPayload,
 } from "../model/AuthSession";
+import { LoginSessionLimitPayload } from "../model/LoginSessionLimit";
 
 export class AuthOnboardingService {
   constructor(private readonly repository: IAuthOnboardingRepository) {}
@@ -28,6 +29,10 @@ async getSecurityQuestionStatus(employeeId: number): Promise<SecurityQuestionSta
     }
 
     return session;
+  }
+
+  async closeOtherSessions(payload: LoginSessionLimitPayload): Promise<void> {
+    return this.repository.closeOtherSessions(payload);
   }
 
   async registerAndSignIn(payload: SignUpPayload): Promise<AuthSession> {

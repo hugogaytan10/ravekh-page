@@ -1,4 +1,4 @@
-import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
@@ -9,6 +9,12 @@ import {
 } from "../../../shared/config/posSession";
 import "./PosV2LoginPage.css";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
+import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
+import {
+  canIncreaseSessionLimit,
+  LoginSessionLimitPayload,
+  processLoginFailure,
+} from "../model/LoginSessionLimit";
 
 const API_BASE_URL = getPosApiBaseUrl();
 const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
@@ -78,6 +84,11 @@ export const PosV2LoginPage = () => {
   const [signUpLogoFile, setSignUpLogoFile] = useState<File | null>(null);
 
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [sessionLimit, setSessionLimit] = useState<LoginSessionLimitPayload | null>(null);
+  const [closingSessions, setClosingSessions] = useState(false);
+  const closingSessionsRef = useRef(false);
+  const [sessionLimitActionError, setSessionLimitActionError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [pendingSecurityPrompt, setPendingSecurityPrompt] = useState<{
     source: "login" | "signup";
@@ -120,6 +131,7 @@ export const PosV2LoginPage = () => {
     setMode("signin");
     setSignUpStep("account");
     setError(null);
+    setNotice(null);
   };
   const goToSales = () => {
     setPendingSecurityPrompt(null);
@@ -173,14 +185,46 @@ export const PosV2LoginPage = () => {
       });
       await finishAuthenticatedFlow(session, "login");
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "No se pudo iniciar sesión en POS v2.",
-      );
+      const failure = processLoginFailure(cause);
+      setSessionLimit(failure.sessionLimit);
+      setError(failure.error);
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const closeOtherSessions = async () => {
+    if (!sessionLimit || closingSessionsRef.current) return;
+
+    closingSessionsRef.current = true;
+    setClosingSessions(true);
+    setSessionLimitActionError(null);
+    try {
+      await authPage.closeOtherSessions(sessionLimit);
+      setSessionLimit(null);
+      setNotice("Sesiones cerradas. Intenta iniciar sesión de nuevo.");
+    } catch {
+      setSessionLimitActionError("No se pudieron cerrar las sesiones activas.");
+    } finally {
+      closingSessionsRef.current = false;
+      setClosingSessions(false);
+    }
+  };
+
+  const goToUpgradePlan = () => {
+    if (!sessionLimit) return;
+    const businessId = Number(sessionLimit.businessId);
+    if (!Number.isInteger(businessId) || businessId <= 0) {
+      setSessionLimitActionError("No se recibió un negocio válido para aumentar el límite.");
+      return;
+    }
+    const params = new URLSearchParams({
+      businessId: String(businessId),
+      currentPlan: sessionLimit.plan,
+      from: POS_V2_PATHS.login,
+    });
+    setSessionLimit(null);
+    navigate(`${POS_V2_PATHS.upgradePlan}?${params.toString()}`);
   };
 
   const handleAccountStep = (event: FormEvent<HTMLFormElement>) => {
@@ -424,6 +468,9 @@ await finishAuthenticatedFlow(session, "signup");
             {error && mode === "signin" ? (
               <span className="pos-v2-error">{error}</span>
             ) : null}
+            {notice && mode === "signin" ? (
+              <span className="pos-v2-notice" role="status">{notice}</span>
+            ) : null}
             <button
               type="button"
               className="pos-v2-forgot-link"
@@ -515,6 +562,23 @@ await finishAuthenticatedFlow(session, "signup");
     </section>
   </div>
 ) : null}
+      <PlanUpgradeModal
+        open={Boolean(sessionLimit)}
+        eyebrow="Sesiones activas"
+        title="Límite de sesiones"
+        message={sessionLimit?.error?.trim() || "Tu plan alcanzó el límite de sesiones activas."}
+        ctaLabel="Cerrar sesión en los otros dispositivos"
+        secondaryCtaLabel={sessionLimit && canIncreaseSessionLimit(sessionLimit) ? "Aumentar límite" : undefined}
+        busy={closingSessions}
+        error={sessionLimitActionError ?? undefined}
+        onClose={() => {
+          if (closingSessions) return;
+          setSessionLimit(null);
+          setSessionLimitActionError(null);
+        }}
+        onUpgrade={() => void closeOtherSessions()}
+        onSecondaryAction={goToUpgradePlan}
+      />
     </div>
   );
 };
