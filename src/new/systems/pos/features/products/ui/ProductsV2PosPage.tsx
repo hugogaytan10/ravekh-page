@@ -2185,12 +2185,17 @@ export const ProductsV2PosPage = () => {
                         </strong>
                         <small>Stock: {product.stock ?? "--"}</small>
                       </div>
-                      {product.wholesalePrice != null ? (
+                      {/*{product.wholesalePrice != null ? (
                         <small className="pos-v2-products__simple-meta">
                           Mayoreo: ${product.wholesalePrice.toFixed(2)} desde{" "}
                           {product.wholesaleMinQuantity ?? "--"} pzas.
                         </small>
                       ) : null}
+                      {product.categoryName ? (
+                        <small className="pos-v2-products__simple-meta">
+                          Categoría: {product.categoryName}
+                        </small>
+                      ) : null}*/}
                       {product.categoryName ? (
                         <small className="pos-v2-products__simple-meta">
                           Categoría: {product.categoryName}
