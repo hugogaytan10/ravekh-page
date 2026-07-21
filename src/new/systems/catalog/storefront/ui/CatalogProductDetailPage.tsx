@@ -282,7 +282,7 @@ export const CatalogProductDetailPage = () => {
       return;
     }
 
-    navigate(`/v2/catalogo/${product.businessId}`);
+    navigate(`/v2/catalogo/${product!.businessId}`);
   };
 
   const buyNow = () => {
