@@ -109,6 +109,7 @@ export class CatalogAiApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly code?: string,
     public readonly payload?: unknown,
   ) {
     super(message);
@@ -117,12 +118,39 @@ export class CatalogAiApiError extends Error {
 }
 
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
+
 const normalizeAccessToken = (value: string): string =>
   value
     .trim()
     .replace(/^["']+|["']+$/g, "")
     .replace(/^Bearer\s+/i, "")
     .trim();
+
+const errorCodeFromPayload = (payload: unknown): string | undefined => {
+  if (!payload || typeof payload !== "object") return undefined;
+  const record = payload as Record<string, unknown>;
+  return typeof record.error === "string" && record.error.trim()
+    ? record.error.trim()
+    : undefined;
+};
+
+export const isCatalogAiSessionExpiredError = (
+  cause: unknown,
+): cause is CatalogAiApiError => {
+  if (!(cause instanceof CatalogAiApiError) || cause.status !== 401) {
+    return false;
+  }
+
+  if (cause.code === "TOKEN_EXPIRED") return true;
+
+  if (cause.payload && typeof cause.payload === "object") {
+    const detail = (cause.payload as Record<string, unknown>).detail;
+    return typeof detail === "string" && /jwt expired/i.test(detail);
+  }
+
+  return false;
+};
+
 const errorMessageFromPayload = (payload: unknown, fallback: string): string => {
   if (!payload || typeof payload !== "object") return fallback;
   const record = payload as Record<string, unknown>;
@@ -172,6 +200,7 @@ export class CatalogAiApi {
       throw new CatalogAiApiError(
         errorMessageFromPayload(payload, `Error HTTP ${response.status}`),
         response.status,
+        errorCodeFromPayload(payload),
         payload,
       );
     }
@@ -226,6 +255,7 @@ export class CatalogAiApi {
       throw new CatalogAiApiError(
         errorMessageFromPayload(payload, "No se pudo subir la imagen a Cloudinary."),
         response.status,
+        errorCodeFromPayload(payload),
         payload,
       );
     }

@@ -10,6 +10,10 @@ import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import {
+  POS_SESSION_UPDATED_EVENT,
+  type PersistedPosSession,
+} from "../../../shared/config/posSessionRuntime";
+import {
   fetchPosBusinessFeatures,
   isPosFeatureBlocked,
   isPosModuleBlocked,
@@ -191,7 +195,9 @@ export const ProductsV2PosPage = () => {
     );
     return storedBusinessId || DEFAULT_BUSINESS_ID;
   });
-  const [token] = useState(() => window.localStorage.getItem(TOKEN_KEY) ?? "");
+  const [token, setToken] = useState(
+    () => window.localStorage.getItem(TOKEN_KEY) ?? "",
+  );
   const [products, setProducts] = useState<ProductItemVm[]>([]);
   const [searchCatalogProducts, setSearchCatalogProducts] = useState<
     ProductItemVm[]
@@ -276,6 +282,21 @@ export const ProductsV2PosPage = () => {
   const service = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
     return factory.createPosProductsService();
+  }, []);
+
+  useEffect(() => {
+    const handleSessionUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<PersistedPosSession>).detail;
+      if (detail?.token) setToken(detail.token);
+    };
+
+    window.addEventListener(POS_SESSION_UPDATED_EVENT, handleSessionUpdated);
+    return () => {
+      window.removeEventListener(
+        POS_SESSION_UPDATED_EVENT,
+        handleSessionUpdated,
+      );
+    };
   }, []);
 
   const resetForm = () => {
@@ -1989,6 +2010,7 @@ export const ProductsV2PosPage = () => {
           businessId={businessId}
           token={token}
           onClose={() => setIsAiImportOpen(false)}
+          onSessionRefreshed={setToken}
           onCompleted={({ created }) => {
             setIsAiImportOpen(false);
             setToast({
@@ -2185,17 +2207,12 @@ export const ProductsV2PosPage = () => {
                         </strong>
                         <small>Stock: {product.stock ?? "--"}</small>
                       </div>
-                      {/*{product.wholesalePrice != null ? (
+                      {product.wholesalePrice != null ? (
                         <small className="pos-v2-products__simple-meta">
                           Mayoreo: ${product.wholesalePrice.toFixed(2)} desde{" "}
                           {product.wholesaleMinQuantity ?? "--"} pzas.
                         </small>
                       ) : null}
-                      {product.categoryName ? (
-                        <small className="pos-v2-products__simple-meta">
-                          Categoría: {product.categoryName}
-                        </small>
-                      ) : null}*/}
                       {product.categoryName ? (
                         <small className="pos-v2-products__simple-meta">
                           Categoría: {product.categoryName}

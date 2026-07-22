@@ -7,6 +7,7 @@ import {
   clearPendingPosUpgradeContext,
   POS_SESSION_STORAGE_KEYS,
 } from "../../../shared/config/posSession";
+import { persistPosSession } from "../../../shared/config/posSessionRuntime";
 import "./PosV2LoginPage.css";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
@@ -18,9 +19,6 @@ import {
 
 const API_BASE_URL = getPosApiBaseUrl();
 const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
-const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
-const EMPLOYEE_ID_KEY = POS_SESSION_STORAGE_KEYS.employeeId;
-const EMAIL_KEY = POS_SESSION_STORAGE_KEYS.email;
 
 type PanelMode = "signin" | "signup";
 type SignUpStep = "account" | "business";
@@ -98,19 +96,6 @@ export const PosV2LoginPage = () => {
     return factory.createPosAuthOnboardingPage();
   }, []);
 
-  const persistSession = (session: {
-    token: string;
-    businessId: number;
-    employeeId: number;
-    email: string;
-  }) => {
-    clearPendingPosUpgradeContext();
-    window.localStorage.setItem(TOKEN_KEY, session.token);
-    window.localStorage.setItem(BUSINESS_ID_KEY, String(session.businessId));
-    window.localStorage.setItem(EMPLOYEE_ID_KEY, String(session.employeeId));
-    window.localStorage.setItem(EMAIL_KEY, session.email);
-  };
-
   useEffect(() => {
     const existingToken = window.localStorage.getItem(TOKEN_KEY);
     if (existingToken) {
@@ -152,7 +137,7 @@ export const PosV2LoginPage = () => {
     },
     source: "login" | "signup",
   ) => {
-    persistSession(session);
+    persistPosSession(session);
 
     try {
       const status = await authPage.getSecurityQuestionStatus(

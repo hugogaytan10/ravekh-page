@@ -1,4 +1,4 @@
-import { ChangeEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CatalogAiApi,
   CatalogAiBatchProgress,
@@ -6,7 +6,15 @@ import {
   CatalogAiItemPatch,
   RegisteredCatalogAsset,
   SignedCatalogUpload,
+  isCatalogAiSessionExpiredError,
 } from "../api/CatalogAiApi";
+import type { PersistedPosSession } from "../../../shared/config/posSessionRuntime";
+import {
+  compressProductImage,
+  PRODUCT_IMAGE_ACCEPTED_TYPES,
+  PRODUCT_IMAGE_MAX_FILE_BYTES,
+} from "../../../shared/api/productImageCompression";
+import { CatalogAiSessionRefreshModal } from "./CatalogAiSessionRefreshModal";
 import "./CatalogAiImportWizard.css";
 
 const DEFAULT_CATALOG_AI_URL = "http://localhost:8095";
@@ -15,15 +23,8 @@ const CATALOG_AI_API_URL = String(
 ).replace(/\/+$/, "");
 
 const MAX_FILES = 100;
-const MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
-const ALLOWED_TYPES = new Set([
-  "image/jpeg",
-  "image/jpg",
-  "image/png",
-  "image/webp",
-  "image/heic",
-  "image/heif",
-]);
+const MAX_FILE_SIZE_BYTES = PRODUCT_IMAGE_MAX_FILE_BYTES;
+const ALLOWED_TYPES = PRODUCT_IMAGE_ACCEPTED_TYPES;
 
 const TERMINAL_BATCH_STATUSES = new Set([
   "COMPLETED",
@@ -67,6 +68,7 @@ type CatalogAiImportWizardProps = {
   businessId: number;
   token: string;
   onClose: () => void;
+  onSessionRefreshed?: (token: string) => void;
   onCompleted: (result: { created: number; productIds: number[] }) => void;
 };
 
@@ -141,6 +143,7 @@ export const CatalogAiImportWizard = ({
   businessId,
   token,
   onClose,
+  onSessionRefreshed,
   onCompleted,
 }: CatalogAiImportWizardProps) => {
   const [step, setStep] = useState<WizardStep>(1);
@@ -153,16 +156,107 @@ export const CatalogAiImportWizard = ({
   const [uploading, setUploading] = useState(false);
   const [publishing, setPublishing] = useState(false);
   const [uploadCompleted, setUploadCompleted] = useState(0);
+  const [preparedCompleted, setPreparedCompleted] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [publishedProductIds, setPublishedProductIds] = useState<number[]>([]);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [finishedAt, setFinishedAt] = useState<number | null>(null);
   const [filter, setFilter] = useState<"all" | "ready" | "review" | "duplicate" | "error">("all");
+  const [currentToken, setCurrentToken] = useState(token);
+  const [sessionRefreshOpen, setSessionRefreshOpen] = useState(false);
+  const [sessionPaused, setSessionPaused] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const pollInFlightRef = useRef(false);
   const photosRef = useRef<SelectedPhoto[]>([]);
+  const apiRef = useRef(new CatalogAiApi(CATALOG_AI_API_URL, token));
+  const sessionRefreshWaiterRef = useRef<{
+    promise: Promise<string>;
+    resolve: (token: string) => void;
+    reject: (cause: unknown) => void;
+  } | null>(null);
 
-  const api = useMemo(() => new CatalogAiApi(CATALOG_AI_API_URL, token), [token]);
+  const requestSessionRefresh = useCallback((): Promise<string> => {
+    if (sessionRefreshWaiterRef.current) {
+      setSessionPaused(false);
+      setSessionRefreshOpen(true);
+      return sessionRefreshWaiterRef.current.promise;
+    }
+
+    let resolve!: (token: string) => void;
+    let reject!: (cause: unknown) => void;
+    const promise = new Promise<string>((resolvePromise, rejectPromise) => {
+      resolve = resolvePromise;
+      reject = rejectPromise;
+    });
+
+    sessionRefreshWaiterRef.current = { promise, resolve, reject };
+    setSessionPaused(false);
+    setSessionRefreshOpen(true);
+    return promise;
+  }, []);
+
+  const runWithSessionRecovery = useCallback(
+    async <T,>(operation: (client: CatalogAiApi) => Promise<T>): Promise<T> => {
+      try {
+        return await operation(apiRef.current);
+      } catch (cause) {
+        if (!isCatalogAiSessionExpiredError(cause)) throw cause;
+
+        const refreshedToken = await requestSessionRefresh();
+        const refreshedApi = new CatalogAiApi(
+          CATALOG_AI_API_URL,
+          refreshedToken,
+        );
+        apiRef.current = refreshedApi;
+
+        try {
+          return await operation(refreshedApi);
+        } catch (retryCause) {
+          if (isCatalogAiSessionExpiredError(retryCause)) {
+            throw new Error(
+              "La nueva sesión no pudo validarse. Vuelve a iniciar sesión.",
+            );
+          }
+          throw retryCause;
+        }
+      }
+    },
+    [requestSessionRefresh],
+  );
+
+  const handleSessionRefreshed = async (
+    session: PersistedPosSession,
+  ): Promise<void> => {
+    const waiter = sessionRefreshWaiterRef.current;
+    if (!waiter) return;
+
+    setCurrentToken(session.token);
+    apiRef.current = new CatalogAiApi(CATALOG_AI_API_URL, session.token);
+    onSessionRefreshed?.(session.token);
+    sessionRefreshWaiterRef.current = null;
+    setSessionRefreshOpen(false);
+    setSessionPaused(false);
+    waiter.resolve(session.token);
+  };
+
+  const continueSessionLater = () => {
+    setSessionRefreshOpen(false);
+    setSessionPaused(true);
+  };
+
+  const cancelPendingSessionRefresh = (message: string) => {
+    const waiter = sessionRefreshWaiterRef.current;
+    sessionRefreshWaiterRef.current = null;
+    setSessionRefreshOpen(false);
+    setSessionPaused(false);
+    waiter?.reject(new Error(message));
+  };
+
+  useEffect(() => {
+    if (!token || token === currentToken) return;
+    setCurrentToken(token);
+    apiRef.current = new CatalogAiApi(CATALOG_AI_API_URL, token);
+  }, [currentToken, token]);
 
   const reset = () => {
     photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
@@ -176,11 +270,14 @@ export const CatalogAiImportWizard = ({
     setUploading(false);
     setPublishing(false);
     setUploadCompleted(0);
+    setPreparedCompleted(0);
     setError(null);
     setPublishedProductIds([]);
     setStartedAt(null);
     setFinishedAt(null);
     setFilter("all");
+    setSessionRefreshOpen(false);
+    setSessionPaused(false);
   };
 
   useEffect(() => {
@@ -199,13 +296,16 @@ export const CatalogAiImportWizard = ({
   }, []);
 
   const safeClose = () => {
-    if (uploading || publishing) return;
+    if ((uploading || publishing) && !sessionPaused) return;
     if (step === 2 && !TERMINAL_BATCH_STATUSES.has(batchProgress?.status ?? "")) {
       const confirmed = window.confirm(
         "La IA sigue procesando tus fotos. Si cierras esta ventana tendrás que retomar el lote después. ¿Deseas cerrar?",
       );
       if (!confirmed) return;
     }
+    cancelPendingSessionRefresh(
+      "La renovación de sesión fue cancelada porque se cerró la importación.",
+    );
     reset();
     onClose();
   };
@@ -226,7 +326,7 @@ export const CatalogAiImportWizard = ({
         continue;
       }
       if (file.size > MAX_FILE_SIZE_BYTES) {
-        rejectedMessages.push(`${file.name}: supera 10 MB.`);
+        rejectedMessages.push(`${file.name}: supera 5 MB.`);
         continue;
       }
       if (photos.length + accepted.length >= MAX_FILES) {
@@ -263,7 +363,7 @@ export const CatalogAiImportWizard = ({
   };
 
   const uploadAndStart = async () => {
-    if (!businessId || !token) {
+    if (!businessId || !currentToken) {
       setError("Inicia sesión y selecciona un negocio antes de usar la IA.");
       return;
     }
@@ -274,33 +374,60 @@ export const CatalogAiImportWizard = ({
 
     setUploading(true);
     setUploadCompleted(0);
+    setPreparedCompleted(0);
     setError(null);
     setStartedAt(Date.now());
 
     try {
-      const created = await api.createBatch(photos.length);
+      // Primero se aplica la misma conversión del flujo normal de productos.
+      // La firma, la subida y el registro usan el archivo ya convertido.
+      const preparedPhotos = await mapWithConcurrency(
+        photos,
+        2,
+        async (photo) => {
+          const prepared = await compressProductImage(photo.file);
+          setPreparedCompleted((current) => current + 1);
+          return {
+            ...photo,
+            uploadFile: prepared.file,
+          };
+        },
+      );
+
+      const created = await runWithSessionRecovery((client) =>
+        client.createBatch(preparedPhotos.length),
+      );
       const newBatchId = created.batchId;
       setBatchId(newBatchId);
 
-      const signedUploads = await api.signUploads(
-        newBatchId,
-        photos.map((photo) => ({
-          clientAssetId: photo.id,
-          mimeType: photo.file.type,
-        })),
+      const signedUploads = await runWithSessionRecovery((client) =>
+        client.signUploads(
+          newBatchId,
+          preparedPhotos.map((photo) => ({
+            clientAssetId: photo.id,
+            mimeType: photo.uploadFile.type,
+          })),
+        ),
       );
       const signedByClientId = new Map<string, SignedCatalogUpload>(
         signedUploads.map((signed) => [signed.clientAssetId, signed]),
       );
 
       const registeredAssets = await mapWithConcurrency(
-        photos,
+        preparedPhotos,
         3,
         async (photo): Promise<RegisteredCatalogAsset> => {
           const signed = signedByClientId.get(photo.id);
-          if (!signed) throw new Error(`No se recibió firma para ${photo.file.name}.`);
-          const uploaded = await api.uploadToCloudinary(photo.file, signed);
+          if (!signed) {
+            throw new Error(`No se recibió firma para ${photo.file.name}.`);
+          }
+
+          const uploaded = await apiRef.current.uploadToCloudinary(
+            photo.uploadFile,
+            signed,
+          );
           setUploadCompleted((current) => current + 1);
+
           return {
             clientAssetId: photo.id,
             assetId: uploaded.asset_id,
@@ -312,13 +439,15 @@ export const CatalogAiImportWizard = ({
             height: uploaded.height,
             bytes: uploaded.bytes,
             format: uploaded.format,
-            mimeType: photo.file.type,
+            mimeType: photo.uploadFile.type,
           };
         },
       );
 
-      await api.registerAssets(newBatchId, registeredAssets);
-      await api.startBatch(newBatchId);
+      await runWithSessionRecovery((client) =>
+        client.registerAssets(newBatchId, registeredAssets),
+      );
+      await runWithSessionRecovery((client) => client.startBatch(newBatchId));
       setStep(2);
     } catch (cause) {
       setError(errorText(cause));
@@ -336,12 +465,16 @@ export const CatalogAiImportWizard = ({
       if (pollInFlightRef.current || cancelled) return;
       pollInFlightRef.current = true;
       try {
-        const progress = await api.getBatch(batchId);
+        const progress = await runWithSessionRecovery((client) =>
+          client.getBatch(batchId),
+        );
         if (cancelled) return;
         setBatchProgress(progress);
 
         if (TERMINAL_BATCH_STATUSES.has(progress.status)) {
-          const batchItems = await api.listBatchItems(batchId);
+          const batchItems = await runWithSessionRecovery((client) =>
+            client.listBatchItems(batchId),
+          );
           if (cancelled) return;
           const editable = batchItems.map(toEditableItem);
           setItems(editable);
@@ -368,7 +501,7 @@ export const CatalogAiImportWizard = ({
       cancelled = true;
       window.clearInterval(interval);
     };
-  }, [api, batchId, open, step]);
+  }, [batchId, open, runWithSessionRecovery, step]);
 
   const updateDraft = (
     itemId: number,
@@ -413,7 +546,9 @@ export const CatalogAiImportWizard = ({
     };
 
     try {
-      await api.updateItem(batchId, itemId, patch);
+      await runWithSessionRecovery((client) =>
+        client.updateItem(batchId, itemId, patch),
+      );
       setItems((current) =>
         current.map((row) =>
           row.Id === itemId
@@ -479,7 +614,7 @@ export const CatalogAiImportWizard = ({
       await saveDirtyItems();
       const selectedItems = items.filter((item) => selectedIds.has(item.Id));
       const productIds = await mapWithConcurrency(selectedItems, 2, (item) =>
-        api.publishItem(batchId, item),
+        runWithSessionRecovery((client) => client.publishItem(batchId, item)),
       );
       setPublishedProductIds(productIds);
       setFinishedAt(Date.now());
@@ -495,7 +630,9 @@ export const CatalogAiImportWizard = ({
     if (!batchId) return;
     setError(null);
     try {
-      await api.retryItem(batchId, itemId);
+      await runWithSessionRecovery((client) =>
+        client.retryItem(batchId, itemId),
+      );
       setStep(2);
     } catch (cause) {
       setError(errorText(cause));
@@ -554,7 +691,7 @@ export const CatalogAiImportWizard = ({
             type="button"
             className="catalog-ai-wizard__close"
             onClick={safeClose}
-            disabled={uploading || publishing}
+            disabled={(uploading || publishing) && !sessionPaused}
             aria-label="Cerrar importación con IA"
           >
             ×
@@ -581,6 +718,24 @@ export const CatalogAiImportWizard = ({
 
         {error ? <p className="catalog-ai-wizard__error" role="alert">{error}</p> : null}
 
+        {sessionPaused && !sessionRefreshOpen ? (
+          <div className="catalog-ai-wizard__session-paused" role="status">
+            <div>
+              <strong>Importación pausada</strong>
+              <p>Renueva tu sesión para continuar sin perder las fotos ni el avance.</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setSessionPaused(false);
+                setSessionRefreshOpen(true);
+              }}
+            >
+              Renovar sesión
+            </button>
+          </div>
+        ) : null}
+
         <div className="catalog-ai-wizard__content">
           {step === 1 ? (
             <div className="catalog-ai-wizard__upload-step">
@@ -601,12 +756,12 @@ export const CatalogAiImportWizard = ({
                 <input
                   ref={inputRef}
                   type="file"
-                  accept="image/jpeg,image/jpg,image/png,image/webp,image/heic,image/heif"
+                  accept="image/jpeg,image/jpg,image/png,image/webp"
                   multiple
                   hidden
                   onChange={handleFileInput}
                 />
-                <small>JPG, PNG, WEBP, HEIC · máximo {MAX_FILES} fotos · 10 MB por archivo</small>
+                <small>JPG, PNG o WEBP · máximo {MAX_FILES} fotos · 5 MB por archivo</small>
               </div>
 
               <div className="catalog-ai-wizard__selection-head">
@@ -651,7 +806,9 @@ export const CatalogAiImportWizard = ({
                   disabled={photos.length === 0 || uploading}
                 >
                   {uploading
-                    ? `Subiendo ${uploadCompleted}/${photos.length}`
+                    ? preparedCompleted < photos.length
+                      ? `Preparando ${preparedCompleted}/${photos.length}`
+                      : `Subiendo ${uploadCompleted}/${photos.length}`
                     : `Analizar ${photos.length || ""} ${photos.length === 1 ? "foto" : "fotos"}`}
                 </button>
               </footer>
@@ -870,6 +1027,13 @@ export const CatalogAiImportWizard = ({
           ) : null}
         </div>
       </section>
+
+      <CatalogAiSessionRefreshModal
+        open={sessionRefreshOpen}
+        expectedBusinessId={businessId}
+        onContinueLater={continueSessionLater}
+        onRefreshed={handleSessionRefreshed}
+      />
     </div>
   );
 };
