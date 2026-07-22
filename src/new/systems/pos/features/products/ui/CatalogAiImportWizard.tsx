@@ -59,6 +59,8 @@ type EditableCatalogAiItem = CatalogAiItem & {
   draftSubcategory: string;
   draftBrand: string;
   draftColor: string;
+  draftPrice: string;
+  draftStock: string;
   dirty: boolean;
   saving: boolean;
 };
@@ -83,9 +85,38 @@ const toEditableItem = (item: CatalogAiItem): EditableCatalogAiItem => ({
   draftSubcategory: item.Suggested_Subcategory ?? "",
   draftBrand: item.Suggested_Brand ?? "",
   draftColor: item.Suggested_Color ?? "",
+  draftPrice: item.Suggested_Price === null || item.Suggested_Price === undefined
+    ? ""
+    : String(item.Suggested_Price),
+  draftStock: item.Suggested_Stock === null || item.Suggested_Stock === undefined
+    ? "1"
+    : String(item.Suggested_Stock),
   dirty: false,
   saving: false,
 });
+
+
+const parseOptionalNonNegativeNumber = (value: string): number | null => {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error("El precio debe ser un número igual o mayor que cero.");
+  }
+  return Math.round(parsed * 100) / 100;
+};
+
+const parseRequiredNonNegativeNumber = (value: string): number => {
+  const trimmed = value.trim();
+  if (!trimmed) {
+    throw new Error("El stock es obligatorio.");
+  }
+  const parsed = Number(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0) {
+    throw new Error("El stock debe ser un número igual o mayor que cero.");
+  }
+  return Math.round(parsed * 100) / 100;
+};
 
 const confidenceValue = (value: number | string | null): number => {
   const parsed = Number(value ?? 0);
@@ -511,7 +542,9 @@ export const CatalogAiImportWizard = ({
       | "draftCategory"
       | "draftSubcategory"
       | "draftBrand"
-      | "draftColor",
+      | "draftColor"
+      | "draftPrice"
+      | "draftStock",
     value: string,
   ) => {
     setItems((current) =>
@@ -521,13 +554,23 @@ export const CatalogAiImportWizard = ({
     );
   };
 
-  const saveItem = async (itemId: number) => {
-    if (!batchId) return;
+  const saveItem = async (itemId: number): Promise<boolean> => {
+    if (!batchId) return false;
     const item = items.find((row) => row.Id === itemId);
-    if (!item || !item.dirty) return;
+    if (!item || !item.dirty) return true;
     if (!item.draftName.trim()) {
       setError("Todos los productos aprobados necesitan un nombre.");
-      return;
+      return false;
+    }
+
+    let parsedPrice: number | null;
+    let parsedStock: number;
+    try {
+      parsedPrice = parseOptionalNonNegativeNumber(item.draftPrice);
+      parsedStock = parseRequiredNonNegativeNumber(item.draftStock);
+    } catch (cause) {
+      setError(errorText(cause));
+      return false;
     }
 
     setItems((current) =>
@@ -543,6 +586,8 @@ export const CatalogAiImportWizard = ({
       subcategory: item.draftSubcategory.trim() || null,
       brand: item.draftBrand.trim() || null,
       color: item.draftColor.trim() || null,
+      price: parsedPrice,
+      stock: parsedStock,
     };
 
     try {
@@ -560,26 +605,33 @@ export const CatalogAiImportWizard = ({
                 Suggested_Subcategory: patch.subcategory ?? null,
                 Suggested_Brand: patch.brand ?? null,
                 Suggested_Color: patch.color ?? null,
+                Suggested_Price: patch.price ?? null,
+                Suggested_Stock: patch.stock ?? 1,
                 dirty: false,
                 saving: false,
               }
             : row,
         ),
       );
+      return true;
     } catch (cause) {
       setItems((current) =>
         current.map((row) =>
           row.Id === itemId ? { ...row, saving: false } : row,
         ),
       );
-      throw cause;
+      setError(errorText(cause));
+      return false;
     }
   };
 
   const saveDirtyItems = async () => {
     const dirtyIds = items.filter((item) => item.dirty).map((item) => item.Id);
     for (const itemId of dirtyIds) {
-      await saveItem(itemId);
+      const saved = await saveItem(itemId);
+      if (!saved) {
+        throw new Error("Revisa los datos de precio, stock y nombre antes de continuar.");
+      }
     }
   };
 
@@ -614,7 +666,9 @@ export const CatalogAiImportWizard = ({
       await saveDirtyItems();
       const selectedItems = items.filter((item) => selectedIds.has(item.Id));
       const productIds = await mapWithConcurrency(selectedItems, 2, (item) =>
-        runWithSessionRecovery((client) => client.publishItem(batchId, item)),
+        runWithSessionRecovery((client) =>
+          client.publishItem(batchId, item, { showPrice: priceMode === "show" }),
+        ),
       );
       setPublishedProductIds(productIds);
       setFinishedAt(Date.now());
@@ -920,6 +974,31 @@ export const CatalogAiImportWizard = ({
                           <label>Subcategoría<input value={item.draftSubcategory} disabled={!selectable} onChange={(event) => updateDraft(item.Id, "draftSubcategory", event.target.value)} /></label>
                           <label>Marca<input value={item.draftBrand} disabled={!selectable} onChange={(event) => updateDraft(item.Id, "draftBrand", event.target.value)} /></label>
                           <label>Color<input value={item.draftColor} disabled={!selectable} onChange={(event) => updateDraft(item.Id, "draftColor", event.target.value)} /></label>
+                          <label>
+                            Precio
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              inputMode="decimal"
+                              placeholder="Sin precio"
+                              value={item.draftPrice}
+                              disabled={!selectable}
+                              onChange={(event) => updateDraft(item.Id, "draftPrice", event.target.value)}
+                            />
+                          </label>
+                          <label>
+                            Stock
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              inputMode="decimal"
+                              value={item.draftStock}
+                              disabled={!selectable}
+                              onChange={(event) => updateDraft(item.Id, "draftStock", event.target.value)}
+                            />
+                          </label>
                         </div>
                         {item.Duplicate_Reason ? <p className="catalog-ai-wizard__inline-warning">Posible duplicado: {item.Duplicate_Reason}</p> : null}
                         {item.Error_Message ? <p className="catalog-ai-wizard__inline-error">{item.Error_Message}</p> : null}
@@ -968,10 +1047,10 @@ export const CatalogAiImportWizard = ({
                   <span className="catalog-ai-wizard__price-radio" />
                   <div><strong>Ocultar precios temporalmente</strong><p>Organiza el catálogo primero y agrega precios después desde productos.</p></div>
                 </label>
-                <label className="is-disabled">
-                  <input type="radio" name="price-mode" value="show" disabled />
+                <label className={priceMode === "show" ? "is-selected" : ""}>
+                  <input type="radio" name="price-mode" value="show" checked={priceMode === "show"} onChange={() => setPriceMode("show")} />
                   <span className="catalog-ai-wizard__price-radio" />
-                  <div><strong>Mostrar precio</strong><p>Disponible cuando agreguemos la edición masiva de precios.</p><small>Próximamente</small></div>
+                  <div><strong>Mostrar precios capturados</strong><p>Los productos con precio se mostrarán en el catálogo. Los que no tengan precio permanecerán ocultos.</p></div>
                 </label>
               </div>
 

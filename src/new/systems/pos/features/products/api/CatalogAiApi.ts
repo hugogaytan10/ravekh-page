@@ -47,6 +47,9 @@ export type CatalogAiItem = {
   Suggested_Subcategory: string | null;
   Suggested_Brand: string | null;
   Suggested_Color: string | null;
+  Suggested_Price: number | string | null;
+  Suggested_Stock: number | string | null;
+  For_Sale: number | boolean;
   Confidence: number | string | null;
   Duplicate_Reason: string | null;
   Duplicate_Product_Id: number | null;
@@ -65,6 +68,8 @@ export type CatalogAiItemPatch = {
   subcategory?: string | null;
   brand?: string | null;
   color?: string | null;
+  price?: number | null;
+  stock?: number;
 };
 
 export type SignedCatalogUpload = {
@@ -316,13 +321,17 @@ export class CatalogAiApi {
     );
   }
 
-  async publishItem(batchId: string, item: CatalogAiItem): Promise<number> {
+  async publishItem(
+    batchId: string,
+    item: CatalogAiItem,
+    options: { showPrice: boolean },
+  ): Promise<number> {
     if (item.Status === "DUPLICATE_EXACT") {
       const response = await this.request<{ productId: number }>(
         `/v1/catalog-imports/${encodeURIComponent(batchId)}/items/${item.Id}/resolve-duplicate`,
         {
           method: "POST",
-          body: JSON.stringify({ action: "publish" }),
+          body: JSON.stringify({ action: "publish", showPrice: options.showPrice }),
         },
       );
       return response.productId;
@@ -330,7 +339,10 @@ export class CatalogAiApi {
 
     const response = await this.request<{ productId: number }>(
       `/v1/catalog-imports/${encodeURIComponent(batchId)}/items/${item.Id}/publish`,
-      { method: "POST" },
+      {
+        method: "POST",
+        body: JSON.stringify({ showPrice: options.showPrice }),
+      },
     );
     return response.productId;
   }
