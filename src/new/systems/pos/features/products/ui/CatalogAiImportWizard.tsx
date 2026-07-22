@@ -17,7 +17,7 @@ import {
 import { CatalogAiSessionRefreshModal } from "./CatalogAiSessionRefreshModal";
 import "./CatalogAiImportWizard.css";
 
-const DEFAULT_CATALOG_AI_URL = "catalog-ai-api-production.up.railway.app";
+const DEFAULT_CATALOG_AI_URL = "catalog-ai-api-production.up.railway.app/api";
 const CATALOG_AI_API_URL = String(
   import.meta.env.VITE_CATALOG_AI_API_URL ?? DEFAULT_CATALOG_AI_URL,
 ).replace(/\/+$/, "");
