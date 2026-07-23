@@ -81,7 +81,6 @@ export type SignedCatalogUpload = {
   cloudName: string;
   uploadUrl: string;
   folder: string;
-  transformation: string;
 };
 
 export type CloudinaryUploadResult = {
@@ -248,7 +247,6 @@ export class CatalogAiApi {
     formData.append("timestamp", String(signed.timestamp));
     formData.append("signature", signed.signature);
     formData.append("public_id", signed.publicId);
-    formData.append("transformation", signed.transformation);
 
     const response = await fetch(signed.uploadUrl, {
       method: "POST",

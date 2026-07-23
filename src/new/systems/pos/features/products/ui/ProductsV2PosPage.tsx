@@ -121,6 +121,14 @@ type ToastState = {
 } | null;
 type ArchiveDialogState = { id: number; name: string } | null;
 type ProductCategoryVm = { id: number; name: string; color: string };
+
+const normalizeCategoryName = (value: string): string =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim()
+    .replace(/\s+/g, " ")
+    .toLocaleLowerCase("es-MX");
 type SaveResultState = { type: "success" | "error"; message: string } | null;
 type CategoryFormErrors = { name?: string; color?: string };
 
@@ -1524,6 +1532,64 @@ export const ProductsV2PosPage = () => {
     return Object.keys(nextErrors).length === 0;
   };
 
+  const createCategoryFromAiReview = async (input: {
+    name: string;
+    color: string;
+  }): Promise<ProductCategoryVm> => {
+    if (!token || !businessId) {
+      throw new Error("Inicia sesión para crear categorías.");
+    }
+
+    const name = input.name.trim().replace(/\s+/g, " ");
+    const color = /^#[0-9A-Fa-f]{6}$/.test(input.color.trim())
+      ? input.color.trim().toUpperCase()
+      : "#6D01D1";
+
+    const existing = categories.find(
+      (category) =>
+        normalizeCategoryName(category.name) === normalizeCategoryName(name),
+    );
+    if (existing) return existing;
+
+    await service.createCategory(
+      {
+        businessId,
+        name,
+        color,
+      },
+      token,
+    );
+
+    const categoryRows = await service.listCategories(businessId, token);
+    const refreshedCategories = (Array.isArray(categoryRows) ? categoryRows : [])
+      .filter(
+        (category) => typeof category.id === "number" && category.id > 0,
+      )
+      .map((category) => ({
+        id: category.id as number,
+        name: category.name,
+        color: category.color || color,
+      }));
+
+    setCategories(refreshedCategories);
+
+    const created = refreshedCategories.find(
+      (category) =>
+        normalizeCategoryName(category.name) === normalizeCategoryName(name),
+    );
+
+    if (!created) {
+      throw new Error("La categoría se creó, pero no pudo recuperarse para seleccionarla.");
+    }
+
+    setToast({
+      type: "success",
+      message: `Categoría “${created.name}” creada.`,
+    });
+
+    return created;
+  };
+
   const saveCategory = async () => {
     if (isPosModuleBlocked(features)) {
       setShowCategoryManager(false);
@@ -2009,6 +2075,8 @@ export const ProductsV2PosPage = () => {
           open={isAiImportOpen}
           businessId={businessId}
           token={token}
+          categories={categories}
+          onCreateCategory={createCategoryFromAiReview}
           onClose={() => setIsAiImportOpen(false)}
           onSessionRefreshed={setToken}
           onCompleted={({ created }) => {
