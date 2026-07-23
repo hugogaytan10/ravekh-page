@@ -6,6 +6,7 @@ import {
   SecurityQuestionStatus,
   SignUpPayload,
 } from "../model/AuthSession";
+import { LoginSessionLimitPayload } from "../model/LoginSessionLimit";
 import { AuthOnboardingService } from "../services/AuthOnboardingService";
 
 type AuthSessionViewModel = {
@@ -27,6 +28,10 @@ export class AuthOnboardingPage {
   async signIn(credentials: LoginCredentials): Promise<AuthSessionViewModel> {
     const session = await this.authOnboardingService.signIn(credentials);
     return this.toViewModel(session);
+  }
+
+  async closeOtherSessions(payload: LoginSessionLimitPayload): Promise<void> {
+    return this.authOnboardingService.closeOtherSessions(payload);
   }
   
   async getSecurityQuestionStatus(employeeId: number): Promise<SecurityQuestionStatus> {

@@ -452,3 +452,11 @@
   border-color: #334155;
   color: #ddd6fe;
 }
+
+.pos-v2-notice {
+  color: #15803d;
+  font-size: 0.8rem;
+  width: 100%;
+  text-align: left;
+  margin-top: 0.25rem;
+}

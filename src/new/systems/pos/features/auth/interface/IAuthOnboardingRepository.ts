@@ -8,8 +8,10 @@ import {
   SecurityQuestionStatus,
   SignUpPayload,
 } from "../model/AuthSession";
+import { LoginSessionLimitPayload } from "../model/LoginSessionLimit";
 export interface IAuthOnboardingRepository {
   login(credentials: LoginCredentials): Promise<AuthSession>;
+  closeOtherSessions(payload: LoginSessionLimitPayload): Promise<void>;
   signUp(payload: SignUpPayload): Promise<AuthSession>;
   getQuestions(): Promise<SecurityQuestion[]>;
   getSecurityQuestionStatus(employeeId: number): Promise<SecurityQuestionStatus>;

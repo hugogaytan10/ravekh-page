@@ -4,10 +4,15 @@ import { ModernSystemsFactory } from "../../../../../index";
 import { ProductImportResult } from "../interface/IProductsRepository";
 import { ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 import { ProductImportModal } from "./ProductImportModal";
+import { CatalogAiImportWizard } from "./CatalogAiImportWizard";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
+import {
+  POS_SESSION_UPDATED_EVENT,
+  type PersistedPosSession,
+} from "../../../shared/config/posSessionRuntime";
 import {
   fetchPosBusinessFeatures,
   isPosFeatureBlocked,
@@ -83,6 +88,7 @@ type ProductItemVm = {
   image: string | null;
   images: string[];
   variants: ProductVariant[];
+  variantsCount?: number;
   extras: Array<{ description: string; type: string }>;
 };
 
@@ -189,7 +195,9 @@ export const ProductsV2PosPage = () => {
     );
     return storedBusinessId || DEFAULT_BUSINESS_ID;
   });
-  const [token] = useState(() => window.localStorage.getItem(TOKEN_KEY) ?? "");
+  const [token, setToken] = useState(
+    () => window.localStorage.getItem(TOKEN_KEY) ?? "",
+  );
   const [products, setProducts] = useState<ProductItemVm[]>([]);
   const [searchCatalogProducts, setSearchCatalogProducts] = useState<
     ProductItemVm[]
@@ -211,6 +219,7 @@ export const ProductsV2PosPage = () => {
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
   const [importing, setImporting] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isAiImportOpen, setIsAiImportOpen] = useState(false);
   const [importResult, setImportResult] = useState<ProductImportResult | null>(
     null,
   );
@@ -273,6 +282,21 @@ export const ProductsV2PosPage = () => {
   const service = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
     return factory.createPosProductsService();
+  }, []);
+
+  useEffect(() => {
+    const handleSessionUpdated = (event: Event) => {
+      const detail = (event as CustomEvent<PersistedPosSession>).detail;
+      if (detail?.token) setToken(detail.token);
+    };
+
+    window.addEventListener(POS_SESSION_UPDATED_EVENT, handleSessionUpdated);
+    return () => {
+      window.removeEventListener(
+        POS_SESSION_UPDATED_EVENT,
+        handleSessionUpdated,
+      );
+    };
   }, []);
 
   const resetForm = () => {
@@ -565,6 +589,7 @@ export const ProductsV2PosPage = () => {
           image: product.image,
           images: product.images,
           variants: product.variants,
+          variantsCount: product.variantsCount,
           extras: product.extras,
         })),
       );
@@ -697,6 +722,7 @@ export const ProductsV2PosPage = () => {
             image: product.image,
             images: product.images,
             variants: product.variants,
+            variantsCount: product.variantsCount,
             extras: product.extras,
           }));
           setSearchCatalogProducts(mapped);
@@ -1624,11 +1650,6 @@ export const ProductsV2PosPage = () => {
     categoryCarouselRef.current.scrollBy({ left: offset, behavior: "smooth" });
   };
 
-  const openImportProducts = () => {
-    if (blockBlockedProductModuleMutation()) return;
-    excelInputRef.current?.click();
-  };
-
   const getImportErrorMessage = (cause: unknown): string => {
     if (cause instanceof Error) {
       const payload = (
@@ -1843,6 +1864,7 @@ export const ProductsV2PosPage = () => {
             image: product.image,
             images: product.images,
             variants: product.variants,
+            variantsCount: product.variantsCount,
             extras: product.extras,
           })),
         );
@@ -1946,6 +1968,18 @@ export const ProductsV2PosPage = () => {
             </button>
             <button
               type="button"
+              className="pos-v2-products__primary"
+              onClick={() => {
+                if (blockBlockedProductModuleMutation()) return;
+                if (blockFreeProductCreation()) return;
+                setIsAiImportOpen(true);
+              }}
+              disabled={!token || !businessId}
+            >
+              ✦ Importar con IA
+            </button>
+            <button
+              type="button"
               className="pos-v2-products__secondary"
               onClick={openImportModal}
               disabled={importing || !token || !businessId}
@@ -1970,6 +2004,22 @@ export const ProductsV2PosPage = () => {
             </button>
           </div>
         </header>
+
+        <CatalogAiImportWizard
+          open={isAiImportOpen}
+          businessId={businessId}
+          token={token}
+          onClose={() => setIsAiImportOpen(false)}
+          onSessionRefreshed={setToken}
+          onCompleted={({ created }) => {
+            setIsAiImportOpen(false);
+            setToast({
+              type: "success",
+              message: `${created} producto(s) creados con IA.`,
+            });
+            void loadProducts(1);
+          }}
+        />
 
         <ProductImportModal
           open={isImportModalOpen}
@@ -2157,17 +2207,12 @@ export const ProductsV2PosPage = () => {
                         </strong>
                         <small>Stock: {product.stock ?? "--"}</small>
                       </div>
-                      {/*{product.wholesalePrice != null ? (
+                      {product.wholesalePrice != null ? (
                         <small className="pos-v2-products__simple-meta">
                           Mayoreo: ${product.wholesalePrice.toFixed(2)} desde{" "}
                           {product.wholesaleMinQuantity ?? "--"} pzas.
                         </small>
                       ) : null}
-                      {product.categoryName ? (
-                        <small className="pos-v2-products__simple-meta">
-                          Categoría: {product.categoryName}
-                        </small>
-                      ) : null}*/}
                       {product.categoryName ? (
                         <small className="pos-v2-products__simple-meta">
                           Categoría: {product.categoryName}
