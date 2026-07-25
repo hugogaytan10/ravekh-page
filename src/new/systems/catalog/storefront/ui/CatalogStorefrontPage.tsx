@@ -26,15 +26,6 @@ const DEFAULT_PRICE_MAX_BOUND = 999;
 const SOCIAL_IMAGE_WIDTH = "1200";
 const SOCIAL_IMAGE_HEIGHT = "630";
 const ALL_PRODUCTS_SEARCH_DEBOUNCE_MS = 450;
-const CLOUDINARY_FACEBOOK_TRANSFORM = "c_pad,b_white,g_center,w_1200,h_630,f_jpg,q_auto";
-
-const addCloudinaryFacebookTransform = (imageUrl: string): string => {
-  const parsedUrl = new URL(imageUrl);
-  if (!parsedUrl.hostname.includes("cloudinary.com") || !parsedUrl.pathname.includes("/upload/")) return imageUrl;
-
-  parsedUrl.pathname = parsedUrl.pathname.replace("/upload/", `/upload/${CLOUDINARY_FACEBOOK_TRANSFORM}/`);
-  return parsedUrl.toString();
-};
 
 const buildAbsoluteCatalogUrl = (value?: string | null): string => {
   const fallback = typeof window !== "undefined" ? `${window.location.origin}/ravekh.png` : "/ravekh.png";
@@ -43,11 +34,9 @@ const buildAbsoluteCatalogUrl = (value?: string | null): string => {
 
   if (typeof window === "undefined") return normalized;
 
-  const absoluteUrl = /^https?:\/\//i.test(normalized)
+  return /^https?:\/\//i.test(normalized)
     ? normalized
     : new URL(normalized.startsWith("/") ? normalized : `/${normalized}`, window.location.origin).toString();
-
-  return addCloudinaryFacebookTransform(absoluteUrl);
 };
 
 const SkeletonGrid = () => (

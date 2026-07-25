@@ -4,7 +4,6 @@ const DEFAULT_DESCRIPTION = "Explora productos, revisa detalles y realiza pedido
 const DEFAULT_IMAGE_PATH = "/ravekh.png";
 const SOCIAL_IMAGE_WIDTH = "1200";
 const SOCIAL_IMAGE_HEIGHT = "630";
-const CLOUDINARY_FACEBOOK_TRANSFORM = "c_pad,b_white,g_center,w_1200,h_630,f_jpg,q_auto";
 
 const escapeHtml = (value) =>
   String(value ?? "")
@@ -33,23 +32,13 @@ const getBusinessId = (url) => {
   return match ? decodeURIComponent(match[1]) : "";
 };
 
-const addCloudinaryFacebookTransform = (imageUrl) => {
-  const parsedUrl = new URL(imageUrl);
-  if (!parsedUrl.hostname.includes("cloudinary.com") || !parsedUrl.pathname.includes("/upload/")) return imageUrl;
-
-  parsedUrl.pathname = parsedUrl.pathname.replace("/upload/", `/upload/${CLOUDINARY_FACEBOOK_TRANSFORM}/`);
-  return parsedUrl.toString();
-};
-
 const toAbsoluteUrl = (value, origin) => {
   const normalized = String(value ?? "").trim();
-  const absoluteUrl = !normalized
+  return !normalized
     ? `${origin}${DEFAULT_IMAGE_PATH}`
     : /^https?:\/\//i.test(normalized)
       ? normalized
       : new URL(normalized.startsWith("/") ? normalized : `/${normalized}`, origin).toString();
-
-  return addCloudinaryFacebookTransform(absoluteUrl);
 };
 
 const fetchBusiness = async (businessId) => {
