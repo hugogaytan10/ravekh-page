@@ -1,11 +1,4 @@
-import {
-  ChangeEvent,
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   CatalogAiApi,
   CatalogAiApiError,
@@ -26,10 +19,34 @@ import { CatalogAiSessionRefreshModal } from "./CatalogAiSessionRefreshModal";
 import "./CatalogAiImportWizard.css";
 
 const DEFAULT_CATALOG_AI_URL = "http://localhost:8095";
-const CATALOG_AI_API_URL = String(
-  import.meta.env.VITE_CATALOG_AI_API_URL ?? DEFAULT_CATALOG_AI_URL,
-).replace(/\/+$/, "");
-const pollFailuresRef = useRef(0);
+
+const normalizeCatalogAiApiUrl = (value: string): string => {
+  const normalized = value
+    .trim()
+    .replace(/^["']+|["']+$/g, "")
+    .replace(/\/+$/, "");
+
+  if (/^https?:\/\//i.test(normalized)) {
+    return normalized;
+  }
+
+  if (
+    normalized.startsWith("localhost") ||
+    normalized.startsWith("127.0.0.1")
+  ) {
+    return `http://${normalized}`;
+  }
+
+  return `https://${normalized}`;
+};
+
+const CATALOG_AI_API_URL = normalizeCatalogAiApiUrl(
+  String(
+    import.meta.env.VITE_CATALOG_AI_API_URL ??
+      DEFAULT_CATALOG_AI_URL,
+  ),
+);
+
 const MAX_FILES = 100;
 const MAX_FILE_SIZE_BYTES = PRODUCT_IMAGE_MAX_FILE_BYTES;
 const ALLOWED_TYPES = PRODUCT_IMAGE_ACCEPTED_TYPES;
@@ -46,7 +63,10 @@ const SELECTABLE_STATUSES = new Set([
   "DUPLICATE_EXACT",
 ]);
 
-const DEFAULT_SELECTED_STATUSES = new Set(["READY", "REVIEW_REQUIRED"]);
+const DEFAULT_SELECTED_STATUSES = new Set([
+  "READY",
+  "REVIEW_REQUIRED",
+]);
 
 type WizardStep = 1 | 2 | 3 | 4 | 5;
 type PriceMode = "whatsapp" | "hidden" | "show";
@@ -89,9 +109,7 @@ type CatalogAiImportWizardProps = {
   businessId: number;
   token: string;
   categories: CatalogAiCategoryOption[];
-  onCreateCategory: (
-    input: CreateCatalogAiCategoryInput,
-  ) => Promise<CatalogAiCategoryOption>;
+  onCreateCategory: (input: CreateCatalogAiCategoryInput) => Promise<CatalogAiCategoryOption>;
   onClose: () => void;
   onSessionRefreshed?: (token: string) => void;
   onCompleted: (result: { created: number; productIds: number[] }) => void;
@@ -108,20 +126,19 @@ const toEditableItem = (item: CatalogAiItem): EditableCatalogAiItem => ({
   draftSubcategory: item.Suggested_Subcategory ?? "",
   draftBrand: item.Suggested_Brand ?? "",
   draftColor: item.Suggested_Color ?? "",
-  draftPrice:
-    item.Suggested_Price === null || item.Suggested_Price === undefined
-      ? ""
-      : String(item.Suggested_Price),
-  draftStock:
-    item.Suggested_Stock === null || item.Suggested_Stock === undefined
-      ? "1"
-      : String(item.Suggested_Stock),
+  draftPrice: item.Suggested_Price === null || item.Suggested_Price === undefined
+    ? ""
+    : String(item.Suggested_Price),
+  draftStock: item.Suggested_Stock === null || item.Suggested_Stock === undefined
+    ? "1"
+    : String(item.Suggested_Stock),
   categoryMode: "auto",
   draftCategoryColor: "#6D01D1",
   creatingCategory: false,
   dirty: false,
   saving: false,
 });
+
 
 const parseOptionalNonNegativeNumber = (value: string): number | null => {
   const trimmed = value.trim();
@@ -222,11 +239,9 @@ export const CatalogAiImportWizard = ({
   const [step, setStep] = useState<WizardStep>(1);
   const [photos, setPhotos] = useState<SelectedPhoto[]>([]);
   const [batchId, setBatchId] = useState<string | null>(null);
-  const [batchProgress, setBatchProgress] =
-    useState<CatalogAiBatchProgress | null>(null);
+  const [batchProgress, setBatchProgress] = useState<CatalogAiBatchProgress | null>(null);
   const [items, setItems] = useState<EditableCatalogAiItem[]>([]);
-  const [availableCategories, setAvailableCategories] =
-    useState<CatalogAiCategoryOption[]>(categories);
+  const [availableCategories, setAvailableCategories] = useState<CatalogAiCategoryOption[]>(categories);
   const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
   const [priceMode, setPriceMode] = useState<PriceMode>("whatsapp");
   const [uploading, setUploading] = useState(false);
@@ -237,14 +252,13 @@ export const CatalogAiImportWizard = ({
   const [publishedProductIds, setPublishedProductIds] = useState<number[]>([]);
   const [startedAt, setStartedAt] = useState<number | null>(null);
   const [finishedAt, setFinishedAt] = useState<number | null>(null);
-  const [filter, setFilter] = useState<
-    "all" | "ready" | "review" | "duplicate" | "error"
-  >("all");
+  const [filter, setFilter] = useState<"all" | "ready" | "review" | "duplicate" | "error">("all");
   const [currentToken, setCurrentToken] = useState(token);
   const [sessionRefreshOpen, setSessionRefreshOpen] = useState(false);
   const [sessionPaused, setSessionPaused] = useState(false);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const pollInFlightRef = useRef(false);
+  const pollFailuresRef = useRef(0);
   const photosRef = useRef<SelectedPhoto[]>([]);
   const apiRef = useRef(new CatalogAiApi(CATALOG_AI_API_URL, token));
   const sessionRefreshWaiterRef = useRef<{
@@ -356,6 +370,7 @@ export const CatalogAiImportWizard = ({
     setFilter("all");
     setSessionRefreshOpen(false);
     setSessionPaused(false);
+    pollFailuresRef.current = 0;
   };
 
   useEffect(() => {
@@ -369,18 +384,13 @@ export const CatalogAiImportWizard = ({
 
   useEffect(() => {
     return () => {
-      photosRef.current.forEach((photo) =>
-        URL.revokeObjectURL(photo.previewUrl),
-      );
+      photosRef.current.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
     };
   }, []);
 
   const safeClose = () => {
     if ((uploading || publishing) && !sessionPaused) return;
-    if (
-      step === 2 &&
-      !TERMINAL_BATCH_STATUSES.has(batchProgress?.status ?? "")
-    ) {
+    if (step === 2 && !TERMINAL_BATCH_STATUSES.has(batchProgress?.status ?? "")) {
       const confirmed = window.confirm(
         "La IA sigue procesando tus fotos. Si cierras esta ventana tendrás que retomar el lote después. ¿Deseas cerrar?",
       );
@@ -396,9 +406,7 @@ export const CatalogAiImportWizard = ({
   const addFiles = (incoming: File[]) => {
     setError(null);
     const existingKeys = new Set(
-      photos.map(
-        ({ file }) => `${file.name}:${file.size}:${file.lastModified}`,
-      ),
+      photos.map(({ file }) => `${file.name}:${file.size}:${file.lastModified}`),
     );
     const accepted: SelectedPhoto[] = [];
     const rejectedMessages: string[] = [];
@@ -415,9 +423,7 @@ export const CatalogAiImportWizard = ({
         continue;
       }
       if (photos.length + accepted.length >= MAX_FILES) {
-        rejectedMessages.push(
-          `Solo puedes procesar hasta ${MAX_FILES} imágenes por lote.`,
-        );
+        rejectedMessages.push(`Solo puedes procesar hasta ${MAX_FILES} imágenes por lote.`);
         break;
       }
       accepted.push({
@@ -549,9 +555,7 @@ export const CatalogAiImportWizard = ({
     let cancelled = false;
 
     const poll = async () => {
-      if (pollInFlightRef.current || cancelled) {
-        return;
-      }
+      if (pollInFlightRef.current || cancelled) return;
 
       pollInFlightRef.current = true;
 
@@ -560,13 +564,9 @@ export const CatalogAiImportWizard = ({
           client.getBatch(batchId),
         );
 
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
 
         pollFailuresRef.current = 0;
-
-        // Elimina cualquier error temporal de una consulta anterior.
         setError(null);
         setBatchProgress(progress);
 
@@ -575,29 +575,24 @@ export const CatalogAiImportWizard = ({
             client.listBatchItems(batchId),
           );
 
-          if (cancelled) {
-            return;
-          }
+          if (cancelled) return;
 
           const editable = batchItems.map(toEditableItem);
-
           setItems(editable);
-
           setSelectedIds(
             new Set(
               editable
-                .filter((item) => DEFAULT_SELECTED_STATUSES.has(item.Status))
+                .filter((item) =>
+                  DEFAULT_SELECTED_STATUSES.has(item.Status),
+                )
                 .map((item) => item.Id),
             ),
           );
-
           setFinishedAt(Date.now());
           setStep(3);
         }
       } catch (cause) {
-        if (cancelled) {
-          return;
-        }
+        if (cancelled) return;
 
         const isTemporaryServerError =
           cause instanceof CatalogAiApiError &&
@@ -611,8 +606,6 @@ export const CatalogAiImportWizard = ({
             cause,
           );
 
-          // No mostrar un error fatal por una sola consulta.
-          // El siguiente intervalo volverá a intentarlo.
           if (pollFailuresRef.current >= 5) {
             setError(
               "El análisis continúa, pero no pudimos actualizar el progreso. Estamos intentando reconectar.",
@@ -656,11 +649,9 @@ export const CatalogAiImportWizard = ({
     (name: string): CatalogAiCategoryOption | null => {
       const normalized = normalizeCategoryName(name);
       if (!normalized) return null;
-      return (
-        availableCategories.find(
-          (category) => normalizeCategoryName(category.name) === normalized,
-        ) ?? null
-      );
+      return availableCategories.find(
+        (category) => normalizeCategoryName(category.name) === normalized,
+      ) ?? null;
     },
     [availableCategories],
   );
@@ -693,9 +684,7 @@ export const CatalogAiImportWizard = ({
         }
 
         const categoryId = Number(value);
-        const category = availableCategories.find(
-          (row) => row.id === categoryId,
-        );
+        const category = availableCategories.find((row) => row.id === categoryId);
         if (!category) return item;
 
         return {
@@ -910,9 +899,7 @@ export const CatalogAiImportWizard = ({
     for (const itemId of dirtyIds) {
       const saved = await saveItem(itemId);
       if (!saved) {
-        throw new Error(
-          "Revisa los datos de precio, stock y nombre antes de continuar.",
-        );
+        throw new Error("Revisa los datos de precio, stock y nombre antes de continuar.");
       }
     }
   };
@@ -949,9 +936,7 @@ export const CatalogAiImportWizard = ({
       const selectedItems = items.filter((item) => selectedIds.has(item.Id));
       const productIds = await mapWithConcurrency(selectedItems, 2, (item) =>
         runWithSessionRecovery((client) =>
-          client.publishItem(batchId, item, {
-            showPrice: priceMode === "show",
-          }),
+          client.publishItem(batchId, item, { showPrice: priceMode === "show" }),
         ),
       );
       setPublishedProductIds(productIds);
@@ -989,25 +974,15 @@ export const CatalogAiImportWizard = ({
 
   const filteredItems = useMemo(() => {
     if (filter === "all") return items;
-    if (filter === "ready")
-      return items.filter((item) => item.Status === "READY");
-    if (filter === "review")
-      return items.filter((item) => item.Status === "REVIEW_REQUIRED");
-    if (filter === "duplicate")
-      return items.filter((item) => item.Status === "DUPLICATE_EXACT");
-    return items.filter(
-      (item) =>
-        item.Status.startsWith("FAILED") ||
-        item.Status === "REJECTED_NOT_PRODUCT",
-    );
+    if (filter === "ready") return items.filter((item) => item.Status === "READY");
+    if (filter === "review") return items.filter((item) => item.Status === "REVIEW_REQUIRED");
+    if (filter === "duplicate") return items.filter((item) => item.Status === "DUPLICATE_EXACT");
+    return items.filter((item) => item.Status.startsWith("FAILED") || item.Status === "REJECTED_NOT_PRODUCT");
   }, [filter, items]);
 
   const progressPercent = useMemo(() => {
     if (!batchProgress?.total) return 0;
-    return Math.min(
-      100,
-      Math.round((batchProgress.processed / batchProgress.total) * 100),
-    );
+    return Math.min(100, Math.round((batchProgress.processed / batchProgress.total) * 100));
   }, [batchProgress]);
 
   const elapsedText = useMemo(() => {
@@ -1051,14 +1026,7 @@ export const CatalogAiImportWizard = ({
         ? `${preparedCompleted} de ${photos.length} preparadas`
         : `${uploadCompleted} de ${photos.length} subidas`,
     };
-  }, [
-    photos.length,
-    preparedCompleted,
-    publishing,
-    selectedIds.size,
-    uploadCompleted,
-    uploading,
-  ]);
+  }, [photos.length, preparedCompleted, publishing, selectedIds.size, uploadCompleted, uploading]);
 
   const showBusyOverlay = Boolean(busyState) && !sessionPaused;
 
@@ -1075,14 +1043,9 @@ export const CatalogAiImportWizard = ({
       >
         <header className="catalog-ai-wizard__header">
           <div>
-            <span className="catalog-ai-wizard__eyebrow">
-              Catálogo asistido
-            </span>
+            <span className="catalog-ai-wizard__eyebrow">Catálogo asistido</span>
             <h2>Importar con IA</h2>
-            <p>
-              La IA prepara tus productos. Nada se agrega a la base hasta que tú
-              lo apruebes.
-            </p>
+            <p>La IA prepara tus productos. Nada se agrega a la base hasta que tú lo apruebes.</p>
           </div>
           <button
             type="button"
@@ -1095,10 +1058,7 @@ export const CatalogAiImportWizard = ({
           </button>
         </header>
 
-        <nav
-          className="catalog-ai-wizard__steps"
-          aria-label="Progreso de importación"
-        >
+        <nav className="catalog-ai-wizard__steps" aria-label="Progreso de importación">
           {[
             [1, "Sube tus fotos"],
             [2, "IA procesa"],
@@ -1116,20 +1076,13 @@ export const CatalogAiImportWizard = ({
           ))}
         </nav>
 
-        {error ? (
-          <p className="catalog-ai-wizard__error" role="alert">
-            {error}
-          </p>
-        ) : null}
+        {error ? <p className="catalog-ai-wizard__error" role="alert">{error}</p> : null}
 
         {sessionPaused && !sessionRefreshOpen ? (
           <div className="catalog-ai-wizard__session-paused" role="status">
             <div>
               <strong>Importación pausada</strong>
-              <p>
-                Renueva tu sesión para continuar sin perder las fotos ni el
-                avance.
-              </p>
+              <p>Renueva tu sesión para continuar sin perder las fotos ni el avance.</p>
             </div>
             <button
               type="button"
@@ -1170,26 +1123,20 @@ export const CatalogAiImportWizard = ({
                   hidden
                   onChange={handleFileInput}
                 />
-                <small>
-                  JPG, PNG o WEBP · máximo {MAX_FILES} fotos · 5 MB por archivo
-                </small>
+                <small>JPG, PNG o WEBP · máximo {MAX_FILES} fotos · 5 MB por archivo</small>
               </div>
 
               <div className="catalog-ai-wizard__selection-head">
                 <div>
                   <h3>Fotos seleccionadas</h3>
-                  <p>
-                    {photos.length} de {MAX_FILES}
-                  </p>
+                  <p>{photos.length} de {MAX_FILES}</p>
                 </div>
                 {photos.length > 0 ? (
                   <button
                     type="button"
                     className="catalog-ai-wizard__text-button"
                     onClick={() => {
-                      photos.forEach((photo) =>
-                        URL.revokeObjectURL(photo.previewUrl),
-                      );
+                      photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
                       setPhotos([]);
                     }}
                   >
@@ -1208,10 +1155,7 @@ export const CatalogAiImportWizard = ({
                   <div className="catalog-ai-wizard__photo-grid">
                     {photos.map((photo, index) => (
                       <figure key={photo.id}>
-                        <img
-                          src={photo.previewUrl}
-                          alt={`Producto seleccionado ${index + 1}`}
-                        />
+                        <img src={photo.previewUrl} alt={`Producto seleccionado ${index + 1}`} />
                         <span>{index + 1}</span>
                         <button
                           type="button"
@@ -1231,13 +1175,7 @@ export const CatalogAiImportWizard = ({
               </div>
 
               <footer className="catalog-ai-wizard__actions">
-                <button
-                  type="button"
-                  className="is-secondary"
-                  onClick={safeClose}
-                >
-                  Cancelar
-                </button>
+                <button type="button" className="is-secondary" onClick={safeClose}>Cancelar</button>
                 <button
                   type="button"
                   className="is-primary"
@@ -1256,66 +1194,20 @@ export const CatalogAiImportWizard = ({
 
           {step === 2 ? (
             <div className="catalog-ai-wizard__processing-step">
-              <div
-                className="catalog-ai-wizard__progress-ring"
-                style={
-                  {
-                    "--progress": `${progressPercent * 3.6}deg`,
-                  } as React.CSSProperties
-                }
-              >
+              <div className="catalog-ai-wizard__progress-ring" style={{ "--progress": `${progressPercent * 3.6}deg` } as React.CSSProperties}>
                 <div>
                   <span>✦</span>
                   <strong>{progressPercent}%</strong>
                 </div>
               </div>
               <h3>Analizando {batchProgress?.total ?? photos.length} fotos…</h3>
-              <p>
-                Estamos detectando productos, generando nombres, categorías y
-                descripciones.
-              </p>
+              <p>Estamos detectando productos, generando nombres, categorías y descripciones.</p>
 
               <div className="catalog-ai-wizard__process-list">
-                <div>
-                  <span
-                    className={
-                      batchProgress?.uploaded === batchProgress?.total
-                        ? "is-done"
-                        : ""
-                    }
-                  >
-                    ✓
-                  </span>
-                  <p>Imágenes cargadas</p>
-                  <strong>
-                    {batchProgress?.uploaded ?? uploadCompleted}/
-                    {batchProgress?.total ?? photos.length}
-                  </strong>
-                </div>
-                <div>
-                  <span className={progressPercent > 0 ? "is-done" : ""}>
-                    ✓
-                  </span>
-                  <p>Productos analizados</p>
-                  <strong>
-                    {batchProgress?.processed ?? 0}/
-                    {batchProgress?.total ?? photos.length}
-                  </strong>
-                </div>
-                <div>
-                  <span className={batchProgress?.review ? "is-warning" : ""}>
-                    !
-                  </span>
-                  <p>Requieren revisión</p>
-                  <strong>{batchProgress?.review ?? 0}</strong>
-                </div>
-                <div>
-                  <span className={batchProgress?.failed ? "is-error" : ""}>
-                    ×
-                  </span>
-                  <p>Con error</p>
-                  <strong>{batchProgress?.failed ?? 0}</strong>
-                </div>
+                <div><span className={batchProgress?.uploaded === batchProgress?.total ? "is-done" : ""}>✓</span><p>Imágenes cargadas</p><strong>{batchProgress?.uploaded ?? uploadCompleted}/{batchProgress?.total ?? photos.length}</strong></div>
+                <div><span className={progressPercent > 0 ? "is-done" : ""}>✓</span><p>Productos analizados</p><strong>{batchProgress?.processed ?? 0}/{batchProgress?.total ?? photos.length}</strong></div>
+                <div><span className={batchProgress?.review ? "is-warning" : ""}>!</span><p>Requieren revisión</p><strong>{batchProgress?.review ?? 0}</strong></div>
+                <div><span className={batchProgress?.failed ? "is-error" : ""}>×</span><p>Con error</p><strong>{batchProgress?.failed ?? 0}</strong></div>
               </div>
 
               <div className="catalog-ai-wizard__notice">
@@ -1338,29 +1230,13 @@ export const CatalogAiImportWizard = ({
                 <strong>{selectedIds.size} aprobados</strong>
               </div>
 
-              <div
-                className="catalog-ai-wizard__filters"
-                role="tablist"
-                aria-label="Filtrar resultados"
-              >
+              <div className="catalog-ai-wizard__filters" role="tablist" aria-label="Filtrar resultados">
                 {[
                   ["all", `Todos ${items.length}`],
-                  [
-                    "ready",
-                    `Listos ${items.filter((item) => item.Status === "READY").length}`,
-                  ],
-                  [
-                    "review",
-                    `Revisar ${items.filter((item) => item.Status === "REVIEW_REQUIRED").length}`,
-                  ],
-                  [
-                    "duplicate",
-                    `Duplicados ${items.filter((item) => item.Status === "DUPLICATE_EXACT").length}`,
-                  ],
-                  [
-                    "error",
-                    `Errores ${items.filter((item) => item.Status.startsWith("FAILED") || item.Status === "REJECTED_NOT_PRODUCT").length}`,
-                  ],
+                  ["ready", `Listos ${items.filter((item) => item.Status === "READY").length}`],
+                  ["review", `Revisar ${items.filter((item) => item.Status === "REVIEW_REQUIRED").length}`],
+                  ["duplicate", `Duplicados ${items.filter((item) => item.Status === "DUPLICATE_EXACT").length}`],
+                  ["error", `Errores ${items.filter((item) => item.Status.startsWith("FAILED") || item.Status === "REJECTED_NOT_PRODUCT").length}`],
                 ].map(([value, label]) => (
                   <button
                     key={value}
@@ -1378,9 +1254,7 @@ export const CatalogAiImportWizard = ({
                   const selectable = SELECTABLE_STATUSES.has(item.Status);
                   const isSelected = selectedIds.has(item.Id);
                   const confidence = confidenceValue(item.Confidence);
-                  const matchedCategory = findAvailableCategory(
-                    item.draftCategory,
-                  );
+                  const matchedCategory = findAvailableCategory(item.draftCategory);
                   const isNewCategory =
                     item.categoryMode === "new" ||
                     (item.categoryMode === "auto" &&
@@ -1392,10 +1266,7 @@ export const CatalogAiImportWizard = ({
                       ? String(matchedCategory.id)
                       : "";
                   return (
-                    <article
-                      key={item.Id}
-                      className={`${isSelected ? "is-selected" : ""} ${!selectable ? "is-disabled" : ""}`}
-                    >
+                    <article key={item.Id} className={`${isSelected ? "is-selected" : ""} ${!selectable ? "is-disabled" : ""}`}>
                       <label className="catalog-ai-wizard__approval-check">
                         <input
                           type="checkbox"
@@ -1407,39 +1278,20 @@ export const CatalogAiImportWizard = ({
                       </label>
 
                       <div className="catalog-ai-wizard__review-image">
-                        {item.Secure_Url ? (
-                          <img
-                            src={item.Secure_Url}
-                            alt={item.draftName || "Producto analizado"}
-                          />
-                        ) : (
-                          <span>Sin foto</span>
-                        )}
+                        {item.Secure_Url ? <img src={item.Secure_Url} alt={item.draftName || "Producto analizado"} /> : <span>Sin foto</span>}
                       </div>
 
                       <div className="catalog-ai-wizard__review-fields">
                         <div className="catalog-ai-wizard__review-status-row">
-                          <span
-                            className={`status-${item.Status.toLowerCase()}`}
-                          >
-                            {statusLabel(item.Status)}
-                          </span>
-                          <small>
-                            Confianza {Math.round(confidence * 100)}%
-                          </small>
+                          <span className={`status-${item.Status.toLowerCase()}`}>{statusLabel(item.Status)}</span>
+                          <small>Confianza {Math.round(confidence * 100)}%</small>
                         </div>
                         <label>
                           Nombre
                           <input
                             value={item.draftName}
                             disabled={!selectable}
-                            onChange={(event) =>
-                              updateDraft(
-                                item.Id,
-                                "draftName",
-                                event.target.value,
-                              )
-                            }
+                            onChange={(event) => updateDraft(item.Id, "draftName", event.target.value)}
                           />
                         </label>
                         <label>
@@ -1448,13 +1300,7 @@ export const CatalogAiImportWizard = ({
                             value={item.draftDescription}
                             disabled={!selectable}
                             rows={2}
-                            onChange={(event) =>
-                              updateDraft(
-                                item.Id,
-                                "draftDescription",
-                                event.target.value,
-                              )
-                            }
+                            onChange={(event) => updateDraft(item.Id, "draftDescription", event.target.value)}
                           />
                         </label>
                         <div className="catalog-ai-wizard__field-grid">
@@ -1470,16 +1316,11 @@ export const CatalogAiImportWizard = ({
                               >
                                 <option value="">Sin categoría</option>
                                 {availableCategories.map((category) => (
-                                  <option
-                                    key={category.id}
-                                    value={String(category.id)}
-                                  >
+                                  <option key={category.id} value={String(category.id)}>
                                     {category.name}
                                   </option>
                                 ))}
-                                <option value="__new__">
-                                  + Crear nueva categoría
-                                </option>
+                                <option value="__new__">+ Crear nueva categoría</option>
                               </select>
                             </label>
 
@@ -1489,9 +1330,7 @@ export const CatalogAiImportWizard = ({
                                   Nombre de la nueva categoría
                                   <input
                                     value={item.draftCategory}
-                                    disabled={
-                                      !selectable || item.creatingCategory
-                                    }
+                                    disabled={!selectable || item.creatingCategory}
                                     placeholder="Ej. Ropa deportiva"
                                     onChange={(event) =>
                                       updateDraft(
@@ -1506,20 +1345,15 @@ export const CatalogAiImportWizard = ({
                                   Color
                                   <input
                                     type="color"
-                                    value={normalizeCategoryColor(
-                                      item.draftCategoryColor,
-                                    )}
-                                    disabled={
-                                      !selectable || item.creatingCategory
-                                    }
+                                    value={normalizeCategoryColor(item.draftCategoryColor)}
+                                    disabled={!selectable || item.creatingCategory}
                                     onChange={(event) =>
                                       setItems((current) =>
                                         current.map((row) =>
                                           row.Id === item.Id
                                             ? {
                                                 ...row,
-                                                draftCategoryColor:
-                                                  event.target.value,
+                                                draftCategoryColor: event.target.value,
                                                 dirty: true,
                                               }
                                             : row,
@@ -1536,9 +1370,7 @@ export const CatalogAiImportWizard = ({
                                     item.creatingCategory ||
                                     item.draftCategory.trim().length < 2
                                   }
-                                  onClick={() =>
-                                    void createCategoryForItem(item.Id)
-                                  }
+                                  onClick={() => void createCategoryForItem(item.Id)}
                                 >
                                   {item.creatingCategory
                                     ? "Creando categoría…"
@@ -1548,57 +1380,16 @@ export const CatalogAiImportWizard = ({
                             ) : matchedCategory ? (
                               <small className="catalog-ai-wizard__selected-category">
                                 <span
-                                  style={{
-                                    backgroundColor: matchedCategory.color,
-                                  }}
+                                  style={{ backgroundColor: matchedCategory.color }}
                                   aria-hidden="true"
                                 />
                                 Se usará {matchedCategory.name}
                               </small>
                             ) : null}
                           </div>
-                          <label>
-                            Subcategoría
-                            <input
-                              value={item.draftSubcategory}
-                              disabled={!selectable}
-                              onChange={(event) =>
-                                updateDraft(
-                                  item.Id,
-                                  "draftSubcategory",
-                                  event.target.value,
-                                )
-                              }
-                            />
-                          </label>
-                          <label>
-                            Marca
-                            <input
-                              value={item.draftBrand}
-                              disabled={!selectable}
-                              onChange={(event) =>
-                                updateDraft(
-                                  item.Id,
-                                  "draftBrand",
-                                  event.target.value,
-                                )
-                              }
-                            />
-                          </label>
-                          <label>
-                            Color
-                            <input
-                              value={item.draftColor}
-                              disabled={!selectable}
-                              onChange={(event) =>
-                                updateDraft(
-                                  item.Id,
-                                  "draftColor",
-                                  event.target.value,
-                                )
-                              }
-                            />
-                          </label>
+                          <label>Subcategoría<input value={item.draftSubcategory} disabled={!selectable} onChange={(event) => updateDraft(item.Id, "draftSubcategory", event.target.value)} /></label>
+                          <label>Marca<input value={item.draftBrand} disabled={!selectable} onChange={(event) => updateDraft(item.Id, "draftBrand", event.target.value)} /></label>
+                          <label>Color<input value={item.draftColor} disabled={!selectable} onChange={(event) => updateDraft(item.Id, "draftColor", event.target.value)} /></label>
                           <label>
                             Precio
                             <input
@@ -1609,13 +1400,7 @@ export const CatalogAiImportWizard = ({
                               placeholder="Sin precio"
                               value={item.draftPrice}
                               disabled={!selectable}
-                              onChange={(event) =>
-                                updateDraft(
-                                  item.Id,
-                                  "draftPrice",
-                                  event.target.value,
-                                )
-                              }
+                              onChange={(event) => updateDraft(item.Id, "draftPrice", event.target.value)}
                             />
                           </label>
                           <label>
@@ -1627,46 +1412,22 @@ export const CatalogAiImportWizard = ({
                               inputMode="decimal"
                               value={item.draftStock}
                               disabled={!selectable}
-                              onChange={(event) =>
-                                updateDraft(
-                                  item.Id,
-                                  "draftStock",
-                                  event.target.value,
-                                )
-                              }
+                              onChange={(event) => updateDraft(item.Id, "draftStock", event.target.value)}
                             />
                           </label>
                         </div>
-                        {item.Duplicate_Reason ? (
-                          <p className="catalog-ai-wizard__inline-warning">
-                            Posible duplicado: {item.Duplicate_Reason}
-                          </p>
-                        ) : null}
-                        {item.Error_Message ? (
-                          <p className="catalog-ai-wizard__inline-error">
-                            {item.Error_Message}
-                          </p>
-                        ) : null}
+                        {item.Duplicate_Reason ? <p className="catalog-ai-wizard__inline-warning">Posible duplicado: {item.Duplicate_Reason}</p> : null}
+                        {item.Error_Message ? <p className="catalog-ai-wizard__inline-error">{item.Error_Message}</p> : null}
                       </div>
 
                       <div className="catalog-ai-wizard__review-actions">
                         {item.dirty && selectable ? (
-                          <button
-                            type="button"
-                            onClick={() => void saveItem(item.Id)}
-                            disabled={item.saving}
-                          >
+                          <button type="button" onClick={() => void saveItem(item.Id)} disabled={item.saving}>
                             {item.saving ? "Guardando…" : "Guardar cambios"}
                           </button>
                         ) : null}
-                        {item.Status === "FAILED_RETRYABLE" ||
-                        item.Status === "FAILED_PERMANENT" ? (
-                          <button
-                            type="button"
-                            onClick={() => void retryItem(item.Id)}
-                          >
-                            Reintentar
-                          </button>
+                        {item.Status === "FAILED_RETRYABLE" || item.Status === "FAILED_PERMANENT" ? (
+                          <button type="button" onClick={() => void retryItem(item.Id)}>Reintentar</button>
                         ) : null}
                       </div>
                     </article>
@@ -1675,19 +1436,8 @@ export const CatalogAiImportWizard = ({
               </div>
 
               <footer className="catalog-ai-wizard__actions">
-                <button
-                  type="button"
-                  className="is-secondary"
-                  onClick={() => setStep(1)}
-                >
-                  Volver
-                </button>
-                <button
-                  type="button"
-                  className="is-primary"
-                  onClick={() => void continueToPricing()}
-                  disabled={selectedIds.size === 0}
-                >
+                <button type="button" className="is-secondary" onClick={() => setStep(1)}>Volver</button>
+                <button type="button" className="is-primary" onClick={() => void continueToPricing()} disabled={selectedIds.size === 0}>
                   Continuar con {selectedIds.size} productos
                 </button>
               </footer>
@@ -1699,65 +1449,24 @@ export const CatalogAiImportWizard = ({
               <div className="catalog-ai-wizard__pricing-copy">
                 <span className="catalog-ai-wizard__pricing-icon">🏷</span>
                 <h3>¿Cómo deseas manejar los precios?</h3>
-                <p>
-                  Los productos todavía no existen en tu base. Se crearán cuando
-                  confirmes este paso.
-                </p>
+                <p>Los productos todavía no existen en tu base. Se crearán cuando confirmes este paso.</p>
               </div>
 
               <div className="catalog-ai-wizard__price-options">
-                <label
-                  className={priceMode === "whatsapp" ? "is-selected" : ""}
-                >
-                  <input
-                    type="radio"
-                    name="price-mode"
-                    value="whatsapp"
-                    checked={priceMode === "whatsapp"}
-                    onChange={() => setPriceMode("whatsapp")}
-                  />
+                <label className={priceMode === "whatsapp" ? "is-selected" : ""}>
+                  <input type="radio" name="price-mode" value="whatsapp" checked={priceMode === "whatsapp"} onChange={() => setPriceMode("whatsapp")} />
                   <span className="catalog-ai-wizard__price-radio" />
-                  <div>
-                    <strong>Solicitar precio por WhatsApp</strong>
-                    <p>
-                      Los productos se crean sin precio visible para que el
-                      cliente pregunte.
-                    </p>
-                  </div>
+                  <div><strong>Solicitar precio por WhatsApp</strong><p>Los productos se crean sin precio visible para que el cliente pregunte.</p></div>
                 </label>
                 <label className={priceMode === "hidden" ? "is-selected" : ""}>
-                  <input
-                    type="radio"
-                    name="price-mode"
-                    value="hidden"
-                    checked={priceMode === "hidden"}
-                    onChange={() => setPriceMode("hidden")}
-                  />
+                  <input type="radio" name="price-mode" value="hidden" checked={priceMode === "hidden"} onChange={() => setPriceMode("hidden")} />
                   <span className="catalog-ai-wizard__price-radio" />
-                  <div>
-                    <strong>Ocultar precios temporalmente</strong>
-                    <p>
-                      Organiza el catálogo primero y agrega precios después
-                      desde productos.
-                    </p>
-                  </div>
+                  <div><strong>Ocultar precios temporalmente</strong><p>Organiza el catálogo primero y agrega precios después desde productos.</p></div>
                 </label>
                 <label className={priceMode === "show" ? "is-selected" : ""}>
-                  <input
-                    type="radio"
-                    name="price-mode"
-                    value="show"
-                    checked={priceMode === "show"}
-                    onChange={() => setPriceMode("show")}
-                  />
+                  <input type="radio" name="price-mode" value="show" checked={priceMode === "show"} onChange={() => setPriceMode("show")} />
                   <span className="catalog-ai-wizard__price-radio" />
-                  <div>
-                    <strong>Mostrar precios capturados</strong>
-                    <p>
-                      Los productos con precio se mostrarán en el catálogo. Los
-                      que no tengan precio permanecerán ocultos.
-                    </p>
-                  </div>
+                  <div><strong>Mostrar precios capturados</strong><p>Los productos con precio se mostrarán en el catálogo. Los que no tengan precio permanecerán ocultos.</p></div>
                 </label>
               </div>
 
@@ -1765,31 +1474,14 @@ export const CatalogAiImportWizard = ({
                 <span>✓</span>
                 <div>
                   <strong>Confirmación obligatoria</strong>
-                  <p>
-                    Al presionar “Crear productos” se insertarán{" "}
-                    {selectedIds.size} registros en tu base de datos.
-                  </p>
+                  <p>Al presionar “Crear productos” se insertarán {selectedIds.size} registros en tu base de datos.</p>
                 </div>
               </div>
 
               <footer className="catalog-ai-wizard__actions">
-                <button
-                  type="button"
-                  className="is-secondary"
-                  onClick={() => setStep(3)}
-                  disabled={publishing}
-                >
-                  Volver a revisar
-                </button>
-                <button
-                  type="button"
-                  className="is-primary"
-                  onClick={() => void publishApproved()}
-                  disabled={publishing || selectedIds.size === 0}
-                >
-                  {publishing
-                    ? "Creando productos…"
-                    : `Crear ${selectedIds.size} productos`}
+                <button type="button" className="is-secondary" onClick={() => setStep(3)} disabled={publishing}>Volver a revisar</button>
+                <button type="button" className="is-primary" onClick={() => void publishApproved()} disabled={publishing || selectedIds.size === 0}>
+                  {publishing ? "Creando productos…" : `Crear ${selectedIds.size} productos`}
                 </button>
               </footer>
             </div>
@@ -1802,41 +1494,15 @@ export const CatalogAiImportWizard = ({
               <p>Los productos aprobados ya fueron agregados a Ravekh.</p>
 
               <div className="catalog-ai-wizard__success-stats">
-                <div>
-                  <span>Productos creados</span>
-                  <strong>{publishedProductIds.length}</strong>
-                </div>
-                <div>
-                  <span>Categorías detectadas</span>
-                  <strong>
-                    {
-                      new Set(
-                        items
-                          .map((item) => item.draftCategory.trim())
-                          .filter(Boolean),
-                      ).size
-                    }
-                  </strong>
-                </div>
-                <div>
-                  <span>Imágenes procesadas</span>
-                  <strong>{items.length}</strong>
-                </div>
-                <div>
-                  <span>Tiempo total</span>
-                  <strong>{elapsedText}</strong>
-                </div>
+                <div><span>Productos creados</span><strong>{publishedProductIds.length}</strong></div>
+                <div><span>Categorías detectadas</span><strong>{new Set(items.map((item) => item.draftCategory.trim()).filter(Boolean)).size}</strong></div>
+                <div><span>Imágenes procesadas</span><strong>{items.length}</strong></div>
+                <div><span>Tiempo total</span><strong>{elapsedText}</strong></div>
               </div>
 
               <div className="catalog-ai-wizard__notice is-success">
                 <span>✓</span>
-                <div>
-                  <strong>La aprobación fue respetada</strong>
-                  <p>
-                    Solo se insertaron los {publishedProductIds.length}{" "}
-                    productos que seleccionaste.
-                  </p>
-                </div>
+                <div><strong>La aprobación fue respetada</strong><p>Solo se insertaron los {publishedProductIds.length} productos que seleccionaste.</p></div>
               </div>
 
               <footer className="catalog-ai-wizard__actions is-centered">
@@ -1844,10 +1510,7 @@ export const CatalogAiImportWizard = ({
                   type="button"
                   className="is-primary"
                   onClick={() => {
-                    const result = {
-                      created: publishedProductIds.length,
-                      productIds: publishedProductIds,
-                    };
+                    const result = { created: publishedProductIds.length, productIds: publishedProductIds };
                     reset();
                     onCompleted(result);
                   }}
@@ -1887,10 +1550,7 @@ export const CatalogAiImportWizard = ({
                   <strong>{busyState.progress}%</strong>
                 </div>
               ) : (
-                <div
-                  className="catalog-ai-wizard__busy-dots"
-                  aria-hidden="true"
-                >
+                <div className="catalog-ai-wizard__busy-dots" aria-hidden="true">
                   <span />
                   <span />
                   <span />
