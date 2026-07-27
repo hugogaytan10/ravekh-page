@@ -45,13 +45,14 @@ export type CatalogAiItem = {
   Suggested_Description: string | null;
   Suggested_Category: string | null;
   Suggested_Subcategory: string | null;
-  Suggested_Brand: string | null;
+  Suggested_Barcode: string | null;
   Suggested_Color: string | null;
   Suggested_Price: number | string | null;
   Suggested_Stock: number | string | null;
   For_Sale: number | boolean;
   Confidence: number | string | null;
   Duplicate_Reason: string | null;
+  Duplicate_Of_Item_Id: number | null;
   Duplicate_Product_Id: number | null;
   Product_Id: number | null;
   Error_Code: string | null;
@@ -59,6 +60,17 @@ export type CatalogAiItem = {
   Retry_Count: number;
   Queue_Available_At: string | null;
   Updated_At: string;
+  Duplicate_Product_Name: string | null;
+  Duplicate_Product_Description: string | null;
+  Duplicate_Product_Barcode: string | null;
+  Duplicate_Product_Color: string | null;
+  Duplicate_Product_Price: number | string | null;
+  Duplicate_Product_Stock: number | string | null;
+  Duplicate_Product_For_Sale: number | boolean | null;
+  Duplicate_Category_Id: number | null;
+  Duplicate_Category_Name: string | null;
+  Duplicate_Subcategory_Id: number | null;
+  Duplicate_Subcategory_Name: string | null;
 };
 
 export type CatalogAiItemPatch = {
@@ -66,7 +78,7 @@ export type CatalogAiItemPatch = {
   description?: string | null;
   category?: string | null;
   subcategory?: string | null;
-  brand?: string | null;
+  barcode?: string | null;
   color?: string | null;
   price?: number | null;
   stock?: number;
@@ -322,14 +334,37 @@ export class CatalogAiApi {
   async publishItem(
     batchId: string,
     item: CatalogAiItem,
-    options: { showPrice: boolean },
+    options: {
+      showPrice: boolean;
+      duplicateAction?: "update_existing" | "create_new";
+    },
   ): Promise<number> {
+    if (
+      item.Duplicate_Product_Id &&
+      options.duplicateAction === "update_existing"
+    ) {
+      const response = await this.request<{ productId: number }>(
+        `/v1/catalog-imports/${encodeURIComponent(batchId)}/items/${item.Id}/resolve-duplicate`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            action: "update_existing",
+            showPrice: options.showPrice,
+          }),
+        },
+      );
+      return response.productId;
+    }
+
     if (item.Status === "DUPLICATE_EXACT") {
       const response = await this.request<{ productId: number }>(
         `/v1/catalog-imports/${encodeURIComponent(batchId)}/items/${item.Id}/resolve-duplicate`,
         {
           method: "POST",
-          body: JSON.stringify({ action: "publish", showPrice: options.showPrice }),
+          body: JSON.stringify({
+            action: "publish",
+            showPrice: options.showPrice,
+          }),
         },
       );
       return response.productId;

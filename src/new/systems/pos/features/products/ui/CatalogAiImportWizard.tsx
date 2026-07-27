@@ -81,25 +81,35 @@ export type CatalogAiCategoryOption = {
   id: number;
   name: string;
   color: string;
+  parentId: number | null;
 };
 
 type CreateCatalogAiCategoryInput = {
   name: string;
   color: string;
+  parentId: number | null;
 };
+
+type DuplicateAction = "update_existing" | "create_new";
+type CategoryMode = "auto" | "existing" | "new";
+type IncompleteReviewDialog = "summary" | "confirm" | null;
 
 type EditableCatalogAiItem = CatalogAiItem & {
   draftName: string;
   draftDescription: string;
   draftCategory: string;
   draftSubcategory: string;
-  draftBrand: string;
+  draftBarcode: string;
   draftColor: string;
   draftPrice: string;
   draftStock: string;
-  categoryMode: "auto" | "existing" | "new";
+  categoryMode: CategoryMode;
+  subcategoryMode: CategoryMode;
   draftCategoryColor: string;
+  draftSubcategoryColor: string;
   creatingCategory: boolean;
+  creatingSubcategory: boolean;
+  duplicateAction: DuplicateAction;
   dirty: boolean;
   saving: boolean;
 };
@@ -118,26 +128,77 @@ type CatalogAiImportWizardProps = {
 const createClientAssetId = (file: File, index: number) =>
   `web-${Date.now()}-${index}-${file.name.replace(/[^a-z0-9._-]/gi, "-").slice(0, 48)}`;
 
-const toEditableItem = (item: CatalogAiItem): EditableCatalogAiItem => ({
-  ...item,
-  draftName: item.Suggested_Name ?? "",
-  draftDescription: item.Suggested_Description ?? "",
-  draftCategory: item.Suggested_Category ?? "",
-  draftSubcategory: item.Suggested_Subcategory ?? "",
-  draftBrand: item.Suggested_Brand ?? "",
-  draftColor: item.Suggested_Color ?? "",
-  draftPrice: item.Suggested_Price === null || item.Suggested_Price === undefined
-    ? ""
-    : String(item.Suggested_Price),
-  draftStock: item.Suggested_Stock === null || item.Suggested_Stock === undefined
-    ? "1"
-    : String(item.Suggested_Stock),
-  categoryMode: "auto",
-  draftCategoryColor: "#6D01D1",
-  creatingCategory: false,
-  dirty: false,
-  saving: false,
-});
+const firstText = (...values: Array<string | null | undefined>): string => {
+  for (const value of values) {
+    const normalized = String(value ?? "").trim();
+    if (normalized) return normalized;
+  }
+  return "";
+};
+
+const firstNumberText = (
+  ...values: Array<number | string | null | undefined>
+): string => {
+  for (const value of values) {
+    if (value === null || value === undefined || value === "") continue;
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) return String(parsed);
+  }
+  return "";
+};
+
+const toEditableItem = (item: CatalogAiItem): EditableCatalogAiItem => {
+  const hasExistingProduct = Boolean(item.Duplicate_Product_Id);
+
+  return {
+    ...item,
+    // Para posibles duplicados, la información ya registrada tiene prioridad.
+    // Los campos vacíos se completan con la sugerencia de la IA.
+    draftName: firstText(
+      item.Duplicate_Product_Name,
+      item.Suggested_Name,
+    ),
+    draftDescription: firstText(
+      item.Duplicate_Product_Description,
+      item.Suggested_Description,
+    ),
+    draftCategory: firstText(
+      item.Duplicate_Category_Name,
+      item.Suggested_Category,
+    ),
+    draftSubcategory: firstText(
+      item.Duplicate_Subcategory_Name,
+      item.Suggested_Subcategory,
+    ),
+    draftBarcode: firstText(item.Duplicate_Product_Barcode),
+    draftColor: firstText(
+      item.Duplicate_Product_Color,
+      item.Suggested_Color,
+    ),
+    draftPrice: firstNumberText(
+      item.Duplicate_Product_Price,
+      item.Suggested_Price,
+    ),
+    draftStock:
+      firstNumberText(
+        item.Duplicate_Product_Stock,
+        item.Suggested_Stock,
+      ) || "1",
+    categoryMode: "auto",
+    subcategoryMode: "auto",
+    draftCategoryColor: "#6D01D1",
+    draftSubcategoryColor: "#6D01D1",
+    creatingCategory: false,
+    creatingSubcategory: false,
+    duplicateAction: hasExistingProduct
+      ? "update_existing"
+      : "create_new",
+    // Los datos provenientes del producto existente deben guardarse en el item
+    // antes de publicar o actualizar.
+    dirty: hasExistingProduct,
+    saving: false,
+  };
+};
 
 
 const parseOptionalNonNegativeNumber = (value: string): number | null => {
@@ -192,7 +253,7 @@ const mapWithConcurrency = async <T, R>(
     while (nextIndex < values.length) {
       const currentIndex = nextIndex;
       nextIndex += 1;
-      results[currentIndex] = await mapper(values[currentIndex], currentIndex);
+      results[currentIndex] = await mapper(values[currentIndex] as T, currentIndex);
     }
   };
 
@@ -221,8 +282,142 @@ const statusLabel = (status: CatalogAiItem["Status"]): string => {
   return labels[status];
 };
 
+const FRIENDLY_ERROR_MESSAGES = {
+  IMAGE_TOO_LARGE:
+    "La imagen es demasiado pesada. Selecciona una imagen más ligera.",
+  IMAGE_NOT_FOUND:
+    "No encontramos la imagen asociada. Vuelve a subirla.",
+  IMAGE_NOT_AVAILABLE:
+    "La imagen ya no está disponible. Vuelve a seleccionarla.",
+  IMAGE_ACCESS_DENIED:
+    "No pudimos acceder a la imagen. Vuelve a subirla.",
+  INVALID_IMAGE:
+    "El archivo no parece ser una imagen válida o está dañado.",
+  AI_COULD_NOT_READ_IMAGE:
+    "La IA no pudo interpretar esta imagen. Prueba con una fotografía más clara.",
+  IMAGE_SERVICE_BUSY:
+    "El servicio de imágenes está ocupado. Puedes reintentar en un momento.",
+  IMAGE_SERVICE_UNAVAILABLE:
+    "No pudimos descargar la imagen temporalmente. Intenta de nuevo.",
+  RETRIES_EXHAUSTED:
+    "No pudimos procesar la imagen después de varios intentos.",
+  PROCESSING_ERROR:
+    "No pudimos procesar esta imagen. Puedes reintentar o seleccionar otra fotografía.",
+  MIME_TYPE_NOT_ALLOWED:
+    "El formato de la imagen no es compatible. Usa JPG, PNG o WEBP.",
+  INVALID_CLOUDINARY_SIGNATURE:
+    "No pudimos validar la carga de la imagen. Intenta subirla nuevamente.",
+} as const;
+
+const friendlyErrorByCode = (code: string): string | null =>
+  (FRIENDLY_ERROR_MESSAGES as Record<string, string>)[code] ?? null;
+
+const friendlyItemError = (item: CatalogAiItem): string | null => {
+  const code = item.Error_Code?.trim() ?? "";
+  if (code) {
+    const friendly = friendlyErrorByCode(code);
+    if (friendly) return friendly;
+  }
+
+  const raw = item.Error_Message?.trim() ?? "";
+  if (!raw) return null;
+
+  if (/IMAGE_DOWNLOAD_FAILED_404/i.test(raw)) {
+    return FRIENDLY_ERROR_MESSAGES.IMAGE_NOT_AVAILABLE;
+  }
+  if (/IMAGE_DOWNLOAD_FAILED_(400|401|403)/i.test(raw)) {
+    return FRIENDLY_ERROR_MESSAGES.IMAGE_ACCESS_DENIED;
+  }
+  if (/IMAGE_DOWNLOAD_FAILED_429/i.test(raw)) {
+    return FRIENDLY_ERROR_MESSAGES.IMAGE_SERVICE_BUSY;
+  }
+  if (/IMAGE_DOWNLOAD_FAILED_5\d\d/i.test(raw)) {
+    return FRIENDLY_ERROR_MESSAGES.IMAGE_SERVICE_UNAVAILABLE;
+  }
+  if (/IMAGE_TOO_LARGE/i.test(raw)) {
+    return FRIENDLY_ERROR_MESSAGES.IMAGE_TOO_LARGE;
+  }
+  if (/INVALID_IMAGE|INPUT BUFFER|UNSUPPORTED IMAGE|UNSUPPORTED FORMAT/i.test(raw)) {
+    return FRIENDLY_ERROR_MESSAGES.INVALID_IMAGE;
+  }
+  if (/OPENAI_EMPTY_STRUCTURED_OUTPUT/i.test(raw)) {
+    return FRIENDLY_ERROR_MESSAGES.AI_COULD_NOT_READ_IMAGE;
+  }
+
+  // El usuario nunca debe ver trazas, nombres de excepciones o códigos internos.
+  return "No pudimos procesar esta imagen. Puedes reintentar o seleccionar otra fotografía.";
+};
+
+const duplicateReasonLabel = (reason: string | null): string => {
+  if (!reason) return "Posible coincidencia con otro producto";
+  if (reason === "EXACT_FILE_HASH") return "La misma imagen ya fue importada";
+  if (reason === "EXACT_EXISTING_PRODUCT_IMAGE") return "La imagen ya pertenece a un producto existente";
+  if (reason === "NORMALIZED_NAME_MATCH") return "Ya existe un producto con un nombre muy parecido";
+  if (reason === "MULTIPLE_PRODUCTS_IN_IMAGE") return "La fotografía parece contener varios productos";
+  if (reason === "LOW_AI_CONFIDENCE") return "La IA necesita que revises este producto";
+  if (reason.startsWith("PERCEPTUAL_HASH_DISTANCE_")) {
+    return "La fotografía es muy parecida a la de un producto existente";
+  }
+  return "Posible coincidencia con otro producto";
+};
+
+const friendlyTechnicalError = (rawValue: string): string | null => {
+  const raw = rawValue.trim();
+  if (!raw) return null;
+
+  for (const [code, message] of Object.entries(FRIENDLY_ERROR_MESSAGES)) {
+    if (raw.toUpperCase().includes(code)) return message;
+  }
+
+  if (/FAILED TO FETCH|NETWORKERROR|ECONNRESET|ETIMEDOUT/i.test(raw)) {
+    return "No pudimos conectar con el servicio de imágenes. Revisa tu conexión e inténtalo de nuevo.";
+  }
+  if (/MISSING REQUIRED PARAMETER.*FILE/i.test(raw)) {
+    return "No se recibió correctamente la imagen. Vuelve a seleccionarla e inténtalo de nuevo.";
+  }
+  if (/INVALID SIGNATURE|SIGNATURE MISMATCH/i.test(raw)) {
+    return "No pudimos validar la carga de la imagen. Intenta subirla nuevamente.";
+  }
+  if (/PAYLOAD TOO LARGE|REQUEST ENTITY TOO LARGE/i.test(raw)) {
+    return FRIENDLY_ERROR_MESSAGES.IMAGE_TOO_LARGE;
+  }
+  if (/UNSUPPORTED|INVALID IMAGE|INPUT BUFFER|CORRUPT/i.test(raw)) {
+    return FRIENDLY_ERROR_MESSAGES.INVALID_IMAGE;
+  }
+  if (/TOO MANY REQUESTS|RATE LIMIT|STATUS 429|HTTP 429/i.test(raw)) {
+    return FRIENDLY_ERROR_MESSAGES.IMAGE_SERVICE_BUSY;
+  }
+  if (/HTTP 5\d\d|STATUS 5\d\d|INTERNAL SERVER ERROR/i.test(raw)) {
+    return "El servicio tuvo un problema temporal. Estamos intentando continuar; vuelve a intentarlo si persiste.";
+  }
+
+  return null;
+};
+
 const errorText = (cause: unknown): string => {
-  if (cause instanceof Error && cause.message.trim()) return cause.message;
+  if (cause instanceof CatalogAiApiError) {
+    const friendly = cause.code
+      ? friendlyErrorByCode(cause.code)
+      : null;
+    if (friendly) return friendly;
+
+    const mapped = friendlyTechnicalError(cause.message);
+    if (mapped) return mapped;
+  }
+
+  if (cause instanceof Error && cause.message.trim()) {
+    const mapped = friendlyTechnicalError(cause.message);
+    if (mapped) return mapped;
+
+    // Conserva validaciones ya redactadas para el usuario y oculta mensajes
+    // técnicos desconocidos provenientes de servicios externos.
+    if (/^(El|La|Los|Las|Selecciona|Escribe|Inicia|Todos|Revisa|Debes|No puedes|No pudimos)/i.test(cause.message.trim())) {
+      return cause.message.trim();
+    }
+
+    return "No pudimos completar la operación. Revisa los datos e inténtalo nuevamente.";
+  }
+
   return "Ocurrió un error al procesar el catálogo con IA.";
 };
 
@@ -256,6 +451,8 @@ export const CatalogAiImportWizard = ({
   const [currentToken, setCurrentToken] = useState(token);
   const [sessionRefreshOpen, setSessionRefreshOpen] = useState(false);
   const [sessionPaused, setSessionPaused] = useState(false);
+  const [incompleteReviewDialog, setIncompleteReviewDialog] =
+    useState<IncompleteReviewDialog>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
   const pollInFlightRef = useRef(false);
   const pollFailuresRef = useRef(0);
@@ -370,6 +567,7 @@ export const CatalogAiImportWizard = ({
     setFilter("all");
     setSessionRefreshOpen(false);
     setSessionPaused(false);
+    setIncompleteReviewDialog(null);
     pollFailuresRef.current = 0;
   };
 
@@ -582,8 +780,13 @@ export const CatalogAiImportWizard = ({
           setSelectedIds(
             new Set(
               editable
-                .filter((item) =>
-                  DEFAULT_SELECTED_STATUSES.has(item.Status),
+                .filter(
+                  (item) =>
+                    SELECTABLE_STATUSES.has(item.Status) &&
+                    (
+                      DEFAULT_SELECTED_STATUSES.has(item.Status) ||
+                      Boolean(item.Duplicate_Product_Id)
+                    ),
                 )
                 .map((item) => item.Id),
             ),
@@ -636,6 +839,7 @@ export const CatalogAiImportWizard = ({
         if (!Number.isInteger(category.id) || category.id <= 0) continue;
         merged.set(category.id, {
           ...category,
+          parentId: category.parentId ?? null,
           color: normalizeCategoryColor(category.color),
         });
       }
@@ -646,14 +850,86 @@ export const CatalogAiImportWizard = ({
   }, [categories]);
 
   const findAvailableCategory = useCallback(
-    (name: string): CatalogAiCategoryOption | null => {
+    (
+      name: string,
+      parentId: number | null,
+    ): CatalogAiCategoryOption | null => {
       const normalized = normalizeCategoryName(name);
       if (!normalized) return null;
-      return availableCategories.find(
-        (category) => normalizeCategoryName(category.name) === normalized,
-      ) ?? null;
+
+      return (
+        availableCategories.find(
+          (category) =>
+            (category.parentId ?? null) === parentId &&
+            normalizeCategoryName(category.name) === normalized,
+        ) ?? null
+      );
     },
     [availableCategories],
+  );
+
+  const rootCategories = useMemo(
+    () =>
+      availableCategories.filter(
+        (category) => category.parentId === null,
+      ),
+    [availableCategories],
+  );
+
+  const storeAvailableCategory = useCallback(
+    (category: CatalogAiCategoryOption): CatalogAiCategoryOption => {
+      const safeCategory: CatalogAiCategoryOption = {
+        ...category,
+        parentId: category.parentId ?? null,
+        color: normalizeCategoryColor(category.color),
+      };
+
+      setAvailableCategories((current) => {
+        const withoutDuplicate = current.filter(
+          (row) =>
+            row.id !== safeCategory.id &&
+            !(
+              (row.parentId ?? null) === safeCategory.parentId &&
+              normalizeCategoryName(row.name) ===
+                normalizeCategoryName(safeCategory.name)
+            ),
+        );
+
+        return [...withoutDuplicate, safeCategory].sort((left, right) => {
+          const parentDifference =
+            (left.parentId ?? 0) - (right.parentId ?? 0);
+          if (parentDifference !== 0) return parentDifference;
+          return left.name.localeCompare(right.name, "es", {
+            sensitivity: "base",
+          });
+        });
+      });
+
+      return safeCategory;
+    },
+    [],
+  );
+
+  const createOrReuseCategory = useCallback(
+    async (input: CreateCatalogAiCategoryInput) => {
+      const name = input.name.trim().replace(/\s+/g, " ");
+      const parentId = input.parentId ?? null;
+      const existing = findAvailableCategory(name, parentId);
+      if (existing) return existing;
+
+      const created = await onCreateCategory({
+        name,
+        parentId,
+        color: normalizeCategoryColor(input.color),
+      });
+
+      if (!Number.isInteger(created.id) || created.id <= 0) {
+        throw new Error("El servidor no devolvió la categoría creada.");
+      }
+
+      return storeAvailableCategory(created);
+    },
+    [findAvailableCategory, onCreateCategory, storeAvailableCategory],
   );
 
   const selectCategory = (itemId: number, value: string) => {
@@ -665,13 +941,18 @@ export const CatalogAiImportWizard = ({
           return {
             ...item,
             categoryMode: "existing",
+            subcategoryMode: "existing",
             draftCategory: "",
+            draftSubcategory: "",
             dirty: true,
           };
         }
 
         if (value === "__new__") {
-          const currentMatch = findAvailableCategory(item.draftCategory);
+          const currentMatch = findAvailableCategory(
+            item.draftCategory,
+            null,
+          );
           return {
             ...item,
             categoryMode: "new",
@@ -684,12 +965,20 @@ export const CatalogAiImportWizard = ({
         }
 
         const categoryId = Number(value);
-        const category = availableCategories.find((row) => row.id === categoryId);
+        const category = rootCategories.find(
+          (row) => row.id === categoryId,
+        );
         if (!category) return item;
+
+        const currentSubcategory = findAvailableCategory(
+          item.draftSubcategory,
+          category.id,
+        );
 
         return {
           ...item,
           categoryMode: "existing",
+          subcategoryMode: currentSubcategory ? "existing" : "auto",
           draftCategory: category.name,
           draftCategoryColor: normalizeCategoryColor(category.color),
           dirty: true,
@@ -698,91 +987,167 @@ export const CatalogAiImportWizard = ({
     );
   };
 
+  const selectSubcategory = (
+    itemId: number,
+    parentCategoryId: number | null,
+    value: string,
+  ) => {
+    setItems((current) =>
+      current.map((item) => {
+        if (item.Id !== itemId) return item;
+
+        if (!value) {
+          return {
+            ...item,
+            subcategoryMode: "existing",
+            draftSubcategory: "",
+            dirty: true,
+          };
+        }
+
+        if (value === "__new__") {
+          const currentMatch = parentCategoryId
+            ? findAvailableCategory(
+                item.draftSubcategory,
+                parentCategoryId,
+              )
+            : null;
+
+          return {
+            ...item,
+            subcategoryMode: "new",
+            draftSubcategory: currentMatch
+              ? ""
+              : item.draftSubcategory,
+            draftSubcategoryColor: currentMatch
+              ? normalizeCategoryColor(currentMatch.color)
+              : item.draftSubcategoryColor,
+            dirty: true,
+          };
+        }
+
+        const subcategoryId = Number(value);
+        const subcategory = availableCategories.find(
+          (row) =>
+            row.id === subcategoryId &&
+            (row.parentId ?? null) === parentCategoryId,
+        );
+        if (!subcategory) return item;
+
+        return {
+          ...item,
+          subcategoryMode: "existing",
+          draftSubcategory: subcategory.name,
+          draftSubcategoryColor: normalizeCategoryColor(
+            subcategory.color,
+          ),
+          dirty: true,
+        };
+      }),
+    );
+  };
+
   const createCategoryForItem = async (
     itemId: number,
+    kind: "category" | "subcategory",
   ): Promise<CatalogAiCategoryOption | null> => {
     const item = items.find((row) => row.Id === itemId);
     if (!item) return null;
 
-    const name = item.draftCategory.trim().replace(/\s+/g, " ");
-    if (name.length < 2) {
-      setError("Escribe un nombre válido para la nueva categoría.");
-      return null;
-    }
+    const field =
+      kind === "category"
+        ? "creatingCategory"
+        : "creatingSubcategory";
+    const name =
+      kind === "category"
+        ? item.draftCategory.trim().replace(/\s+/g, " ")
+        : item.draftSubcategory.trim().replace(/\s+/g, " ");
 
-    const existing = findAvailableCategory(name);
-    if (existing) {
-      setItems((current) =>
-        current.map((row) =>
-          row.Id === itemId
-            ? {
-                ...row,
-                categoryMode: "existing",
-                draftCategory: existing.name,
-                draftCategoryColor: normalizeCategoryColor(existing.color),
-                creatingCategory: false,
-                dirty: true,
-              }
-            : row,
-        ),
+    if (name.length < 2) {
+      setError(
+        kind === "category"
+          ? "Escribe un nombre válido para la nueva categoría."
+          : "Escribe un nombre válido para la nueva subcategoría.",
       );
-      return existing;
+      return null;
     }
 
     setItems((current) =>
       current.map((row) =>
-        row.Id === itemId ? { ...row, creatingCategory: true } : row,
+        row.Id === itemId ? { ...row, [field]: true } : row,
       ),
     );
     setError(null);
 
     try {
-      const created = await onCreateCategory({
-        name,
-        color: normalizeCategoryColor(item.draftCategoryColor),
-      });
+      let parentCategory: CatalogAiCategoryOption | null = null;
 
-      if (!Number.isInteger(created.id) || created.id <= 0) {
-        throw new Error("El servidor no devolvió la categoría creada.");
+      if (kind === "subcategory") {
+        const parentName = item.draftCategory.trim();
+        if (!parentName) {
+          throw new Error(
+            "Selecciona o crea una categoría antes de crear la subcategoría.",
+          );
+        }
+
+        parentCategory = findAvailableCategory(parentName, null);
+        if (!parentCategory) {
+          parentCategory = await createOrReuseCategory({
+            name: parentName,
+            color: item.draftCategoryColor,
+            parentId: null,
+          });
+        }
       }
 
-      const safeCreated = {
-        ...created,
-        color: normalizeCategoryColor(created.color),
-      };
-
-      setAvailableCategories((current) => {
-        const withoutDuplicate = current.filter(
-          (category) =>
-            category.id !== safeCreated.id &&
-            normalizeCategoryName(category.name) !==
-              normalizeCategoryName(safeCreated.name),
-        );
-        return [...withoutDuplicate, safeCreated].sort((left, right) =>
-          left.name.localeCompare(right.name, "es", { sensitivity: "base" }),
-        );
+      const created = await createOrReuseCategory({
+        name,
+        color:
+          kind === "category"
+            ? item.draftCategoryColor
+            : item.draftSubcategoryColor,
+        parentId:
+          kind === "category"
+            ? null
+            : parentCategory?.id ?? null,
       });
 
       setItems((current) =>
-        current.map((row) =>
-          row.Id === itemId
-            ? {
-                ...row,
-                categoryMode: "existing",
-                draftCategory: safeCreated.name,
-                draftCategoryColor: safeCreated.color,
-                creatingCategory: false,
-                dirty: true,
-              }
-            : row,
-        ),
+        current.map((row) => {
+          if (row.Id !== itemId) return row;
+
+          if (kind === "category") {
+            return {
+              ...row,
+              categoryMode: "existing",
+              draftCategory: created.name,
+              draftCategoryColor: created.color,
+              creatingCategory: false,
+              dirty: true,
+            };
+          }
+
+          return {
+            ...row,
+            categoryMode: "existing",
+            subcategoryMode: "existing",
+            draftCategory:
+              parentCategory?.name ?? row.draftCategory,
+            draftCategoryColor:
+              parentCategory?.color ?? row.draftCategoryColor,
+            draftSubcategory: created.name,
+            draftSubcategoryColor: created.color,
+            creatingSubcategory: false,
+            dirty: true,
+          };
+        }),
       );
 
-      return safeCreated;
+      return created;
     } catch (cause) {
       setItems((current) =>
         current.map((row) =>
-          row.Id === itemId ? { ...row, creatingCategory: false } : row,
+          row.Id === itemId ? { ...row, [field]: false } : row,
         ),
       );
       setError(errorText(cause));
@@ -797,7 +1162,7 @@ export const CatalogAiImportWizard = ({
       | "draftDescription"
       | "draftCategory"
       | "draftSubcategory"
-      | "draftBrand"
+      | "draftBarcode"
       | "draftColor"
       | "draftPrice"
       | "draftStock",
@@ -814,22 +1179,54 @@ export const CatalogAiImportWizard = ({
     if (!batchId) return false;
     const item = items.find((row) => row.Id === itemId);
     if (!item || !item.dirty) return true;
+
     if (!item.draftName.trim()) {
       setError("Todos los productos aprobados necesitan un nombre.");
       return false;
     }
 
     let categoryName = item.draftCategory.trim() || null;
-    const selectedCategory = categoryName
-      ? findAvailableCategory(categoryName)
-      : null;
+    let subcategoryName = item.draftSubcategory.trim() || null;
+    let parentCategory: CatalogAiCategoryOption | null = null;
 
-    if (categoryName && !selectedCategory && item.categoryMode !== "existing") {
-      const createdCategory = await createCategoryForItem(itemId);
-      if (!createdCategory) return false;
-      categoryName = createdCategory.name;
-    } else if (selectedCategory) {
-      categoryName = selectedCategory.name;
+    try {
+      if (categoryName) {
+        parentCategory = findAvailableCategory(categoryName, null);
+        if (!parentCategory) {
+          parentCategory = await createOrReuseCategory({
+            name: categoryName,
+            color: item.draftCategoryColor,
+            parentId: null,
+          });
+        }
+        categoryName = parentCategory.name;
+      }
+
+      if (subcategoryName) {
+        if (!parentCategory) {
+          throw new Error(
+            "Selecciona una categoría antes de usar una subcategoría.",
+          );
+        }
+
+        let subcategory = findAvailableCategory(
+          subcategoryName,
+          parentCategory.id,
+        );
+
+        if (!subcategory) {
+          subcategory = await createOrReuseCategory({
+            name: subcategoryName,
+            color: item.draftSubcategoryColor,
+            parentId: parentCategory.id,
+          });
+        }
+
+        subcategoryName = subcategory.name;
+      }
+    } catch (cause) {
+      setError(errorText(cause));
+      return false;
     }
 
     let parsedPrice: number | null;
@@ -852,8 +1249,8 @@ export const CatalogAiImportWizard = ({
       name: item.draftName.trim(),
       description: item.draftDescription.trim() || null,
       category: categoryName,
-      subcategory: item.draftSubcategory.trim() || null,
-      brand: item.draftBrand.trim() || null,
+      subcategory: subcategoryName,
+      barcode: item.draftBarcode.trim() || null,
       color: item.draftColor.trim() || null,
       price: parsedPrice,
       stock: parsedStock,
@@ -863,6 +1260,7 @@ export const CatalogAiImportWizard = ({
       await runWithSessionRecovery((client) =>
         client.updateItem(batchId, itemId, patch),
       );
+
       setItems((current) =>
         current.map((row) =>
           row.Id === itemId
@@ -872,10 +1270,16 @@ export const CatalogAiImportWizard = ({
                 Suggested_Description: patch.description ?? null,
                 Suggested_Category: patch.category ?? null,
                 Suggested_Subcategory: patch.subcategory ?? null,
-                Suggested_Brand: patch.brand ?? null,
+                Suggested_Barcode: patch.barcode ?? null,
                 Suggested_Color: patch.color ?? null,
                 Suggested_Price: patch.price ?? null,
                 Suggested_Stock: patch.stock ?? 1,
+                draftCategory: patch.category ?? "",
+                draftSubcategory: patch.subcategory ?? "",
+                categoryMode: patch.category ? "existing" : row.categoryMode,
+                subcategoryMode: patch.subcategory
+                  ? "existing"
+                  : row.subcategoryMode,
                 dirty: false,
                 saving: false,
               }
@@ -894,8 +1298,11 @@ export const CatalogAiImportWizard = ({
     }
   };
 
-  const saveDirtyItems = async () => {
-    const dirtyIds = items.filter((item) => item.dirty).map((item) => item.Id);
+  const saveSelectedDirtyItems = async () => {
+    const dirtyIds = items
+      .filter((item) => item.dirty && selectedIds.has(item.Id))
+      .map((item) => item.Id);
+
     for (const itemId of dirtyIds) {
       const saved = await saveItem(itemId);
       if (!saved) {
@@ -904,26 +1311,75 @@ export const CatalogAiImportWizard = ({
     }
   };
 
+  const proceedToPricing = async () => {
+    setError(null);
+
+    try {
+      await saveSelectedDirtyItems();
+      setStep(4);
+    } catch (cause) {
+      setError(errorText(cause));
+    }
+  };
+
   const continueToPricing = async () => {
     if (selectedIds.size === 0) {
       setError("Selecciona al menos un producto para continuar.");
       return;
     }
+
     const invalidSelected = items.some(
       (item) => selectedIds.has(item.Id) && !item.draftName.trim(),
     );
+
     if (invalidSelected) {
       setError("Los productos seleccionados necesitan un nombre.");
       return;
     }
 
-    setError(null);
-    try {
-      await saveDirtyItems();
-      setStep(4);
-    } catch (cause) {
-      setError(errorText(cause));
+    const remainingReviewableItems = items.filter(
+      (item) =>
+        SELECTABLE_STATUSES.has(item.Status) &&
+        !selectedIds.has(item.Id),
+    );
+
+    if (remainingReviewableItems.length > 0) {
+      setError(null);
+      setIncompleteReviewDialog("summary");
+      return;
     }
+
+    await proceedToPricing();
+  };
+
+  const reviewRemainingProducts = () => {
+    const firstPendingItem = items.find(
+      (item) =>
+        SELECTABLE_STATUSES.has(item.Status) &&
+        !selectedIds.has(item.Id),
+    );
+
+    setIncompleteReviewDialog(null);
+    setFilter("all");
+    setError(null);
+
+    if (!firstPendingItem) return;
+
+    window.requestAnimationFrame(() => {
+      window.setTimeout(() => {
+        document
+          .getElementById(`catalog-ai-review-item-${firstPendingItem.Id}`)
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
+      }, 0);
+    });
+  };
+
+  const confirmContinueWithoutReview = async () => {
+    setIncompleteReviewDialog(null);
+    await proceedToPricing();
   };
 
   const publishApproved = async () => {
@@ -932,11 +1388,14 @@ export const CatalogAiImportWizard = ({
     setError(null);
 
     try {
-      await saveDirtyItems();
+      await saveSelectedDirtyItems();
       const selectedItems = items.filter((item) => selectedIds.has(item.Id));
       const productIds = await mapWithConcurrency(selectedItems, 2, (item) =>
         runWithSessionRecovery((client) =>
-          client.publishItem(batchId, item, { showPrice: priceMode === "show" }),
+          client.publishItem(batchId, item, {
+            showPrice: priceMode === "show",
+            duplicateAction: item.duplicateAction,
+          }),
         ),
       );
       setPublishedProductIds(productIds);
@@ -972,6 +1431,21 @@ export const CatalogAiImportWizard = ({
     });
   };
 
+  const selectableItemCount = useMemo(
+    () => items.filter((item) => SELECTABLE_STATUSES.has(item.Status)).length,
+    [items],
+  );
+
+  const pendingReviewCount = useMemo(
+    () =>
+      items.filter(
+        (item) =>
+          SELECTABLE_STATUSES.has(item.Status) &&
+          !selectedIds.has(item.Id),
+      ).length,
+    [items, selectedIds],
+  );
+
   const filteredItems = useMemo(() => {
     if (filter === "all") return items;
     if (filter === "ready") return items.filter((item) => item.Status === "READY");
@@ -999,7 +1473,7 @@ export const CatalogAiImportWizard = ({
       return {
         eyebrow: "Creando catálogo",
         title: "Guardando tus productos",
-        description: `Estamos insertando ${selectedIds.size} productos en Ravekh. No cierres esta ventana.`,
+        description: `Estamos creando o actualizando ${selectedIds.size} productos en Ravekh. No cierres esta ventana.`,
         progress: null as number | null,
         counter: `${selectedIds.size} productos`,
       };
@@ -1225,7 +1699,7 @@ export const CatalogAiImportWizard = ({
               <div className="catalog-ai-wizard__review-head">
                 <div>
                   <h3>Revisa los productos ({items.length})</h3>
-                  <p>Selecciona únicamente los productos que deseas crear.</p>
+                  <p>Selecciona los productos que deseas crear o actualizar. Los posibles duplicados requieren una decisión manual.</p>
                 </div>
                 <strong>{selectedIds.size} aprobados</strong>
               </div>
@@ -1254,19 +1728,51 @@ export const CatalogAiImportWizard = ({
                   const selectable = SELECTABLE_STATUSES.has(item.Status);
                   const isSelected = selectedIds.has(item.Id);
                   const confidence = confidenceValue(item.Confidence);
-                  const matchedCategory = findAvailableCategory(item.draftCategory);
+                  const matchedCategory = findAvailableCategory(
+                    item.draftCategory,
+                    null,
+                  );
+                  const subcategoryOptions = matchedCategory
+                    ? availableCategories.filter(
+                        (category) => category.parentId === matchedCategory.id,
+                      )
+                    : [];
+                  const matchedSubcategory = matchedCategory
+                    ? findAvailableCategory(
+                        item.draftSubcategory,
+                        matchedCategory.id,
+                      )
+                    : null;
                   const isNewCategory =
                     item.categoryMode === "new" ||
                     (item.categoryMode === "auto" &&
                       Boolean(item.draftCategory.trim()) &&
                       !matchedCategory);
+                  const isNewSubcategory =
+                    item.subcategoryMode === "new" ||
+                    (item.subcategoryMode === "auto" &&
+                      Boolean(item.draftSubcategory.trim()) &&
+                      !matchedSubcategory);
                   const categorySelectValue = isNewCategory
                     ? "__new__"
                     : matchedCategory
                       ? String(matchedCategory.id)
                       : "";
+                  const subcategorySelectValue = isNewSubcategory
+                    ? "__new__"
+                    : matchedSubcategory
+                      ? String(matchedSubcategory.id)
+                      : "";
+                  const hasExistingDuplicate = Boolean(
+                    item.Duplicate_Product_Id,
+                  );
+                  const visibleItemError = friendlyItemError(item);
                   return (
-                    <article key={item.Id} className={`${isSelected ? "is-selected" : ""} ${!selectable ? "is-disabled" : ""}`}>
+                    <article
+                      id={`catalog-ai-review-item-${item.Id}`}
+                      key={item.Id}
+                      className={`${isSelected ? "is-selected" : ""} ${!selectable ? "is-disabled" : ""} ${selectable && !isSelected ? "is-pending-review" : ""}`}
+                    >
                       <label className="catalog-ai-wizard__approval-check">
                         <input
                           type="checkbox"
@@ -1303,6 +1809,75 @@ export const CatalogAiImportWizard = ({
                             onChange={(event) => updateDraft(item.Id, "draftDescription", event.target.value)}
                           />
                         </label>
+                        {hasExistingDuplicate ? (
+                          <div className="catalog-ai-wizard__duplicate-panel">
+                            <div>
+                              <strong>
+                                Encontramos el producto #{item.Duplicate_Product_Id}
+                              </strong>
+                              <p>
+                                Cargamos primero la información existente. Los campos vacíos se completaron con la sugerencia de la IA para que puedas editarlos.
+                              </p>
+                            </div>
+                            <div className="catalog-ai-wizard__duplicate-options">
+                              <label>
+                                <input
+                                  type="radio"
+                                  name={`duplicate-action-${item.Id}`}
+                                  checked={item.duplicateAction === "update_existing"}
+                                  disabled={!selectable}
+                                  onChange={() => {
+                                    setItems((current) =>
+                                      current.map((row) =>
+                                        row.Id === item.Id
+                                          ? {
+                                              ...row,
+                                              duplicateAction: "update_existing",
+                                              dirty: true,
+                                            }
+                                          : row,
+                                      ),
+                                    );
+                                    setSelectedIds((current) => {
+                                      const next = new Set(current);
+                                      next.add(item.Id);
+                                      return next;
+                                    });
+                                  }}
+                                />
+                                Actualizar el producto existente
+                              </label>
+                              <label>
+                                <input
+                                  type="radio"
+                                  name={`duplicate-action-${item.Id}`}
+                                  checked={item.duplicateAction === "create_new"}
+                                  disabled={!selectable}
+                                  onChange={() => {
+                                    setItems((current) =>
+                                      current.map((row) =>
+                                        row.Id === item.Id
+                                          ? {
+                                              ...row,
+                                              duplicateAction: "create_new",
+                                              dirty: true,
+                                            }
+                                          : row,
+                                      ),
+                                    );
+                                    setSelectedIds((current) => {
+                                      const next = new Set(current);
+                                      next.add(item.Id);
+                                      return next;
+                                    });
+                                  }}
+                                />
+                                Crear un producto nuevo
+                              </label>
+                            </div>
+                          </div>
+                        ) : null}
+
                         <div className="catalog-ai-wizard__field-grid">
                           <div className="catalog-ai-wizard__category-field">
                             <label>
@@ -1315,23 +1890,25 @@ export const CatalogAiImportWizard = ({
                                 }
                               >
                                 <option value="">Sin categoría</option>
-                                {availableCategories.map((category) => (
+                                {rootCategories.map((category) => (
                                   <option key={category.id} value={String(category.id)}>
                                     {category.name}
                                   </option>
                                 ))}
-                                <option value="__new__">+ Crear nueva categoría</option>
+                                <option value="__new__">
+                                  + Usar o crear otra categoría
+                                </option>
                               </select>
                             </label>
 
                             {isNewCategory ? (
                               <div className="catalog-ai-wizard__new-category">
                                 <label>
-                                  Nombre de la nueva categoría
+                                  Categoría sugerida
                                   <input
                                     value={item.draftCategory}
                                     disabled={!selectable || item.creatingCategory}
-                                    placeholder="Ej. Ropa deportiva"
+                                    placeholder="Ej. Ropa"
                                     onChange={(event) =>
                                       updateDraft(
                                         item.Id,
@@ -1345,7 +1922,9 @@ export const CatalogAiImportWizard = ({
                                   Color
                                   <input
                                     type="color"
-                                    value={normalizeCategoryColor(item.draftCategoryColor)}
+                                    value={normalizeCategoryColor(
+                                      item.draftCategoryColor,
+                                    )}
                                     disabled={!selectable || item.creatingCategory}
                                     onChange={(event) =>
                                       setItems((current) =>
@@ -1370,7 +1949,12 @@ export const CatalogAiImportWizard = ({
                                     item.creatingCategory ||
                                     item.draftCategory.trim().length < 2
                                   }
-                                  onClick={() => void createCategoryForItem(item.Id)}
+                                  onClick={() =>
+                                    void createCategoryForItem(
+                                      item.Id,
+                                      "category",
+                                    )
+                                  }
                                 >
                                   {item.creatingCategory
                                     ? "Creando categoría…"
@@ -1387,9 +1971,149 @@ export const CatalogAiImportWizard = ({
                               </small>
                             ) : null}
                           </div>
-                          <label>Subcategoría<input value={item.draftSubcategory} disabled={!selectable} onChange={(event) => updateDraft(item.Id, "draftSubcategory", event.target.value)} /></label>
-                          <label>Marca<input value={item.draftBrand} disabled={!selectable} onChange={(event) => updateDraft(item.Id, "draftBrand", event.target.value)} /></label>
-                          <label>Color<input value={item.draftColor} disabled={!selectable} onChange={(event) => updateDraft(item.Id, "draftColor", event.target.value)} /></label>
+
+                          <div className="catalog-ai-wizard__category-field">
+                            <label>
+                              Subcategoría
+                              <select
+                                value={subcategorySelectValue}
+                                disabled={
+                                  !selectable ||
+                                  item.creatingSubcategory ||
+                                  (!matchedCategory && !item.draftCategory.trim())
+                                }
+                                onChange={(event) =>
+                                  selectSubcategory(
+                                    item.Id,
+                                    matchedCategory?.id ?? null,
+                                    event.target.value,
+                                  )
+                                }
+                              >
+                                <option value="">Sin subcategoría</option>
+                                {subcategoryOptions.map((subcategory) => (
+                                  <option
+                                    key={subcategory.id}
+                                    value={String(subcategory.id)}
+                                  >
+                                    {subcategory.name}
+                                  </option>
+                                ))}
+                                <option value="__new__">
+                                  + Usar o crear otra subcategoría
+                                </option>
+                              </select>
+                            </label>
+
+                            {isNewSubcategory ? (
+                              <div className="catalog-ai-wizard__new-category">
+                                <label>
+                                  Subcategoría sugerida
+                                  <input
+                                    value={item.draftSubcategory}
+                                    disabled={!selectable || item.creatingSubcategory}
+                                    placeholder="Ej. Playeras"
+                                    onChange={(event) =>
+                                      updateDraft(
+                                        item.Id,
+                                        "draftSubcategory",
+                                        event.target.value,
+                                      )
+                                    }
+                                  />
+                                </label>
+                                <label className="catalog-ai-wizard__category-color">
+                                  Color
+                                  <input
+                                    type="color"
+                                    value={normalizeCategoryColor(
+                                      item.draftSubcategoryColor,
+                                    )}
+                                    disabled={!selectable || item.creatingSubcategory}
+                                    onChange={(event) =>
+                                      setItems((current) =>
+                                        current.map((row) =>
+                                          row.Id === item.Id
+                                            ? {
+                                                ...row,
+                                                draftSubcategoryColor:
+                                                  event.target.value,
+                                                dirty: true,
+                                              }
+                                            : row,
+                                        ),
+                                      )
+                                    }
+                                  />
+                                </label>
+                                <button
+                                  type="button"
+                                  className="catalog-ai-wizard__create-category"
+                                  disabled={
+                                    !selectable ||
+                                    item.creatingSubcategory ||
+                                    !item.draftCategory.trim() ||
+                                    item.draftSubcategory.trim().length < 2
+                                  }
+                                  onClick={() =>
+                                    void createCategoryForItem(
+                                      item.Id,
+                                      "subcategory",
+                                    )
+                                  }
+                                >
+                                  {item.creatingSubcategory
+                                    ? "Creando subcategoría…"
+                                    : "Crear y seleccionar"}
+                                </button>
+                              </div>
+                            ) : matchedSubcategory ? (
+                              <small className="catalog-ai-wizard__selected-category">
+                                <span
+                                  style={{
+                                    backgroundColor: matchedSubcategory.color,
+                                  }}
+                                  aria-hidden="true"
+                                />
+                                Se usará {matchedSubcategory.name}
+                              </small>
+                            ) : null}
+                          </div>
+
+                          <label>
+                            Código de barras <small>(opcional)</small>
+                            <input
+                              value={item.draftBarcode}
+                              disabled={!selectable}
+                              placeholder="Captúralo manualmente"
+                              autoComplete="off"
+                              maxLength={255}
+                              onChange={(event) =>
+                                updateDraft(
+                                  item.Id,
+                                  "draftBarcode",
+                                  event.target.value,
+                                )
+                              }
+                            />
+                            <small>La IA no completa este campo.</small>
+                          </label>
+
+                          <label>
+                            Color
+                            <input
+                              value={item.draftColor}
+                              disabled={!selectable}
+                              onChange={(event) =>
+                                updateDraft(
+                                  item.Id,
+                                  "draftColor",
+                                  event.target.value,
+                                )
+                              }
+                            />
+                          </label>
+
                           <label>
                             Precio
                             <input
@@ -1400,9 +2124,16 @@ export const CatalogAiImportWizard = ({
                               placeholder="Sin precio"
                               value={item.draftPrice}
                               disabled={!selectable}
-                              onChange={(event) => updateDraft(item.Id, "draftPrice", event.target.value)}
+                              onChange={(event) =>
+                                updateDraft(
+                                  item.Id,
+                                  "draftPrice",
+                                  event.target.value,
+                                )
+                              }
                             />
                           </label>
+
                           <label>
                             Stock
                             <input
@@ -1412,12 +2143,27 @@ export const CatalogAiImportWizard = ({
                               inputMode="decimal"
                               value={item.draftStock}
                               disabled={!selectable}
-                              onChange={(event) => updateDraft(item.Id, "draftStock", event.target.value)}
+                              onChange={(event) =>
+                                updateDraft(
+                                  item.Id,
+                                  "draftStock",
+                                  event.target.value,
+                                )
+                              }
                             />
                           </label>
                         </div>
-                        {item.Duplicate_Reason ? <p className="catalog-ai-wizard__inline-warning">Posible duplicado: {item.Duplicate_Reason}</p> : null}
-                        {item.Error_Message ? <p className="catalog-ai-wizard__inline-error">{item.Error_Message}</p> : null}
+
+                        {item.Duplicate_Reason ? (
+                          <p className="catalog-ai-wizard__inline-warning">
+                            {duplicateReasonLabel(item.Duplicate_Reason)}
+                          </p>
+                        ) : null}
+                        {visibleItemError ? (
+                          <p className="catalog-ai-wizard__inline-error">
+                            {visibleItemError}
+                          </p>
+                        ) : null}
                       </div>
 
                       <div className="catalog-ai-wizard__review-actions">
@@ -1449,7 +2195,7 @@ export const CatalogAiImportWizard = ({
               <div className="catalog-ai-wizard__pricing-copy">
                 <span className="catalog-ai-wizard__pricing-icon">🏷</span>
                 <h3>¿Cómo deseas manejar los precios?</h3>
-                <p>Los productos todavía no existen en tu base. Se crearán cuando confirmes este paso.</p>
+                <p>Los productos nuevos todavía no existen en tu base. Los duplicados solo se actualizarán si eliges esa opción.</p>
               </div>
 
               <div className="catalog-ai-wizard__price-options">
@@ -1474,14 +2220,14 @@ export const CatalogAiImportWizard = ({
                 <span>✓</span>
                 <div>
                   <strong>Confirmación obligatoria</strong>
-                  <p>Al presionar “Crear productos” se insertarán {selectedIds.size} registros en tu base de datos.</p>
+                  <p>Al confirmar se crearán productos nuevos o se actualizarán los duplicados que hayas indicado.</p>
                 </div>
               </div>
 
               <footer className="catalog-ai-wizard__actions">
                 <button type="button" className="is-secondary" onClick={() => setStep(3)} disabled={publishing}>Volver a revisar</button>
                 <button type="button" className="is-primary" onClick={() => void publishApproved()} disabled={publishing || selectedIds.size === 0}>
-                  {publishing ? "Creando productos…" : `Crear ${selectedIds.size} productos`}
+                  {publishing ? "Guardando productos…" : `Guardar ${selectedIds.size} productos`}
                 </button>
               </footer>
             </div>
@@ -1490,11 +2236,11 @@ export const CatalogAiImportWizard = ({
           {step === 5 ? (
             <div className="catalog-ai-wizard__success-step">
               <div className="catalog-ai-wizard__success-icon">✓</div>
-              <h3>¡Catálogo creado!</h3>
-              <p>Los productos aprobados ya fueron agregados a Ravekh.</p>
+              <h3>¡Productos guardados!</h3>
+              <p>Los productos aprobados ya fueron creados o actualizados en Ravekh.</p>
 
               <div className="catalog-ai-wizard__success-stats">
-                <div><span>Productos creados</span><strong>{publishedProductIds.length}</strong></div>
+                <div><span>Productos procesados</span><strong>{publishedProductIds.length}</strong></div>
                 <div><span>Categorías detectadas</span><strong>{new Set(items.map((item) => item.draftCategory.trim()).filter(Boolean)).size}</strong></div>
                 <div><span>Imágenes procesadas</span><strong>{items.length}</strong></div>
                 <div><span>Tiempo total</span><strong>{elapsedText}</strong></div>
@@ -1502,7 +2248,7 @@ export const CatalogAiImportWizard = ({
 
               <div className="catalog-ai-wizard__notice is-success">
                 <span>✓</span>
-                <div><strong>La aprobación fue respetada</strong><p>Solo se insertaron los {publishedProductIds.length} productos que seleccionaste.</p></div>
+                <div><strong>La aprobación fue respetada</strong><p>Solo se procesaron los {publishedProductIds.length} productos que seleccionaste.</p></div>
               </div>
 
               <footer className="catalog-ai-wizard__actions is-centered">
@@ -1521,6 +2267,105 @@ export const CatalogAiImportWizard = ({
             </div>
           ) : null}
         </div>
+
+        {incompleteReviewDialog === "summary" ? (
+          <div
+            className="catalog-ai-wizard__decision-backdrop"
+            role="presentation"
+          >
+            <section
+              className="catalog-ai-wizard__decision-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="catalog-ai-incomplete-review-title"
+            >
+              <span className="catalog-ai-wizard__decision-eyebrow">
+                Revisión incompleta
+              </span>
+              <h3 id="catalog-ai-incomplete-review-title">
+                Solo has aprobado {selectedIds.size} de {selectableItemCount} productos
+              </h3>
+              <p>
+                Hay {pendingReviewCount} {pendingReviewCount === 1 ? "producto" : "productos"} que todavía no
+                {pendingReviewCount === 1 ? " ha" : " han"} sido revisado{pendingReviewCount === 1 ? "" : "s"}.
+                Si continúas, esos productos no se crearán ni se actualizarán.
+              </p>
+
+              <div className="catalog-ai-wizard__decision-summary">
+                <div>
+                  <span>Aprobados</span>
+                  <strong>{selectedIds.size}</strong>
+                </div>
+                <div>
+                  <span>Pendientes</span>
+                  <strong>{pendingReviewCount}</strong>
+                </div>
+                <div>
+                  <span>Total disponible</span>
+                  <strong>{selectableItemCount}</strong>
+                </div>
+              </div>
+
+              <div className="catalog-ai-wizard__decision-actions">
+                <button
+                  type="button"
+                  className="is-subtle"
+                  onClick={() => setIncompleteReviewDialog("confirm")}
+                >
+                  Continuar sin revisar
+                </button>
+                <button
+                  type="button"
+                  className="is-primary"
+                  onClick={reviewRemainingProducts}
+                >
+                  Ir a revisar {pendingReviewCount === 1 ? "el producto" : "los productos"}
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
+
+        {incompleteReviewDialog === "confirm" ? (
+          <div
+            className="catalog-ai-wizard__decision-backdrop"
+            role="presentation"
+          >
+            <section
+              className="catalog-ai-wizard__decision-dialog is-confirmation"
+              role="alertdialog"
+              aria-modal="true"
+              aria-labelledby="catalog-ai-skip-review-title"
+            >
+              <span className="catalog-ai-wizard__decision-eyebrow is-warning">
+                Confirmación
+              </span>
+              <h3 id="catalog-ai-skip-review-title">
+                ¿Estás seguro de continuar sin revisar?
+              </h3>
+              <p>
+                Los {pendingReviewCount} productos pendientes no se crearán ni se actualizarán en esta importación.
+              </p>
+
+              <div className="catalog-ai-wizard__decision-actions">
+                <button
+                  type="button"
+                  className="is-subtle"
+                  onClick={() => setIncompleteReviewDialog("summary")}
+                >
+                  No
+                </button>
+                <button
+                  type="button"
+                  className="is-confirm"
+                  onClick={() => void confirmContinueWithoutReview()}
+                >
+                  Sí, continuar
+                </button>
+              </div>
+            </section>
+          </div>
+        ) : null}
 
         {showBusyOverlay && busyState ? (
           <div
