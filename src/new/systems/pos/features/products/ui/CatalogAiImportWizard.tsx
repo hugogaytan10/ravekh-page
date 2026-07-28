@@ -1656,8 +1656,11 @@ export const CatalogAiImportWizard = ({
                         </span>
                         <button
                           type="button"
+                          className="catalog-ai-wizard__photo-remove"
                           onClick={() => removePhoto(photo.id)}
-                          aria-label={`Quitar ${photo.file.name}`}
+                          aria-label={`Eliminar ${photo.file.name}`}
+                          title="Eliminar fotografía"
+                          disabled={selectingFiles || uploading}
                         >
                           ×
                         </button>
