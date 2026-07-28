@@ -133,6 +133,41 @@ export class CatalogAiApiError extends Error {
   }
 }
 
+const CLOUDINARY_UPLOAD_TIMEOUT_MS = 90_000;
+const CLOUDINARY_UPLOAD_ATTEMPTS = 3;
+const CLOUDINARY_RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+const sleep = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+const isCloudinaryUploadResult = (
+  value: unknown,
+): value is CloudinaryUploadResult => {
+  if (!value || typeof value !== "object") return false;
+  const row = value as Record<string, unknown>;
+
+  return (
+    typeof row.asset_id === "string" &&
+    Boolean(row.asset_id.trim()) &&
+    typeof row.public_id === "string" &&
+    Boolean(row.public_id.trim()) &&
+    Number.isInteger(Number(row.version)) &&
+    Number(row.version) > 0 &&
+    typeof row.signature === "string" &&
+    Boolean(row.signature.trim()) &&
+    typeof row.secure_url === "string" &&
+    /^https:\/\//i.test(row.secure_url) &&
+    Number.isInteger(Number(row.width)) &&
+    Number(row.width) > 0 &&
+    Number.isInteger(Number(row.height)) &&
+    Number(row.height) > 0 &&
+    Number.isInteger(Number(row.bytes)) &&
+    Number(row.bytes) > 0 &&
+    typeof row.format === "string" &&
+    Boolean(row.format.trim())
+  );
+};
+
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
 const normalizeAccessToken = (value: string): string =>
@@ -253,29 +288,104 @@ export class CatalogAiApi {
     file: File,
     signed: SignedCatalogUpload,
   ): Promise<CloudinaryUploadResult> {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("api_key", signed.apiKey);
-    formData.append("timestamp", String(signed.timestamp));
-    formData.append("signature", signed.signature);
-    formData.append("public_id", signed.publicId);
+    let lastError: unknown = null;
 
-    const response = await fetch(signed.uploadUrl, {
-      method: "POST",
-      body: formData,
-    });
-    const payload = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      throw new CatalogAiApiError(
-        errorMessageFromPayload(payload, "No se pudo subir la imagen a Cloudinary."),
-        response.status,
-        errorCodeFromPayload(payload),
-        payload,
+    for (let attempt = 1; attempt <= CLOUDINARY_UPLOAD_ATTEMPTS; attempt += 1) {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        CLOUDINARY_UPLOAD_TIMEOUT_MS,
       );
+
+      try {
+        // FormData no se reutiliza entre intentos: algunos navegadores consumen
+        // el cuerpo del request después del primer envío.
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("api_key", signed.apiKey);
+        formData.append("timestamp", String(signed.timestamp));
+        formData.append("signature", signed.signature);
+        formData.append("public_id", signed.publicId);
+
+        const response = await fetch(signed.uploadUrl, {
+          method: "POST",
+          body: formData,
+          signal: controller.signal,
+        });
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          const cloudinaryError = new CatalogAiApiError(
+            errorMessageFromPayload(
+              payload,
+              "No se pudo subir la imagen a Cloudinary.",
+            ),
+            response.status,
+            errorCodeFromPayload(payload),
+            payload,
+          );
+
+          if (
+            attempt < CLOUDINARY_UPLOAD_ATTEMPTS &&
+            CLOUDINARY_RETRYABLE_STATUS.has(response.status)
+          ) {
+            lastError = cloudinaryError;
+            await sleep(700 * attempt + Math.floor(Math.random() * 350));
+            continue;
+          }
+
+          throw cloudinaryError;
+        }
+
+        if (!isCloudinaryUploadResult(payload)) {
+          throw new CatalogAiApiError(
+            "Cloudinary no devolvió la información completa de la imagen.",
+            502,
+            "INVALID_CLOUDINARY_RESPONSE",
+            payload,
+          );
+        }
+
+        return payload;
+      } catch (cause) {
+        lastError = cause;
+
+        const isAbort =
+          cause instanceof DOMException && cause.name === "AbortError";
+        const isNetworkError = cause instanceof TypeError || isAbort;
+        const retryableApiError =
+          cause instanceof CatalogAiApiError &&
+          CLOUDINARY_RETRYABLE_STATUS.has(cause.status);
+
+        if (
+          attempt < CLOUDINARY_UPLOAD_ATTEMPTS &&
+          (isNetworkError || retryableApiError)
+        ) {
+          await sleep(700 * attempt + Math.floor(Math.random() * 350));
+          continue;
+        }
+
+        if (isAbort) {
+          throw new CatalogAiApiError(
+            `La subida de ${file.name} tardó demasiado. Intenta nuevamente.`,
+            408,
+            "CLOUDINARY_UPLOAD_TIMEOUT",
+            cause,
+          );
+        }
+
+        throw cause;
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
     }
 
-    return payload as CloudinaryUploadResult;
+    throw new CatalogAiApiError(
+      `No se pudo subir ${file.name} después de varios intentos.`,
+      503,
+      "CLOUDINARY_UPLOAD_RETRIES_EXHAUSTED",
+      lastError,
+    );
   }
 
   async registerAssets(batchId: string, assets: RegisteredCatalogAsset[]): Promise<void> {
