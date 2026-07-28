@@ -184,8 +184,19 @@ const toEditableItem = (item: CatalogAiItem): EditableCatalogAiItem => {
         item.Duplicate_Product_Stock,
         item.Suggested_Stock,
       ) || "1",
-    categoryMode: "auto",
-    subcategoryMode: "auto",
+    // En productos existentes se conserva la clasificación actual. Para productos
+    // nuevos, la sugerencia de IA queda seleccionada explícitamente y puede
+    // reemplazarse por una categoría existente o por una nueva categoría manual.
+    categoryMode: item.Duplicate_Category_Name
+      ? "existing"
+      : item.Suggested_Category
+        ? "auto"
+        : "existing",
+    subcategoryMode: item.Duplicate_Subcategory_Name
+      ? "existing"
+      : item.Suggested_Subcategory
+        ? "auto"
+        : "existing",
     draftCategoryColor: "#6D01D1",
     draftSubcategoryColor: "#6D01D1",
     creatingCategory: false,
@@ -944,6 +955,48 @@ export const CatalogAiImportWizard = ({
             subcategoryMode: "existing",
             draftCategory: "",
             draftSubcategory: "",
+            dirty: true,
+          };
+        }
+
+        if (value === "__suggested__") {
+          const suggestedCategory = String(
+            item.Suggested_Category ?? "",
+          ).trim();
+
+          if (!suggestedCategory) return item;
+
+          const suggestedCategoryMatch = findAvailableCategory(
+            suggestedCategory,
+            null,
+          );
+          const suggestedSubcategory = String(
+            item.Suggested_Subcategory ?? "",
+          ).trim();
+          const suggestedSubcategoryMatch =
+            suggestedCategoryMatch && suggestedSubcategory
+              ? findAvailableCategory(
+                  suggestedSubcategory,
+                  suggestedCategoryMatch.id,
+                )
+              : null;
+
+          return {
+            ...item,
+            categoryMode: "auto",
+            subcategoryMode: suggestedSubcategory
+              ? "auto"
+              : "existing",
+            draftCategory:
+              suggestedCategoryMatch?.name ?? suggestedCategory,
+            draftCategoryColor: suggestedCategoryMatch
+              ? normalizeCategoryColor(suggestedCategoryMatch.color)
+              : item.draftCategoryColor,
+            draftSubcategory:
+              suggestedSubcategoryMatch?.name ?? suggestedSubcategory,
+            draftSubcategoryColor: suggestedSubcategoryMatch
+              ? normalizeCategoryColor(suggestedSubcategoryMatch.color)
+              : item.draftSubcategoryColor,
             dirty: true,
           };
         }
@@ -1743,21 +1796,29 @@ export const CatalogAiImportWizard = ({
                         matchedCategory.id,
                       )
                     : null;
+                  const suggestedCategoryName = String(
+                    item.Suggested_Category ?? "",
+                  ).trim();
+                  const hasSuggestedCategory = Boolean(
+                    suggestedCategoryName,
+                  );
+                  const isSuggestedCategory =
+                    item.categoryMode === "auto" &&
+                    hasSuggestedCategory;
                   const isNewCategory =
-                    item.categoryMode === "new" ||
-                    (item.categoryMode === "auto" &&
-                      Boolean(item.draftCategory.trim()) &&
-                      !matchedCategory);
+                    item.categoryMode === "new";
                   const isNewSubcategory =
                     item.subcategoryMode === "new" ||
                     (item.subcategoryMode === "auto" &&
                       Boolean(item.draftSubcategory.trim()) &&
                       !matchedSubcategory);
-                  const categorySelectValue = isNewCategory
-                    ? "__new__"
-                    : matchedCategory
-                      ? String(matchedCategory.id)
-                      : "";
+                  const categorySelectValue = isSuggestedCategory
+                    ? "__suggested__"
+                    : isNewCategory
+                      ? "__new__"
+                      : matchedCategory
+                        ? String(matchedCategory.id)
+                        : "";
                   const subcategorySelectValue = isNewSubcategory
                     ? "__new__"
                     : matchedSubcategory
@@ -1890,6 +1951,11 @@ export const CatalogAiImportWizard = ({
                                 }
                               >
                                 <option value="">Sin categoría</option>
+                                {hasSuggestedCategory ? (
+                                  <option value="__suggested__">
+                                    Sugerencia de IA: {suggestedCategoryName}
+                                  </option>
+                                ) : null}
                                 {rootCategories.map((category) => (
                                   <option key={category.id} value={String(category.id)}>
                                     {category.name}
@@ -1901,10 +1967,26 @@ export const CatalogAiImportWizard = ({
                               </select>
                             </label>
 
-                            {isNewCategory ? (
+                            {isSuggestedCategory ? (
+                              <small className="catalog-ai-wizard__selected-category">
+                                <span
+                                  style={{
+                                    backgroundColor: matchedCategory
+                                      ? matchedCategory.color
+                                      : normalizeCategoryColor(
+                                          item.draftCategoryColor,
+                                        ),
+                                  }}
+                                  aria-hidden="true"
+                                />
+                                {matchedCategory
+                                  ? `La sugerencia ${suggestedCategoryName} coincide con una categoría existente y se reutilizará.`
+                                  : `La sugerencia ${suggestedCategoryName} se creará automáticamente al guardar si decides conservarla.`}
+                              </small>
+                            ) : isNewCategory ? (
                               <div className="catalog-ai-wizard__new-category">
                                 <label>
-                                  Categoría sugerida
+                                  Nueva categoría
                                   <input
                                     value={item.draftCategory}
                                     disabled={!selectable || item.creatingCategory}
