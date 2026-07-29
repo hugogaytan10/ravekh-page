@@ -922,7 +922,7 @@ export const CatalogAiImportWizard = ({
 
         const isTemporaryServerError =
           cause instanceof CatalogAiApiError &&
-          [500, 502, 503, 504].includes(cause.status);
+          [304, 408, 425, 429, 500, 502, 503, 504].includes(cause.status);
 
         if (isTemporaryServerError) {
           pollFailuresRef.current += 1;
