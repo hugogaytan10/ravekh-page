@@ -1,6 +1,8 @@
 export const PRODUCT_IMAGE_MAX_DIMENSION = 1400;
 export const PRODUCT_IMAGE_QUALITY = 0.78;
 export const PRODUCT_IMAGE_MAX_FILE_BYTES = 5 * 1024 * 1024;
+export const PRODUCT_IMAGE_PREVIEW_MAX_DIMENSION = 360;
+export const PRODUCT_IMAGE_PREVIEW_QUALITY = 0.72;
 
 export const PRODUCT_IMAGE_ACCEPTED_TYPES = new Set([
   "image/jpeg",
@@ -18,14 +20,34 @@ export type ProductImageCompressionResult = {
   outputType: "image/jpeg" | "image/png";
 };
 
-const loadImage = (file: File): Promise<HTMLImageElement> =>
+export type ProductImagePreviewResult = {
+  url: string;
+  width: number;
+  height: number;
+};
+
+type DrawableImage = {
+  source: CanvasImageSource;
+  width: number;
+  height: number;
+  dispose: () => void;
+};
+
+const loadHtmlImage = (file: File): Promise<DrawableImage> =>
   new Promise((resolve, reject) => {
     const objectUrl = URL.createObjectURL(file);
     const image = new Image();
 
     image.onload = () => {
       URL.revokeObjectURL(objectUrl);
-      resolve(image);
+      resolve({
+        source: image,
+        width: image.naturalWidth,
+        height: image.naturalHeight,
+        dispose: () => {
+          image.src = "";
+        },
+      });
     };
 
     image.onerror = () => {
@@ -35,6 +57,28 @@ const loadImage = (file: File): Promise<HTMLImageElement> =>
 
     image.src = objectUrl;
   });
+
+const loadDrawableImage = async (file: File): Promise<DrawableImage> => {
+  if (typeof createImageBitmap === "function") {
+    try {
+      const bitmap = await createImageBitmap(file, {
+        imageOrientation: "from-image",
+      });
+
+      return {
+        source: bitmap,
+        width: bitmap.width,
+        height: bitmap.height,
+        dispose: () => bitmap.close(),
+      };
+    } catch {
+      // Safari y algunos navegadores pueden rechazar imageOrientation.
+      // Se usa el flujo compatible con HTMLImageElement como respaldo.
+    }
+  }
+
+  return loadHtmlImage(file);
+};
 
 const canvasToBlob = (
   canvas: HTMLCanvasElement,
@@ -55,20 +99,60 @@ const canvasToBlob = (
     );
   });
 
-/**
- * Mantiene la misma política del flujo normal de productos:
- * - redimensiona con canvas respetando proporción;
- * - conserva PNG como PNG;
- * - JPEG/JPG/WEBP se convierten a JPEG;
- * - devuelve un File listo para enviarse a Cloudinary.
- */
-export const compressProductImage = async (
+const renderImage = async (
   file: File,
   options: {
-    maxDimension?: number;
-    quality?: number;
-  } = {},
-): Promise<ProductImageCompressionResult> => {
+    maxDimension: number;
+    quality: number;
+    outputType: "image/jpeg" | "image/png";
+  },
+): Promise<{ blob: Blob; width: number; height: number }> => {
+  const drawable = await loadDrawableImage(file);
+
+  try {
+    if (!drawable.width || !drawable.height) {
+      throw new Error(`${file.name}: la imagen no tiene dimensiones válidas.`);
+    }
+
+    const longestSide = Math.max(drawable.width, drawable.height);
+    const ratio = longestSide > options.maxDimension
+      ? options.maxDimension / longestSide
+      : 1;
+    const width = Math.max(1, Math.round(drawable.width * ratio));
+    const height = Math.max(1, Math.round(drawable.height * ratio));
+    const canvas = document.createElement("canvas");
+    canvas.width = width;
+    canvas.height = height;
+
+    const context = canvas.getContext("2d", { alpha: options.outputType === "image/png" });
+    if (!context) {
+      throw new Error("Tu navegador no pudo preparar la imagen seleccionada.");
+    }
+
+    if (options.outputType === "image/jpeg") {
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, width, height);
+    }
+
+    context.drawImage(drawable.source, 0, 0, width, height);
+    const blob = await canvasToBlob(
+      canvas,
+      options.outputType,
+      options.quality,
+    );
+
+    // Liberar la superficie del canvas reduce el uso de memoria al manejar
+    // decenas de fotografías en dispositivos móviles.
+    canvas.width = 1;
+    canvas.height = 1;
+
+    return { blob, width, height };
+  } finally {
+    drawable.dispose();
+  }
+};
+
+const assertSupportedProductImage = (file: File): void => {
   if (!PRODUCT_IMAGE_ACCEPTED_TYPES.has(file.type)) {
     throw new Error(
       `${file.name}: solo se aceptan imágenes JPG, JPEG, PNG o WEBP.`,
@@ -78,6 +162,21 @@ export const compressProductImage = async (
   if (file.size > PRODUCT_IMAGE_MAX_FILE_BYTES) {
     throw new Error(`${file.name}: la imagen no puede pesar más de 5 MB.`);
   }
+};
+
+/**
+ * Convierte la fotografía para subirla al catálogo.
+ * La imagen ya preparada es la que se envía a Cloudinary; Cloudinary solo la
+ * almacena y no necesita aplicar transformaciones de carga.
+ */
+export const compressProductImage = async (
+  file: File,
+  options: {
+    maxDimension?: number;
+    quality?: number;
+  } = {},
+): Promise<ProductImageCompressionResult> => {
+  assertSupportedProductImage(file);
 
   const maxDimension = Math.max(
     1,
@@ -87,43 +186,55 @@ export const compressProductImage = async (
     1,
     Math.max(0.1, options.quality ?? PRODUCT_IMAGE_QUALITY),
   );
-  const image = await loadImage(file);
-  const longestSide = Math.max(image.naturalWidth, image.naturalHeight);
-  const ratio = longestSide > maxDimension ? maxDimension / longestSide : 1;
-  const width = Math.max(1, Math.round(image.naturalWidth * ratio));
-  const height = Math.max(1, Math.round(image.naturalHeight * ratio));
-  const canvas = document.createElement("canvas");
-  canvas.width = width;
-  canvas.height = height;
-
-  const context = canvas.getContext("2d");
-  if (!context) {
-    throw new Error("Tu navegador no pudo preparar la imagen seleccionada.");
-  }
-
-  // JPEG no soporta transparencia. Se usa blanco como fondo para evitar negro.
   const outputType: "image/jpeg" | "image/png" =
     file.type === "image/png" ? "image/png" : "image/jpeg";
 
-  if (outputType === "image/jpeg") {
-    context.fillStyle = "#ffffff";
-    context.fillRect(0, 0, width, height);
-  }
-
-  context.drawImage(image, 0, 0, width, height);
-  const blob = await canvasToBlob(canvas, outputType, quality);
-
-  const convertedFile = new File([blob], file.name, {
-    type: outputType,
-    lastModified: file.lastModified,
+  const rendered = await renderImage(file, {
+    maxDimension,
+    quality,
+    outputType,
   });
+
+  const extension = outputType === "image/png" ? ".png" : ".jpg";
+  const baseName = file.name.replace(/\.[^.]+$/u, "") || "producto";
+  const convertedFile = new File(
+    [rendered.blob],
+    `${baseName}${extension}`,
+    {
+      type: outputType,
+      lastModified: file.lastModified,
+    },
+  );
 
   return {
     file: convertedFile,
     originalBytes: file.size,
     compressedBytes: convertedFile.size,
-    width,
-    height,
+    width: rendered.width,
+    height: rendered.height,
     outputType,
+  };
+};
+
+/**
+ * Genera una miniatura ligera para la lista de selección. Evita que el
+ * navegador mantenga decodificadas 30 o más fotografías originales al mismo
+ * tiempo, causa común de miniaturas en blanco en móviles.
+ */
+export const createProductImagePreview = async (
+  file: File,
+): Promise<ProductImagePreviewResult> => {
+  assertSupportedProductImage(file);
+
+  const rendered = await renderImage(file, {
+    maxDimension: PRODUCT_IMAGE_PREVIEW_MAX_DIMENSION,
+    quality: PRODUCT_IMAGE_PREVIEW_QUALITY,
+    outputType: "image/jpeg",
+  });
+
+  return {
+    url: URL.createObjectURL(rendered.blob),
+    width: rendered.width,
+    height: rendered.height,
   };
 };

@@ -45,13 +45,14 @@ export type CatalogAiItem = {
   Suggested_Description: string | null;
   Suggested_Category: string | null;
   Suggested_Subcategory: string | null;
-  Suggested_Brand: string | null;
+  Suggested_Barcode: string | null;
   Suggested_Color: string | null;
   Suggested_Price: number | string | null;
   Suggested_Stock: number | string | null;
   For_Sale: number | boolean;
   Confidence: number | string | null;
   Duplicate_Reason: string | null;
+  Duplicate_Of_Item_Id: number | null;
   Duplicate_Product_Id: number | null;
   Product_Id: number | null;
   Error_Code: string | null;
@@ -59,6 +60,17 @@ export type CatalogAiItem = {
   Retry_Count: number;
   Queue_Available_At: string | null;
   Updated_At: string;
+  Duplicate_Product_Name: string | null;
+  Duplicate_Product_Description: string | null;
+  Duplicate_Product_Barcode: string | null;
+  Duplicate_Product_Color: string | null;
+  Duplicate_Product_Price: number | string | null;
+  Duplicate_Product_Stock: number | string | null;
+  Duplicate_Product_For_Sale: number | boolean | null;
+  Duplicate_Category_Id: number | null;
+  Duplicate_Category_Name: string | null;
+  Duplicate_Subcategory_Id: number | null;
+  Duplicate_Subcategory_Name: string | null;
 };
 
 export type CatalogAiItemPatch = {
@@ -66,7 +78,7 @@ export type CatalogAiItemPatch = {
   description?: string | null;
   category?: string | null;
   subcategory?: string | null;
-  brand?: string | null;
+  barcode?: string | null;
   color?: string | null;
   price?: number | null;
   stock?: number;
@@ -121,6 +133,41 @@ export class CatalogAiApiError extends Error {
   }
 }
 
+const CLOUDINARY_UPLOAD_TIMEOUT_MS = 90_000;
+const CLOUDINARY_UPLOAD_ATTEMPTS = 3;
+const CLOUDINARY_RETRYABLE_STATUS = new Set([408, 425, 429, 500, 502, 503, 504]);
+
+const sleep = (milliseconds: number): Promise<void> =>
+  new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+
+const isCloudinaryUploadResult = (
+  value: unknown,
+): value is CloudinaryUploadResult => {
+  if (!value || typeof value !== "object") return false;
+  const row = value as Record<string, unknown>;
+
+  return (
+    typeof row.asset_id === "string" &&
+    Boolean(row.asset_id.trim()) &&
+    typeof row.public_id === "string" &&
+    Boolean(row.public_id.trim()) &&
+    Number.isInteger(Number(row.version)) &&
+    Number(row.version) > 0 &&
+    typeof row.signature === "string" &&
+    Boolean(row.signature.trim()) &&
+    typeof row.secure_url === "string" &&
+    /^https:\/\//i.test(row.secure_url) &&
+    Number.isInteger(Number(row.width)) &&
+    Number(row.width) > 0 &&
+    Number.isInteger(Number(row.height)) &&
+    Number(row.height) > 0 &&
+    Number.isInteger(Number(row.bytes)) &&
+    Number(row.bytes) > 0 &&
+    typeof row.format === "string" &&
+    Boolean(row.format.trim())
+  );
+};
+
 const trimTrailingSlash = (value: string) => value.replace(/\/+$/, "");
 
 const normalizeAccessToken = (value: string): string =>
@@ -169,6 +216,16 @@ const errorMessageFromPayload = (payload: unknown, fallback: string): string => 
   return fallback;
 };
 
+const TRANSIENT_REQUEST_STATUSES = new Set([304, 408, 425, 429, 500, 502, 503, 504]);
+
+const requestDelay = (ms: number): Promise<void> =>
+  new Promise((resolve) => window.setTimeout(resolve, ms));
+
+const addPollingNonce = (path: string): string => {
+  const separator = path.includes("?") ? "&" : "?";
+  return `${path}${separator}__catalogAiPoll=${Date.now()}-${Math.random().toString(16).slice(2)}`;
+};
+
 export class CatalogAiApi {
   private readonly baseUrl: string;
   private readonly token: string;
@@ -182,34 +239,73 @@ export class CatalogAiApi {
     path: string,
     init: RequestInit = {},
   ): Promise<T> {
-    const headers = new Headers(init.headers);
-    headers.set("Accept", "application/json");
-    headers.set("Authorization", `Bearer ${this.token}`);
+    const method = String(init.method ?? "GET").toUpperCase();
+    const canRetry = method === "GET";
+    const maxAttempts = canRetry ? 4 : 1;
+    let lastError: unknown;
 
-    if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
-      headers.set("Content-Type", "application/json");
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      try {
+        const headers = new Headers(init.headers);
+        headers.set("Accept", "application/json");
+        headers.set("Authorization", `Bearer ${this.token}`);
+        headers.set("Cache-Control", "no-cache, no-store, max-age=0");
+        headers.set("Pragma", "no-cache");
+
+        if (init.body && !(init.body instanceof FormData) && !headers.has("Content-Type")) {
+          headers.set("Content-Type", "application/json");
+        }
+
+        const requestPath = method === "GET" ? addPollingNonce(path) : path;
+        const response = await fetch(`${this.baseUrl}${requestPath}`, {
+          ...init,
+          headers,
+          cache: "no-store",
+        });
+
+        const responseText = await response.text().catch(() => "");
+        let payload: unknown = null;
+        if (responseText) {
+          try {
+            payload = JSON.parse(responseText);
+          } catch {
+            payload = responseText;
+          }
+        }
+
+        if (!response.ok) {
+          const error = new CatalogAiApiError(
+            errorMessageFromPayload(payload, `Error HTTP ${response.status}`),
+            response.status,
+            errorCodeFromPayload(payload),
+            payload,
+          );
+
+          if (
+            canRetry &&
+            TRANSIENT_REQUEST_STATUSES.has(response.status) &&
+            attempt < maxAttempts
+          ) {
+            lastError = error;
+            await requestDelay(500 * attempt);
+            continue;
+          }
+          throw error;
+        }
+
+        return payload as T;
+      } catch (cause) {
+        lastError = cause;
+        const status = cause instanceof CatalogAiApiError ? cause.status : undefined;
+        const retryable = status === undefined || TRANSIENT_REQUEST_STATUSES.has(status);
+        if (!canRetry || !retryable || attempt >= maxAttempts) throw cause;
+        await requestDelay(500 * attempt);
+      }
     }
 
-    const response = await fetch(`${this.baseUrl}${path}`, {
-      ...init,
-      headers,
-    });
-
-    const contentType = response.headers.get("content-type") ?? "";
-    const payload = contentType.includes("application/json")
-      ? await response.json().catch(() => null)
-      : await response.text().catch(() => "");
-
-    if (!response.ok) {
-      throw new CatalogAiApiError(
-        errorMessageFromPayload(payload, `Error HTTP ${response.status}`),
-        response.status,
-        errorCodeFromPayload(payload),
-        payload,
-      );
-    }
-
-    return payload as T;
+    throw lastError instanceof Error
+      ? lastError
+      : new Error("No se pudo consultar el progreso del lote.");
   }
 
   async createBatch(expectedItems: number): Promise<{ batchId: string; status: string; maxImages: number }> {
@@ -241,39 +337,117 @@ export class CatalogAiApi {
     file: File,
     signed: SignedCatalogUpload,
   ): Promise<CloudinaryUploadResult> {
-    const formData = new FormData();
-    formData.append("file", file);
-    formData.append("api_key", signed.apiKey);
-    formData.append("timestamp", String(signed.timestamp));
-    formData.append("signature", signed.signature);
-    formData.append("public_id", signed.publicId);
+    let lastError: unknown = null;
 
-    const response = await fetch(signed.uploadUrl, {
-      method: "POST",
-      body: formData,
-    });
-    const payload = await response.json().catch(() => null);
-
-    if (!response.ok) {
-      throw new CatalogAiApiError(
-        errorMessageFromPayload(payload, "No se pudo subir la imagen a Cloudinary."),
-        response.status,
-        errorCodeFromPayload(payload),
-        payload,
+    for (let attempt = 1; attempt <= CLOUDINARY_UPLOAD_ATTEMPTS; attempt += 1) {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(
+        () => controller.abort(),
+        CLOUDINARY_UPLOAD_TIMEOUT_MS,
       );
+
+      try {
+        // FormData no se reutiliza entre intentos: algunos navegadores consumen
+        // el cuerpo del request después del primer envío.
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("api_key", signed.apiKey);
+        formData.append("timestamp", String(signed.timestamp));
+        formData.append("signature", signed.signature);
+        formData.append("public_id", signed.publicId);
+
+        const response = await fetch(signed.uploadUrl, {
+          method: "POST",
+          body: formData,
+          signal: controller.signal,
+        });
+        const payload = await response.json().catch(() => null);
+
+        if (!response.ok) {
+          const cloudinaryError = new CatalogAiApiError(
+            errorMessageFromPayload(
+              payload,
+              "No se pudo subir la imagen a Cloudinary.",
+            ),
+            response.status,
+            errorCodeFromPayload(payload),
+            payload,
+          );
+
+          if (
+            attempt < CLOUDINARY_UPLOAD_ATTEMPTS &&
+            CLOUDINARY_RETRYABLE_STATUS.has(response.status)
+          ) {
+            lastError = cloudinaryError;
+            await sleep(700 * attempt + Math.floor(Math.random() * 350));
+            continue;
+          }
+
+          throw cloudinaryError;
+        }
+
+        if (!isCloudinaryUploadResult(payload)) {
+          throw new CatalogAiApiError(
+            "Cloudinary no devolvió la información completa de la imagen.",
+            502,
+            "INVALID_CLOUDINARY_RESPONSE",
+            payload,
+          );
+        }
+
+        return payload;
+      } catch (cause) {
+        lastError = cause;
+
+        const isAbort =
+          cause instanceof DOMException && cause.name === "AbortError";
+        const isNetworkError = cause instanceof TypeError || isAbort;
+        const retryableApiError =
+          cause instanceof CatalogAiApiError &&
+          CLOUDINARY_RETRYABLE_STATUS.has(cause.status);
+
+        if (
+          attempt < CLOUDINARY_UPLOAD_ATTEMPTS &&
+          (isNetworkError || retryableApiError)
+        ) {
+          await sleep(700 * attempt + Math.floor(Math.random() * 350));
+          continue;
+        }
+
+        if (isAbort) {
+          throw new CatalogAiApiError(
+            `La subida de ${file.name} tardó demasiado. Intenta nuevamente.`,
+            408,
+            "CLOUDINARY_UPLOAD_TIMEOUT",
+            cause,
+          );
+        }
+
+        throw cause;
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
     }
 
-    return payload as CloudinaryUploadResult;
+    throw new CatalogAiApiError(
+      `No se pudo subir ${file.name} después de varios intentos.`,
+      503,
+      "CLOUDINARY_UPLOAD_RETRIES_EXHAUSTED",
+      lastError,
+    );
   }
 
   async registerAssets(batchId: string, assets: RegisteredCatalogAsset[]): Promise<void> {
-    await this.request(
-      `/v1/catalog-imports/${encodeURIComponent(batchId)}/assets`,
-      {
-        method: "POST",
-        body: JSON.stringify({ assets }),
-      },
-    );
+    const chunkSize = 10;
+    for (let offset = 0; offset < assets.length; offset += chunkSize) {
+      await this.request(
+        `/v1/catalog-imports/${encodeURIComponent(batchId)}/assets`,
+        {
+          method: "POST",
+          body: JSON.stringify({ assets: assets.slice(offset, offset + chunkSize) }),
+        },
+      );
+    }
   }
 
   async startBatch(batchId: string): Promise<void> {
@@ -322,14 +496,37 @@ export class CatalogAiApi {
   async publishItem(
     batchId: string,
     item: CatalogAiItem,
-    options: { showPrice: boolean },
+    options: {
+      showPrice: boolean;
+      duplicateAction?: "update_existing" | "create_new";
+    },
   ): Promise<number> {
+    if (
+      item.Duplicate_Product_Id &&
+      options.duplicateAction === "update_existing"
+    ) {
+      const response = await this.request<{ productId: number }>(
+        `/v1/catalog-imports/${encodeURIComponent(batchId)}/items/${item.Id}/resolve-duplicate`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            action: "update_existing",
+            showPrice: options.showPrice,
+          }),
+        },
+      );
+      return response.productId;
+    }
+
     if (item.Status === "DUPLICATE_EXACT") {
       const response = await this.request<{ productId: number }>(
         `/v1/catalog-imports/${encodeURIComponent(batchId)}/items/${item.Id}/resolve-duplicate`,
         {
           method: "POST",
-          body: JSON.stringify({ action: "publish", showPrice: options.showPrice }),
+          body: JSON.stringify({
+            action: "publish",
+            showPrice: options.showPrice,
+          }),
         },
       );
       return response.productId;

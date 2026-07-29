@@ -120,7 +120,12 @@ type ToastState = {
   message: string;
 } | null;
 type ArchiveDialogState = { id: number; name: string } | null;
-type ProductCategoryVm = { id: number; name: string; color: string };
+type ProductCategoryVm = {
+  id: number;
+  name: string;
+  color: string;
+  parentId: number | null;
+};
 
 const normalizeCategoryName = (value: string): string =>
   value
@@ -626,6 +631,7 @@ export const ProductsV2PosPage = () => {
             id: category.id as number,
             name: category.name,
             color: category.color,
+            parentId: category.parentId ?? null,
           })),
       );
       if (list.length === 0) {
@@ -1574,6 +1580,7 @@ export const ProductsV2PosPage = () => {
   const createCategoryFromAiReview = async (input: {
     name: string;
     color: string;
+    parentId: number | null;
   }): Promise<ProductCategoryVm> => {
     if (!token || !businessId) {
       throw new Error("Inicia sesión para crear categorías.");
@@ -1584,8 +1591,10 @@ export const ProductsV2PosPage = () => {
       ? input.color.trim().toUpperCase()
       : "#6D01D1";
 
+    const parentId = input.parentId ?? null;
     const existing = categories.find(
       (category) =>
+        category.parentId === parentId &&
         normalizeCategoryName(category.name) === normalizeCategoryName(name),
     );
     if (existing) return existing;
@@ -1593,6 +1602,7 @@ export const ProductsV2PosPage = () => {
     await service.createCategory(
       {
         businessId,
+        parentId,
         name,
         color,
       },
@@ -1608,12 +1618,14 @@ export const ProductsV2PosPage = () => {
         id: category.id as number,
         name: category.name,
         color: category.color || color,
+        parentId: category.parentId ?? null,
       }));
 
     setCategories(refreshedCategories);
 
     const created = refreshedCategories.find(
       (category) =>
+        category.parentId === parentId &&
         normalizeCategoryName(category.name) === normalizeCategoryName(name),
     );
 
