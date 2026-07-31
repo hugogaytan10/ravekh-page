@@ -1,6 +1,6 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { ModernSystemsFactory } from "../../../index";
-import { uploadImageToCloudinary } from "../../pos/shared/api/cloudinaryUpload";
+import { uploadBusinessLogoToCloudinary } from "../../pos/shared/api/cloudinaryUpload";
 import { getPosApiBaseUrl } from "../../pos/shared/config/posEnv";
 import { POS_SESSION_STORAGE_KEYS } from "../../pos/shared/config/posSession";
 
@@ -159,7 +159,7 @@ const FreeCatalogLoginModal = ({ open, planName = "tu plan", onAuthenticated, on
     setError(null);
 
     try {
-      const logoUrl = await uploadImageToCloudinary(signUpLogoFile);
+      const logoUrl = await uploadBusinessLogoToCloudinary(signUpLogoFile);
       const session = await authPage.signUp({
         business: {
           name: signUpBusinessName.trim(),

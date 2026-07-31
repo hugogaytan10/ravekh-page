@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
-import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
+import { uploadBusinessLogoToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import {
   clearPendingPosUpgradeContext,
@@ -247,7 +247,7 @@ export const PosV2LoginPage = () => {
     setError(null);
 
     try {
-      const logoUrl = await uploadImageToCloudinary(signUpLogoFile);
+      const logoUrl = await uploadBusinessLogoToCloudinary(signUpLogoFile);
 
       const session = await authPage.signUp({
         business: {
