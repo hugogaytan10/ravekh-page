@@ -130,6 +130,12 @@ type CatalogAiImportWizardProps = {
 const createClientAssetId = (file: File, index: number) =>
   `web-${Date.now()}-${index}-${file.name.replace(/[^a-z0-9._-]/gi, "-").slice(0, 48)}`;
 
+const snapshotSelectedFile = async (file: File): Promise<File> =>
+  new File([await file.arrayBuffer()], file.name, {
+    type: file.type,
+    lastModified: file.lastModified,
+  });
+
 const firstText = (...values: Array<string | null | undefined>): string => {
   for (const value of values) {
     const normalized = String(value ?? "").trim();
@@ -826,8 +832,43 @@ export const CatalogAiImportWizard = ({
     }
 
     try {
+      // Inicia todas las lecturas inmediatamente. Algunos proveedores de
+      // archivos móviles invalidan sus referencias temporales mientras las
+      // últimas imágenes esperan turno para generar su miniatura.
+      const snapshotResults = await Promise.all(
+        candidates.map(async (candidate) => {
+          try {
+            return {
+              candidate: {
+                ...candidate,
+                file: await snapshotSelectedFile(candidate.file),
+              },
+              error: null as string | null,
+            };
+          } catch (cause) {
+            catalogAiDebug.error("WIZARD", "photo.snapshot.failed", {
+              flowId: flowIdRef.current,
+              file: candidate.file,
+              cause,
+            });
+            return {
+              candidate: null,
+              error: `${candidate.file.name}: no se pudo conservar el archivo. Selecciónalo nuevamente.`,
+            };
+          }
+        }),
+      );
+      const stableCandidates = snapshotResults
+        .map((result) => result.candidate)
+        .filter((candidate): candidate is (typeof candidates)[number] => Boolean(candidate));
+      rejectedMessages.push(
+        ...snapshotResults
+          .map((result) => result.error)
+          .filter((message): message is string => Boolean(message)),
+      );
+
       const previewResults = await mapWithConcurrency(
-        candidates,
+        stableCandidates,
         PHOTO_PREVIEW_CONCURRENCY,
         async (candidate) => {
           try {
