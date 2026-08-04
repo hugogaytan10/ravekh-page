@@ -53,7 +53,6 @@ const MAX_FILES = 50;
 const MAX_FILE_SIZE_BYTES = PRODUCT_IMAGE_MAX_FILE_BYTES;
 const ALLOWED_TYPES = PRODUCT_IMAGE_ACCEPTED_TYPES;
 const PHOTO_PREVIEW_CONCURRENCY = 2;
-const PHOTO_PREPARE_CONCURRENCY = 2;
 const PHOTO_UPLOAD_CONCURRENCY = 2;
 const PHOTO_UPLOAD_CHUNK_SIZE = 5;
 
@@ -79,6 +78,7 @@ type PriceMode = "whatsapp" | "hidden" | "show";
 
 type SelectedPhoto = {
   id: string;
+  sourceKey: string;
   file: File;
   previewUrl: string;
 };
@@ -788,11 +788,9 @@ export const CatalogAiImportWizard = ({
 
     const currentPhotos = photosRef.current;
     const existingKeys = new Set(
-      currentPhotos.map(
-        ({ file }) => `${file.name}:${file.size}:${file.lastModified}`,
-      ),
+      currentPhotos.map(({ sourceKey }) => sourceKey),
     );
-    const candidates: Array<{ id: string; file: File }> = [];
+    const candidates: Array<{ id: string; sourceKey: string; file: File }> = [];
     const rejectedMessages: string[] = [];
 
     for (const file of incoming) {
@@ -821,6 +819,7 @@ export const CatalogAiImportWizard = ({
           file,
           currentPhotos.length + candidates.length,
         ),
+        sourceKey: key,
         file,
       });
       existingKeys.add(key);
@@ -832,10 +831,15 @@ export const CatalogAiImportWizard = ({
         PHOTO_PREVIEW_CONCURRENCY,
         async (candidate) => {
           try {
-            const preview = await createProductImagePreview(candidate.file);
+            // En móviles el File del selector puede ser temporal y dejar de ser
+            // legible antes de iniciar la carga. Se conserva desde ahora la copia
+            // convertida, que ya es propiedad del navegador.
+            const prepared = await compressProductImage(candidate.file);
+            const preview = await createProductImagePreview(prepared.file);
             return {
               photo: {
                 ...candidate,
+                file: prepared.file,
                 previewUrl: preview.url,
               } satisfies SelectedPhoto,
               error: null as string | null,
@@ -871,18 +875,15 @@ export const CatalogAiImportWizard = ({
       if (accepted.length > 0) {
         setPhotos((current) => {
           const currentKeys = new Set(
-            current.map(
-              ({ file }) => `${file.name}:${file.size}:${file.lastModified}`,
-            ),
+            current.map(({ sourceKey }) => sourceKey),
           );
 
           const uniqueAccepted = accepted.filter((photo) => {
-            const key = `${photo.file.name}:${photo.file.size}:${photo.file.lastModified}`;
-            if (currentKeys.has(key)) {
+            if (currentKeys.has(photo.sourceKey)) {
               URL.revokeObjectURL(photo.previewUrl);
               return false;
             }
-            currentKeys.add(key);
+            currentKeys.add(photo.sourceKey);
             return true;
           });
 
@@ -931,7 +932,6 @@ export const CatalogAiImportWizard = ({
       businessId,
       photoCount: photos.length,
       chunkSize: PHOTO_UPLOAD_CHUNK_SIZE,
-      prepareConcurrency: PHOTO_PREPARE_CONCURRENCY,
       uploadConcurrency: PHOTO_UPLOAD_CONCURRENCY,
     });
     if (!businessId || !currentToken) {
@@ -955,6 +955,7 @@ export const CatalogAiImportWizard = ({
       );
       const newBatchId = created.batchId;
       setBatchId(newBatchId);
+      setPreparedCompleted(photos.length);
       catalogAiDebug.info("WIZARD", "batch.created", {
         flowId: flowIdRef.current,
         batchId: newBatchId,
@@ -978,38 +979,10 @@ export const CatalogAiImportWizard = ({
           chunkSize: photoChunk.length,
           clientAssetIds: photoChunk.map((photo) => photo.id),
         });
-        const preparedChunk = await mapWithConcurrency(
-          photoChunk,
-          PHOTO_PREPARE_CONCURRENCY,
-          async (photo) => {
-            const prepareStartedAt = performance.now();
-            catalogAiDebug.debug("WIZARD", "photo.prepare.begin", {
-              flowId: flowIdRef.current,
-              batchId: newBatchId,
-              clientAssetId: photo.id,
-              original: {
-                name: photo.file.name,
-                type: photo.file.type,
-                size: photo.file.size,
-              },
-            });
-            const prepared = await compressProductImage(photo.file);
-            setPreparedCompleted((current) => current + 1);
-            catalogAiDebug.info("WIZARD", "photo.prepare.success", {
-              flowId: flowIdRef.current,
-              batchId: newBatchId,
-              clientAssetId: photo.id,
-              originalBytes: photo.file.size,
-              uploadBytes: prepared.file.size,
-              uploadType: prepared.file.type,
-              durationMs: Math.round(performance.now() - prepareStartedAt),
-            });
-            return {
-              ...photo,
-              uploadFile: prepared.file,
-            };
-          },
-        );
+        const preparedChunk = photoChunk.map((photo) => ({
+          ...photo,
+          uploadFile: photo.file,
+        }));
 
         const signedUploads = await runWithSessionRecovery((client) =>
           client.signUploads(
