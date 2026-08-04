@@ -8,6 +8,7 @@ export class Customer {
     public readonly phoneNumber: string | null,
     public readonly email: string | null,
     public readonly address: string | null,
+    public readonly reference: string | null,
     public readonly notes: string | null,
     public readonly canPayLater: boolean,
     public readonly sex: CustomerSex,
@@ -19,31 +20,26 @@ export class Customer {
       return true;
     }
 
-    return [this.name, this.phoneNumber ?? "", this.email ?? ""]
+    return [
+      this.name,
+      this.phoneNumber ?? "",
+      this.email ?? "",
+      this.reference ?? "",
+    ]
       .join(" ")
       .toLowerCase()
       .includes(query);
   }
 }
 
-export interface UpsertCustomerDto {
-  businessId: number;
-  name: string;
-  phoneNumber?: string;
-  email?: string;
-  address?: string;
-  notes?: string;
-  canPayLater?: boolean;
-  sex?: CustomerSex;
-}
-
 export interface UpsertCustomerDto2 {
   businessId: number;
   business_customers: {
     businessId: number;
+    reference?: string;
     notes?: string;
     canPayLater?: boolean;
-  },
+  };
   customer: {
     id?: number;
     name: string;
@@ -51,7 +47,7 @@ export interface UpsertCustomerDto2 {
     email?: string;
     address?: string;
     sex?: CustomerSex;
-  }
+  };
 }
 
 export interface toApiInactivePayload {
