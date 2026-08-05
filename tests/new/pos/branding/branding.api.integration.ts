@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { PosBrandingApi } from "../../../../src/new/systems/pos/features/settings/branding/api/PosBrandingApi";
+import { getSocialImageRect } from "../../../../src/new/systems/pos/shared/api/cloudinaryUpload";
 
 export async function run(): Promise<void> {
   const calls: string[] = [];
@@ -44,4 +45,10 @@ export async function run(): Promise<void> {
   assert.equal(saved.logo, "data:image/png;base64,updated-logo");
   assert.equal(saved.color, "#6D01D1");
   assert.equal(saved.references, "Frente al parque");
+  assert.deepEqual(getSocialImageRect(941, 1672), {
+    x: 423,
+    y: 0,
+    width: 355,
+    height: 630,
+  });
 }

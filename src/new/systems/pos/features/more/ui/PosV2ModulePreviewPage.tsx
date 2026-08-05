@@ -10,7 +10,7 @@ import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
 import { emitPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
-import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
+import { uploadBusinessLogoToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { usePlanActionGuard } from "../../../shared/hooks/usePlanActionGuard";
 import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
 import "./PosV2ModulePreviewPage.css";
@@ -630,7 +630,7 @@ export const PosV2ModulePreviewPage = () => {
     setBrandingError("");
 
     try {
-      const logoUrl = await uploadImageToCloudinary(file);
+      const logoUrl = await uploadBusinessLogoToCloudinary(file);
       setBrandingForm((current) => ({ ...current, logo: logoUrl }));
       setBrandingSuccess("Logo subido a Cloudinary. Guarda la información del negocio para aplicar el cambio.");
     } catch (cause) {

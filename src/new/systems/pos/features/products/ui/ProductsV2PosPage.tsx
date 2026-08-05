@@ -136,6 +136,10 @@ const normalizeCategoryName = (value: string): string =>
     .toLocaleLowerCase("es-MX");
 type SaveResultState = { type: "success" | "error"; message: string } | null;
 type CategoryFormErrors = { name?: string; color?: string };
+type WholesaleFormErrors = {
+  price?: string;
+  minQuantity?: string;
+};
 
 const compareByNameAsc = (a: ProductItemVm, b: ProductItemVm) =>
   a.name.localeCompare(b.name, "es", { sensitivity: "base" });
@@ -273,6 +277,8 @@ export const ProductsV2PosPage = () => {
   const [costPerItem, setCostPerItem] = useState("");
   const [wholesalePrice, setWholesalePrice] = useState("");
   const [wholesaleMinQuantity, setWholesaleMinQuantity] = useState("");
+  const [wholesaleFormErrors, setWholesaleFormErrors] =
+    useState<WholesaleFormErrors>({});
   const [stock, setStock] = useState("");
   const [forSale, setForSale] = useState(true);
   const [showInStore, setShowInStore] = useState(true);
@@ -291,6 +297,8 @@ export const ProductsV2PosPage = () => {
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
   const categoryCarouselRef = useRef<HTMLDivElement | null>(null);
   const categoryNameInputRef = useRef<HTMLInputElement | null>(null);
+  const wholesalePriceInputRef = useRef<HTMLInputElement | null>(null);
+  const wholesaleMinQuantityInputRef = useRef<HTMLInputElement | null>(null);
 
   const service = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
@@ -320,6 +328,7 @@ export const ProductsV2PosPage = () => {
     setCostPerItem("");
     setWholesalePrice("");
     setWholesaleMinQuantity("");
+    setWholesaleFormErrors({});
     setStock("");
     setForSale(true);
     setShowInStore(true);
@@ -843,14 +852,34 @@ export const ProductsV2PosPage = () => {
   const handleWholesalePriceChange = (value: string) => {
     if (!canEditWholesalePrices()) return;
     setWholesalePrice(value);
+    setWholesaleFormErrors((current) => ({ ...current, price: undefined }));
     if (value.trim() === "") {
       setWholesaleMinQuantity("");
+      setWholesaleFormErrors({});
     }
   };
 
   const handleWholesaleMinQuantityChange = (value: string) => {
     if (!canEditWholesalePrices()) return;
     setWholesaleMinQuantity(value);
+    setWholesaleFormErrors((current) => ({
+      ...current,
+      minQuantity: undefined,
+    }));
+  };
+
+  const showWholesaleFieldError = (
+    field: keyof WholesaleFormErrors,
+    message: string,
+  ) => {
+    setError(message);
+    setWholesaleFormErrors({ [field]: message });
+    window.setTimeout(() => {
+      (field === "price"
+        ? wholesalePriceInputRef.current
+        : wholesaleMinQuantityInputRef.current
+      )?.focus();
+    }, 0);
   };
 
   const handleVariantWholesaleChange = (
@@ -973,12 +1002,16 @@ export const ProductsV2PosPage = () => {
       parsedWholesalePrice !== null &&
       (Number.isNaN(parsedWholesalePrice) || parsedWholesalePrice <= 0)
     ) {
-      setError("El precio por mayoreo debe ser un número válido mayor a 0.");
+      showWholesaleFieldError(
+        "price",
+        "El precio por mayoreo debe ser un número válido mayor a 0.",
+      );
       return;
     }
 
     if (parsedWholesalePrice !== null && parsedPrice === null) {
-      setError(
+      showWholesaleFieldError(
+        "price",
         "Agrega el precio normal antes de configurar precio por mayoreo.",
       );
       return;
@@ -989,7 +1022,8 @@ export const ProductsV2PosPage = () => {
       parsedPrice !== null &&
       parsedWholesalePrice > parsedPrice
     ) {
-      setError(
+      showWholesaleFieldError(
+        "price",
         "El precio por mayoreo no puede ser mayor que el precio normal.",
       );
       return;
@@ -999,14 +1033,16 @@ export const ProductsV2PosPage = () => {
       parsedWholesalePrice !== null &&
       normalizedWholesaleMinQuantity === null
     ) {
-      setError(
+      showWholesaleFieldError(
+        "minQuantity",
         "La cantidad mínima para mayoreo es obligatoria cuando agregas precio por mayoreo.",
       );
       return;
     }
 
     if (parsedWholesalePrice === null && parsedWholesaleMinQuantity !== null) {
-      setError(
+      showWholesaleFieldError(
+        "price",
         "No puedes agregar cantidad mínima para mayoreo sin precio por mayoreo.",
       );
       return;
@@ -1017,7 +1053,10 @@ export const ProductsV2PosPage = () => {
       (Number.isNaN(normalizedWholesaleMinQuantity) ||
         normalizedWholesaleMinQuantity < 2)
     ) {
-      setError("La cantidad mínima para mayoreo debe ser mayor o igual a 2.");
+      showWholesaleFieldError(
+        "minQuantity",
+        "La cantidad mínima para mayoreo debe ser mayor o igual a 2.",
+      );
       return;
     }
 
@@ -2535,9 +2574,16 @@ export const ProductsV2PosPage = () => {
                       onChange={(event) => setPrice(event.target.value)}
                     />
                   </label>
-                  <label>
+                  <label
+                    className={
+                      wholesaleFormErrors.price
+                        ? "pos-v2-products__wholesale-field is-invalid"
+                        : "pos-v2-products__wholesale-field"
+                    }
+                  >
                     Precio por mayoreo
                     <input
+                      ref={wholesalePriceInputRef}
                       type="number"
                       min="0"
                       step="0.01"
@@ -2551,11 +2597,33 @@ export const ProductsV2PosPage = () => {
                       }
                       placeholder="Ej. 80"
                       readOnly={isFreePlan}
+                      aria-invalid={Boolean(wholesaleFormErrors.price)}
+                      aria-describedby={
+                        wholesaleFormErrors.price
+                          ? "wholesale-price-error"
+                          : undefined
+                      }
                     />
+                    {wholesaleFormErrors.price ? (
+                      <small
+                        id="wholesale-price-error"
+                        className="pos-v2-products__wholesale-error"
+                        role="alert"
+                      >
+                        {wholesaleFormErrors.price}
+                      </small>
+                    ) : null}
                   </label>
-                  <label>
+                  <label
+                    className={
+                      wholesaleFormErrors.minQuantity
+                        ? "pos-v2-products__wholesale-field is-invalid"
+                        : "pos-v2-products__wholesale-field"
+                    }
+                  >
                     Cantidad mínima para mayoreo
                     <input
+                      ref={wholesaleMinQuantityInputRef}
                       type="number"
                       min="2"
                       step="1"
@@ -2569,7 +2637,22 @@ export const ProductsV2PosPage = () => {
                       }
                       placeholder="Ej. 3"
                       readOnly={isFreePlan}
+                      aria-invalid={Boolean(wholesaleFormErrors.minQuantity)}
+                      aria-describedby={
+                        wholesaleFormErrors.minQuantity
+                          ? "wholesale-min-quantity-error"
+                          : undefined
+                      }
                     />
+                    {wholesaleFormErrors.minQuantity ? (
+                      <small
+                        id="wholesale-min-quantity-error"
+                        className="pos-v2-products__wholesale-error"
+                        role="alert"
+                      >
+                        {wholesaleFormErrors.minQuantity}
+                      </small>
+                    ) : null}
                   </label>
                   <label>
                     Costo por producto (opcional)
