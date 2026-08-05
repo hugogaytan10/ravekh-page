@@ -1993,6 +1993,9 @@ export const PosV2SalesHomePage = () => {
       )
       .join("");
     const storeName = quoteBusinessName.trim() || "Mi negocio";
+    const ticketLogoMarkup = quoteLogoUrl.trim()
+      ? `<img class="ticket-logo" src="${quoteLogoUrl.trim()}" alt="Logo de ${storeName}" />`
+      : "";
     const saleDate = new Date(sale.createdAt);
     const safeSaleDate = Number.isNaN(saleDate.getTime())
       ? new Date()
@@ -2034,6 +2037,7 @@ export const PosV2SalesHomePage = () => {
       .preview-actions { position: sticky; top: 0; z-index: 2; display: flex; justify-content: center; padding: 8px; background: #111827; }
       .preview-actions button { border: 0; border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; background: #22c55e; color: #052e16; }
       .ticket { width: ${pageWidth}; padding: 2mm; margin: 8px auto; background: #fff; }
+      .ticket-logo { display: block; max-width: 70%; max-height: 22mm; margin: 0 auto 2mm; object-fit: contain; }
       h1 { margin: 0 0 2mm; font-size: 14px; text-align: center; }
       p { margin: 0 0 1.4mm; font-size: 11px; }
       ul { list-style: none; margin: 2mm 0; padding: 0; display: grid; gap: 1mm; }
@@ -2050,6 +2054,7 @@ export const PosV2SalesHomePage = () => {
   <body>
     <div class="preview-actions"><button type="button" onclick="window.print()">Imprimir ticket</button></div>
     <section class="ticket">
+      ${ticketLogoMarkup}
       <h1>Ticket de venta</h1>
       <p><strong>Tienda:</strong> ${storeName}</p>
       <p class="meta">Formato: ${resolvedPaper} mm</p>
