@@ -205,14 +205,14 @@ export const isCatalogAiSessionExpiredError = (
 const errorMessageFromPayload = (payload: unknown, fallback: string): string => {
   if (!payload || typeof payload !== "object") return fallback;
   const record = payload as Record<string, unknown>;
+  const message = record.message;
+  if (typeof message === "string" && message.trim()) return message;
   const error = record.error;
   if (typeof error === "string" && error.trim()) return error;
   if (error && typeof error === "object") {
     const nestedMessage = (error as Record<string, unknown>).message;
     if (typeof nestedMessage === "string" && nestedMessage.trim()) return nestedMessage;
   }
-  const message = record.message;
-  if (typeof message === "string" && message.trim()) return message;
   return fallback;
 };
 

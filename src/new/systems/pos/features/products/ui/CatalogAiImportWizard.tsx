@@ -16,6 +16,7 @@ import {
   PRODUCT_IMAGE_ACCEPTED_TYPES,
   PRODUCT_IMAGE_MAX_FILE_BYTES,
 } from "../../../shared/api/productImageCompression";
+import { catalogAiDebug } from "../../../shared/debug/catalogAiDebug";
 import { CatalogAiSessionRefreshModal } from "./CatalogAiSessionRefreshModal";
 import "./CatalogAiImportWizard.css";
 
@@ -48,11 +49,10 @@ const CATALOG_AI_API_URL = normalizeCatalogAiApiUrl(
   ),
 );
 
-const MAX_FILES = 100;
+const MAX_FILES = 50;
 const MAX_FILE_SIZE_BYTES = PRODUCT_IMAGE_MAX_FILE_BYTES;
 const ALLOWED_TYPES = PRODUCT_IMAGE_ACCEPTED_TYPES;
 const PHOTO_PREVIEW_CONCURRENCY = 2;
-const PHOTO_PREPARE_CONCURRENCY = 2;
 const PHOTO_UPLOAD_CONCURRENCY = 2;
 const PHOTO_UPLOAD_CHUNK_SIZE = 5;
 
@@ -78,6 +78,7 @@ type PriceMode = "whatsapp" | "hidden" | "show";
 
 type SelectedPhoto = {
   id: string;
+  sourceKey: string;
   file: File;
   previewUrl: string;
 };
@@ -128,6 +129,12 @@ type CatalogAiImportWizardProps = {
 
 const createClientAssetId = (file: File, index: number) =>
   `web-${Date.now()}-${index}-${file.name.replace(/[^a-z0-9._-]/gi, "-").slice(0, 48)}`;
+
+const snapshotSelectedFile = async (file: File): Promise<File> =>
+  new File([await file.arrayBuffer()], file.name, {
+    type: file.type,
+    lastModified: file.lastModified,
+  });
 
 const firstText = (...values: Array<string | null | undefined>): string => {
   for (const value of values) {
@@ -495,7 +502,9 @@ export const CatalogAiImportWizard = ({
   const inputRef = useRef<HTMLInputElement | null>(null);
   const pollInFlightRef = useRef(false);
   const pollFailuresRef = useRef(0);
+  const lastProgressSignatureRef = useRef<string | null>(null);
   const photosRef = useRef<SelectedPhoto[]>([]);
+  const flowIdRef = useRef(catalogAiDebug.createId("flow"));
   const apiRef = useRef(new CatalogAiApi(CATALOG_AI_API_URL, token));
   const sessionRefreshWaiterRef = useRef<{
     promise: Promise<string>;
@@ -504,6 +513,12 @@ export const CatalogAiImportWizard = ({
   } | null>(null);
 
   const requestSessionRefresh = useCallback((): Promise<string> => {
+    catalogAiDebug.warn("WIZARD", "session.refresh.requested", {
+      flowId: flowIdRef.current,
+      batchId,
+      step,
+      alreadyWaiting: Boolean(sessionRefreshWaiterRef.current),
+    });
     if (sessionRefreshWaiterRef.current) {
       setSessionPaused(false);
       setSessionRefreshOpen(true);
@@ -521,7 +536,7 @@ export const CatalogAiImportWizard = ({
     setSessionPaused(false);
     setSessionRefreshOpen(true);
     return promise;
-  }, []);
+  }, [batchId, step]);
 
   const runWithSessionRecovery = useCallback(
     async <T,>(operation: (client: CatalogAiApi) => Promise<T>): Promise<T> => {
@@ -530,6 +545,12 @@ export const CatalogAiImportWizard = ({
       } catch (cause) {
         if (!isCatalogAiSessionExpiredError(cause)) throw cause;
 
+        catalogAiDebug.warn("WIZARD", "session.expired", {
+          flowId: flowIdRef.current,
+          batchId,
+          step,
+          cause,
+        });
         const refreshedToken = await requestSessionRefresh();
         const refreshedApi = new CatalogAiApi(
           CATALOG_AI_API_URL,
@@ -538,7 +559,13 @@ export const CatalogAiImportWizard = ({
         apiRef.current = refreshedApi;
 
         try {
-          return await operation(refreshedApi);
+          const recoveredResult = await operation(refreshedApi);
+          catalogAiDebug.info("WIZARD", "session.operation.recovered", {
+            flowId: flowIdRef.current,
+            batchId,
+            step,
+          });
+          return recoveredResult;
         } catch (retryCause) {
           if (isCatalogAiSessionExpiredError(retryCause)) {
             throw new Error(
@@ -549,7 +576,7 @@ export const CatalogAiImportWizard = ({
         }
       }
     },
-    [requestSessionRefresh],
+    [batchId, requestSessionRefresh, step],
   );
 
   const handleSessionRefreshed = async (
@@ -558,6 +585,11 @@ export const CatalogAiImportWizard = ({
     const waiter = sessionRefreshWaiterRef.current;
     if (!waiter) return;
 
+    catalogAiDebug.info("WIZARD", "session.refreshed", {
+      flowId: flowIdRef.current,
+      batchId,
+      step,
+    });
     setCurrentToken(session.token);
     apiRef.current = new CatalogAiApi(CATALOG_AI_API_URL, session.token);
     onSessionRefreshed?.(session.token);
@@ -582,11 +614,24 @@ export const CatalogAiImportWizard = ({
 
   useEffect(() => {
     if (!token || token === currentToken) return;
+    catalogAiDebug.info("WIZARD", "session.token.updated", {
+      flowId: flowIdRef.current,
+      batchId,
+      step,
+    });
     setCurrentToken(token);
     apiRef.current = new CatalogAiApi(CATALOG_AI_API_URL, token);
-  }, [currentToken, token]);
+  }, [batchId, currentToken, step, token]);
 
   const reset = () => {
+    catalogAiDebug.info("WIZARD", "flow.reset", {
+      flowId: flowIdRef.current,
+      batchId,
+      step,
+      photos: photos.length,
+      items: items.length,
+      selected: selectedIds.size,
+    });
     photos.forEach((photo) => URL.revokeObjectURL(photo.previewUrl));
     setStep(1);
     setPhotos([]);
@@ -609,12 +654,84 @@ export const CatalogAiImportWizard = ({
     setSessionPaused(false);
     setIncompleteReviewDialog(null);
     pollFailuresRef.current = 0;
+    lastProgressSignatureRef.current = null;
+    flowIdRef.current = catalogAiDebug.createId("flow");
   };
 
   useEffect(() => {
     if (!open) return;
+    catalogAiDebug.info("WIZARD", "opened", {
+      flowId: flowIdRef.current,
+      businessId,
+      apiUrl: CATALOG_AI_API_URL,
+      maxFiles: MAX_FILES,
+      debugEnabled: catalogAiDebug.enabled(),
+    });
     setError(null);
-  }, [open]);
+  }, [businessId, open]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    const handleUnhandledRejection = (event: PromiseRejectionEvent) => {
+      catalogAiDebug.error("WINDOW", "unhandledrejection", {
+        flowId: flowIdRef.current,
+        batchId,
+        step,
+        reason: event.reason,
+      });
+    };
+    const handleWindowError = (event: ErrorEvent) => {
+      catalogAiDebug.error("WINDOW", "error", {
+        flowId: flowIdRef.current,
+        batchId,
+        step,
+        message: event.message,
+        filename: event.filename,
+        lineno: event.lineno,
+        colno: event.colno,
+        error: event.error,
+      });
+    };
+    const handleOnline = () => {
+      catalogAiDebug.info("NETWORK", "online", {
+        flowId: flowIdRef.current,
+        batchId,
+        step,
+      });
+    };
+    const handleOffline = () => {
+      catalogAiDebug.warn("NETWORK", "offline", {
+        flowId: flowIdRef.current,
+        batchId,
+        step,
+      });
+    };
+
+    window.addEventListener("unhandledrejection", handleUnhandledRejection);
+    window.addEventListener("error", handleWindowError);
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("unhandledrejection", handleUnhandledRejection);
+      window.removeEventListener("error", handleWindowError);
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, [batchId, open, step]);
+
+  useEffect(() => {
+    if (!open) return;
+    catalogAiDebug.debug("WIZARD", "step.changed", {
+      flowId: flowIdRef.current,
+      batchId,
+      step,
+      photos: photos.length,
+      items: items.length,
+      selected: selectedIds.size,
+    });
+  }, [batchId, items.length, open, photos.length, selectedIds.size, step]);
 
   useEffect(() => {
     photosRef.current = photos;
@@ -627,7 +744,23 @@ export const CatalogAiImportWizard = ({
   }, []);
 
   const safeClose = () => {
-    if ((selectingFiles || uploading || publishing) && !sessionPaused) return;
+    catalogAiDebug.info("WIZARD", "close.requested", {
+      flowId: flowIdRef.current,
+      batchId,
+      step,
+      selectingFiles,
+      uploading,
+      publishing,
+      sessionPaused,
+    });
+    if ((selectingFiles || uploading || publishing) && !sessionPaused) {
+      catalogAiDebug.warn("WIZARD", "close.blocked.busy", {
+        flowId: flowIdRef.current,
+        batchId,
+        step,
+      });
+      return;
+    }
     if (step === 2 && !TERMINAL_BATCH_STATUSES.has(batchProgress?.status ?? "")) {
       const confirmed = window.confirm(
         "La IA sigue procesando tus fotos. Si cierras esta ventana tendrás que retomar el lote después. ¿Deseas cerrar?",
@@ -644,16 +777,26 @@ export const CatalogAiImportWizard = ({
   const addFiles = async (incoming: File[]): Promise<void> => {
     if (selectingFiles || uploading || incoming.length === 0) return;
 
+    catalogAiDebug.info("WIZARD", "photos.selection.begin", {
+      flowId: flowIdRef.current,
+      incoming: incoming.length,
+      existing: photosRef.current.length,
+      maxFiles: MAX_FILES,
+      files: incoming.map((file) => ({
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        lastModified: file.lastModified,
+      })),
+    });
     setSelectingFiles(true);
     setError(null);
 
     const currentPhotos = photosRef.current;
     const existingKeys = new Set(
-      currentPhotos.map(
-        ({ file }) => `${file.name}:${file.size}:${file.lastModified}`,
-      ),
+      currentPhotos.map(({ sourceKey }) => sourceKey),
     );
-    const candidates: Array<{ id: string; file: File }> = [];
+    const candidates: Array<{ id: string; sourceKey: string; file: File }> = [];
     const rejectedMessages: string[] = [];
 
     for (const file of incoming) {
@@ -682,26 +825,76 @@ export const CatalogAiImportWizard = ({
           file,
           currentPhotos.length + candidates.length,
         ),
+        sourceKey: key,
         file,
       });
       existingKeys.add(key);
     }
 
     try {
+      // Inicia todas las lecturas inmediatamente. Algunos proveedores de
+      // archivos móviles invalidan sus referencias temporales mientras las
+      // últimas imágenes esperan turno para generar su miniatura.
+      const snapshotResults = await Promise.all(
+        candidates.map(async (candidate) => {
+          try {
+            return {
+              candidate: {
+                ...candidate,
+                file: await snapshotSelectedFile(candidate.file),
+              },
+              error: null as string | null,
+            };
+          } catch (cause) {
+            catalogAiDebug.error("WIZARD", "photo.snapshot.failed", {
+              flowId: flowIdRef.current,
+              file: candidate.file,
+              cause,
+            });
+            return {
+              candidate: null,
+              error: `${candidate.file.name}: no se pudo conservar el archivo. Selecciónalo nuevamente.`,
+            };
+          }
+        }),
+      );
+      const stableCandidates = snapshotResults
+        .map((result) => result.candidate)
+        .filter((candidate): candidate is (typeof candidates)[number] => Boolean(candidate));
+      rejectedMessages.push(
+        ...snapshotResults
+          .map((result) => result.error)
+          .filter((message): message is string => Boolean(message)),
+      );
+
       const previewResults = await mapWithConcurrency(
-        candidates,
+        stableCandidates,
         PHOTO_PREVIEW_CONCURRENCY,
         async (candidate) => {
           try {
-            const preview = await createProductImagePreview(candidate.file);
+            // En móviles el File del selector puede ser temporal y dejar de ser
+            // legible antes de iniciar la carga. Se conserva desde ahora la copia
+            // convertida, que ya es propiedad del navegador.
+            const prepared = await compressProductImage(candidate.file);
+            const preview = await createProductImagePreview(prepared.file);
             return {
               photo: {
                 ...candidate,
+                file: prepared.file,
                 previewUrl: preview.url,
               } satisfies SelectedPhoto,
               error: null as string | null,
             };
           } catch (cause) {
+            catalogAiDebug.error("WIZARD", "photo.preview.failed", {
+              flowId: flowIdRef.current,
+              file: {
+                name: candidate.file.name,
+                type: candidate.file.type,
+                size: candidate.file.size,
+              },
+              cause,
+            });
             return {
               photo: null,
               error: `${candidate.file.name}: ${errorText(cause)}`,
@@ -723,18 +916,15 @@ export const CatalogAiImportWizard = ({
       if (accepted.length > 0) {
         setPhotos((current) => {
           const currentKeys = new Set(
-            current.map(
-              ({ file }) => `${file.name}:${file.size}:${file.lastModified}`,
-            ),
+            current.map(({ sourceKey }) => sourceKey),
           );
 
           const uniqueAccepted = accepted.filter((photo) => {
-            const key = `${photo.file.name}:${photo.file.size}:${photo.file.lastModified}`;
-            if (currentKeys.has(key)) {
+            if (currentKeys.has(photo.sourceKey)) {
               URL.revokeObjectURL(photo.previewUrl);
               return false;
             }
-            currentKeys.add(key);
+            currentKeys.add(photo.sourceKey);
             return true;
           });
 
@@ -745,6 +935,13 @@ export const CatalogAiImportWizard = ({
       if (rejectedMessages.length > 0) {
         setError(rejectedMessages.slice(0, 4).join(" "));
       }
+      catalogAiDebug.info("WIZARD", "photos.selection.complete", {
+        flowId: flowIdRef.current,
+        candidates: candidates.length,
+        accepted: accepted.length,
+        rejected: rejectedMessages.length,
+        rejectionMessages: rejectedMessages,
+      });
     } finally {
       setSelectingFiles(false);
     }
@@ -757,6 +954,11 @@ export const CatalogAiImportWizard = ({
   };
 
   const removePhoto = (photoId: string) => {
+    catalogAiDebug.info("WIZARD", "photo.removed", {
+      flowId: flowIdRef.current,
+      photoId,
+      before: photosRef.current.length,
+    });
     setPhotos((current) => {
       const target = current.find((photo) => photo.id === photoId);
       if (target) URL.revokeObjectURL(target.previewUrl);
@@ -765,6 +967,14 @@ export const CatalogAiImportWizard = ({
   };
 
   const uploadAndStart = async () => {
+    const uploadFlowStartedAt = performance.now();
+    catalogAiDebug.info("WIZARD", "upload.flow.begin", {
+      flowId: flowIdRef.current,
+      businessId,
+      photoCount: photos.length,
+      chunkSize: PHOTO_UPLOAD_CHUNK_SIZE,
+      uploadConcurrency: PHOTO_UPLOAD_CONCURRENCY,
+    });
     if (!businessId || !currentToken) {
       setError("Inicia sesión y selecciona un negocio antes de usar la IA.");
       return;
@@ -786,23 +996,34 @@ export const CatalogAiImportWizard = ({
       );
       const newBatchId = created.batchId;
       setBatchId(newBatchId);
+      setPreparedCompleted(photos.length);
+      catalogAiDebug.info("WIZARD", "batch.created", {
+        flowId: flowIdRef.current,
+        batchId: newBatchId,
+        requestedItems: photos.length,
+        serverMaxImages: created.maxImages,
+        status: created.status,
+      });
 
       // Procesar y registrar grupos pequeños evita mantener decenas de imágenes
       // convertidas en memoria y evita perder todas las cargas cuando una sola
       // petición de Cloudinary falla de forma temporal.
-      for (const photoChunk of chunkValues(photos, PHOTO_UPLOAD_CHUNK_SIZE)) {
-        const preparedChunk = await mapWithConcurrency(
-          photoChunk,
-          PHOTO_PREPARE_CONCURRENCY,
-          async (photo) => {
-            const prepared = await compressProductImage(photo.file);
-            setPreparedCompleted((current) => current + 1);
-            return {
-              ...photo,
-              uploadFile: prepared.file,
-            };
-          },
-        );
+      const photoChunks = chunkValues(photos, PHOTO_UPLOAD_CHUNK_SIZE);
+      for (let chunkIndex = 0; chunkIndex < photoChunks.length; chunkIndex += 1) {
+        const photoChunk = photoChunks[chunkIndex] as SelectedPhoto[];
+        const chunkStartedAt = performance.now();
+        catalogAiDebug.info("WIZARD", "upload.chunk.begin", {
+          flowId: flowIdRef.current,
+          batchId: newBatchId,
+          chunkIndex: chunkIndex + 1,
+          chunkCount: photoChunks.length,
+          chunkSize: photoChunk.length,
+          clientAssetIds: photoChunk.map((photo) => photo.id),
+        });
+        const preparedChunk = photoChunk.map((photo) => ({
+          ...photo,
+          uploadFile: photo.file,
+        }));
 
         const signedUploads = await runWithSessionRecovery((client) =>
           client.signUploads(
@@ -813,6 +1034,14 @@ export const CatalogAiImportWizard = ({
             })),
           ),
         );
+        catalogAiDebug.info("WIZARD", "uploads.signed", {
+          flowId: flowIdRef.current,
+          batchId: newBatchId,
+          chunkIndex: chunkIndex + 1,
+          requested: preparedChunk.length,
+          received: signedUploads.length,
+          clientAssetIds: signedUploads.map((signed) => signed.clientAssetId),
+        });
         const signedByClientId = new Map<string, SignedCatalogUpload>(
           signedUploads.map((signed) => [signed.clientAssetId, signed]),
         );
@@ -832,6 +1061,17 @@ export const CatalogAiImportWizard = ({
                 signed,
               );
               setUploadCompleted((current) => current + 1);
+              catalogAiDebug.info("WIZARD", "photo.upload.success", {
+                flowId: flowIdRef.current,
+                batchId: newBatchId,
+                clientAssetId: photo.id,
+                publicId: uploaded.public_id,
+                assetId: uploaded.asset_id,
+                bytes: uploaded.bytes,
+                format: uploaded.format,
+                width: uploaded.width,
+                height: uploaded.height,
+              });
 
               return {
                 clientAssetId: photo.id,
@@ -847,6 +1087,17 @@ export const CatalogAiImportWizard = ({
                 mimeType: photo.uploadFile.type,
               };
             } catch (cause) {
+              catalogAiDebug.error("WIZARD", "photo.upload.failed", {
+                flowId: flowIdRef.current,
+                batchId: newBatchId,
+                clientAssetId: photo.id,
+                file: {
+                  name: photo.file.name,
+                  type: photo.uploadFile.type,
+                  size: photo.uploadFile.size,
+                },
+                cause,
+              });
               throw new Error(
                 `${photo.file.name}: ${errorText(cause)}`,
               );
@@ -859,13 +1110,40 @@ export const CatalogAiImportWizard = ({
         await runWithSessionRecovery((client) =>
           client.registerAssets(newBatchId, registeredAssets),
         );
+        catalogAiDebug.info("WIZARD", "upload.chunk.registered", {
+          flowId: flowIdRef.current,
+          batchId: newBatchId,
+          chunkIndex: chunkIndex + 1,
+          registered: registeredAssets.length,
+          durationMs: Math.round(performance.now() - chunkStartedAt),
+        });
       }
 
       await runWithSessionRecovery((client) => client.startBatch(newBatchId));
+      catalogAiDebug.info("WIZARD", "batch.started", {
+        flowId: flowIdRef.current,
+        batchId: newBatchId,
+        photos: photos.length,
+        totalDurationMs: Math.round(performance.now() - uploadFlowStartedAt),
+      });
       setStep(2);
     } catch (cause) {
+      catalogAiDebug.error("WIZARD", "upload.flow.failed", {
+        flowId: flowIdRef.current,
+        batchId,
+        photoCount: photos.length,
+        preparedCompleted,
+        uploadCompleted,
+        durationMs: Math.round(performance.now() - uploadFlowStartedAt),
+        cause,
+      });
       setError(errorText(cause));
     } finally {
+      catalogAiDebug.debug("WIZARD", "upload.flow.finished", {
+        flowId: flowIdRef.current,
+        batchId,
+        durationMs: Math.round(performance.now() - uploadFlowStartedAt),
+      });
       setUploading(false);
     }
   };
@@ -876,7 +1154,15 @@ export const CatalogAiImportWizard = ({
     let cancelled = false;
 
     const poll = async () => {
-      if (pollInFlightRef.current || cancelled) return;
+      if (pollInFlightRef.current || cancelled) {
+        catalogAiDebug.debug("WIZARD", "poll.skipped", {
+          flowId: flowIdRef.current,
+          batchId,
+          inFlight: pollInFlightRef.current,
+          cancelled,
+        });
+        return;
+      }
 
       pollInFlightRef.current = true;
 
@@ -891,6 +1177,33 @@ export const CatalogAiImportWizard = ({
         setError(null);
         setBatchProgress(progress);
 
+        const progressSignature = JSON.stringify({
+          status: progress.status,
+          total: progress.total,
+          uploaded: progress.uploaded,
+          processed: progress.processed,
+          published: progress.published,
+          duplicates: progress.duplicates,
+          review: progress.review,
+          failed: progress.failed,
+        });
+        if (lastProgressSignatureRef.current !== progressSignature) {
+          lastProgressSignatureRef.current = progressSignature;
+          catalogAiDebug.info("WIZARD", "batch.progress.changed", {
+            flowId: flowIdRef.current,
+            batchId,
+            ...progress,
+          });
+        } else {
+          catalogAiDebug.debug("WIZARD", "batch.progress.unchanged", {
+            flowId: flowIdRef.current,
+            batchId,
+            status: progress.status,
+            processed: progress.processed,
+            total: progress.total,
+          });
+        }
+
         if (TERMINAL_BATCH_STATUSES.has(progress.status)) {
           const batchItems = await runWithSessionRecovery((client) =>
             client.listBatchItems(batchId),
@@ -899,6 +1212,29 @@ export const CatalogAiImportWizard = ({
           if (cancelled) return;
 
           const editable = batchItems.map(toEditableItem);
+          catalogAiDebug.info("WIZARD", "batch.items.loaded", {
+            flowId: flowIdRef.current,
+            batchId,
+            totalItems: editable.length,
+            statuses: editable.reduce<Record<string, number>>((summary, item) => {
+              summary[item.Status] = (summary[item.Status] ?? 0) + 1;
+              return summary;
+            }, {}),
+          });
+          catalogAiDebug.table(
+            "WIZARD",
+            "batch.items.summary",
+            editable.map((item) => ({
+              id: item.Id,
+              clientAssetId: item.Client_Asset_Id,
+              status: item.Status,
+              retryCount: item.Retry_Count,
+              errorCode: item.Error_Code,
+              duplicateProductId: item.Duplicate_Product_Id,
+              productId: item.Product_Id,
+              confidence: item.Confidence,
+            })),
+          );
           setItems(editable);
           setSelectedIds(
             new Set(
@@ -927,10 +1263,12 @@ export const CatalogAiImportWizard = ({
         if (isTemporaryServerError) {
           pollFailuresRef.current += 1;
 
-          console.warn(
-            "Error temporal consultando el progreso del lote:",
+          catalogAiDebug.warn("WIZARD", "poll.temporary-error", {
+            flowId: flowIdRef.current,
+            batchId,
+            failures: pollFailuresRef.current,
             cause,
-          );
+          });
 
           if (pollFailuresRef.current >= 5) {
             setError(
@@ -941,6 +1279,11 @@ export const CatalogAiImportWizard = ({
           return;
         }
 
+        catalogAiDebug.error("WIZARD", "poll.failed", {
+          flowId: flowIdRef.current,
+          batchId,
+          cause,
+        });
         setError(errorText(cause));
       } finally {
         pollInFlightRef.current = false;
@@ -952,6 +1295,10 @@ export const CatalogAiImportWizard = ({
     return () => {
       cancelled = true;
       window.clearInterval(interval);
+      catalogAiDebug.debug("WIZARD", "poll.stopped", {
+        flowId: flowIdRef.current,
+        batchId,
+      });
     };
   }, [batchId, open, runWithSessionRecovery, step]);
 
@@ -1201,6 +1548,7 @@ export const CatalogAiImportWizard = ({
 
   const saveItem = async (itemId: number): Promise<boolean> => {
     if (!batchId) return false;
+    const saveStartedAt = performance.now();
     const item = items.find((row) => row.Id === itemId);
     if (!item || !item.dirty) return true;
 
@@ -1258,9 +1606,21 @@ export const CatalogAiImportWizard = ({
     };
 
     try {
+      catalogAiDebug.info("WIZARD", "item.save.begin", {
+        flowId: flowIdRef.current,
+        batchId,
+        itemId,
+        patch,
+      });
       await runWithSessionRecovery((client) =>
         client.updateItem(batchId, itemId, patch),
       );
+      catalogAiDebug.info("WIZARD", "item.save.success", {
+        flowId: flowIdRef.current,
+        batchId,
+        itemId,
+        durationMs: Math.round(performance.now() - saveStartedAt),
+      });
 
       setItems((current) =>
         current.map((row) =>
@@ -1285,6 +1645,13 @@ export const CatalogAiImportWizard = ({
       );
       return true;
     } catch (cause) {
+      catalogAiDebug.error("WIZARD", "item.save.failed", {
+        flowId: flowIdRef.current,
+        batchId,
+        itemId,
+        durationMs: Math.round(performance.now() - saveStartedAt),
+        cause,
+      });
       setItems((current) =>
         current.map((row) =>
           row.Id === itemId ? { ...row, saving: false } : row,
@@ -1381,6 +1748,14 @@ export const CatalogAiImportWizard = ({
 
   const publishApproved = async () => {
     if (!batchId || selectedIds.size === 0) return;
+    const publishStartedAt = performance.now();
+    catalogAiDebug.info("WIZARD", "publish.begin", {
+      flowId: flowIdRef.current,
+      batchId,
+      selected: selectedIds.size,
+      priceMode,
+      itemIds: [...selectedIds],
+    });
     setPublishing(true);
     setError(null);
 
@@ -1397,8 +1772,21 @@ export const CatalogAiImportWizard = ({
       );
       setPublishedProductIds(productIds);
       setFinishedAt(Date.now());
+      catalogAiDebug.info("WIZARD", "publish.success", {
+        flowId: flowIdRef.current,
+        batchId,
+        productIds,
+        durationMs: Math.round(performance.now() - publishStartedAt),
+      });
       setStep(5);
     } catch (cause) {
+      catalogAiDebug.error("WIZARD", "publish.failed", {
+        flowId: flowIdRef.current,
+        batchId,
+        selected: selectedIds.size,
+        durationMs: Math.round(performance.now() - publishStartedAt),
+        cause,
+      });
       setError(errorText(cause));
     } finally {
       setPublishing(false);
@@ -1408,12 +1796,28 @@ export const CatalogAiImportWizard = ({
   const retryItem = async (itemId: number) => {
     if (!batchId) return;
     setError(null);
+    catalogAiDebug.info("WIZARD", "item.retry.begin", {
+      flowId: flowIdRef.current,
+      batchId,
+      itemId,
+    });
     try {
       await runWithSessionRecovery((client) =>
         client.retryItem(batchId, itemId),
       );
+      catalogAiDebug.info("WIZARD", "item.retry.queued", {
+        flowId: flowIdRef.current,
+        batchId,
+        itemId,
+      });
       setStep(2);
     } catch (cause) {
+      catalogAiDebug.error("WIZARD", "item.retry.failed", {
+        flowId: flowIdRef.current,
+        batchId,
+        itemId,
+        cause,
+      });
       setError(errorText(cause));
     }
   };

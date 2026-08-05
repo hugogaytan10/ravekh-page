@@ -1,8 +1,13 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { ICustomerRepository } from "../interface/ICustomerRepository";
-import { Customer, CustomerSale, CustomerSalesPeriod, CustomerSex, UpsertCustomerDto2, toApiInactivePayload } from "../model/Customer";
-
-
+import {
+  Customer,
+  CustomerSale,
+  CustomerSalesPeriod,
+  CustomerSex,
+  UpsertCustomerDto2,
+  toApiInactivePayload,
+} from "../model/Customer";
 
 type CustomerSaleResponse = {
   Id?: number;
@@ -24,26 +29,10 @@ type CustomerResponse = {
   PhoneNumber: string | null;
   Email: string | null;
   Address: string | null;
+  Reference: string | null;
   Notes: string | null;
-  CanPayLater: number | boolean | null;
+  CanPayLater: number | boolean | string | null;
   Sex: string | null;
-};
-
-type CustomerResponse2 = {
-  businessId: number;
-  business_customers: {
-    Business_Id: number;
-    Notes?: string;
-    CanPayLater?: number | boolean;
-  },
-  customer: {
-    Id?: number;
-    Name: string;
-    PhoneNumber?: string;
-    Email?: string;
-    Address?: string;
-    Sex?: string;
-  }
 };
 
 export class PosCustomerApi implements ICustomerRepository {
@@ -51,21 +40,34 @@ export class PosCustomerApi implements ICustomerRepository {
 
   async listByBusiness(businessId: number, token: string): Promise<Customer[]> {
     const response = await this.httpClient.request<
-      CustomerResponse[] | { data?: CustomerResponse[]; Data?: CustomerResponse[]; customers?: CustomerResponse[] } | null
+      | CustomerResponse[]
+      | {
+          data?: CustomerResponse[];
+          Data?: CustomerResponse[];
+          customers?: CustomerResponse[];
+        }
+      | null
     >({
       method: "GET",
       path: `customers/business/${businessId}`,
       token,
     });
 
-    const rows = Array.isArray(response) ? response : response?.data ?? response?.Data ?? response?.customers ?? [];
+    const rows = Array.isArray(response)
+      ? response
+      : response?.data ?? response?.Data ?? response?.customers ?? [];
+
     return rows.map((item) => this.toDomain(item));
   }
 
-  async getById(customerId: number, token: string): Promise<Customer> {
+  async getById(
+    customerId: number,
+    businessId: number,
+    token: string,
+  ): Promise<Customer> {
     const response = await this.httpClient.request<CustomerResponse>({
       method: "GET",
-      path: `customers/${customerId}`,
+      path: `customers/${customerId}?businessId=${businessId}`,
       token,
     });
 
@@ -77,24 +79,32 @@ export class PosCustomerApi implements ICustomerRepository {
       method: "POST",
       path: "customers",
       token,
-      body: this.toApiPayload2(payload),
+      body: this.toApiPayload(payload),
     });
 
     return this.toDomain(response);
   }
 
-  async update(customerId: number, payload: UpsertCustomerDto2, token: string): Promise<Customer> {
-    const response = await this.httpClient.request<CustomerResponse2>({
+  async update(
+    customerId: number,
+    payload: UpsertCustomerDto2,
+    token: string,
+  ): Promise<Customer> {
+    const response = await this.httpClient.request<CustomerResponse>({
       method: "PUT",
       path: `customers/${customerId}`,
       token,
-      body: this.toApiPayload2(payload),
+      body: this.toApiPayload(payload),
     });
 
     return this.toDomain(response);
   }
 
-  async delete(customerId: number, payload: toApiInactivePayload, token: string): Promise<void> {
+  async delete(
+    customerId: number,
+    payload: toApiInactivePayload,
+    token: string,
+  ): Promise<void> {
     await this.httpClient.request<void>({
       method: "PUT",
       path: `customers/inactive/${customerId}`,
@@ -103,19 +113,31 @@ export class PosCustomerApi implements ICustomerRepository {
     });
   }
 
-  async listSalesByPeriod(customerId: number, period: CustomerSalesPeriod, token: string): Promise<CustomerSale[]> {
+  async listSalesByPeriod(
+    customerId: number,
+    period: CustomerSalesPeriod,
+    token: string,
+  ): Promise<CustomerSale[]> {
     const response = await this.httpClient.request<
-      CustomerSaleResponse[] | { data?: CustomerSaleResponse[]; Data?: CustomerSaleResponse[]; sales?: CustomerSaleResponse[] } | null
+      | CustomerSaleResponse[]
+      | {
+          data?: CustomerSaleResponse[];
+          Data?: CustomerSaleResponse[];
+          sales?: CustomerSaleResponse[];
+        }
+      | null
     >({
       method: "GET",
       path: `customers/order/${customerId}/${period}`,
       token,
     });
 
-    const rows = Array.isArray(response) ? response : response?.data ?? response?.Data ?? response?.sales ?? [];
+    const rows = Array.isArray(response)
+      ? response
+      : response?.data ?? response?.Data ?? response?.sales ?? [];
+
     return rows.map((row) => this.toSale(row));
   }
-
 
   private toApiInactivePayload(payload: toApiInactivePayload): Record<string, unknown> {
     return {
@@ -124,11 +146,12 @@ export class PosCustomerApi implements ICustomerRepository {
     };
   }
 
-  private toApiPayload2(payload: UpsertCustomerDto2): Record<string, unknown> {
+  private toApiPayload(payload: UpsertCustomerDto2): Record<string, unknown> {
     return {
       businessId: payload.businessId,
       business_customers: {
         Business_Id: payload.businessId,
+        Reference: payload.business_customers.reference ?? null,
         CanPayLater: payload.business_customers.canPayLater ? 1 : 0,
         Notes: payload.business_customers.notes ?? null,
       },
@@ -139,22 +162,27 @@ export class PosCustomerApi implements ICustomerRepository {
         Address: payload.customer.address ?? null,
         Email: payload.customer.email ?? null,
         Sex: payload.customer.sex ?? "M",
-      }
+      },
     };
   }
 
   private toDomain(item: CustomerResponse): Customer {
     return new Customer(
-      item.Id,
-      item.Business_Id,
+      Number(item.Id),
+      Number(item.Business_Id),
       item.Name,
       item.PhoneNumber,
       item.Email,
       item.Address,
+      item.Reference,
       item.Notes,
-      item.CanPayLater === true || item.CanPayLater === 1,
+      this.toBoolean(item.CanPayLater),
       this.toSex(item.Sex),
     );
+  }
+
+  private toBoolean(value: number | boolean | string | null): boolean {
+    return value === true || value === 1 || value === "1" || value === "true";
   }
 
   private toSale(row: CustomerSaleResponse): CustomerSale {

@@ -1,10 +1,16 @@
-import { CustomerSalesPeriod, CustomerSex, UpsertCustomerDto2, toApiInactivePayload } from "../model/Customer";
+import {
+  CustomerSalesPeriod,
+  CustomerSex,
+  UpsertCustomerDto2,
+  toApiInactivePayload,
+} from "../model/Customer";
 import { CustomerService } from "../services/CustomerService";
 
 type CustomerCardVm = {
   id: number;
   name: string;
   contact: string;
+  reference: string;
   canPayLater: boolean;
 };
 
@@ -21,6 +27,7 @@ export type CustomerDetailViewModel = {
   phoneNumber: string;
   email: string;
   address: string;
+  reference: string;
   notes: string;
   sex: CustomerSex;
   canPayLater: boolean;
@@ -29,19 +36,28 @@ export type CustomerDetailViewModel = {
 export class CustomerManagementPage {
   constructor(private readonly service: CustomerService) {}
 
-  async getCustomerCards(businessId: number, token: string, searchTerm = ""): Promise<CustomerCardVm[]> {
+  async getCustomerCards(
+    businessId: number,
+    token: string,
+    searchTerm = "",
+  ): Promise<CustomerCardVm[]> {
     const customers = await this.service.listCustomers(businessId, token, searchTerm);
 
     return customers.map((customer) => ({
       id: customer.id,
       name: customer.name,
-      contact: customer.phoneNumber ?? customer.email ?? "No contact",
+      contact: customer.phoneNumber ?? customer.email ?? "Sin contacto",
+      reference: customer.reference ?? "",
       canPayLater: customer.canPayLater,
     }));
   }
 
-  async getCustomerDetail(customerId: number, token: string): Promise<CustomerDetailViewModel> {
-    const customer = await this.service.getCustomerDetail(customerId, token);
+  async getCustomerDetail(
+    customerId: number,
+    businessId: number,
+    token: string,
+  ): Promise<CustomerDetailViewModel> {
+    const customer = await this.service.getCustomerDetail(customerId, businessId, token);
 
     return {
       id: customer.id,
@@ -49,13 +65,18 @@ export class CustomerManagementPage {
       phoneNumber: customer.phoneNumber ?? "",
       email: customer.email ?? "",
       address: customer.address ?? "",
+      reference: customer.reference ?? "",
       notes: customer.notes ?? "",
       sex: customer.sex,
       canPayLater: customer.canPayLater,
     };
   }
 
-  async getCustomerSales(customerId: number, period: CustomerSalesPeriod, token: string): Promise<CustomerSalesViewModel[]> {
+  async getCustomerSales(
+    customerId: number,
+    period: CustomerSalesPeriod,
+    token: string,
+  ): Promise<CustomerSalesViewModel[]> {
     const sales = await this.service.listSalesByPeriod(customerId, period, token);
 
     return sales.map((sale) => ({
@@ -66,13 +87,19 @@ export class CustomerManagementPage {
     }));
   }
 
-  async upsertCustomer(token: string, payload: UpsertCustomerDto2, customerId?: number): Promise<void> {
-    console.log("Payload for upsertCustomer:", payload);
+  async upsertCustomer(
+    token: string,
+    payload: UpsertCustomerDto2,
+    customerId?: number,
+  ): Promise<void> {
     await this.service.saveCustomer(token, payload, customerId);
-
   }
 
-  async deleteCustomer(customerId: number, payload: toApiInactivePayload, token: string): Promise<void> {
+  async deleteCustomer(
+    customerId: number,
+    payload: toApiInactivePayload,
+    token: string,
+  ): Promise<void> {
     await this.service.removeCustomer(customerId, payload, token);
   }
 }
