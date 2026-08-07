@@ -324,6 +324,8 @@ export const PosV2SalesHomePage = () => {
   const [productsError, setProductsError] = useState<string | null>(null);
   const [cart, setCart] = useState<Record<string, CartItemVm>>({});
   const [discountPercent, setDiscountPercent] = useState("0");
+  const [fixedDiscount, setFixedDiscount] = useState("0");
+  const discountSourceRef = useRef<"percent" | "fixed">("percent");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("EFECTIVO");
   const [ticket, setTicket] = useState<string | null>(null);
   const [mobileStep, setMobileStep] = useState<MobileStep>("catalog");
@@ -1274,7 +1276,9 @@ export const PosV2SalesHomePage = () => {
       (acc, item) => acc + item.price * item.quantity,
       0,
     );
-    const discount = subtotal * (Number(discountPercent) / 100);
+    const discount = discountSourceRef.current === "fixed"
+      ? Number(fixedDiscount)
+      : subtotal * (Number(discountPercent) / 100);
     const taxableBase = Math.max(0, subtotal - discount);
     const taxAmount =
       salesTax && applyTax
@@ -1286,7 +1290,24 @@ export const PosV2SalesHomePage = () => {
     const items = cartItems.reduce((acc, item) => acc + item.quantity, 0);
 
     return { subtotal, discount, taxableBase, taxAmount, total, items };
-  }, [applyTax, cartItems, discountPercent, salesTax]);
+  }, [applyTax, cartItems, discountPercent, fixedDiscount, salesTax]);
+
+  const formatDiscountInput = (value: number): string =>
+    String(Number(value.toFixed(2)));
+
+  useEffect(() => {
+    if (discountSourceRef.current === "fixed") {
+      const percentage = totals.subtotal > 0
+        ? (Number(fixedDiscount) / totals.subtotal) * 100
+        : 0;
+      setDiscountPercent(formatDiscountInput(percentage));
+      return;
+    }
+
+    setFixedDiscount(
+      formatDiscountInput(totals.subtotal * (Number(discountPercent) / 100)),
+    );
+  }, [discountPercent, fixedDiscount, totals.subtotal]);
 
   const mobileSteps = useMemo(
     () => [
@@ -1694,6 +1715,14 @@ export const PosV2SalesHomePage = () => {
     }
 
     if (
+      discountSourceRef.current === "fixed" &&
+      Number(fixedDiscount) > totals.subtotal
+    ) {
+      setValidationError("El descuento fijo no puede ser mayor al subtotal de la venta.");
+      return;
+    }
+
+    if (
       Number.isNaN(discountValue) ||
       discountValue < 0 ||
       discountValue > 100
@@ -1867,6 +1896,8 @@ export const PosV2SalesHomePage = () => {
       }
       setCart({});
       setDiscountPercent("0");
+      setFixedDiscount("0");
+      discountSourceRef.current = "percent";
       setPlanUpgradePrompt(null);
       setMobileStep("catalog");
     } catch (error) {
@@ -1993,6 +2024,9 @@ export const PosV2SalesHomePage = () => {
       )
       .join("");
     const storeName = quoteBusinessName.trim() || "Mi negocio";
+    const ticketLogoMarkup = quoteLogoUrl.trim()
+      ? `<img class="ticket-logo" src="${quoteLogoUrl.trim()}" alt="Logo de ${storeName}" />`
+      : "";
     const saleDate = new Date(sale.createdAt);
     const safeSaleDate = Number.isNaN(saleDate.getTime())
       ? new Date()
@@ -2034,6 +2068,7 @@ export const PosV2SalesHomePage = () => {
       .preview-actions { position: sticky; top: 0; z-index: 2; display: flex; justify-content: center; padding: 8px; background: #111827; }
       .preview-actions button { border: 0; border-radius: 999px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; background: #22c55e; color: #052e16; }
       .ticket { width: ${pageWidth}; padding: 2mm; margin: 8px auto; background: #fff; }
+      .ticket-logo { display: block; max-width: 70%; max-height: 22mm; margin: 0 auto 2mm; object-fit: contain; }
       h1 { margin: 0 0 2mm; font-size: 14px; text-align: center; }
       p { margin: 0 0 1.4mm; font-size: 11px; }
       ul { list-style: none; margin: 2mm 0; padding: 0; display: grid; gap: 1mm; }
@@ -2050,6 +2085,7 @@ export const PosV2SalesHomePage = () => {
   <body>
     <div class="preview-actions"><button type="button" onclick="window.print()">Imprimir ticket</button></div>
     <section class="ticket">
+      ${ticketLogoMarkup}
       <h1>Ticket de venta</h1>
       <p><strong>Tienda:</strong> ${storeName}</p>
       <p class="meta">Formato: ${resolvedPaper} mm</p>
@@ -2543,19 +2579,46 @@ export const PosV2SalesHomePage = () => {
             className={`pos-v2-sales-home__checkout pos-v2-sales-home__checkout-content ${mobileStep === "checkout" ? "is-mobile-active" : ""}`}
           >
             <h3>Cobro</h3>
-            <label>
-              Descuento (%)
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={discountPercent}
-                onChange={(event) => {
-                  setDiscountPercent(event.target.value);
-                  setValidationError(null);
-                }}
-              />
-            </label>
+            <div className="pos-v2-sales-home__discount-fields">
+              <label>
+                Descuento (%)
+                <input
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="0.01"
+                  value={discountPercent}
+                  onChange={(event) => {
+                    discountSourceRef.current = "percent";
+                    setDiscountPercent(event.target.value);
+                    setValidationError(null);
+                  }}
+                />
+              </label>
+              <label>
+                Fijo ($)
+                <input
+                  type="number"
+                  min="0"
+                  max={totals.subtotal}
+                  step="0.01"
+                  value={fixedDiscount}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    discountSourceRef.current = "fixed";
+                    setFixedDiscount(value);
+                    setDiscountPercent(
+                      formatDiscountInput(
+                        totals.subtotal > 0
+                          ? (Number(value) / totals.subtotal) * 100
+                          : 0,
+                      ),
+                    );
+                    setValidationError(null);
+                  }}
+                />
+              </label>
+            </div>
 
             <div
               className="pos-v2-sales-home__payment-methods"
