@@ -400,6 +400,10 @@ export class PosProductsApi implements IProductsRepository {
     });
   }
 
+  async addExtras(productId: number, extras: ProductExtra[], token: string): Promise<void> {
+    await this.persistExtras(productId, extras, token);
+  }
+
   async listCategoriesByBusiness(businessId: number, token: string): Promise<ProductCategory[]> {
     const payload = await this.httpClient.request<CategoryResponse[] | { data?: CategoryResponse[]; Data?: CategoryResponse[] } | null>({
       method: "GET",

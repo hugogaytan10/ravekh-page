@@ -122,6 +122,7 @@ type CatalogAiImportWizardProps = {
   token: string;
   categories: CatalogAiCategoryOption[];
   onCreateCategory: (input: CreateCatalogAiCategoryInput) => Promise<CatalogAiCategoryOption>;
+  onAddProductColors: (productId: number, colors: string[]) => Promise<void>;
   onClose: () => void;
   onSessionRefreshed?: (token: string) => void;
   onCompleted: (result: { created: number; productIds: number[] }) => void;
@@ -143,6 +144,17 @@ const firstText = (...values: Array<string | null | undefined>): string => {
   }
   return "";
 };
+
+const parseColors = (value: string): string[] =>
+  Array.from(
+    new Map(
+      value
+        .split(",")
+        .map((color) => color.trim())
+        .filter(Boolean)
+        .map((color) => [color.toLowerCase(), color]),
+    ).values(),
+  );
 
 const firstNumberText = (
   ...values: Array<number | string | null | undefined>
@@ -472,6 +484,7 @@ export const CatalogAiImportWizard = ({
   token,
   categories,
   onCreateCategory,
+  onAddProductColors,
   onClose,
   onSessionRefreshed,
   onCompleted,
@@ -1600,7 +1613,7 @@ export const CatalogAiImportWizard = ({
       // El catálogo utiliza una sola categoría específica por producto.
       subcategory: null,
       barcode: item.draftBarcode.trim() || null,
-      color: item.draftColor.trim() || null,
+      color: parseColors(item.draftColor)[0] ?? null,
       price: parsedPrice,
       stock: parsedStock,
     };
@@ -1770,6 +1783,11 @@ export const CatalogAiImportWizard = ({
             showPrice: priceMode === "show",
             duplicateAction: item.duplicateAction,
           }),
+        ),
+      );
+      await Promise.all(
+        productIds.map((productId, index) =>
+          onAddProductColors(productId, parseColors(selectedItems[index].draftColor)),
         ),
       );
       setPublishedProductIds(productIds);
@@ -2441,9 +2459,10 @@ export const CatalogAiImportWizard = ({
                           </label>
 
                           <label>
-                            Color
+                            Colores
                             <input
                               value={item.draftColor}
+                              placeholder="Ej. Rojo, Azul, Negro"
                               disabled={!selectable}
                               onChange={(event) =>
                                 updateDraft(
@@ -2453,6 +2472,7 @@ export const CatalogAiImportWizard = ({
                                 )
                               }
                             />
+                            <small>Separa varios colores con comas.</small>
                           </label>
 
                           <label>

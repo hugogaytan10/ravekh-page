@@ -6,6 +6,7 @@ const buildProduct = (id: number, available = true) =>
   new ManagedProduct(id, 10, `Product ${id}`, "desc", null, true, true, available, false, null, null, 30, null, 10, 2, null, null, null, null, null, [], null, [], []);
 
 export async function run(): Promise<void> {
+  let addedExtras: unknown[] = [];
   const createRepo = {
     listByBusiness: async () => [],
     listAllByBusiness: async () => [],
@@ -13,6 +14,9 @@ export async function run(): Promise<void> {
     create: async () => buildProduct(101),
     update: async () => buildProduct(999),
     archive: async () => undefined,
+    addExtras: async (_productId: number, extras: unknown[]) => {
+      addedExtras = extras;
+    },
     listCategoriesByBusiness: async () => [],
     createCategory: async () => ({ id: 1, businessId: 10, parentId: null, name: "General", color: "#111" }),
     updateCategory: async () => ({ id: 1, businessId: 10, parentId: null, name: "General", color: "#222" }),
@@ -72,6 +76,9 @@ export async function run(): Promise<void> {
   const archiveService = new ProductsService(archiveRepo);
   await archiveService.archiveProduct(55, "token");
   assert.equal(archivedId, 55, "archive should call repository with product id");
+
+  await createService.addProductExtras(101, [{ description: "Rojo", type: "COLOR" }], "token");
+  assert.deepEqual(addedExtras, [{ description: "Rojo", type: "COLOR" }]);
 
   const categoryService = new ProductsService(createRepo);
   const category = await categoryService.createCategory({ businessId: 10, name: "General", color: "#111" }, "token");

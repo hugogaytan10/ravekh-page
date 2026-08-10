@@ -2128,6 +2128,13 @@ export const ProductsV2PosPage = () => {
           token={token}
           categories={categories}
           onCreateCategory={createCategoryFromAiReview}
+          onAddProductColors={(productId, productColors) =>
+            service.addProductExtras(
+              productId,
+              productColors.map((color) => ({ description: color, type: "COLOR" })),
+              token,
+            )
+          }
           onClose={() => setIsAiImportOpen(false)}
           onSessionRefreshed={setToken}
           onCompleted={({ created }) => {
