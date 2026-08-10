@@ -1762,7 +1762,9 @@ export const CatalogAiImportWizard = ({
     try {
       await saveSelectedDirtyItems();
       const selectedItems = items.filter((item) => selectedIds.has(item.Id));
-      const productIds = await mapWithConcurrency(selectedItems, 2, (item) =>
+      // Publicar en serie evita que dos productos intenten crear al mismo tiempo
+      // la misma categoría sugerida en el servicio de IA.
+      const productIds = await mapWithConcurrency(selectedItems, 1, (item) =>
         runWithSessionRecovery((client) =>
           client.publishItem(batchId, item, {
             showPrice: priceMode === "show",
