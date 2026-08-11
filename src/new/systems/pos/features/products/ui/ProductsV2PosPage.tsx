@@ -274,6 +274,8 @@ export const ProductsV2PosPage = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [promotionPrice, setPromotionPrice] = useState("");
+  const [showPromotionPrice, setShowPromotionPrice] = useState(false);
   const [costPerItem, setCostPerItem] = useState("");
   const [wholesalePrice, setWholesalePrice] = useState("");
   const [wholesaleMinQuantity, setWholesaleMinQuantity] = useState("");
@@ -325,6 +327,8 @@ export const ProductsV2PosPage = () => {
     setName("");
     setDescription("");
     setPrice("");
+    setPromotionPrice("");
+    setShowPromotionPrice(false);
     setCostPerItem("");
     setWholesalePrice("");
     setWholesaleMinQuantity("");
@@ -962,6 +966,8 @@ export const ProductsV2PosPage = () => {
     }
 
     const parsedPrice = price.trim() === "" ? null : Number(price);
+    const parsedPromotionPrice =
+      promotionPrice.trim() === "" ? null : Number(promotionPrice);
     const parsedCostPerItem =
       costPerItem.trim() === "" ? null : Number(costPerItem);
     const parsedWholesalePrice =
@@ -977,6 +983,28 @@ export const ProductsV2PosPage = () => {
       (Number.isNaN(parsedPrice) || parsedPrice < 0)
     ) {
       setError("El precio debe ser un número válido mayor o igual a 0.");
+      return;
+    }
+
+    if (
+      parsedPromotionPrice !== null &&
+      (Number.isNaN(parsedPromotionPrice) || parsedPromotionPrice <= 0)
+    ) {
+      setError("El precio de promoción debe ser un número válido mayor a 0.");
+      return;
+    }
+
+    if (parsedPromotionPrice !== null && parsedPrice === null) {
+      setError("Agrega el precio normal antes del precio de promoción.");
+      return;
+    }
+
+    if (
+      parsedPromotionPrice !== null &&
+      parsedPrice !== null &&
+      parsedPromotionPrice >= parsedPrice
+    ) {
+      setError("El precio de promoción debe ser menor que el precio normal.");
       return;
     }
 
@@ -1158,7 +1186,7 @@ export const ProductsV2PosPage = () => {
         color: productColor.trim() || null,
         volume: false,
         price: parsedPrice,
-        promotionPrice: null,
+        promotionPrice: parsedPromotionPrice,
         wholesalePrice: parsedWholesalePrice,
         wholesaleMinQuantity: normalizedWholesaleMinQuantity,
         stock: parsedStock,
@@ -1308,6 +1336,10 @@ export const ProductsV2PosPage = () => {
       setName(detail.name);
       setDescription(detail.description);
       setPrice(detail.price == null ? "" : String(detail.price));
+      setPromotionPrice(
+        detail.promotionPrice == null ? "" : String(detail.promotionPrice),
+      );
+      setShowPromotionPrice(detail.promotionPrice != null);
       setCostPerItem(
         detail.costPerItem == null ? "" : String(detail.costPerItem),
       );
@@ -2574,6 +2606,33 @@ export const ProductsV2PosPage = () => {
                       onChange={(event) => setPrice(event.target.value)}
                     />
                   </label>
+                  <div className="pos-v2-products__promotion-field">
+                    {showPromotionPrice ? (
+                      <label>
+                        Precio de promoción
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          inputMode="decimal"
+                          value={promotionPrice}
+                          onChange={(event) =>
+                            setPromotionPrice(event.target.value)
+                          }
+                          placeholder="Ej. 80"
+                          autoFocus
+                        />
+                      </label>
+                    ) : (
+                      <button
+                        type="button"
+                        className="pos-v2-products__secondary pos-v2-products__promotion-button"
+                        onClick={() => setShowPromotionPrice(true)}
+                      >
+                        + Agregar precio de promoción
+                      </button>
+                    )}
+                  </div>
                   <label
                     className={
                       wholesaleFormErrors.price
