@@ -1,6 +1,6 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { IReportingRepository } from "../interface/IReportingRepository";
-import { IncomePoint, ReportLeaderboardItem, ReportProductItem, ReportRange, ReportSale, SalesReport, SalesSummary } from "../model/SalesReport";
+import { IncomePoint, ReportLeaderboardItem, ReportProductItem, ReportRange, ReportSale, SalesReport, SalesSummary, SalesTicketsPage } from "../model/SalesReport";
 
 type NullableNumber = number | string | null | undefined;
 type NullableText = string | null | undefined;
@@ -108,6 +108,32 @@ type CatalogDetailOrderResponse = {
   date?: NullableText;
   status?: NullableText;
   products?: CatalogDetailProductResponse[];
+};
+
+type SalesTicketResponse = {
+  Id?: NullableNumber;
+  Type?: NullableText;
+  Date?: NullableText;
+  PaymentMethod?: NullableText;
+  MoneyTipe?: NullableText;
+  Customer_Name?: NullableText;
+  Employee_Name?: NullableText;
+  Total?: NullableNumber;
+  DiscountApplied?: NullableNumber;
+  TaxesApplied?: NullableNumber;
+  products?: Array<{
+    Detail_Id?: NullableNumber;
+    Item_Name?: NullableText;
+    Quantity?: NullableNumber;
+    UnitPrice?: NullableNumber;
+    DetailAmount?: NullableNumber;
+    Notes?: NullableText;
+  }>;
+};
+
+type SalesTicketsRangeResponse = {
+  items?: SalesTicketResponse[];
+  pagination?: { page?: NullableNumber; pageSize?: NullableNumber; totalItems?: NullableNumber; totalPages?: NullableNumber };
 };
 
 type BackendCustomerItem = {
@@ -264,6 +290,60 @@ export class PosReportingApi implements IReportingRepository {
       .flatMap((row) => this.toCatalogSales(row))
       .filter((sale) => sale.id !== "0")
       .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }
+
+  async getSalesTicketsByDateRange(
+    businessId: number,
+    from: string,
+    to: string,
+    timezone: string,
+    page: number,
+    pageSize: number,
+    token: string,
+  ): Promise<SalesTicketsPage> {
+    const query = new URLSearchParams({
+      from,
+      to,
+      timezone,
+      page: String(page),
+      pageSize: String(pageSize),
+      source: "all",
+    });
+    const payload = await this.httpClient.request<SalesTicketsRangeResponse>({
+      method: "GET",
+      path: `report2/details-range/${businessId}?${query.toString()}`,
+      token,
+    });
+    const pagination = payload?.pagination;
+
+    return {
+      items: (payload?.items ?? []).map((sale) => ({
+        id: Math.round(toNumber(sale.Id)),
+        type: toText(sale.Type, "ORDER"),
+        date: toText(sale.Date, ""),
+        paymentMethod: toText(sale.PaymentMethod, "N/A"),
+        currency: toText(sale.MoneyTipe, "MXN"),
+        customerName: sale.Customer_Name?.trim() || null,
+        employeeName: sale.Employee_Name?.trim() || null,
+        total: toNumber(sale.Total),
+        discountApplied: toNumber(sale.DiscountApplied),
+        taxesApplied: toNumber(sale.TaxesApplied),
+        products: (sale.products ?? []).map((product) => ({
+          detailId: Math.round(toNumber(product.Detail_Id)),
+          itemName: toText(product.Item_Name, "Sin detalle"),
+          quantity: toNumber(product.Quantity),
+          unitPrice: toNumber(product.UnitPrice),
+          detailAmount: toNumber(product.DetailAmount),
+          notes: product.Notes?.trim() || null,
+        })),
+      })),
+      pagination: {
+        page: Math.max(1, Math.round(toNumber(pagination?.page) || page)),
+        pageSize: Math.max(1, Math.round(toNumber(pagination?.pageSize) || pageSize)),
+        totalItems: Math.max(0, Math.round(toNumber(pagination?.totalItems))),
+        totalPages: Math.max(1, Math.round(toNumber(pagination?.totalPages) || 1)),
+      },
+    };
   }
 
   async getProductsLeaderboard(businessId: number, range: ReportRange, token: string): Promise<ReportProductItem[]> {

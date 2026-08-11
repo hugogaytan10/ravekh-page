@@ -248,6 +248,8 @@ export const ProductsV2PosPage = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [showNoStockConfirmation, setShowNoStockConfirmation] =
+    useState(false);
   const [archiveDialog, setArchiveDialog] = useState<ArchiveDialogState>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const [saveResult, setSaveResult] = useState<SaveResultState>(null);
@@ -274,6 +276,7 @@ export const ProductsV2PosPage = () => {
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  const [promotionPrice, setPromotionPrice] = useState("");
   const [costPerItem, setCostPerItem] = useState("");
   const [wholesalePrice, setWholesalePrice] = useState("");
   const [wholesaleMinQuantity, setWholesaleMinQuantity] = useState("");
@@ -296,6 +299,9 @@ export const ProductsV2PosPage = () => {
   const [storedImages, setStoredImages] = useState<string[]>([]);
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
   const categoryCarouselRef = useRef<HTMLDivElement | null>(null);
+  const productFormRef = useRef<HTMLFormElement | null>(null);
+  const stockInputRef = useRef<HTMLInputElement | null>(null);
+  const skipNextStockConfirmation = useRef(false);
   const categoryNameInputRef = useRef<HTMLInputElement | null>(null);
   const wholesalePriceInputRef = useRef<HTMLInputElement | null>(null);
   const wholesaleMinQuantityInputRef = useRef<HTMLInputElement | null>(null);
@@ -325,6 +331,7 @@ export const ProductsV2PosPage = () => {
     setName("");
     setDescription("");
     setPrice("");
+    setPromotionPrice("");
     setCostPerItem("");
     setWholesalePrice("");
     setWholesaleMinQuantity("");
@@ -348,6 +355,8 @@ export const ProductsV2PosPage = () => {
   const closeFormModal = () => {
     if (saving) return;
     setIsFormOpen(false);
+    setShowNoStockConfirmation(false);
+    skipNextStockConfirmation.current = false;
     setSaveResult(null);
     resetForm();
   };
@@ -956,12 +965,23 @@ export const ProductsV2PosPage = () => {
       return;
     }
 
+    if (
+      !skipNextStockConfirmation.current &&
+      (stock.trim() === "" || Number(stock) === 0)
+    ) {
+      setShowNoStockConfirmation(true);
+      return;
+    }
+    skipNextStockConfirmation.current = false;
+
     if (variants.some((variant) => variant.imageUploading)) {
       setError("Espera a que terminen de subir las imágenes de variantes.");
       return;
     }
 
     const parsedPrice = price.trim() === "" ? null : Number(price);
+    const parsedPromotionPrice =
+      promotionPrice.trim() === "" ? null : Number(promotionPrice);
     const parsedCostPerItem =
       costPerItem.trim() === "" ? null : Number(costPerItem);
     const parsedWholesalePrice =
@@ -977,6 +997,16 @@ export const ProductsV2PosPage = () => {
       (Number.isNaN(parsedPrice) || parsedPrice < 0)
     ) {
       setError("El precio debe ser un número válido mayor o igual a 0.");
+      return;
+    }
+
+    if (
+      parsedPromotionPrice !== null &&
+      (Number.isNaN(parsedPromotionPrice) || parsedPromotionPrice < 0)
+    ) {
+      setError(
+        "El precio de promoción debe ser un número válido mayor o igual a 0.",
+      );
       return;
     }
 
@@ -1158,7 +1188,7 @@ export const ProductsV2PosPage = () => {
         color: productColor.trim() || null,
         volume: false,
         price: parsedPrice,
-        promotionPrice: null,
+        promotionPrice: parsedPromotionPrice,
         wholesalePrice: parsedWholesalePrice,
         wholesaleMinQuantity: normalizedWholesaleMinQuantity,
         stock: parsedStock,
@@ -1308,6 +1338,9 @@ export const ProductsV2PosPage = () => {
       setName(detail.name);
       setDescription(detail.description);
       setPrice(detail.price == null ? "" : String(detail.price));
+      setPromotionPrice(
+        detail.promotionPrice == null ? "" : String(detail.promotionPrice),
+      );
       setCostPerItem(
         detail.costPerItem == null ? "" : String(detail.costPerItem),
       );
@@ -2489,7 +2522,11 @@ export const ProductsV2PosPage = () => {
                 </p>
               ) : null}
 
-              <form className="pos-v2-products__form" onSubmit={handleSubmit}>
+              <form
+                ref={productFormRef}
+                className="pos-v2-products__form"
+                onSubmit={handleSubmit}
+              >
                 <label>
                   Nombre
                   <input
@@ -2579,6 +2616,20 @@ export const ProductsV2PosPage = () => {
                       inputMode="decimal"
                       value={price}
                       onChange={(event) => setPrice(event.target.value)}
+                    />
+                  </label>
+                  <label>
+                    Precio de promoción (opcional)
+                    <input
+                      ref={stockInputRef}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      inputMode="decimal"
+                      value={promotionPrice}
+                      onChange={(event) =>
+                        setPromotionPrice(event.target.value)
+                      }
                     />
                   </label>
                   <label
@@ -3254,6 +3305,53 @@ export const ProductsV2PosPage = () => {
                   </button>
                 </div>
               </form>
+            </section>
+          </div>
+        ) : null}
+
+        {showNoStockConfirmation ? (
+          <div
+            className="pos-v2-products__modal-backdrop is-sheet"
+            role="presentation"
+            onClick={() => setShowNoStockConfirmation(false)}
+          >
+            <section
+              className="pos-v2-products__modal pos-v2-products__modal-sheet w-full max-h-[85vh] overflow-y-auto"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Confirmar producto sin stock"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <header className="pos-v2-products__modal-head">
+                <h3>¿Guardar producto sin stock?</h3>
+              </header>
+              <p>
+                ¿Estás seguro de guardar el producto sin stock? Este producto
+                no se mostrará en el catálogo.
+              </p>
+              <div className="pos-v2-products__form-actions is-modal">
+                <button
+                  type="button"
+                  className="pos-v2-products__secondary"
+                  onClick={() => {
+                    setShowNoStockConfirmation(false);
+                    window.setTimeout(() => stockInputRef.current?.focus(), 0);
+                  }}
+                >
+                  Agregar stock
+                </button>
+                <button
+                  type="button"
+                  className="pos-v2-products__primary"
+                  onClick={() => {
+                    skipNextStockConfirmation.current = true;
+                    setShowNoStockConfirmation(false);
+                    productFormRef.current?.requestSubmit();
+                  }}
+                >
+                  Aceptar
+                </button>
+              </div>
             </section>
           </div>
         ) : null}

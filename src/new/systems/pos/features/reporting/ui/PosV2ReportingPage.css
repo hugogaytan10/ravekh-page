@@ -789,3 +789,18 @@
   color: var(--report-muted);
   font-size: 0.84rem;
 }
+
+.pos-v2-reporting__pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  margin-top: 0.35rem;
+  color: var(--report-muted);
+  font-size: 0.84rem;
+}
+
+.pos-v2-reporting__table td button {
+  min-height: 34px;
+  padding: 0.35rem 0.65rem;
+}
