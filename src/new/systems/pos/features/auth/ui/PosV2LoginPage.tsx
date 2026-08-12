@@ -1,7 +1,7 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
-import { uploadBusinessLogoToCloudinary } from "../../../shared/api/cloudinaryUpload";
+import { getBusinessLogoDimensionWarning, uploadBusinessLogoToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import {
   clearPendingPosUpgradeContext,
@@ -80,6 +80,7 @@ export const PosV2LoginPage = () => {
   const [signUpReferences, setSignUpReferences] = useState("");
   const [signUpColor, setSignUpColor] = useState("#6D01D1");
   const [signUpLogoFile, setSignUpLogoFile] = useState<File | null>(null);
+  const [signUpLogoWarning, setSignUpLogoWarning] = useState("");
 
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -227,9 +228,17 @@ export const PosV2LoginPage = () => {
     setSignUpStep("business");
   };
 
-  const handleLogoSelection = (event: ChangeEvent<HTMLInputElement>) => {
+  const handleLogoSelection = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0] ?? null;
+    if (file && !file.type.startsWith("image/")) {
+      setSignUpLogoFile(null);
+      setSignUpLogoWarning("");
+      setError("Selecciona un archivo de imagen válido.");
+      event.target.value = "";
+      return;
+    }
     setSignUpLogoFile(file);
+    setSignUpLogoWarning(file ? await getBusinessLogoDimensionWarning(file) : "");
     setError(null);
   };
 
@@ -386,7 +395,7 @@ await finishAuthenticatedFlow(session, "signup");
                   Logo del negocio
                 </label>
                 <span className="pos-v2-file-name">
-                  Recomendado: 800 × 800 px (cuadrada). Se mostrará en círculo.
+                  Recomendado: imagen cuadrada de al menos 800 × 800 px. Se mostrará en círculo.
                 </span>
                 <input
                   id="signup-logo"
@@ -401,6 +410,7 @@ await finishAuthenticatedFlow(session, "signup");
                     Archivo: {signUpLogoFile.name}
                   </span>
                 ) : null}
+                {signUpLogoWarning ? <span className="pos-v2-file-warning">{signUpLogoWarning}</span> : null}
               </div>
               {error && mode === "signup" ? (
                 <span className="pos-v2-error">{error}</span>

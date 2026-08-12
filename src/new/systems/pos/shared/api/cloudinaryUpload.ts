@@ -7,6 +7,28 @@ const IMAGE_QUALITY = 0.75;
 
 const canCompressInBrowser = (): boolean => typeof window !== "undefined" && typeof document !== "undefined";
 
+export const getBusinessLogoDimensionWarning = async (file: File): Promise<string> => {
+  if (!canCompressInBrowser() || !file.type.startsWith("image/")) return "";
+
+  const imageUrl = URL.createObjectURL(file);
+  try {
+    const { naturalWidth: width, naturalHeight: height } = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const image = new Image();
+      image.onload = () => resolve(image);
+      image.onerror = () => reject(new Error("No se pudieron leer las dimensiones de la imagen."));
+      image.src = imageUrl;
+    });
+
+    return width === height && width >= 800
+      ? ""
+      : `La imagen mide ${width} × ${height} px. Recomendamos una imagen cuadrada de al menos 800 × 800 px. Puedes usarla de todos modos.`;
+  } catch {
+    return "";
+  } finally {
+    URL.revokeObjectURL(imageUrl);
+  }
+};
+
 const compressImage = async (file: File): Promise<File> => {
   if (!canCompressInBrowser() || !file.type.startsWith("image/")) {
     return file;

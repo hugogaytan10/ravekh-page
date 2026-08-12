@@ -10,7 +10,7 @@ import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
 import { emitPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
-import { uploadBusinessLogoToCloudinary } from "../../../shared/api/cloudinaryUpload";
+import { getBusinessLogoDimensionWarning, uploadBusinessLogoToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { usePlanActionGuard } from "../../../shared/hooks/usePlanActionGuard";
 import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
 import "./PosV2ModulePreviewPage.css";
@@ -141,6 +141,7 @@ export const PosV2ModulePreviewPage = () => {
   const [brandingImageUploading, setBrandingImageUploading] = useState(false);
   const [brandingLogoFile, setBrandingLogoFile] = useState<File | null>(null);
   const [brandingLogoPreview, setBrandingLogoPreview] = useState("");
+  const [brandingLogoWarning, setBrandingLogoWarning] = useState("");
   const [brandingSuccess, setBrandingSuccess] = useState("");
   const [brandingError, setBrandingError] = useState("");
   const [brandingForm, setBrandingForm] = useState({
@@ -598,6 +599,7 @@ export const PosV2ModulePreviewPage = () => {
       const saved = await factory.createPosBrandingPage().saveProfile(businessId, { ...brandingForm, logo }, token);
       setBrandingLogoFile(null);
       setBrandingLogoPreview("");
+      setBrandingLogoWarning("");
       setBrandingForm({
         name: saved.name,
         address: saved.address,
@@ -623,10 +625,11 @@ export const PosV2ModulePreviewPage = () => {
     }
   };
 
-  const onBrandingImageSelected = (event: ChangeEvent<HTMLInputElement>) => {
+  const onBrandingImageSelected = async (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
+      setBrandingLogoWarning("");
       setBrandingError("Selecciona un archivo de imagen válido.");
       event.target.value = "";
       return;
@@ -636,6 +639,7 @@ export const PosV2ModulePreviewPage = () => {
     setBrandingError("");
     setBrandingLogoFile(file);
     setBrandingLogoPreview(URL.createObjectURL(file));
+    setBrandingLogoWarning(await getBusinessLogoDimensionWarning(file));
     setBrandingSuccess("Imagen seleccionada. Se subirá cuando guardes la información del negocio.");
   };
 
@@ -742,7 +746,7 @@ export const PosV2ModulePreviewPage = () => {
                 </label>
                 <label className="pos-v2-module-preview__color-field">
                   <span>{brandingImageUploading ? "Subiendo logo..." : "Logo del negocio"}</span>
-                  <small>Recomendado: 800 × 800 px (cuadrada). Se mostrará en círculo en el catálogo.</small>
+                  <small>Recomendado: imagen cuadrada de al menos 800 × 800 px. Se mostrará en círculo en el catálogo.</small>
                   <div className="pos-v2-module-preview__logo-upload">
                     <input type="file" accept="image/*" onChange={onBrandingImageSelected} disabled={brandingImageUploading || brandingSaving} />
                   </div>
@@ -751,6 +755,7 @@ export const PosV2ModulePreviewPage = () => {
               <div className="pos-v2-module-preview__logo-preview">
                 {brandingLogoPreview || brandingForm.logo ? <img src={brandingLogoPreview || brandingForm.logo} alt="Logo del negocio" /> : <p>Sin imagen de negocio. Sube un archivo para visualizarlo aquí.</p>}
               </div>
+              {brandingLogoWarning ? <p className="pos-v2-module-preview__warning">{brandingLogoWarning}</p> : null}
               {brandingSuccess ? <p className="pos-v2-module-preview__ok">{brandingSuccess}</p> : null}
               {brandingError ? <p className="pos-v2-module-preview__error">{brandingError}</p> : null}
               <button type="submit" disabled={brandingSaving || brandingImageUploading}>{brandingSaving ? "Guardando..." : brandingImageUploading ? "Subiendo logo..." : "Guardar información del negocio"}</button>
