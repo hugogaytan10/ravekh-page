@@ -139,6 +139,8 @@ export const PosV2ModulePreviewPage = () => {
   const [brandingLoading, setBrandingLoading] = useState(false);
   const [brandingSaving, setBrandingSaving] = useState(false);
   const [brandingImageUploading, setBrandingImageUploading] = useState(false);
+  const [brandingLogoFile, setBrandingLogoFile] = useState<File | null>(null);
+  const [brandingLogoPreview, setBrandingLogoPreview] = useState("");
   const [brandingSuccess, setBrandingSuccess] = useState("");
   const [brandingError, setBrandingError] = useState("");
   const [brandingForm, setBrandingForm] = useState({
@@ -175,6 +177,10 @@ export const PosV2ModulePreviewPage = () => {
   const exportTotalAmount = useMemo(() => exportRows.reduce((sum, row) => sum + row.total, 0), [exportRows]);
   const exportAverageTicket = useMemo(() => (exportRows.length > 0 ? exportTotalAmount / exportRows.length : 0), [exportRows, exportTotalAmount]);
   const exportInactiveCount = useMemo(() => exportRows.filter((row) => !row.hasActivity).length, [exportRows]);
+
+  useEffect(() => () => {
+    if (brandingLogoPreview) URL.revokeObjectURL(brandingLogoPreview);
+  }, [brandingLogoPreview]);
 
   const runBetaAction = async () => {
     setLoading(true);
@@ -584,14 +590,14 @@ export const PosV2ModulePreviewPage = () => {
     setBrandingSuccess("");
     setBrandingError("");
 
-    if (brandingImageUploading) {
-      setBrandingSaving(false);
-      setBrandingError("Espera a que termine de subir el logo antes de guardar.");
-      return;
-    }
-
     try {
-      const saved = await factory.createPosBrandingPage().saveProfile(businessId, brandingForm, token);
+      setBrandingImageUploading(Boolean(brandingLogoFile));
+      const logo = brandingLogoFile
+        ? await uploadBusinessLogoToCloudinary(brandingLogoFile)
+        : brandingForm.logo;
+      const saved = await factory.createPosBrandingPage().saveProfile(businessId, { ...brandingForm, logo }, token);
+      setBrandingLogoFile(null);
+      setBrandingLogoPreview("");
       setBrandingForm({
         name: saved.name,
         address: saved.address,
@@ -600,7 +606,7 @@ export const PosV2ModulePreviewPage = () => {
         color: saved.color,
         references: saved.references,
       });
-      setBrandingSuccess("Branding guardado correctamente.");
+      setBrandingSuccess("Información del negocio guardada correctamente.");
       setBusinessStatus((current) => (current ? {
         ...current,
         name: saved.name,
@@ -612,11 +618,12 @@ export const PosV2ModulePreviewPage = () => {
       setBrandingSuccess("");
       setBrandingError(cause instanceof Error ? cause.message : "No fue posible guardar la información del negocio.");
     } finally {
+      setBrandingImageUploading(false);
       setBrandingSaving(false);
     }
   };
 
-  const onBrandingImageSelected = async (event: ChangeEvent<HTMLInputElement>) => {
+  const onBrandingImageSelected = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -625,20 +632,11 @@ export const PosV2ModulePreviewPage = () => {
       return;
     }
 
-    setBrandingImageUploading(true);
     setBrandingSuccess("");
     setBrandingError("");
-
-    try {
-      const logoUrl = await uploadBusinessLogoToCloudinary(file);
-      setBrandingForm((current) => ({ ...current, logo: logoUrl }));
-      setBrandingSuccess("Logo subido a Cloudinary. Guarda la información del negocio para aplicar el cambio.");
-    } catch (cause) {
-      setBrandingError(cause instanceof Error ? cause.message : "No fue posible subir la imagen a Cloudinary.");
-      event.target.value = "";
-    } finally {
-      setBrandingImageUploading(false);
-    }
+    setBrandingLogoFile(file);
+    setBrandingLogoPreview(URL.createObjectURL(file));
+    setBrandingSuccess("Imagen seleccionada. Se subirá cuando guardes la información del negocio.");
   };
 
   const createStripeAccount = async () => {
@@ -744,13 +742,14 @@ export const PosV2ModulePreviewPage = () => {
                 </label>
                 <label className="pos-v2-module-preview__color-field">
                   <span>{brandingImageUploading ? "Subiendo logo..." : "Logo del negocio"}</span>
+                  <small>Recomendado: 800 × 800 px (cuadrada). Se mostrará en círculo en el catálogo.</small>
                   <div className="pos-v2-module-preview__logo-upload">
                     <input type="file" accept="image/*" onChange={onBrandingImageSelected} disabled={brandingImageUploading || brandingSaving} />
                   </div>
                 </label>
               </div>
               <div className="pos-v2-module-preview__logo-preview">
-                {brandingForm.logo ? <img src={brandingForm.logo} alt="Logo del negocio" /> : <p>Sin imagen de negocio. Sube un archivo para visualizarlo aquí.</p>}
+                {brandingLogoPreview || brandingForm.logo ? <img src={brandingLogoPreview || brandingForm.logo} alt="Logo del negocio" /> : <p>Sin imagen de negocio. Sube un archivo para visualizarlo aquí.</p>}
               </div>
               {brandingSuccess ? <p className="pos-v2-module-preview__ok">{brandingSuccess}</p> : null}
               {brandingError ? <p className="pos-v2-module-preview__error">{brandingError}</p> : null}

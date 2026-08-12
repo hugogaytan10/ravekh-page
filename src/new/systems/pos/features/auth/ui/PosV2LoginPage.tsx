@@ -385,6 +385,9 @@ await finishAuthenticatedFlow(session, "signup");
                 <label htmlFor="signup-logo" className="pos-v2-label">
                   Logo del negocio
                 </label>
+                <span className="pos-v2-file-name">
+                  Recomendado: 800 × 800 px (cuadrada). Se mostrará en círculo.
+                </span>
                 <input
                   id="signup-logo"
                   className="pos-v2-input pos-v2-file-input"
