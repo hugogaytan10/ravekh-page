@@ -66,6 +66,9 @@ const SELECTABLE_STATUSES = new Set([
   "READY",
   "REVIEW_REQUIRED",
   "DUPLICATE_EXACT",
+  "REJECTED_NOT_PRODUCT",
+  "FAILED_RETRYABLE",
+  "FAILED_PERMANENT",
 ]);
 
 const DEFAULT_SELECTED_STATUSES = new Set([
@@ -97,7 +100,7 @@ type CreateCatalogAiCategoryInput = {
 };
 
 type DuplicateAction = "update_existing" | "create_new";
-type CategoryMode = "auto" | "existing" | "new";
+type CategoryMode = "pending" | "existing" | "new";
 type IncompleteReviewDialog = "summary" | "confirm" | null;
 
 type EditableCatalogAiItem = CatalogAiItem & {
@@ -208,7 +211,7 @@ const toEditableItem = (item: CatalogAiItem): EditableCatalogAiItem => {
       item.Duplicate_Subcategory_Name || item.Duplicate_Category_Name
         ? "existing"
         : item.Suggested_Category
-          ? "auto"
+          ? "pending"
           : "existing",
     draftCategoryColor: "#6D01D1",
     creatingCategory: false,
@@ -217,7 +220,7 @@ const toEditableItem = (item: CatalogAiItem): EditableCatalogAiItem => {
       : "create_new",
     // Los datos provenientes del producto existente deben guardarse en el item
     // antes de publicar o actualizar.
-    dirty: hasExistingProduct,
+    dirty: hasExistingProduct || Boolean(item.Suggested_Category),
     saving: false,
   };
 };
@@ -518,6 +521,9 @@ export const CatalogAiImportWizard = ({
   const lastProgressSignatureRef = useRef<string | null>(null);
   const photosRef = useRef<SelectedPhoto[]>([]);
   const flowIdRef = useRef(catalogAiDebug.createId("flow"));
+  const categoryCreationRef = useRef(
+    new Map<string, Promise<CatalogAiCategoryOption>>(),
+  );
   const apiRef = useRef(new CatalogAiApi(CATALOG_AI_API_URL, token));
   const sessionRefreshWaiterRef = useRef<{
     promise: Promise<string>;
@@ -1359,6 +1365,16 @@ export const CatalogAiImportWizard = ({
     [availableCategories],
   );
 
+  const pendingSuggestedCategories = useMemo(() => {
+    const unique = new Map<string, string>();
+    items.forEach((item) => {
+      const name = String(item.Suggested_Category ?? "").trim();
+      const key = normalizeCategoryName(name);
+      if (key && !findAvailableCategory(name, null)) unique.set(key, name);
+    });
+    return [...unique.entries()].map(([key, name]) => ({ key, name }));
+  }, [findAvailableCategory, items]);
+
   const storeAvailableCategory = useCallback(
     (category: CatalogAiCategoryOption): CatalogAiCategoryOption => {
       const safeCategory: CatalogAiCategoryOption = {
@@ -1400,19 +1416,30 @@ export const CatalogAiImportWizard = ({
       const existing = findAvailableCategory(name, parentId);
       if (existing) return existing;
 
-      const created = await onCreateCategory({
+      const key = `${businessId}:${parentId ?? "root"}:${normalizeCategoryName(name)}`;
+      const pendingCreation = categoryCreationRef.current.get(key);
+      if (pendingCreation) return pendingCreation;
+
+      const creation = onCreateCategory({
         name,
         parentId,
         color: normalizeCategoryColor(input.color),
+      }).then((created) => {
+        if (!Number.isInteger(created.id) || created.id <= 0) {
+          throw new Error("El servidor no devolvió la categoría creada.");
+        }
+        return storeAvailableCategory(created);
       });
+      categoryCreationRef.current.set(key, creation);
 
-      if (!Number.isInteger(created.id) || created.id <= 0) {
-        throw new Error("El servidor no devolvió la categoría creada.");
+      try {
+        return await creation;
+      } catch (cause) {
+        categoryCreationRef.current.delete(key);
+        throw cause;
       }
-
-      return storeAvailableCategory(created);
     },
-    [findAvailableCategory, onCreateCategory, storeAvailableCategory],
+    [businessId, findAvailableCategory, onCreateCategory, storeAvailableCategory],
   );
 
   const selectCategory = (itemId: number, value: string) => {
@@ -1429,10 +1456,11 @@ export const CatalogAiImportWizard = ({
           };
         }
 
-        if (value === "__suggested__") {
-          const suggestedCategory = String(
-            item.Suggested_Category ?? "",
-          ).trim();
+        if (value.startsWith("__pending__:")) {
+          const pendingKey = decodeURIComponent(value.slice(12));
+          const suggestedCategory = pendingSuggestedCategories.find(
+            (category) => category.key === pendingKey,
+          )?.name;
           if (!suggestedCategory) return item;
 
           const suggestedMatch = findAvailableCategory(
@@ -1442,7 +1470,7 @@ export const CatalogAiImportWizard = ({
 
           return {
             ...item,
-            categoryMode: "auto",
+            categoryMode: "pending",
             draftCategory: suggestedMatch?.name ?? suggestedCategory,
             draftCategoryColor: suggestedMatch
               ? normalizeCategoryColor(suggestedMatch.color)
@@ -2182,19 +2210,12 @@ export const CatalogAiImportWizard = ({
                     item.draftCategory,
                     null,
                   );
-                  const suggestedCategoryName = String(
-                    item.Suggested_Category ?? "",
-                  ).trim();
-                  const hasSuggestedCategory = Boolean(
-                    suggestedCategoryName,
-                  );
-                  const isSuggestedCategory =
-                    item.categoryMode === "auto" &&
-                    hasSuggestedCategory;
+                  const isPendingCategory =
+                    item.categoryMode === "pending" && !matchedCategory;
                   const isNewCategory =
                     item.categoryMode === "new";
-                  const categorySelectValue = isSuggestedCategory
-                    ? "__suggested__"
+                  const categorySelectValue = isPendingCategory
+                    ? `__pending__:${encodeURIComponent(normalizeCategoryName(item.draftCategory))}`
                     : isNewCategory
                       ? "__new__"
                       : matchedCategory
@@ -2338,11 +2359,14 @@ export const CatalogAiImportWizard = ({
                                 }
                               >
                                 <option value="">Sin categoría</option>
-                                {hasSuggestedCategory ? (
-                                  <option value="__suggested__">
-                                    Sugerencia de IA: {suggestedCategoryName}
+                                {pendingSuggestedCategories.map((category) => (
+                                  <option
+                                    key={category.key}
+                                    value={`__pending__:${encodeURIComponent(category.key)}`}
+                                  >
+                                    Sugerencia de IA: {category.name}
                                   </option>
-                                ) : null}
+                                ))}
                                 {rootCategories.map((category) => (
                                   <option key={category.id} value={String(category.id)}>
                                     {category.name}
@@ -2354,7 +2378,7 @@ export const CatalogAiImportWizard = ({
                               </select>
                             </label>
 
-                            {isSuggestedCategory ? (
+                            {isPendingCategory ? (
                               <small className="catalog-ai-wizard__selected-category">
                                 <span
                                   style={{
@@ -2367,8 +2391,8 @@ export const CatalogAiImportWizard = ({
                                   aria-hidden="true"
                                 />
                                 {matchedCategory
-                                  ? `La sugerencia ${suggestedCategoryName} coincide con una categoría existente y se reutilizará.`
-                                  : `La sugerencia ${suggestedCategoryName} se creará automáticamente al guardar si decides conservarla.`}
+                                  ? `La sugerencia ${item.draftCategory} coincide con una categoría existente y se reutilizará.`
+                                  : `La sugerencia ${item.draftCategory} se compartirá entre productos y se creará una sola vez al guardar.`}
                               </small>
                             ) : isNewCategory ? (
                               <div className="catalog-ai-wizard__new-category">
