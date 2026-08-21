@@ -283,6 +283,26 @@
   color: #64748b;
 }
 
+.pos-v2-online-orders__item-summary {
+  display: grid;
+  gap: 0.15rem;
+  min-width: 0;
+}
+
+.pos-v2-online-orders__item-attributes {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.4rem;
+  padding-top: 0.45rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.pos-v2-online-orders__item-attributes small {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
 .pos-v2-online-orders__printable {
   display: none;
 }
@@ -467,10 +487,35 @@
     gap: 6px;
   }
 
-  .pos-v2-online-orders__printable li {
+  .pos-v2-online-orders__printable .print-item {
+    display: grid;
+    gap: 6px;
+    padding: 8px 0;
+    break-inside: avoid;
+  }
+
+  .pos-v2-online-orders__printable .print-item + .print-item {
+    border-top: 1px solid #e2e8f0;
+  }
+
+  .pos-v2-online-orders__printable .print-item__main {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     gap: 8px;
+  }
+
+  .pos-v2-online-orders__printable .print-item__attributes {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+    padding-top: 6px;
+    border-top: 1px solid #e2e8f0;
+    color: #475569;
+  }
+
+  .pos-v2-online-orders__printable .print-item__attributes small {
+    overflow-wrap: anywhere;
   }
 
   .pos-v2-online-orders__printable .flex {
