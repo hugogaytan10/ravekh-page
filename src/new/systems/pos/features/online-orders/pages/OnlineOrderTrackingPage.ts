@@ -9,6 +9,7 @@ export interface OnlineOrderCardViewModel {
   address: string;
   paymentMethod: string;
   phoneNumber: string;
+  deliveryMethod: string;
   items: OnlineOrderItem[];
 }
 
@@ -39,6 +40,7 @@ export class OnlineOrderTrackingPage {
       address: order.address,
       paymentMethod: order.paymentMethod,
       phoneNumber: order.phoneNumber,
+      deliveryMethod: order.deliveryMethod,
       items: order.items,
     }));
   }
@@ -53,6 +55,7 @@ export class OnlineOrderTrackingPage {
       address: order.address,
       paymentMethod: order.paymentMethod,
       phoneNumber: order.phoneNumber,
+      deliveryMethod: order.deliveryMethod,
       items: order.items,
     };
   }
@@ -67,6 +70,7 @@ export class OnlineOrderTrackingPage {
       address: updated.address,
       paymentMethod: updated.paymentMethod,
       phoneNumber: updated.phoneNumber,
+      deliveryMethod: updated.deliveryMethod,
       items: updated.items,
     };
   }

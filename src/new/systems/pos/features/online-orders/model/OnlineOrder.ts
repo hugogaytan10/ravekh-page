@@ -20,6 +20,7 @@ export class OnlineOrder {
     public readonly paymentMethod: string = "",
     public readonly phoneNumber: string = "",
     public readonly items: OnlineOrderItem[] = [],
+    public readonly deliveryMethod: string = "",
   ) {}
 
   isPending(): boolean {

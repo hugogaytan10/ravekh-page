@@ -11,6 +11,7 @@ type OrderCatalogResponse = {
   Address?: string;
   PaymentMethod?: string;
   PhoneNumber?: string;
+  Delivery?: number | string;
 };
 
 type UpdateOrderStatusResponse = OrderCatalogResponse | {
@@ -90,6 +91,7 @@ export class PosOnlineOrderApi implements IOnlineOrderRepository {
         colorName: detail.Color_Name ?? "",
         sizeName: detail.Size_Name ?? "",
       })),
+      "",
     );
   }
 
@@ -146,7 +148,15 @@ export class PosOnlineOrderApi implements IOnlineOrderRepository {
       order.PaymentMethod ?? "",
       order.PhoneNumber ?? "",
       items,
+      this.toDeliveryMethod(order.Delivery),
     );
+  }
+
+  private toDeliveryMethod(delivery: OrderCatalogResponse["Delivery"]): string {
+    const normalized = Number(delivery);
+    if (normalized === 1) return "Recoger en tienda";
+    if (normalized === 0) return "Entrega a domicilio";
+    return "";
   }
 
   private toItemName(detail: OrderDetailItemResponse): string {

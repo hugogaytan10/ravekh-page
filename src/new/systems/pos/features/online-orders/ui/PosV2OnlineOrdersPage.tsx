@@ -129,6 +129,7 @@ export const PosV2OnlineOrdersPage = () => {
         address: selectedFromList?.address ?? detail.address,
         paymentMethod: selectedFromList?.paymentMethod ?? detail.paymentMethod,
         phoneNumber: selectedFromList?.phoneNumber ?? detail.phoneNumber,
+        deliveryMethod: selectedFromList?.deliveryMethod || detail.deliveryMethod,
         total: detail.total > 0 ? detail.total : (selectedFromList?.total ?? detail.total),
       });
     } catch (cause) {
@@ -263,7 +264,8 @@ export const PosV2OnlineOrdersPage = () => {
                   <span className={`status status-${order.status.toLowerCase()}`}>{getStatusLabel(order.status)}</span>
                 </div>
                 <span>{order.customerName}</span>
-                <small>Total del pedido: {formatCurrency(order.total)}</small>
+                <small>Entrega: {order.deliveryMethod || "No disponible"}</small>
+                {/*<small>Total del pedido: {formatCurrency(order.total)}</small>*/}
                 <div className="pos-v2-online-orders__actions">
                   <button type="button" className="is-light" onClick={() => openOrderDetails(order.id)}>
                     Ver detalle
@@ -304,6 +306,7 @@ export const PosV2OnlineOrdersPage = () => {
                   <p><strong>Teléfono:</strong> {selectedOrder.phoneNumber || "No disponible"}</p>
                   <p><strong>Dirección:</strong> {selectedOrder.address || "No disponible"}</p>
                   <p><strong>Método de pago:</strong> {selectedOrder.paymentMethod || "No disponible"}</p>
+                  <p><strong>Tipo de entrega:</strong> {selectedOrder.deliveryMethod || "No disponible"}</p>
                   <p><strong>Total:</strong> {formatCurrency(selectedOrder.total)}</p>
                   <section className="pos-v2-online-orders__items">
                     <h4>Items del pedido</h4>
@@ -358,6 +361,7 @@ export const PosV2OnlineOrdersPage = () => {
               <p><strong>Teléfono:</strong> {printingOrder.phoneNumber || "No disponible"}</p>
               <p><strong>Dirección:</strong> {printingOrder.address || "No disponible"}</p>
               <p><strong>Método de pago:</strong> {printingOrder.paymentMethod || "No disponible"}</p>
+              <p><strong>Tipo de entrega:</strong> {printingOrder.deliveryMethod || "No disponible"}</p>
               <p><strong>Total:</strong> {formatCurrency(printingOrder.total)}</p>
             </div>
             <div className="print-card">

@@ -27,7 +27,7 @@ class FakeOnlineOrderService {
         colorName: "Rojo",
         sizeName: "Grande",
       },
-    ]);
+    ], "Recoger en tienda");
   }
 
   async updateOrderStatus(orderId: number, payload: { status: "ENTREGADO" | "CANCELADO" | "PEDIDO" | "pending" | "accepted" | "preparing" | "completed" | "cancelled" }): Promise<OnlineOrder> {
@@ -54,6 +54,7 @@ export async function run(): Promise<void> {
   assert.equal(detail.items.length, 1);
   assert.equal(detail.items[0]?.colorName, "Rojo");
   assert.equal(detail.items[0]?.sizeName, "Grande");
+  assert.equal(detail.deliveryMethod, "Recoger en tienda");
 
   const updated = await page.changeOrderStatus(55, "ENTREGADO", "token");
   assert.equal(updated.status, "ENTREGADO");
