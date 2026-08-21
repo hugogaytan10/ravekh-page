@@ -158,10 +158,18 @@ export const PosV2OnlineOrdersPage = () => {
 
   const summarizeItems = (items: OnlineOrderCardViewModel["items"] | null | undefined) => {
     if (!Array.isArray(items) || items.length === 0) return [];
-    const grouped = new Map<string, { name: string; quantity: number; price: number; image: string; itemType: string }>();
+    const grouped = new Map<string, {
+      name: string;
+      quantity: number;
+      price: number;
+      image: string;
+      itemType: string;
+      colorName: string;
+      sizeName: string;
+    }>();
 
     for (const item of items) {
-      const key = `${item.name}-${item.price}-${item.itemType ?? ""}`;
+      const key = `${item.name}-${item.price}-${item.itemType ?? ""}-${item.colorName ?? ""}-${item.sizeName ?? ""}`;
       const current = grouped.get(key);
       if (current) {
         current.quantity += item.quantity;
@@ -172,6 +180,8 @@ export const PosV2OnlineOrdersPage = () => {
           price: item.price,
           image: item.image,
           itemType: item.itemType ?? "",
+          colorName: item.colorName ?? "",
+          sizeName: item.sizeName ?? "",
         });
       }
     }
@@ -302,12 +312,18 @@ export const PosV2OnlineOrdersPage = () => {
                         {summarizeItems(selectedOrder.items).map((item, index) => (
                           <li key={`${selectedOrder.id}-${item.name}-${index}`}>
                             {item.image ? <img src={item.image} alt={item.name} /> : null}
-                            <div>
+                            <div className="pos-v2-online-orders__item-summary">
                               <strong>{item.name}</strong>
-                              {item.itemType ? <small>{item.itemType === "Variant" ? "Variante" : "Producto"}</small> : null}
                               <small>{item.quantity} x {formatCurrency(item.price)}</small>
                             </div>
                             <span>{formatCurrency(item.price * item.quantity)}</span>
+                            {(item.itemType || item.colorName || item.sizeName) ? (
+                              <div className="pos-v2-online-orders__item-attributes">
+                                {item.itemType ? <small><strong>Tipo:</strong> {item.itemType === "Variant" ? "Variante" : "Producto"}</small> : null}
+                                {item.colorName ? <small><strong>Color:</strong> {item.colorName}</small> : null}
+                                {item.sizeName ? <small><strong>Talla:</strong> {item.sizeName}</small> : null}
+                              </div>
+                            ) : null}
                           </li>
                         ))}
                       </ul>
@@ -349,12 +365,21 @@ export const PosV2OnlineOrdersPage = () => {
               {summarizeItems(printingOrder.items).length > 0 ? (
                 <ul>
                   {summarizeItems(printingOrder.items).map((item, index) => (
-                    <li key={`print-${printingOrder.id}-${item.name}-${index}`}>
-                      <div className="flex items-center gap-2">
-                        {item.image ? <img src={item.image} alt={item.name} className="h-16 w-16 rounded-md" /> : null}
-                        <span>{item.name} x{item.quantity}</span>
+                    <li className="print-item" key={`print-${printingOrder.id}-${item.name}-${index}`}>
+                      <div className="print-item__main">
+                        <div className="flex items-center gap-2">
+                          {item.image ? <img src={item.image} alt={item.name} className="h-16 w-16 rounded-md" /> : null}
+                          <span>{item.name} x{item.quantity}</span>
+                        </div>
+                        <strong>{formatCurrency(item.price * item.quantity)}</strong>
                       </div>
-                      <strong>{formatCurrency(item.price * item.quantity)}</strong>
+                      {(item.itemType || item.colorName || item.sizeName) ? (
+                        <div className="print-item__attributes">
+                          {item.itemType ? <small><strong>Tipo:</strong> {item.itemType === "Variant" ? "Variante" : "Producto"}</small> : null}
+                          {item.colorName ? <small><strong>Color:</strong> {item.colorName}</small> : null}
+                          {item.sizeName ? <small><strong>Talla:</strong> {item.sizeName}</small> : null}
+                        </div>
+                      ) : null}
                     </li>
                   ))}
                 </ul>

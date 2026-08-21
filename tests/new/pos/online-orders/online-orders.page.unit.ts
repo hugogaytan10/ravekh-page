@@ -18,7 +18,15 @@ class FakeOnlineOrderService {
 
   async getOrderDetails(orderId: number): Promise<OnlineOrder> {
     return new OnlineOrder(orderId, 10, "PEDIDO", "Cliente Detalle", 150, "Calle 99", "EFECTIVO", "5551112233", [
-      { id: 4, name: "Hamburguesa", price: 75, quantity: 2, image: "https://img/burger.png" },
+      {
+        id: 4,
+        name: "Hamburguesa",
+        price: 75,
+        quantity: 2,
+        image: "https://img/burger.png",
+        colorName: "Rojo",
+        sizeName: "Grande",
+      },
     ]);
   }
 
@@ -44,6 +52,8 @@ export async function run(): Promise<void> {
   assert.equal(detail.customerName, "Cliente Detalle");
   assert.equal(detail.address, "Calle 99");
   assert.equal(detail.items.length, 1);
+  assert.equal(detail.items[0]?.colorName, "Rojo");
+  assert.equal(detail.items[0]?.sizeName, "Grande");
 
   const updated = await page.changeOrderStatus(55, "ENTREGADO", "token");
   assert.equal(updated.status, "ENTREGADO");

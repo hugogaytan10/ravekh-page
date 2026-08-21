@@ -5,6 +5,8 @@ export type OnlineOrderItem = {
   quantity: number;
   image: string;
   itemType?: string;
+  colorName?: string;
+  sizeName?: string;
 };
 
 export class OnlineOrder {

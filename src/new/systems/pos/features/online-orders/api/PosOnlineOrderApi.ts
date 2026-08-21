@@ -87,6 +87,8 @@ export class PosOnlineOrderApi implements IOnlineOrderRepository {
         quantity: Number(detail.Item_Quantity ?? 0),
         image: detail.Item_Image ?? "",
         itemType: detail.Item_Type ?? "",
+        colorName: detail.Color_Name ?? "",
+        sizeName: detail.Size_Name ?? "",
       })),
     );
   }
@@ -130,6 +132,8 @@ export class PosOnlineOrderApi implements IOnlineOrderRepository {
       quantity: Number(detail.Item_Quantity ?? 0),
       image: detail.Item_Image || "",
       itemType: detail.Item_Type ?? "",
+      colorName: detail.Color_Name ?? "",
+      sizeName: detail.Size_Name ?? "",
     }));
 
     return new OnlineOrder(
