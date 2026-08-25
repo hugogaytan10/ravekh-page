@@ -9,10 +9,12 @@ export async function run(): Promise<void> {
   const createRepo = {
     listByBusiness: async () => [],
     listAllByBusiness: async () => [],
+    listByBusinessNoAvailablePaginated: async () => ({ products: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 1, hasNext: false, hasPrev: false, categoryIds: [] } }),
     getById: async () => null,
     create: async () => buildProduct(101),
     update: async () => buildProduct(999),
     archive: async () => undefined,
+    restore: async () => undefined,
     listCategoriesByBusiness: async () => [],
     createCategory: async () => ({ id: 1, businessId: 10, parentId: null, name: "General", color: "#111" }),
     updateCategory: async () => ({ id: 1, businessId: 10, parentId: null, name: "General", color: "#222" }),

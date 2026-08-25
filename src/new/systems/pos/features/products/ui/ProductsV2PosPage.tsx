@@ -2151,6 +2151,13 @@ export const ProductsV2PosPage = () => {
             >
               {loading ? "Actualizando..." : "Actualizar"}
             </button>
+            <button
+              type="button"
+              className="pos-v2-products__secondary"
+              onClick={() => navigate(POS_V2_PATHS.discontinuedProducts)}
+            >
+              Ver descontinuados
+            </button>
           </div>
         </header>
 

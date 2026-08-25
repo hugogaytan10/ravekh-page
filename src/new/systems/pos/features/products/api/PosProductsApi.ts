@@ -238,6 +238,33 @@ export class PosProductsApi implements IProductsRepository {
     };
   }
 
+  async listByBusinessNoAvailablePaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult> {
+    const resolvedLimit = Math.max(1, Number(limit) || 20);
+    const payload = await this.httpClient.request<
+      ProductResponse[] |
+      { products?: ProductResponse[]; data?: ProductResponse[]; pagination?: Record<string, unknown> }
+    >({
+      method: "GET",
+      path: POS_ENDPOINTS.productsNoAvailableByBusiness(businessId),
+      token,
+      query: { page, limit: resolvedLimit },
+    });
+
+    const rows = Array.isArray(payload) ? payload : payload?.products ?? payload?.data ?? [];
+    const paginationPayload = Array.isArray(payload) ? undefined : payload?.pagination;
+    const categoryIds = Array.isArray(paginationPayload?.categoryIds)
+      ? paginationPayload.categoryIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
+      : [];
+
+    return {
+      products: rows.map((product) => this.toDomain(product)),
+      pagination: {
+        ...toPaginationMeta(paginationPayload, page, resolvedLimit, rows.length),
+        categoryIds,
+      },
+    };
+  }
+
 
   async listByBusinessAllForSearch(businessId: number, token: string, limit: string | number): Promise<ManagedProduct[]> {
     const payload = await this.httpClient.request<
@@ -397,6 +424,15 @@ export class PosProductsApi implements IProductsRepository {
       path: POS_ENDPOINTS.productAvailability(productId),
       token,
       body: { Available: false },
+    });
+  }
+
+  async restore(productId: number, token: string): Promise<void> {
+    await this.httpClient.request<void>({
+      method: "PUT",
+      path: POS_ENDPOINTS.productAvailability(productId),
+      token,
+      body: { Available: 1 },
     });
   }
 

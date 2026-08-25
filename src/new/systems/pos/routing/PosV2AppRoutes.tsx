@@ -1,5 +1,6 @@
 import { Route } from "react-router-dom";
 import { ProductsV2PosPage } from "../features/products/ui/ProductsV2PosPage";
+import { DiscontinuedProductsV2PosPage } from "../features/products/ui/DiscontinuedProductsV2PosPage";
 import { PosHealthV2Screen } from "../features/health/ui/PosHealthV2Screen";
 import { PosV2LoginPage } from "../features/auth/ui/PosV2LoginPage";
 import { PosV2PasswordRecoveryPage } from "../features/auth/ui/PosV2PasswordRecoveryPage";
@@ -32,6 +33,7 @@ export const POS_V2_APP_ROUTES = (
     <Route path={POS_V2_PATHS.passwordRecovery} element={<PosV2PasswordRecoveryPage />} />
     <Route path={POS_V2_PATHS.sales} element={withAuth(<PosV2FeatureRouteGuard feature="pos"><PosV2SalesHomePage /></PosV2FeatureRouteGuard>)} />
     <Route path={POS_V2_PATHS.products} element={withAuth(<ProductsV2PosPage />)} />
+    <Route path={POS_V2_PATHS.discontinuedProducts} element={withAuth(<DiscontinuedProductsV2PosPage />)} />
     <Route path={POS_V2_PATHS.finances} element={withAuth(<PosV2FinancePage />)} />
     <Route path={POS_V2_PATHS.reports} element={withAuth(<PosV2ReportingPage />)} />
     <Route path={POS_V2_PATHS.more} element={withAuth(<PosV2MorePage />)} />

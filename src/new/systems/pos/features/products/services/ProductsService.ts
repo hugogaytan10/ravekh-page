@@ -20,6 +20,10 @@ export class ProductsService {
     return this.repository.listByBusinessPaginated(businessId, token, page, limit);
   }
 
+  async listNoAvailableProductsPaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult> {
+    return this.repository.listByBusinessNoAvailablePaginated(businessId, token, page, limit);
+  }
+
   async listProductsAllForSearch(businessId: number, token: string, limit: string | number): Promise<ManagedProduct[]> {
     return this.repository.listByBusinessAllForSearch(businessId, token, limit);
   }
@@ -35,6 +39,10 @@ export class ProductsService {
 
   async archiveProduct(productId: number, token: string): Promise<void> {
     return this.repository.archive(productId, token);
+  }
+
+  async restoreProduct(productId: number, token: string): Promise<void> {
+    return this.repository.restore(productId, token);
   }
 
   async listCategories(businessId: number, token: string): Promise<ProductCategory[]> {
