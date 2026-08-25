@@ -5,6 +5,7 @@ import { ProductImportResult } from "../interface/IProductsRepository";
 import { ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 import { ProductImportModal } from "./ProductImportModal";
 import { CatalogAiImportWizard } from "./CatalogAiImportWizard";
+import { CatalogProductChatModal } from "./CatalogProductChatModal";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
@@ -237,12 +238,14 @@ export const ProductsV2PosPage = () => {
   const [importing, setImporting] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAiImportOpen, setIsAiImportOpen] = useState(false);
+  const [isProductChatOpen, setIsProductChatOpen] = useState(false);
   const [importResult, setImportResult] = useState<ProductImportResult | null>(
     null,
   );
   const [importError, setImportError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [showArchived, setShowArchived] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("name-asc");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
@@ -691,10 +694,17 @@ export const ProductsV2PosPage = () => {
     };
 
     const source =
-      normalizedSearch.length >= 2 ? searchCatalogProducts : products;
+      normalizedSearch.length >= 2 || categoryFilter !== "all"
+        ? searchCatalogProducts
+        : products;
 
     return source
       .filter((product) => (showArchived ? true : product.available))
+      .filter((product) => {
+        if (categoryFilter === "all") return true;
+        if (categoryFilter === "uncategorized") return product.categoryId === null;
+        return product.categoryId === Number(categoryFilter);
+      })
       .filter((product) => {
         if (!normalizedSearch) return true;
 
@@ -704,11 +714,11 @@ export const ProductsV2PosPage = () => {
         );
       })
       .sort(comparators[sortBy]);
-  }, [products, searchCatalogProducts, search, showArchived, sortBy]);
+  }, [products, searchCatalogProducts, search, categoryFilter, showArchived, sortBy]);
 
   useEffect(() => {
     const normalizedSearch = search.trim().toLowerCase();
-    if (normalizedSearch.length < 2) {
+    if (normalizedSearch.length < 2 && categoryFilter === "all") {
       setSearchCatalogProducts([]);
       setSearchingCatalog(false);
       return;
@@ -767,7 +777,7 @@ export const ProductsV2PosPage = () => {
     }, 320);
 
     return () => window.clearTimeout(timeout);
-  }, [search, businessId, token, service, productsLimit]);
+  }, [search, categoryFilter, businessId, token, service, productsLimit]);
 
   const stats = useMemo(() => {
     const active = products.filter((product) => product.available).length;
@@ -2122,11 +2132,23 @@ export const ProductsV2PosPage = () => {
               onClick={() => {
                 if (blockBlockedProductModuleMutation()) return;
                 if (blockFreeProductCreation()) return;
+                setIsProductChatOpen(true);
+              }}
+              disabled={!token || !businessId}
+            >
+              ✦ Crear con chat
+            </button>
+            <button
+              type="button"
+              className="pos-v2-products__secondary"
+              onClick={() => {
+                if (blockBlockedProductModuleMutation()) return;
+                if (blockFreeProductCreation()) return;
                 setIsAiImportOpen(true);
               }}
               disabled={!token || !businessId}
             >
-              ✦ Importar con IA
+              Importar lote con IA
             </button>
             <button
               type="button"
@@ -2154,6 +2176,22 @@ export const ProductsV2PosPage = () => {
             </button>
           </div>
         </header>
+
+        <CatalogProductChatModal
+          open={isProductChatOpen}
+          businessId={businessId}
+          token={token}
+          onClose={() => setIsProductChatOpen(false)}
+          onSessionRefreshed={setToken}
+          onCompleted={({ productId }) => {
+            setIsProductChatOpen(false);
+            setToast({
+              type: "success",
+              message: `Producto #${productId} creado desde el chat.`,
+            });
+            void loadProducts(1);
+          }}
+        />
 
         <CatalogAiImportWizard
           open={isAiImportOpen}
@@ -2220,6 +2258,22 @@ export const ProductsV2PosPage = () => {
                 placeholder="Buscar por nombre o descripción"
                 aria-label="Buscar productos"
               />
+              <label className="pos-v2-products__sort">
+                Categoría
+                <select
+                  value={categoryFilter}
+                  onChange={(event) => setCategoryFilter(event.target.value)}
+                  aria-label="Filtrar productos por categoría"
+                >
+                  <option value="all">Todas las categorías</option>
+                  <option value="uncategorized">Sin categoría</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label className="pos-v2-products__sort">
                 Ordenar
                 <select
@@ -2439,7 +2493,8 @@ export const ProductsV2PosPage = () => {
 
           {!loading &&
           visibleProducts.length > 0 &&
-          search.trim().length < 2 ? (
+          search.trim().length < 2 &&
+          categoryFilter === "all" ? (
             <nav
               className="pos-v2-products__pagination"
               aria-label="Paginación de productos"
