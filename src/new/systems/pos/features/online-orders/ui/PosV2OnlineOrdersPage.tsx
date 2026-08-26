@@ -265,7 +265,7 @@ export const PosV2OnlineOrdersPage = () => {
                 </div>
                 <span>{order.customerName}</span>
                 <small>Entrega: {order.deliveryMethod || "No disponible"}</small>
-                {/*<small>Total del pedido: {formatCurrency(order.total)}</small>*/}
+                <small>Total del pedido: {formatCurrency(order.total)}</small>
                 <div className="pos-v2-online-orders__actions">
                   <button type="button" className="is-light" onClick={() => openOrderDetails(order.id)}>
                     Ver detalle

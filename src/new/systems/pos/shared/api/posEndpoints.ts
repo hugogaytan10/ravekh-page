@@ -1,6 +1,7 @@
 export const POS_ENDPOINTS = {
   products: () => "products",
   productsByBusiness: (businessId: number) => `products/business/${businessId}`,
+  productsNoAvailableByBusiness: (businessId: number) => `products/business/noavailable/${businessId}`,
   productsAllByBusiness: (businessId: number) => `products/business/all/${businessId}`,
   productsReallyAll: (businessId: number | string) => `products/really/all/${businessId}`,
   productsStockNull: (businessId: number) => `products/stocknull/${businessId}`,
@@ -10,6 +11,7 @@ export const POS_ENDPOINTS = {
   productsByCategory: (categoryId: number) => `products/category/${categoryId}`,
   productById: (productId: number) => `products/${productId}`,
   productAvailability: (productId: number) => `products/available/${productId}`,
+  productsMassiveAvailability: () => "products/masive/available",
   productExtras: (productId: number) => `extras/product/${productId}`,
   variantsByProduct: (productId: number) => `variants/product/${productId}`,
   variants: () => "variants",

@@ -2034,9 +2034,9 @@ export const CatalogAiImportWizard = ({
           className={`catalog-ai-wizard__content ${step === 1 ? "is-upload-step" : ""}`}
         >
           {step === 1 ? (
-            <div className="catalog-ai-wizard__upload-step">
+            <div className={`catalog-ai-wizard__upload-step ${photos.length > 0 ? "has-photos" : ""}`}>
               <div
-                className="catalog-ai-wizard__dropzone"
+                className={`catalog-ai-wizard__dropzone ${photos.length > 0 ? "has-photos" : ""}`}
                 onDragOver={(event) => event.preventDefault()}
                 onDrop={(event) => {
                   event.preventDefault();

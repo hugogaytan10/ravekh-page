@@ -3,6 +3,7 @@ export const POS_V2_PATHS = {
   passwordRecovery: "/recuperar-contrasena",
   sales: "/MainSales",
   products: "/main-products/items",
+  discontinuedProducts: "/main-products/discontinued",
   finances: "/MainFinances",
   reports: "/dashboard",
   more: "/more",

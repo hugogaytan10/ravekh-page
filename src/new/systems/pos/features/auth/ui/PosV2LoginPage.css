@@ -352,9 +352,20 @@
   margin-top: 0.15rem;
 }
 
+.pos-v2-file-warning {
+  color: #b45309;
+  font-size: 0.75rem;
+  font-weight: 600;
+  margin-top: 0.15rem;
+}
+
 :root[data-theme="dark"] .pos-v2-label,
 :root[data-theme="dark"] .pos-v2-file-name {
   color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-file-warning {
+  color: #fbbf24;
 }
 
 .pos-v2-security-prompt-backdrop {

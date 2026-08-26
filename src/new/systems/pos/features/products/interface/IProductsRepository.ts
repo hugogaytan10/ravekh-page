@@ -8,7 +8,7 @@ export type ProductsPagination = PaginatedMeta & {
 };
 
 export type ProductsPaginatedResult = {
-  products: ManagedProduct[];
+  products: ManagedProduct[]; 
   pagination: ProductsPagination;
 };
 
@@ -17,12 +17,15 @@ export interface IProductsRepository {
   listAllByBusiness(businessId: number, token: string, limit: string): Promise<ManagedProduct[]>;
   listReallyAllByBusiness(businessId: number, token: string): Promise<ManagedProduct[]>;
   listByBusinessPaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult>;
+  listByBusinessNoAvailablePaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult>;
   listByBusinessAllForSearch(businessId: number, token: string, limit: string | number): Promise<ManagedProduct[]>;
   getById(productId: number, token: string): Promise<ManagedProduct | null>;
   create(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct>;
   update(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct>;
   archive(productId: number, token: string): Promise<void>;
-  addExtras(productId: number, extras: ProductExtra[], token: string): Promise<void>;
+  archiveMany(productIds: number[], token: string): Promise<void>;
+  restore(productId: number, token: string): Promise<void>;
+  restoreMany(productIds: number[], token: string): Promise<void>;
 
   listCategoriesByBusiness(businessId: number, token: string): Promise<ProductCategory[]>;
   createCategory(category: ProductCategory, token: string): Promise<ProductCategory>;

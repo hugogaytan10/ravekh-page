@@ -13,8 +13,16 @@ export async function run(): Promise<void> {
   let updateCategoryBody: unknown;
 
   const httpClient = {
-    request: async ({ method, path, body }: { method: string; path: string; body?: unknown }) => {
+    request: async ({ method, path, body, query }: { method: string; path: string; body?: unknown; query?: Record<string, unknown> }) => {
       calls.push(`${method} ${path}`);
+
+      if (method === "GET" && path === "products/business/noavailable/7") {
+        assert.deepEqual(query, { page: 2, limit: 20 });
+        return {
+          products: [{ Id: 2, Business_Id: 7, Name: "Descatalogado", Available: 0 }],
+          pagination: { page: 2, totalPages: 3, total: 42, limit: 20 },
+        };
+      }
 
       if (method === "GET" && path === "products/business/7") {
         return [
@@ -96,6 +104,10 @@ export async function run(): Promise<void> {
     { id: 1, name: "Café", available: true },
     { id: 2, name: "Descatalogado", available: false },
   ]);
+
+  const discontinued = await service.listNoAvailableProductsPaginated(7, "token", 2, 20);
+  assert.equal(discontinued.products[0]?.name, "Descatalogado");
+  assert.equal(discontinued.pagination.total, 42);
 
   const saved = await page.saveProduct(
     {
@@ -250,6 +262,7 @@ export async function run(): Promise<void> {
 
   assert.deepEqual(calls, [
     "GET products/business/7",
+    "GET products/business/noavailable/7",
     "POST products",
     "PUT products/9",
     "GET variants/product/9",
