@@ -247,6 +247,11 @@ export const ProductsV2PosPage = () => {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [showArchived, setShowArchived] = useState(false);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<number>>(
+    () => new Set(),
+  );
+  const [archivingSelected, setArchivingSelected] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("name-asc");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -280,6 +285,7 @@ export const ProductsV2PosPage = () => {
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [promotionPrice, setPromotionPrice] = useState("");
+  const [showPromotionPrice, setShowPromotionPrice] = useState(false);
   const [costPerItem, setCostPerItem] = useState("");
   const [wholesalePrice, setWholesalePrice] = useState("");
   const [wholesaleMinQuantity, setWholesaleMinQuantity] = useState("");
@@ -314,6 +320,46 @@ export const ProductsV2PosPage = () => {
     return factory.createPosProductsService();
   }, []);
 
+  const cancelSelection = () => {
+    setIsSelecting(false);
+    setSelectedProductIds(new Set());
+  };
+
+  const toggleProductSelection = (productId: number) => {
+    setSelectedProductIds((current) => {
+      const next = new Set(current);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
+
+  const handleArchiveSelected = async () => {
+    if (!token || selectedProductIds.size === 0) return;
+
+    setArchivingSelected(true);
+    try {
+      await service.archiveProducts(Array.from(selectedProductIds), token);
+      const archivedCount = selectedProductIds.size;
+      cancelSelection();
+      setToast({
+        type: "success",
+        message: `${archivedCount} producto(s) descontinuado(s).`,
+      });
+      await loadProducts(currentPage);
+    } catch (cause) {
+      setToast({
+        type: "error",
+        message:
+          cause instanceof Error
+            ? cause.message
+            : "No se pudieron descontinuar los productos seleccionados.",
+      });
+    } finally {
+      setArchivingSelected(false);
+    }
+  };
+
   useEffect(() => {
     const handleSessionUpdated = (event: Event) => {
       const detail = (event as CustomEvent<PersistedPosSession>).detail;
@@ -335,6 +381,7 @@ export const ProductsV2PosPage = () => {
     setDescription("");
     setPrice("");
     setPromotionPrice("");
+    setShowPromotionPrice(false);
     setCostPerItem("");
     setWholesalePrice("");
     setWholesaleMinQuantity("");
@@ -1012,11 +1059,23 @@ export const ProductsV2PosPage = () => {
 
     if (
       parsedPromotionPrice !== null &&
-      (Number.isNaN(parsedPromotionPrice) || parsedPromotionPrice < 0)
+      (Number.isNaN(parsedPromotionPrice) || parsedPromotionPrice <= 0)
     ) {
-      setError(
-        "El precio de promoción debe ser un número válido mayor o igual a 0.",
-      );
+      setError("El precio de promoción debe ser un número válido mayor a 0.");
+      return;
+    }
+
+    if (parsedPromotionPrice !== null && parsedPrice === null) {
+      setError("Agrega el precio normal antes del precio de promoción.");
+      return;
+    }
+
+    if (
+      parsedPromotionPrice !== null &&
+      parsedPrice !== null &&
+      parsedPromotionPrice >= parsedPrice
+    ) {
+      setError("El precio de promoción debe ser menor que el precio normal.");
       return;
     }
 
@@ -1351,6 +1410,7 @@ export const ProductsV2PosPage = () => {
       setPromotionPrice(
         detail.promotionPrice == null ? "" : String(detail.promotionPrice),
       );
+      setShowPromotionPrice(detail.promotionPrice != null);
       setCostPerItem(
         detail.costPerItem == null ? "" : String(detail.costPerItem),
       );
@@ -2174,6 +2234,40 @@ export const ProductsV2PosPage = () => {
             >
               {loading ? "Actualizando..." : "Actualizar"}
             </button>
+            <button
+              type="button"
+              className={
+                isSelecting
+                  ? "pos-v2-products__primary is-danger"
+                  : "pos-v2-products__secondary"
+              }
+              onClick={
+                isSelecting
+                  ? handleArchiveSelected
+                  : () => navigate(POS_V2_PATHS.discontinuedProducts)
+              }
+              disabled={
+                isSelecting &&
+                (selectedProductIds.size === 0 || archivingSelected)
+              }
+            >
+              {isSelecting
+                ? archivingSelected
+                  ? "Descontinuando..."
+                  : `Descontinuar (${selectedProductIds.size})`
+                : "Ver descontinuados"}
+            </button>
+            <button
+              type="button"
+              className="pos-v2-products__secondary"
+              onClick={() => {
+                if (isSelecting) cancelSelection();
+                else setIsSelecting(true);
+              }}
+              disabled={archivingSelected}
+            >
+              {isSelecting ? "Cancelar" : "Seleccionar"}
+            </button>
           </div>
         </header>
 
@@ -2384,8 +2478,18 @@ export const ProductsV2PosPage = () => {
                 return (
                   <article
                     key={product.id}
-                    className={`pos-v2-products__card ${!product.available ? "is-archived" : ""}`}
+                    className={`pos-v2-products__card ${!product.available ? "is-archived" : ""} ${selectedProductIds.has(product.id) ? "is-selected" : ""}`}
                   >
+                    {isSelecting && product.available ? (
+                      <label className="pos-v2-products__select-product">
+                        <input
+                          type="checkbox"
+                          aria-label={`Seleccionar ${product.name}`}
+                          checked={selectedProductIds.has(product.id)}
+                          onChange={() => toggleProductSelection(product.id)}
+                        />
+                      </label>
+                    ) : null}
                     {preview ? (
                       <img
                         src={preview}
@@ -2451,40 +2555,42 @@ export const ProductsV2PosPage = () => {
                       ) : null}
                     </div>
 
-                    <div className="pos-v2-products__card-actions">
-                      <button
-                        type="button"
-                        className="is-edit"
-                        onClick={() => handleEdit(product.id)}
-                      >
-                        Editar
-                      </button>
+                    {!isSelecting ? (
+                      <div className="pos-v2-products__card-actions">
+                        <button
+                          type="button"
+                          className="is-edit"
+                          onClick={() => handleEdit(product.id)}
+                        >
+                          Editar
+                        </button>
 
-                      {product.available ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            requestArchive(product.id, product.name)
-                          }
-                          disabled={archivingId === product.id}
-                        >
-                          {archivingId === product.id
-                            ? "Eliminando..."
-                            : "Eliminar"}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="is-restore"
-                          onClick={() => handleRestore(product.id)}
-                          disabled={actionLoadingId === product.id}
-                        >
-                          {actionLoadingId === product.id
-                            ? "Procesando..."
-                            : "Restaurar"}
-                        </button>
-                      )}
-                    </div>
+                        {product.available ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              requestArchive(product.id, product.name)
+                            }
+                            disabled={archivingId === product.id}
+                          >
+                            {archivingId === product.id
+                              ? "Eliminando..."
+                              : "Eliminar"}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="is-restore"
+                            onClick={() => handleRestore(product.id)}
+                            disabled={actionLoadingId === product.id}
+                          >
+                            {actionLoadingId === product.id
+                              ? "Procesando..."
+                              : "Restaurar"}
+                          </button>
+                        )}
+                      </div>
+                    ) : null}
                   </article>
                 );
               })}
@@ -2673,20 +2779,33 @@ export const ProductsV2PosPage = () => {
                       onChange={(event) => setPrice(event.target.value)}
                     />
                   </label>
-                  <label>
-                    Precio de promoción (opcional)
-                    <input
-                      ref={stockInputRef}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      inputMode="decimal"
-                      value={promotionPrice}
-                      onChange={(event) =>
-                        setPromotionPrice(event.target.value)
-                      }
-                    />
-                  </label>
+                  <div className="pos-v2-products__promotion-field">
+                    {showPromotionPrice ? (
+                      <label>
+                        Precio de promoción
+                        <input
+                          type="number"
+                          min="0.01"
+                          step="0.01"
+                          inputMode="decimal"
+                          value={promotionPrice}
+                          onChange={(event) =>
+                            setPromotionPrice(event.target.value)
+                          }
+                          placeholder="Ej. 80"
+                          autoFocus
+                        />
+                      </label>
+                    ) : (
+                      <button
+                        type="button"
+                        className="pos-v2-products__secondary pos-v2-products__promotion-button"
+                        onClick={() => setShowPromotionPrice(true)}
+                      >
+                        + Agregar precio de promoción
+                      </button>
+                    )}
+                  </div>
                   <label
                     className={
                       wholesaleFormErrors.price

@@ -1,6 +1,6 @@
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
 import {
@@ -46,6 +46,7 @@ const variantMatchesColor = (
 export const CatalogProductDetailPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
+  const location = useLocation();
   const { productId = "", phone = "" } = useParams<{
     productId: string;
     phone: string;
@@ -368,7 +369,13 @@ export const CatalogProductDetailPage = () => {
       <button
         type="button"
         className="w-fit rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-1.5 text-sm font-semibold text-[var(--text-primary)]"
-        onClick={() => navigate(`/v2/catalogo/${product.businessId}`)}
+        onClick={() => {
+          const origin = location.state as { catalogPage?: number; catalogProductId?: number } | null;
+          const catalogPage = Math.max(1, Number(origin?.catalogPage) || 1);
+          navigate(`/v2/catalogo/${product.businessId}${catalogPage > 1 ? `?page=${catalogPage}` : ""}`, {
+            state: { restoreProductId: origin?.catalogProductId },
+          });
+        }}
       >
         ← Volver al catálogo
       </button>
