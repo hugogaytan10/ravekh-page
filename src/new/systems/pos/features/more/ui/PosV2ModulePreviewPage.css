@@ -117,6 +117,12 @@
   font-weight: 600;
 }
 
+.pos-v2-module-preview__color-field small {
+  color: #64748b;
+  font-size: 0.75rem;
+  font-weight: 400;
+}
+
 .pos-v2-module-preview__color-field > div {
   min-height: 38px;
   border: 1px solid #cbd5e1;
@@ -467,6 +473,10 @@
 
 :root[data-theme="dark"] .pos-v2-module-preview__color-field {
   color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-module-preview__color-field small {
+  color: #94a3b8;
 }
 
 :root[data-theme="dark"] .pos-v2-module-preview__color-field > div {

@@ -2,8 +2,6 @@ const DEFAULT_SITE_NAME = "Ravekh";
 const DEFAULT_TITLE = "Catálogo digital | Ravekh";
 const DEFAULT_DESCRIPTION = "Explora productos, revisa detalles y realiza pedidos desde el catálogo digital de Ravekh.";
 const DEFAULT_IMAGE_PATH = "/ravekh.png";
-const SOCIAL_IMAGE_WIDTH = "1200";
-const SOCIAL_IMAGE_HEIGHT = "630";
 
 const escapeHtml = (value) =>
   String(value ?? "")
@@ -77,11 +75,9 @@ const renderMetaTags = ({ title, description, image, url, siteName }) => `
   <meta property="og:image" content="${escapeHtml(image)}">
   <meta property="og:image:secure_url" content="${escapeHtml(image)}">
   <meta property="og:image:type" content="image/jpeg">
-  <meta property="og:image:width" content="${SOCIAL_IMAGE_WIDTH}">
-  <meta property="og:image:height" content="${SOCIAL_IMAGE_HEIGHT}">
   <meta property="og:image:alt" content="${escapeHtml(siteName)}">
   <meta property="og:locale" content="es_MX">
-  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:card" content="summary">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${escapeHtml(image)}">

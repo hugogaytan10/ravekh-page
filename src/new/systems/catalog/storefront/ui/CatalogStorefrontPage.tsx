@@ -23,8 +23,6 @@ import { useCatalogThemeSync } from "./useCatalogThemeSync";
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
 const DEFAULT_PRICE_MAX_BOUND = 999;
-const SOCIAL_IMAGE_WIDTH = "1200";
-const SOCIAL_IMAGE_HEIGHT = "630";
 const ALL_PRODUCTS_SEARCH_DEBOUNCE_MS = 450;
 
 const buildAbsoluteCatalogUrl = (value?: string | null): string => {
@@ -520,11 +518,9 @@ export const CatalogStorefrontPage = () => {
         <meta property="og:image" content={catalogImage} />
         <meta property="og:image:secure_url" content={catalogImage} />
         <meta property="og:image:type" content="image/jpeg" />
-        <meta property="og:image:width" content={SOCIAL_IMAGE_WIDTH} />
-        <meta property="og:image:height" content={SOCIAL_IMAGE_HEIGHT} />
         <meta property="og:image:alt" content={store?.name ? `Logo de ${store.name}` : "Ravekh"} />
         <meta property="og:locale" content="es_MX" />
-        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:card" content="summary" />
         <meta name="twitter:title" content={catalogTitle} />
         <meta name="twitter:description" content={catalogDescription} />
         <meta name="twitter:image" content={catalogImage} />
