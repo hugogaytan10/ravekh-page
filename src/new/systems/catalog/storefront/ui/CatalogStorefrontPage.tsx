@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useParams } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { FiMessageCircle, FiSearch, FiShoppingCart, FiSliders, FiX } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
@@ -77,6 +77,7 @@ const buildWhatsAppUrl = (phone?: string | null) => {
 export const CatalogStorefrontPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
+  const location = useLocation();
   const params = useParams<{ businessId?: string; Id?: string }>();
   const businessId = params.businessId ?? params.Id ?? "";
   const [store, setStore] = useState<StorefrontBusiness | null>(null);
@@ -88,8 +89,7 @@ export const CatalogStorefrontPage = () => {
   const [globalSearchProducts, setGlobalSearchProducts] = useState<StorefrontProduct[]>([]);
   const [searchingGlobalCatalog, setSearchingGlobalCatalog] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [page, setPage] = useState(1);
-  const [pageInput, setPageInput] = useState("1");
+  const [page, setPage] = useState(() => Math.max(1, Number(new URLSearchParams(location.search).get("page")) || 1));
   const [totalPages, setTotalPages] = useState(1);
   const [error, setError] = useState<string | null>(null);
   const [cart, setCart] = useState<StorefrontCartItem[]>([]);
@@ -110,6 +110,7 @@ export const CatalogStorefrontPage = () => {
   const [visitLimitReached, setVisitLimitReached] = useState(false);
   const businessContextRequestRef = useRef(0);
   const catalogSearchRequestRef = useRef(0);
+  const restoredProductRef = useRef<number | null>(null);
   const catalogTitle = store?.name ? `${store.name} | Catálogo digital` : "Catálogo digital | Ravekh";
   const catalogDescription = store?.name
     ? `Explora productos y realiza pedidos en el catálogo digital de ${store.name}.`
@@ -132,14 +133,20 @@ export const CatalogStorefrontPage = () => {
   const whatsappUrl = useMemo(() => buildWhatsAppUrl(store?.phone), [store?.phone]);
 
   useEffect(() => {
-    setPage(1);
-    setPageInput("1");
+    setPage(Math.max(1, Number(new URLSearchParams(window.location.search).get("page")) || 1));
     setSelectedCategoryId(null);
     setPriceMin(minBound);
     setPriceMax(DEFAULT_PRICE_MAX_BOUND);
     setPriceCeiling(DEFAULT_PRICE_MAX_BOUND);
     setVisitLimitReached(false);
   }, [businessId]);
+
+  useEffect(() => {
+    const productId = Number((location.state as { restoreProductId?: number } | null)?.restoreProductId);
+    if (loading || !productId || restoredProductRef.current === productId) return;
+    restoredProductRef.current = productId;
+    document.getElementById(`catalog-product-${productId}`)?.scrollIntoView({ block: "center" });
+  }, [loading, location.state, products]);
 
   useEffect(() => {
     const highestPrice = products.reduce((maxValue, product) => {
@@ -494,13 +501,13 @@ export const CatalogStorefrontPage = () => {
   const handleSelectCategory = (categoryId: number | null) => {
     setSelectedCategoryId(categoryId);
     setPage(1);
-    setPageInput("1");
+    navigate({ search: "" }, { replace: true });
   };
 
   const changePage = (nextPage: number) => {
     const safePage = Math.min(totalPages, Math.max(1, nextPage));
     setPage(safePage);
-    setPageInput(String(safePage));
+    navigate({ search: safePage > 1 ? `?page=${safePage}` : "" }, { replace: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
@@ -638,6 +645,7 @@ export const CatalogStorefrontPage = () => {
             existingQuantities={cartQuantityMap}
             formatPrice={money}
             phone={store?.phone ?? null}
+            page={page}
           />
         )}
         {!loading && productsWithImage.length === 0 ? (
@@ -658,28 +666,19 @@ export const CatalogStorefrontPage = () => {
           >
             Anterior
           </button>
-          <span className="text-sm text-[var(--text-secondary)]">Página {page} de {totalPages}</span>
-          <div className="flex items-center gap-1.5">
-            <input
-              type="text"
-              inputMode="numeric"
-              value={pageInput}
-              className="h-9 w-14 rounded-lg border border-[var(--border-default)] bg-[var(--bg-subtle)] text-center text-sm text-[var(--text-primary)] outline-none focus:ring-2 focus:ring-[var(--text-primary)]/20"
-              onChange={(event) => setPageInput(event.target.value.replace(/[^\d]/g, ""))}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  changePage(Number(pageInput || page));
-                }
-              }}
-              aria-label="Ir a la página"
-            />
-            <button
-              type="button"
-              className="min-h-9 rounded-lg border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 text-sm font-semibold text-[var(--text-primary)]"
-              onClick={() => changePage(Number(pageInput || page))}
-            >
-              Ir
-            </button>
+          <div className="flex flex-wrap items-center justify-center gap-1.5">
+            {Array.from({ length: totalPages }, (_, index) => index + 1).map((pageNumber) => (
+              <button
+                key={pageNumber}
+                type="button"
+                className={`grid h-9 min-w-9 place-items-center rounded-lg border px-2 text-sm font-semibold ${pageNumber === page ? "border-[var(--text-primary)] bg-[var(--text-primary)] text-[var(--bg-surface)]" : "border-[var(--border-default)] bg-[var(--bg-subtle)] text-[var(--text-primary)]"}`}
+                onClick={() => changePage(pageNumber)}
+                aria-current={pageNumber === page ? "page" : undefined}
+                aria-label={`Página ${pageNumber}`}
+              >
+                {pageNumber}
+              </button>
+            ))}
           </div>
           <button
             type="button"

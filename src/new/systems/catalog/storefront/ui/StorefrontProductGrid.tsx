@@ -14,6 +14,7 @@ type ProductGridProps = {
   existingQuantities: Record<number, number>;
   formatPrice: (value: number) => string;
   phone: string | null;
+  page: number;
 };
 
 const ProductCard = memo(({
@@ -26,6 +27,7 @@ const ProductCard = memo(({
   existingQuantities,
   formatPrice,
   phone,
+  page,
 }: {
   product: StorefrontProduct;
   onAdd: (product: StorefrontProduct) => void;
@@ -36,6 +38,7 @@ const ProductCard = memo(({
   existingQuantities: Record<number, number>;
   formatPrice: (value: number) => string;
   phone: string | null;
+  page: number;
 }) => {
   const qty = existingQuantities[product.id] ?? 0;
   const hasInCart = qty > 0;
@@ -76,9 +79,9 @@ const ProductCard = memo(({
   const priceLabel = formattedPromo ? "Promo" : "Precio";
 
   return (
-    <article className={`catalog-v2-grid__card group${isWholesaleActive ? " is-wholesale-active" : ""}`}>
+    <article id={`catalog-product-${product.id}`} className={`catalog-v2-grid__card group${isWholesaleActive ? " is-wholesale-active" : ""}`}>
       <div className="catalog-v2-grid__media">
-        <NavLink to={`/catalogo/producto/${product.id}/${phone ?? ""}`} className="catalog-v2-grid__link" aria-label={`Ver detalle de ${product.name}`}>
+        <NavLink to={`/catalogo/producto/${product.id}/${phone ?? ""}`} state={{ catalogPage: page, catalogProductId: product.id }} className="catalog-v2-grid__link" aria-label={`Ver detalle de ${product.name}`}>
           {product.image ? <img src={product.image} alt={product.name} loading="lazy" decoding="async" /> : <div className="catalog-v2-grid__placeholder">Sin imagen</div>}
         </NavLink>
 
@@ -91,7 +94,7 @@ const ProductCard = memo(({
 
       <div className="catalog-v2-grid__meta">
         <h2>
-          <NavLink to={`/catalogo/producto/${product.id}/${phone ?? ""}`} className="catalog-v2-grid__name-link">
+          <NavLink to={`/catalogo/producto/${product.id}/${phone ?? ""}`} state={{ catalogPage: page, catalogProductId: product.id }} className="catalog-v2-grid__name-link">
             {product.name}
           </NavLink>
         </h2>
@@ -165,7 +168,7 @@ const ProductCard = memo(({
 
 ProductCard.displayName = "ProductCard";
 
-export const StorefrontProductGrid = ({ products, onAdd, onRemove, onDecrement, onSetQuantity, onQuickView, existingQuantities, formatPrice, phone }: ProductGridProps) => {
+export const StorefrontProductGrid = ({ products, onAdd, onRemove, onDecrement, onSetQuantity, onQuickView, existingQuantities, formatPrice, phone, page }: ProductGridProps) => {
   return (
     <div className="catalog-v2-grid">
       {products.map((product) => (
@@ -180,6 +183,7 @@ export const StorefrontProductGrid = ({ products, onAdd, onRemove, onDecrement, 
           existingQuantities={existingQuantities}
           formatPrice={formatPrice}
           phone={phone}
+          page={page}
         />
       ))}
     </div>
