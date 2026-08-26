@@ -1,5 +1,5 @@
 import { IProductsRepository, ProductImportResult, ProductsPaginatedResult } from "../interface/IProductsRepository";
-import { ManagedProduct, ProductCategory, SaveManagedProductDto } from "../model/ManagedProduct";
+import { ManagedProduct, ProductCategory, ProductExtra, SaveManagedProductDto } from "../model/ManagedProduct";
 
 export class ProductsService {
   constructor(private readonly repository: IProductsRepository) {}

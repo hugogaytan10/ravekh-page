@@ -1,5 +1,5 @@
 import { PaginatedMeta } from "../../../shared/model/Pagination";
-import { ManagedProduct, ProductCategory, SaveManagedProductDto } from "../model/ManagedProduct";
+import { ManagedProduct, ProductCategory, ProductExtra, SaveManagedProductDto } from "../model/ManagedProduct";
 
 export type ProductImportResult = { imported: number; message: string; errors: string[] };
 
@@ -8,7 +8,7 @@ export type ProductsPagination = PaginatedMeta & {
 };
 
 export type ProductsPaginatedResult = {
-  products: ManagedProduct[];
+  products: ManagedProduct[]; 
   pagination: ProductsPagination;
 };
 

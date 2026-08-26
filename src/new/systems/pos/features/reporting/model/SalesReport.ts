@@ -77,6 +77,39 @@ export class IncomePoint {
 
 export type ReportSaleType = "ORDER" | "COMMAND";
 
+export type SalesTicketProduct = {
+  detailId: number;
+  itemName: string;
+  quantity: number;
+  unitPrice: number;
+  detailAmount: number;
+  notes: string | null;
+};
+
+export type SalesTicket = {
+  id: number;
+  type: string;
+  date: string;
+  paymentMethod: string;
+  currency: string;
+  customerName: string | null;
+  employeeName: string | null;
+  total: number;
+  discountApplied: number;
+  taxesApplied: number;
+  products: SalesTicketProduct[];
+};
+
+export type SalesTicketsPage = {
+  items: SalesTicket[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
+};
+
 export class ReportSale {
   constructor(
     public readonly id: string,

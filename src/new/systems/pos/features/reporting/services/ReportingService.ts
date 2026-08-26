@@ -1,5 +1,5 @@
 import { IReportingRepository } from "../interface/IReportingRepository";
-import { IncomePoint, ReportLeaderboardItem, ReportProductItem, ReportRange, ReportSale, SalesSummary } from "../model/SalesReport";
+import { IncomePoint, ReportLeaderboardItem, ReportProductItem, ReportRange, ReportSale, SalesSummary, SalesTicketsPage } from "../model/SalesReport";
 
 export class ReportingService {
   constructor(private readonly repository: IReportingRepository) {}
@@ -20,6 +20,11 @@ export class ReportingService {
     token: string,
   ): Promise<ReportSale[]> {
     return this.repository.getSalesDetails(businessId, range, payment, token);
+  }
+
+  async getSalesTicketsByDateRange(businessId: number, from: string, to: string, timezone: string, page: number, pageSize: number, token: string): Promise<SalesTicketsPage> {
+    if (!from || !to || from > to) throw new Error("El rango de fechas no es válido.");
+    return this.repository.getSalesTicketsByDateRange(businessId, from, to, timezone, page, pageSize, token);
   }
 
   async getProductsLeaderboard(businessId: number, range: ReportRange, token: string): Promise<ReportProductItem[]> {

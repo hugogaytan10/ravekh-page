@@ -22,10 +22,14 @@ export async function run(): Promise<void> {
         return { data: [{ date: "2026-03-20", amount: "200" }] };
       }
 
-      if (method === "POST" && path === "sales/payment") {
+      if (method === "GET" && path === "report2/catalog-details-month/22") {
+        return [{ id: 1, date: "2026-03-21T10:00:00Z", status: "ENTREGADO", products: [{ detailId: 2, name: "Latte", quantity: 2, detailAmount: 150 }] }];
+      }
+
+      if (method === "GET" && path === "report2/details-range/22?from=2026-08-01&to=2026-08-11&timezone=America%2FMexico_City&page=1&pageSize=50&source=all") {
         return {
-          Orders: [{ Id: "order-1", Date: "2026-03-21T10:00:00Z", PaymentMethod: "EFECTIVO", CoinName: "MXN", Total: 150 }],
-          commands: [{ id: "command-1", date: "2026-03-21T11:00:00Z", paymentMethod: "TARJETA", coinName: "MXN", total: "200" }],
+          items: [{ Id: 3415, Type: "ORDER", Date: "2026-08-11T14:52:05.000Z", PaymentMethod: "EFECTIVO", MoneyTipe: "MXN", Employee_Name: "Nous", Total: 210, DiscountApplied: 0, TaxesApplied: 0, products: [{ Detail_Id: 6030, Item_Name: "Playera", Quantity: 2, UnitPrice: 105, DetailAmount: 210, Notes: null }] }],
+          pagination: { page: 1, pageSize: 50, totalItems: 1, totalPages: 1 },
         };
       }
 
@@ -59,10 +63,13 @@ export async function run(): Promise<void> {
   assert.equal(series[0].amount, 200);
 
   const sales = await api.getSalesDetails(22, "MONTH", "TODOS", "token");
-  assert.equal(sales.length, 2);
-  assert.equal(sales[0].id, "command-1");
-  assert.equal(sales[1].type, "ORDER");
-  assert.deepEqual(calls[2]?.body, { business_Id: 22, date: "MES", payment: "TODOS" });
+  assert.equal(sales.length, 1);
+  assert.equal(sales[0].productName, "Latte");
+
+  const ticketPage = await api.getSalesTicketsByDateRange(22, "2026-08-01", "2026-08-11", "America/Mexico_City", 1, 50, "token");
+  assert.equal(ticketPage.items[0]?.id, 3415);
+  assert.equal(ticketPage.items[0]?.products[0]?.itemName, "Playera");
+  assert.equal(ticketPage.pagination.totalItems, 1);
 
   const topProducts = await api.getProductsLeaderboard(22, "MONTH", "token");
   const topEmployees = await api.getEmployeesLeaderboard(22, "MONTH", "token");
@@ -76,7 +83,8 @@ export async function run(): Promise<void> {
     [
       "GET report/22",
       "GET income/month/22",
-      "POST sales/payment",
+      "GET report2/catalog-details-month/22",
+      "GET report2/details-range/22?from=2026-08-01&to=2026-08-11&timezone=America%2FMexico_City&page=1&pageSize=50&source=all",
       "GET report/products/month/22",
       "GET report/employee/month/22",
       "GET report/customer/month/22",

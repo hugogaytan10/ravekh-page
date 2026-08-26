@@ -5,6 +5,7 @@ import { ProductImportResult } from "../interface/IProductsRepository";
 import { ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 import { ProductImportModal } from "./ProductImportModal";
 import { CatalogAiImportWizard } from "./CatalogAiImportWizard";
+import { CatalogProductChatModal } from "./CatalogProductChatModal";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { uploadImageToCloudinary } from "../../../shared/api/cloudinaryUpload";
@@ -237,12 +238,14 @@ export const ProductsV2PosPage = () => {
   const [importing, setImporting] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAiImportOpen, setIsAiImportOpen] = useState(false);
+  const [isProductChatOpen, setIsProductChatOpen] = useState(false);
   const [importResult, setImportResult] = useState<ProductImportResult | null>(
     null,
   );
   const [importError, setImportError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("all");
   const [showArchived, setShowArchived] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
   const [selectedProductIds, setSelectedProductIds] = useState<Set<number>>(
@@ -253,6 +256,8 @@ export const ProductsV2PosPage = () => {
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [editingId, setEditingId] = useState<number | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [showNoStockConfirmation, setShowNoStockConfirmation] =
+    useState(false);
   const [archiveDialog, setArchiveDialog] = useState<ArchiveDialogState>(null);
   const [toast, setToast] = useState<ToastState>(null);
   const [saveResult, setSaveResult] = useState<SaveResultState>(null);
@@ -303,6 +308,9 @@ export const ProductsV2PosPage = () => {
   const [storedImages, setStoredImages] = useState<string[]>([]);
   const [selectedImageFiles, setSelectedImageFiles] = useState<File[]>([]);
   const categoryCarouselRef = useRef<HTMLDivElement | null>(null);
+  const productFormRef = useRef<HTMLFormElement | null>(null);
+  const stockInputRef = useRef<HTMLInputElement | null>(null);
+  const skipNextStockConfirmation = useRef(false);
   const categoryNameInputRef = useRef<HTMLInputElement | null>(null);
   const wholesalePriceInputRef = useRef<HTMLInputElement | null>(null);
   const wholesaleMinQuantityInputRef = useRef<HTMLInputElement | null>(null);
@@ -397,6 +405,8 @@ export const ProductsV2PosPage = () => {
   const closeFormModal = () => {
     if (saving) return;
     setIsFormOpen(false);
+    setShowNoStockConfirmation(false);
+    skipNextStockConfirmation.current = false;
     setSaveResult(null);
     resetForm();
   };
@@ -731,10 +741,17 @@ export const ProductsV2PosPage = () => {
     };
 
     const source =
-      normalizedSearch.length >= 2 ? searchCatalogProducts : products;
+      normalizedSearch.length >= 2 || categoryFilter !== "all"
+        ? searchCatalogProducts
+        : products;
 
     return source
       .filter((product) => (showArchived ? true : product.available))
+      .filter((product) => {
+        if (categoryFilter === "all") return true;
+        if (categoryFilter === "uncategorized") return product.categoryId === null;
+        return product.categoryId === Number(categoryFilter);
+      })
       .filter((product) => {
         if (!normalizedSearch) return true;
 
@@ -744,11 +761,11 @@ export const ProductsV2PosPage = () => {
         );
       })
       .sort(comparators[sortBy]);
-  }, [products, searchCatalogProducts, search, showArchived, sortBy]);
+  }, [products, searchCatalogProducts, search, categoryFilter, showArchived, sortBy]);
 
   useEffect(() => {
     const normalizedSearch = search.trim().toLowerCase();
-    if (normalizedSearch.length < 2) {
+    if (normalizedSearch.length < 2 && categoryFilter === "all") {
       setSearchCatalogProducts([]);
       setSearchingCatalog(false);
       return;
@@ -807,7 +824,7 @@ export const ProductsV2PosPage = () => {
     }, 320);
 
     return () => window.clearTimeout(timeout);
-  }, [search, businessId, token, service, productsLimit]);
+  }, [search, categoryFilter, businessId, token, service, productsLimit]);
 
   const stats = useMemo(() => {
     const active = products.filter((product) => product.available).length;
@@ -1004,6 +1021,15 @@ export const ProductsV2PosPage = () => {
       setError("El nombre del producto es obligatorio.");
       return;
     }
+
+    if (
+      !skipNextStockConfirmation.current &&
+      (stock.trim() === "" || Number(stock) === 0)
+    ) {
+      setShowNoStockConfirmation(true);
+      return;
+    }
+    skipNextStockConfirmation.current = false;
 
     if (variants.some((variant) => variant.imageUploading)) {
       setError("Espera a que terminen de subir las imágenes de variantes.");
@@ -2166,11 +2192,23 @@ export const ProductsV2PosPage = () => {
               onClick={() => {
                 if (blockBlockedProductModuleMutation()) return;
                 if (blockFreeProductCreation()) return;
+                setIsProductChatOpen(true);
+              }}
+              disabled={!token || !businessId}
+            >
+              ✦ Crear con chat
+            </button>
+            <button
+              type="button"
+              className="pos-v2-products__secondary"
+              onClick={() => {
+                if (blockBlockedProductModuleMutation()) return;
+                if (blockFreeProductCreation()) return;
                 setIsAiImportOpen(true);
               }}
               disabled={!token || !businessId}
             >
-              ✦ Importar con IA
+              Importar lote con IA
             </button>
             <button
               type="button"
@@ -2233,12 +2271,35 @@ export const ProductsV2PosPage = () => {
           </div>
         </header>
 
+        <CatalogProductChatModal
+          open={isProductChatOpen}
+          businessId={businessId}
+          token={token}
+          onClose={() => setIsProductChatOpen(false)}
+          onSessionRefreshed={setToken}
+          onCompleted={({ productId }) => {
+            setIsProductChatOpen(false);
+            setToast({
+              type: "success",
+              message: `Producto #${productId} creado desde el chat.`,
+            });
+            void loadProducts(1);
+          }}
+        />
+
         <CatalogAiImportWizard
           open={isAiImportOpen}
           businessId={businessId}
           token={token}
           categories={categories}
           onCreateCategory={createCategoryFromAiReview}
+          onAddProductColors={(productId, productColors) =>
+            service.addProductExtras(
+              productId,
+              productColors.map((color) => ({ description: color, type: "COLOR" })),
+              token,
+            )
+          }
           onClose={() => setIsAiImportOpen(false)}
           onSessionRefreshed={setToken}
           onCompleted={({ created }) => {
@@ -2291,6 +2352,22 @@ export const ProductsV2PosPage = () => {
                 placeholder="Buscar por nombre o descripción"
                 aria-label="Buscar productos"
               />
+              <label className="pos-v2-products__sort">
+                Categoría
+                <select
+                  value={categoryFilter}
+                  onChange={(event) => setCategoryFilter(event.target.value)}
+                  aria-label="Filtrar productos por categoría"
+                >
+                  <option value="all">Todas las categorías</option>
+                  <option value="uncategorized">Sin categoría</option>
+                  {categories.map((category) => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </label>
               <label className="pos-v2-products__sort">
                 Ordenar
                 <select
@@ -2522,7 +2599,8 @@ export const ProductsV2PosPage = () => {
 
           {!loading &&
           visibleProducts.length > 0 &&
-          search.trim().length < 2 ? (
+          search.trim().length < 2 &&
+          categoryFilter === "all" ? (
             <nav
               className="pos-v2-products__pagination"
               aria-label="Paginación de productos"
@@ -2605,7 +2683,11 @@ export const ProductsV2PosPage = () => {
                 </p>
               ) : null}
 
-              <form className="pos-v2-products__form" onSubmit={handleSubmit}>
+              <form
+                ref={productFormRef}
+                className="pos-v2-products__form"
+                onSubmit={handleSubmit}
+              >
                 <label>
                   Nombre
                   <input
@@ -3397,6 +3479,53 @@ export const ProductsV2PosPage = () => {
                   </button>
                 </div>
               </form>
+            </section>
+          </div>
+        ) : null}
+
+        {showNoStockConfirmation ? (
+          <div
+            className="pos-v2-products__modal-backdrop is-sheet"
+            role="presentation"
+            onClick={() => setShowNoStockConfirmation(false)}
+          >
+            <section
+              className="pos-v2-products__modal pos-v2-products__modal-sheet w-full max-h-[85vh] overflow-y-auto"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Confirmar producto sin stock"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <header className="pos-v2-products__modal-head">
+                <h3>¿Guardar producto sin stock?</h3>
+              </header>
+              <p>
+                ¿Estás seguro de guardar el producto sin stock? Este producto
+                no se mostrará en el catálogo.
+              </p>
+              <div className="pos-v2-products__form-actions is-modal">
+                <button
+                  type="button"
+                  className="pos-v2-products__secondary"
+                  onClick={() => {
+                    setShowNoStockConfirmation(false);
+                    window.setTimeout(() => stockInputRef.current?.focus(), 0);
+                  }}
+                >
+                  Agregar stock
+                </button>
+                <button
+                  type="button"
+                  className="pos-v2-products__primary"
+                  onClick={() => {
+                    skipNextStockConfirmation.current = true;
+                    setShowNoStockConfirmation(false);
+                    productFormRef.current?.requestSubmit();
+                  }}
+                >
+                  Aceptar
+                </button>
+              </div>
             </section>
           </div>
         ) : null}

@@ -31,6 +31,7 @@
 .pos-v2-products__form select,
 .pos-v2-products__form textarea,
 .pos-v2-products__controls input,
+.pos-v2-products__controls select,
 .pos-v2-products__variants input,
 .pos-v2-products__variants select { border: 1px solid #d1d5db; border-radius: 10px; padding: .62rem .72rem; font-size: .95rem; width: 100%; min-height: 42px; }
 .pos-v2-products__form textarea { min-height: 80px; resize: vertical; }
