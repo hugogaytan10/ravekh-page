@@ -427,12 +427,34 @@ export class PosProductsApi implements IProductsRepository {
     });
   }
 
+  async archiveMany(productIds: number[], token: string): Promise<void> {
+    await this.httpClient.request<void>({
+      method: "PUT",
+      path: POS_ENDPOINTS.productsMassiveAvailability(),
+      token,
+      body: {
+        product: productIds.map((id) => ({ id, Available: 0 })),
+      },
+    });
+  }
+
   async restore(productId: number, token: string): Promise<void> {
     await this.httpClient.request<void>({
       method: "PUT",
       path: POS_ENDPOINTS.productAvailability(productId),
       token,
       body: { Available: 1 },
+    });
+  }
+
+  async restoreMany(productIds: number[], token: string): Promise<void> {
+    await this.httpClient.request<void>({
+      method: "PUT",
+      path: POS_ENDPOINTS.productsMassiveAvailability(),
+      token,
+      body: {
+        product: productIds.map((id) => ({ id, Available: 1 })),
+      },
     });
   }
 

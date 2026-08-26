@@ -23,7 +23,9 @@ export interface IProductsRepository {
   create(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct>;
   update(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct>;
   archive(productId: number, token: string): Promise<void>;
+  archiveMany(productIds: number[], token: string): Promise<void>;
   restore(productId: number, token: string): Promise<void>;
+  restoreMany(productIds: number[], token: string): Promise<void>;
 
   listCategoriesByBusiness(businessId: number, token: string): Promise<ProductCategory[]>;
   createCategory(category: ProductCategory, token: string): Promise<ProductCategory>;

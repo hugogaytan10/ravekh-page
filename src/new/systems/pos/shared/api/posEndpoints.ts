@@ -11,6 +11,7 @@ export const POS_ENDPOINTS = {
   productsByCategory: (categoryId: number) => `products/category/${categoryId}`,
   productById: (productId: number) => `products/${productId}`,
   productAvailability: (productId: number) => `products/available/${productId}`,
+  productsMassiveAvailability: () => "products/masive/available",
   productExtras: (productId: number) => `extras/product/${productId}`,
   variantsByProduct: (productId: number) => `variants/product/${productId}`,
   variants: () => "variants",

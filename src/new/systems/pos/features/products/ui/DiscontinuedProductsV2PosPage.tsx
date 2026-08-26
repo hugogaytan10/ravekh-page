@@ -21,6 +21,11 @@ export const DiscontinuedProductsV2PosPage = () => {
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [restoringId, setRestoringId] = useState<number | null>(null);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<number>>(
+    () => new Set(),
+  );
+  const [restoringSelected, setRestoringSelected] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const service = useMemo(
@@ -78,6 +83,46 @@ export const DiscontinuedProductsV2PosPage = () => {
     }
   };
 
+  const cancelSelection = () => {
+    setIsSelecting(false);
+    setSelectedProductIds(new Set());
+  };
+
+  const toggleProductSelection = (productId: number) => {
+    setSelectedProductIds((current) => {
+      const next = new Set(current);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
+
+  const restoreSelectedProducts = async () => {
+    if (!token || selectedProductIds.size === 0) return;
+
+    setRestoringSelected(true);
+    setError(null);
+    setToast(null);
+    try {
+      const restoredCount = selectedProductIds.size;
+      await service.restoreProducts(Array.from(selectedProductIds), token);
+      const targetPage = restoredCount >= products.length && currentPage > 1
+        ? currentPage - 1
+        : currentPage;
+      cancelSelection();
+      setToast(`${restoredCount} producto(s) restaurado(s) correctamente.`);
+      await loadProducts(targetPage);
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "No fue posible restaurar los productos seleccionados.",
+      );
+    } finally {
+      setRestoringSelected(false);
+    }
+  };
+
   return (
     <PosV2Shell title="Productos descontinuados" subtitle="Consulta los productos eliminados de tu catálogo.">
       <section className="pos-v2-products">
@@ -92,6 +137,29 @@ export const DiscontinuedProductsV2PosPage = () => {
             </button>
             <button type="button" className="pos-v2-products__refresh" onClick={() => loadProducts(currentPage)} disabled={loading}>
               {loading ? "Actualizando..." : "Actualizar"}
+            </button>
+            {isSelecting ? (
+              <button
+                type="button"
+                className="pos-v2-products__primary"
+                onClick={restoreSelectedProducts}
+                disabled={selectedProductIds.size === 0 || restoringSelected}
+              >
+                {restoringSelected
+                  ? "Restaurando..."
+                  : `Restaurar (${selectedProductIds.size})`}
+              </button>
+            ) : null}
+            <button
+              type="button"
+              className="pos-v2-products__secondary"
+              onClick={() => {
+                if (isSelecting) cancelSelection();
+                else setIsSelecting(true);
+              }}
+              disabled={restoringSelected || products.length === 0}
+            >
+              {isSelecting ? "Cancelar" : "Seleccionar"}
             </button>
           </div>
         </header>
@@ -119,7 +187,20 @@ export const DiscontinuedProductsV2PosPage = () => {
           {!loading && products.length > 0 ? (
             <div className="pos-v2-products__products is-grid">
               {products.map((product) => (
-                <article className="pos-v2-products__card is-archived" key={product.id}>
+                <article
+                  className={`pos-v2-products__card is-archived ${selectedProductIds.has(product.id) ? "is-selected" : ""}`}
+                  key={product.id}
+                >
+                  {isSelecting ? (
+                    <label className="pos-v2-products__select-product">
+                      <input
+                        type="checkbox"
+                        aria-label={`Seleccionar ${product.name}`}
+                        checked={selectedProductIds.has(product.id)}
+                        onChange={() => toggleProductSelection(product.id)}
+                      />
+                    </label>
+                  ) : null}
                   {product.image ? (
                     <img className="pos-v2-products__card-image" src={product.image} alt={product.name} />
                   ) : (
@@ -135,16 +216,18 @@ export const DiscontinuedProductsV2PosPage = () => {
                       <strong>{product.price === null ? "Sin precio" : new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(product.price)}</strong>
                       <small>Stock: {product.stock ?? 0}</small>
                     </div>
-                    <div className="pos-v2-products__card-actions">
-                      <button
-                        type="button"
-                        className="is-restore"
-                        onClick={() => restoreProduct(product)}
-                        disabled={restoringId === product.id}
-                      >
-                        {restoringId === product.id ? "Restaurando..." : "Restaurar"}
-                      </button>
-                    </div>
+                    {!isSelecting ? (
+                      <div className="pos-v2-products__card-actions">
+                        <button
+                          type="button"
+                          className="is-restore"
+                          onClick={() => restoreProduct(product)}
+                          disabled={restoringId === product.id}
+                        >
+                          {restoringId === product.id ? "Restaurando..." : "Restaurar"}
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 </article>
               ))}

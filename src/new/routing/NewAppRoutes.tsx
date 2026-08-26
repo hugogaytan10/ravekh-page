@@ -11,12 +11,12 @@ import { LoyaltyCustomerRoutes } from "../systems/loyalty/features/customer-expe
 import { PrivacyPoliciesIndexPage } from "../systems/legal/pages/PrivacyPoliciesIndexPage";
 import { PrivacyPolicyPage } from "../systems/legal/pages/PrivacyPolicyPage";
 import { MainCatalogPage } from "../systems/main-catalog/pages/MainCatalogPage";
-import { RavekhPerfumeriaPage } from "../systems/ravekh-perfumeria/pages/RavekhPerfumeriaPage";
-import { RavekhBoutiquePage } from "../systems/ravekh-perfumeria/pages/RavekhBoutique";
-import { RavekhRefaccionesPage } from "../systems/ravekh-perfumeria/pages/RavekhRefacciones";
-import { RavekhAbarrotesPage } from "../systems/ravekh-perfumeria/pages/ravekhAbarrotesPage";
-import { RavekhAccesoriosPage } from "../systems/ravekh-perfumeria/pages/RavekhAccesoriosPage";
-import { RavekhComidaPage } from "../systems/ravekh-perfumeria/pages/RavekhComidaPage";
+import { RavekhPerfumeriaPage } from "../systems/ravekh-segment/pages/RavekhPerfumeriaPage";
+import { RavekhBoutiquePage } from "../systems/ravekh-segment/pages/RavekhBoutique";
+import { RavekhRefaccionesPage } from "../systems/ravekh-segment/pages/RavekhRefacciones";
+import { RavekhAbarrotesPage } from "../systems/ravekh-segment/pages/ravekhAbarrotesPage";
+import { RavekhAccesoriosPage } from "../systems/ravekh-segment/pages/RavekhAccesoriosPage";
+import { RavekhComidaPage } from "../systems/ravekh-segment/pages/RavekhComidaPage";
 const LegacyCatalogRedirect = () => {
   const { idBusiness } = useParams<{ idBusiness: string }>();
   return <Navigate to={`/v2/catalogo/${idBusiness ?? ""}`} replace />;

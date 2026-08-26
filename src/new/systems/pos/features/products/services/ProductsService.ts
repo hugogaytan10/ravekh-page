@@ -41,8 +41,16 @@ export class ProductsService {
     return this.repository.archive(productId, token);
   }
 
+  async archiveProducts(productIds: number[], token: string): Promise<void> {
+    return this.repository.archiveMany(productIds, token);
+  }
+
   async restoreProduct(productId: number, token: string): Promise<void> {
     return this.repository.restore(productId, token);
+  }
+
+  async restoreProducts(productIds: number[], token: string): Promise<void> {
+    return this.repository.restoreMany(productIds, token);
   }
 
   async listCategories(businessId: number, token: string): Promise<ProductCategory[]> {

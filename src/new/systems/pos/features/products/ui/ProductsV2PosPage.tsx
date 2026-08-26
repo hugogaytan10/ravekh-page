@@ -244,6 +244,11 @@ export const ProductsV2PosPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [showArchived, setShowArchived] = useState(false);
+  const [isSelecting, setIsSelecting] = useState(false);
+  const [selectedProductIds, setSelectedProductIds] = useState<Set<number>>(
+    () => new Set(),
+  );
+  const [archivingSelected, setArchivingSelected] = useState(false);
   const [sortBy, setSortBy] = useState<SortOption>("name-asc");
   const [viewMode, setViewMode] = useState<ViewMode>("grid");
   const [editingId, setEditingId] = useState<number | null>(null);
@@ -306,6 +311,46 @@ export const ProductsV2PosPage = () => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
     return factory.createPosProductsService();
   }, []);
+
+  const cancelSelection = () => {
+    setIsSelecting(false);
+    setSelectedProductIds(new Set());
+  };
+
+  const toggleProductSelection = (productId: number) => {
+    setSelectedProductIds((current) => {
+      const next = new Set(current);
+      if (next.has(productId)) next.delete(productId);
+      else next.add(productId);
+      return next;
+    });
+  };
+
+  const handleArchiveSelected = async () => {
+    if (!token || selectedProductIds.size === 0) return;
+
+    setArchivingSelected(true);
+    try {
+      await service.archiveProducts(Array.from(selectedProductIds), token);
+      const archivedCount = selectedProductIds.size;
+      cancelSelection();
+      setToast({
+        type: "success",
+        message: `${archivedCount} producto(s) descontinuado(s).`,
+      });
+      await loadProducts(currentPage);
+    } catch (cause) {
+      setToast({
+        type: "error",
+        message:
+          cause instanceof Error
+            ? cause.message
+            : "No se pudieron descontinuar los productos seleccionados.",
+      });
+    } finally {
+      setArchivingSelected(false);
+    }
+  };
 
   useEffect(() => {
     const handleSessionUpdated = (event: Event) => {
@@ -2153,10 +2198,37 @@ export const ProductsV2PosPage = () => {
             </button>
             <button
               type="button"
-              className="pos-v2-products__secondary"
-              onClick={() => navigate(POS_V2_PATHS.discontinuedProducts)}
+              className={
+                isSelecting
+                  ? "pos-v2-products__primary is-danger"
+                  : "pos-v2-products__secondary"
+              }
+              onClick={
+                isSelecting
+                  ? handleArchiveSelected
+                  : () => navigate(POS_V2_PATHS.discontinuedProducts)
+              }
+              disabled={
+                isSelecting &&
+                (selectedProductIds.size === 0 || archivingSelected)
+              }
             >
-              Ver descontinuados
+              {isSelecting
+                ? archivingSelected
+                  ? "Descontinuando..."
+                  : `Descontinuar (${selectedProductIds.size})`
+                : "Ver descontinuados"}
+            </button>
+            <button
+              type="button"
+              className="pos-v2-products__secondary"
+              onClick={() => {
+                if (isSelecting) cancelSelection();
+                else setIsSelecting(true);
+              }}
+              disabled={archivingSelected}
+            >
+              {isSelecting ? "Cancelar" : "Seleccionar"}
             </button>
           </div>
         </header>
@@ -2329,8 +2401,18 @@ export const ProductsV2PosPage = () => {
                 return (
                   <article
                     key={product.id}
-                    className={`pos-v2-products__card ${!product.available ? "is-archived" : ""}`}
+                    className={`pos-v2-products__card ${!product.available ? "is-archived" : ""} ${selectedProductIds.has(product.id) ? "is-selected" : ""}`}
                   >
+                    {isSelecting && product.available ? (
+                      <label className="pos-v2-products__select-product">
+                        <input
+                          type="checkbox"
+                          aria-label={`Seleccionar ${product.name}`}
+                          checked={selectedProductIds.has(product.id)}
+                          onChange={() => toggleProductSelection(product.id)}
+                        />
+                      </label>
+                    ) : null}
                     {preview ? (
                       <img
                         src={preview}
@@ -2396,40 +2478,42 @@ export const ProductsV2PosPage = () => {
                       ) : null}
                     </div>
 
-                    <div className="pos-v2-products__card-actions">
-                      <button
-                        type="button"
-                        className="is-edit"
-                        onClick={() => handleEdit(product.id)}
-                      >
-                        Editar
-                      </button>
+                    {!isSelecting ? (
+                      <div className="pos-v2-products__card-actions">
+                        <button
+                          type="button"
+                          className="is-edit"
+                          onClick={() => handleEdit(product.id)}
+                        >
+                          Editar
+                        </button>
 
-                      {product.available ? (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            requestArchive(product.id, product.name)
-                          }
-                          disabled={archivingId === product.id}
-                        >
-                          {archivingId === product.id
-                            ? "Eliminando..."
-                            : "Eliminar"}
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          className="is-restore"
-                          onClick={() => handleRestore(product.id)}
-                          disabled={actionLoadingId === product.id}
-                        >
-                          {actionLoadingId === product.id
-                            ? "Procesando..."
-                            : "Restaurar"}
-                        </button>
-                      )}
-                    </div>
+                        {product.available ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              requestArchive(product.id, product.name)
+                            }
+                            disabled={archivingId === product.id}
+                          >
+                            {archivingId === product.id
+                              ? "Eliminando..."
+                              : "Eliminar"}
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            className="is-restore"
+                            onClick={() => handleRestore(product.id)}
+                            disabled={actionLoadingId === product.id}
+                          >
+                            {actionLoadingId === product.id
+                              ? "Procesando..."
+                              : "Restaurar"}
+                          </button>
+                        )}
+                      </div>
+                    ) : null}
                   </article>
                 );
               })}
