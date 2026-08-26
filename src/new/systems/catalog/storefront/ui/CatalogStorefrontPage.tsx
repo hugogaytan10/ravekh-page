@@ -84,7 +84,8 @@ export const CatalogStorefrontPage = () => {
   const [planLimit, setPlanLimit] = useState<string | undefined>(undefined);
   const [businessContextLoaded, setBusinessContextLoaded] = useState(false);
   const [categories, setCategories] = useState<StorefrontCategory[]>([]);
-  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(null);
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<number[]>([]);
+  const [categorySearch, setCategorySearch] = useState("");
   const [products, setProducts] = useState<StorefrontProduct[]>([]);
   const [globalSearchProducts, setGlobalSearchProducts] = useState<StorefrontProduct[]>([]);
   const [searchingGlobalCatalog, setSearchingGlobalCatalog] = useState(false);
@@ -134,7 +135,7 @@ export const CatalogStorefrontPage = () => {
 
   useEffect(() => {
     setPage(Math.max(1, Number(new URLSearchParams(window.location.search).get("page")) || 1));
-    setSelectedCategoryId(null);
+    setSelectedCategoryIds([]);
     setPriceMin(minBound);
     setPriceMax(DEFAULT_PRICE_MAX_BOUND);
     setPriceCeiling(DEFAULT_PRICE_MAX_BOUND);
@@ -241,15 +242,21 @@ export const CatalogStorefrontPage = () => {
       setLoading(true);
       setError(null);
       try {
-        logCatalogDebug("products:load:start", { businessId, page, selectedCategoryId, planLimit: planLimit ?? null });
-        const productsPage = await pageLogic.loadProducts(businessId, page, selectedCategoryId, planLimit);
+        logCatalogDebug("products:load:start", { businessId, page, selectedCategoryIds, planLimit: planLimit ?? null });
+        const productsPage = selectedCategoryIds.length > 1
+          ? {
+              products: (await pageLogic.loadAllProducts(businessId, null, planLimit))
+                .filter((product) => product.categoryId != null && selectedCategoryIds.includes(product.categoryId)),
+              pagination: { currentPage: 1, totalPages: 1, hasNext: false, hasPrev: false },
+            }
+          : await pageLogic.loadProducts(businessId, page, selectedCategoryIds[0] ?? null, planLimit);
         if (cancelled) return;
         setProducts(productsPage.products);
         setTotalPages(productsPage.pagination.totalPages);
         logCatalogDebug("products:load:success", {
           businessId,
           page,
-          selectedCategoryId,
+          selectedCategoryIds,
           planLimit: planLimit ?? null,
           productCount: productsPage.products.length,
           totalPages: productsPage.pagination.totalPages,
@@ -257,7 +264,7 @@ export const CatalogStorefrontPage = () => {
       } catch {
         if (cancelled) return;
         setError("No fue posible cargar el catálogo digital.");
-        logCatalogDebug("products:load:error", { businessId, page, selectedCategoryId, planLimit: planLimit ?? null });
+        logCatalogDebug("products:load:error", { businessId, page, selectedCategoryIds, planLimit: planLimit ?? null });
       } finally {
         if (cancelled) return;
         setLoading(false);
@@ -269,7 +276,7 @@ export const CatalogStorefrontPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [businessContextLoaded, businessId, page, pageLogic, selectedCategoryId, planLimit, catalogUnavailable]);
+  }, [businessContextLoaded, businessId, page, pageLogic, selectedCategoryIds, planLimit, catalogUnavailable]);
 
   useEffect(() => {
     if (!businessId) return;
@@ -382,7 +389,7 @@ export const CatalogStorefrontPage = () => {
     const timeout = window.setTimeout(() => {
       setSearchingGlobalCatalog(true);
       pageLogic
-        .loadAllProducts(businessId, selectedCategoryId, planLimit)
+        .loadAllProducts(businessId, null, planLimit)
         .then((rows) => {
           if (cancelled || requestId != catalogSearchRequestRef.current) return;
           setGlobalSearchProducts(rows);
@@ -401,11 +408,16 @@ export const CatalogStorefrontPage = () => {
       cancelled = true;
       window.clearTimeout(timeout);
     };
-  }, [businessContextLoaded, businessId, pageLogic, planLimit, selectedCategoryId, useGlobalSearch]);
+  }, [businessContextLoaded, businessId, pageLogic, planLimit, useGlobalSearch]);
 
   const filteredProducts = useMemo(() => {
     const source = useGlobalSearch ? globalSearchProducts : products;
-    const publishable = source.filter((product) => (product.available ?? true) && (product.forSale ?? true) && (product.showInStore ?? true));
+    const publishable = source.filter((product) =>
+      (product.available ?? true) &&
+      (product.forSale ?? true) &&
+      (product.showInStore ?? true) &&
+      (selectedCategoryIds.length === 0 || (product.categoryId != null && selectedCategoryIds.includes(product.categoryId))),
+    );
     const base = normalizedSearch.length === 0
       ? publishable
       : publishable.filter((product) => `${product.name} ${product.description}`.toLowerCase().includes(normalizedSearch));
@@ -422,7 +434,7 @@ export const CatalogStorefrontPage = () => {
       const bPrice = getEffectiveCatalogPrice(b.price, b.promotionPrice) ?? Number.POSITIVE_INFINITY;
       return sortMode === "asc" ? aPrice - bPrice : bPrice - aPrice;
     });
-  }, [globalSearchProducts, normalizedSearch, priceMax, priceMin, products, sortMode, useGlobalSearch]);
+  }, [globalSearchProducts, normalizedSearch, priceMax, priceMin, products, selectedCategoryIds, sortMode, useGlobalSearch]);
 
   const handleQuickView = async (product: StorefrontProduct) => {
     const [variants, extras] = await Promise.all([pageLogic.loadVariants(product.id), pageLogic.loadExtras(product.id)]);
@@ -499,7 +511,11 @@ export const CatalogStorefrontPage = () => {
     [filteredProducts],
   );
   const handleSelectCategory = (categoryId: number | null) => {
-    setSelectedCategoryId(categoryId);
+    setSelectedCategoryIds((current) => categoryId == null
+      ? []
+      : current.includes(categoryId)
+        ? current.filter((id) => id !== categoryId)
+        : [...current, categoryId]);
     setPage(1);
     navigate({ search: "" }, { replace: true });
   };
@@ -601,7 +617,7 @@ export const CatalogStorefrontPage = () => {
       <section className="flex gap-3 overflow-x-auto py-1" aria-label="Categorías de catálogo">
         <button
           type="button"
-          className={`whitespace-nowrap border-b-2 bg-transparent pb-1 text-sm ${selectedCategoryId === null
+          className={`whitespace-nowrap border-b-2 bg-transparent pb-1 text-sm ${selectedCategoryIds.length === 0
             ? "border-[var(--text-primary)] text-[var(--text-primary)] font-semibold"
             : "border-transparent text-[var(--text-muted)]"
             }`}
@@ -613,7 +629,7 @@ export const CatalogStorefrontPage = () => {
           <button
             key={category.id}
             type="button"
-            className={`whitespace-nowrap border-b-2 bg-transparent pb-1 text-sm ${selectedCategoryId === category.id
+            className={`whitespace-nowrap border-b-2 bg-transparent pb-1 text-sm ${selectedCategoryIds.includes(category.id)
               ? "border-[var(--text-primary)] text-[var(--text-primary)] font-semibold"
               : "border-transparent text-[var(--text-muted)]"
               }`}
@@ -708,6 +724,39 @@ export const CatalogStorefrontPage = () => {
               <FiX />
             </button>
             <h3 className="text-3xl font-bold leading-none">Filtros</h3>
+            <details className="group rounded-2xl border border-[var(--border-default)] bg-[var(--bg-subtle)] p-3">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 font-bold">
+                <span>Categorías</span>
+                <span className="rounded-full bg-[var(--bg-surface)] px-2 py-1 text-xs text-[var(--text-secondary)]">
+                  {selectedCategoryIds.length ? `${selectedCategoryIds.length} seleccionadas` : "Todas"}
+                </span>
+              </summary>
+              <div className="mt-3 grid gap-2 border-t border-[var(--border-default)] pt-3">
+                {categories.length > 6 ? (
+                  <input
+                    type="search"
+                    value={categorySearch}
+                    onChange={(event) => setCategorySearch(event.target.value)}
+                    placeholder="Buscar categoría"
+                    className="h-10 rounded-xl border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 text-sm outline-none"
+                  />
+                ) : null}
+                <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
+                  <input type="checkbox" checked={selectedCategoryIds.length === 0} onChange={() => handleSelectCategory(null)} className="h-4 w-4 accent-[var(--text-primary)]" />
+                  Todas las categorías
+                </label>
+                <div className="grid max-h-44 gap-1 overflow-y-auto pr-1 sm:grid-cols-2">
+                  {categories
+                    .filter((category) => category.name.toLowerCase().includes(categorySearch.trim().toLowerCase()))
+                    .map((category) => (
+                      <label key={category.id} className="flex min-w-0 cursor-pointer items-center gap-2 rounded-lg px-1 py-1.5 text-sm hover:bg-[var(--bg-surface)]">
+                        <input type="checkbox" checked={selectedCategoryIds.includes(category.id)} onChange={() => handleSelectCategory(category.id)} className="h-4 w-4 shrink-0 accent-[var(--text-primary)]" />
+                        <span className="truncate">{category.name}</span>
+                      </label>
+                    ))}
+                </div>
+              </div>
+            </details>
             <label className="grid grid-cols-[1fr_auto] items-center gap-3 rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] px-3 py-2">
               <span className="text-sm font-medium text-[var(--text-secondary)]">Precio de menor a mayor</span>
               <input type="checkbox" checked={sortMode === "asc"} onChange={() => setSortMode((value) => value === "asc" ? "none" : "asc")} className="h-5 w-5 shrink-0 rounded accent-[var(--text-primary)]" />
@@ -734,7 +783,7 @@ export const CatalogStorefrontPage = () => {
               <input className="w-full accent-[var(--text-primary)]" type="range" min={minBound} max={priceCeiling} value={priceMax} onChange={(e) => setPriceMax(Math.max(Number(e.target.value), priceMin))} aria-label="Precio máximo" />
             </div>
             <div className="mt-2 grid grid-cols-2 gap-2 max-sm:grid-cols-1">
-              <button className="min-h-11 rounded-full border border-[var(--border-default)] bg-[var(--bg-subtle)] text-sm font-semibold text-[var(--text-primary)]" type="button" onClick={() => { setSortMode("none"); setPriceMin(minBound); setPriceMax(priceCeiling); }}>Limpiar</button>
+              <button className="min-h-11 rounded-full border border-[var(--border-default)] bg-[var(--bg-subtle)] text-sm font-semibold text-[var(--text-primary)]" type="button" onClick={() => { setSortMode("none"); setPriceMin(minBound); setPriceMax(priceCeiling); handleSelectCategory(null); }}>Limpiar</button>
               <button className="min-h-11 rounded-full bg-[var(--text-primary)] text-sm font-semibold text-[var(--text-inverse)]" type="button" onClick={() => setShowFilters(false)}>Aplicar</button>
             </div>
           </aside>
