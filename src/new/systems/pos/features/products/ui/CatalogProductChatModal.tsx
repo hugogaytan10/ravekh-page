@@ -61,6 +61,7 @@ const fieldLabels: Record<string, string> = {
   name: "nombre",
   description: "descripción",
   price: "precio",
+  stock: "existencias",
   wholesaleEnabled: "si manejará mayoreo",
   wholesalePrice: "precio de mayoreo",
   wholesaleMinQuantity: "piezas mínimas de mayoreo",
@@ -463,7 +464,7 @@ export const CatalogProductChatModal = ({
           <div>
             <span className="catalog-product-chat__eyebrow">Asistente de catálogo</span>
             <h2 id="catalog-product-chat-title">Crear producto por chat</h2>
-            <p>Agrega fotos y escribe los datos como en una conversación normal.</p>
+            <p>Envía fotos y datos del producto como si estuvieras chateando.</p>
           </div>
           <button
             type="button"
@@ -562,7 +563,7 @@ export const CatalogProductChatModal = ({
                   type="button"
                   onClick={() =>
                     setMessageDraft(
-                      "Nombre: \nDescripción: \nPrecio: \n¿Mayoreo?: \nPrecio mayoreo: \nDesde cuántas piezas: ",
+                      "Nombre: \nDescripción: \nPrecio: \nExistencias: \n¿Mayoreo?: \nPrecio mayoreo: \nDesde cuántas piezas: ",
                     )
                   }
                   disabled={isBusy}
@@ -587,7 +588,7 @@ export const CatalogProductChatModal = ({
               <textarea
                 value={messageDraft}
                 onChange={(event) => setMessageDraft(event.target.value)}
-                placeholder="Ej. Blusa halter, tela licra, cuesta $103 y mayoreo $92 desde 12 piezas…"
+                placeholder="Ej. Blusa halter, tela licra, cuesta $103, tengo 25 piezas y mayoreo $92 desde 12 piezas…"
                 rows={2}
                 maxLength={4000}
                 disabled={!session || isBusy}
@@ -640,6 +641,14 @@ export const CatalogProductChatModal = ({
                   {session?.draft.price != null
                     ? `$${session.draft.price.toFixed(2)}`
                     : "Pendiente"}
+                </dd>
+              </div>
+              <div>
+                <dt>Existencias</dt>
+                <dd>
+                  {session?.draft.stock != null
+                    ? `${session.draft.stock} pieza${session.draft.stock === 1 ? "" : "s"}`
+                    : "No especificadas"}
                 </dd>
               </div>
               <div>

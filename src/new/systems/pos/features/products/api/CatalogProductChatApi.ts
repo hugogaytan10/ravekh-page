@@ -17,6 +17,7 @@ export type CatalogProductDraft = {
   name: string | null;
   description: string | null;
   price: number | null;
+  stock: number | null;
   wholesaleEnabled: boolean | null;
   wholesalePrice: number | null;
   wholesaleMinQuantity: number | null;
