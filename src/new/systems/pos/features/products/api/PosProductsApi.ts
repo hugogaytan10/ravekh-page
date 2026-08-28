@@ -388,6 +388,41 @@ export class PosProductsApi implements IProductsRepository {
     );
   }
 
+  async addProductExtras(productId: number, extras: ProductExtra[], token: string): Promise<void> {
+    const normalized = Array.from(
+      new Map(
+        extras
+          .map((extra) => ({
+            ...extra,
+            description: extra.description.trim(),
+            type: String(extra.type || "").trim().toUpperCase() || "COLOR",
+          }))
+          .filter((extra) => extra.description.length > 0)
+          .map((extra) => [this.toExtraKey(extra.description, extra.type), extra]),
+      ).values(),
+    );
+
+    if (normalized.length === 0) return;
+
+    const currentPayload = await this.httpClient.request<unknown>({
+      method: "GET",
+      path: POS_ENDPOINTS.productExtras(productId),
+      token,
+    }).catch(() => null);
+
+    const currentKeys = new Set(
+      this.toDomainExtras(currentPayload).map((extra) =>
+        this.toExtraKey(extra.description, extra.type),
+      ),
+    );
+
+    const missingExtras = normalized.filter(
+      (extra) => !currentKeys.has(this.toExtraKey(extra.description, extra.type)),
+    );
+
+    await this.persistExtras(productId, missingExtras, token);
+  }
+
   async update(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct> {
     if (!payload.id) {
       throw new Error("Product id is required for updates.");

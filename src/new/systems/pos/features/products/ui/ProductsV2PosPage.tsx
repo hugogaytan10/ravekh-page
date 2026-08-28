@@ -2293,12 +2293,8 @@ export const ProductsV2PosPage = () => {
           token={token}
           categories={categories}
           onCreateCategory={createCategoryFromAiReview}
-          onAddProductColors={(productId, productColors) =>
-            service.addProductExtras(
-              productId,
-              productColors.map((color) => ({ description: color, type: "COLOR" })),
-              token,
-            )
+          onAddProductExtras={(productId, extras) =>
+            service.addProductExtras(productId, extras, token)
           }
           onClose={() => setIsAiImportOpen(false)}
           onSessionRefreshed={setToken}
