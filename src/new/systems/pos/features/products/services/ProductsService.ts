@@ -53,6 +53,10 @@ export class ProductsService {
     return this.repository.restoreMany(productIds, token);
   }
 
+  async addProductExtras(productId: number, extras: ProductExtra[], token: string): Promise<void> {
+    return this.repository.addProductExtras(productId, extras, token);
+  }
+
   async listCategories(businessId: number, token: string): Promise<ProductCategory[]> {
     return this.repository.listCategoriesByBusiness(businessId, token);
   }

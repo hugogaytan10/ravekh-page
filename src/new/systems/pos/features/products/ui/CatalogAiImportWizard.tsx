@@ -109,6 +109,7 @@ type EditableCatalogAiItem = CatalogAiItem & {
   draftCategory: string;
   draftBarcode: string;
   draftColor: string;
+  draftSizes: string;
   draftPrice: string;
   draftStock: string;
   categoryMode: CategoryMode;
@@ -125,7 +126,10 @@ type CatalogAiImportWizardProps = {
   token: string;
   categories: CatalogAiCategoryOption[];
   onCreateCategory: (input: CreateCatalogAiCategoryInput) => Promise<CatalogAiCategoryOption>;
-  onAddProductColors: (productId: number, colors: string[]) => Promise<void>;
+  onAddProductExtras: (
+    productId: number,
+    extras: Array<{ description: string; type: "COLOR" | "TALLA" }>,
+  ) => Promise<void>;
   onClose: () => void;
   onSessionRefreshed?: (token: string) => void;
   onCompleted: (result: { created: number; productIds: number[] }) => void;
@@ -148,7 +152,7 @@ const firstText = (...values: Array<string | null | undefined>): string => {
   return "";
 };
 
-const parseColors = (value: string): string[] =>
+const parseCommaSeparatedValues = (value: string): string[] =>
   Array.from(
     new Map(
       value
@@ -195,6 +199,8 @@ const toEditableItem = (item: CatalogAiItem): EditableCatalogAiItem => {
       item.Duplicate_Product_Color,
       item.Suggested_Color,
     ),
+    // Las tallas son exclusivamente manuales; la IA no las propone.
+    draftSizes: "",
     draftPrice: firstNumberText(
       item.Duplicate_Product_Price,
       item.Suggested_Price,
@@ -487,7 +493,7 @@ export const CatalogAiImportWizard = ({
   token,
   categories,
   onCreateCategory,
-  onAddProductColors,
+  onAddProductExtras,
   onClose,
   onSessionRefreshed,
   onCompleted,
@@ -1567,6 +1573,14 @@ export const CatalogAiImportWizard = ({
       return null;
     }
   };
+  const updateManualSizes = (itemId: number, value: string) => {
+    setItems((current) =>
+      current.map((item) =>
+        item.Id === itemId ? { ...item, draftSizes: value } : item,
+      ),
+    );
+  };
+
 
   const updateDraft = (
     itemId: number,
@@ -1641,7 +1655,7 @@ export const CatalogAiImportWizard = ({
       // El catálogo utiliza una sola categoría específica por producto.
       subcategory: null,
       barcode: item.draftBarcode.trim() || null,
-      color: parseColors(item.draftColor)[0] ?? null,
+      color: parseCommaSeparatedValues(item.draftColor)[0] ?? null,
       price: parsedPrice,
       stock: parsedStock,
     };
@@ -1814,9 +1828,22 @@ export const CatalogAiImportWizard = ({
         ),
       );
       await Promise.all(
-        productIds.map((productId, index) =>
-          onAddProductColors(productId, parseColors(selectedItems[index].draftColor)),
-        ),
+        productIds.map((productId, index) => {
+          const selectedItem = selectedItems[index];
+          const extras: Array<{
+            description: string;
+            type: "COLOR" | "TALLA";
+          }> = [
+            ...parseCommaSeparatedValues(selectedItem.draftColor).map(
+              (description) => ({ description, type: "COLOR" as const }),
+            ),
+            ...parseCommaSeparatedValues(selectedItem.draftSizes).map(
+              (description) => ({ description, type: "TALLA" as const }),
+            ),
+          ];
+
+          return onAddProductExtras(productId, extras);
+        }),
       );
       setPublishedProductIds(productIds);
       setFinishedAt(Date.now());
@@ -2497,6 +2524,21 @@ export const CatalogAiImportWizard = ({
                               }
                             />
                             <small>Separa varios colores con comas.</small>
+                          </label>
+
+                          <label>
+                            Tallas
+                            <input
+                              value={item.draftSizes}
+                              placeholder="Ej. CH, M, G, XG"
+                              disabled={!selectable}
+                              onChange={(event) =>
+                                updateManualSizes(item.Id, event.target.value)
+                              }
+                            />
+                            <small>
+                              Opcional. Agrega varias tallas separandolas con comas.
+                            </small>
                           </label>
 
                           <label>
