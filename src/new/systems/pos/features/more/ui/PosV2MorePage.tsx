@@ -41,6 +41,19 @@ import "./PosV2MorePage.css";
 const API_BASE_URL = getPosApiBaseUrl();
 const FAVORITES_KEY = POS_SESSION_STORAGE_KEYS.moreFavorites;
 const BANNER_COLORS = ["#4338CA", "#0EA5E9", "#059669", "#D946EF", "#F97316"];
+const wrapBannerText = (value: string, lineLength: number, maxLines: number) => {
+  const words = value.trim().split(/\s+/).filter(Boolean);
+  const lines: string[] = [];
+  words.forEach((word) => {
+    const current = lines.at(-1);
+    if (!current || current.length + word.length + 1 > lineLength) {
+      if (lines.length < maxLines) lines.push(word);
+    } else {
+      lines[lines.length - 1] = `${current} ${word}`;
+    }
+  });
+  return lines;
+};
 
 export const PosV2MorePage = () => {
   const navigate = useNavigate();
@@ -98,6 +111,12 @@ export const PosV2MorePage = () => {
   const catalogUrl = useMemo(
     () => buildPosPublicCatalogUrl(sessionSnapshot.businessId),
     [sessionSnapshot.businessId],
+  );
+  const bannerTitleLines = wrapBannerText(bannerTitle || "Promo especial", 29, 2);
+  const bannerSubtitleLines = wrapBannerText(
+    bannerSubtitle || "Escanea el QR para conocer más productos.",
+    58,
+    2,
   );
   const allItems = useMemo(() => {
     const items = MORE_MODULE_SECTIONS.flatMap((section) => section.items);
@@ -244,15 +263,24 @@ export const PosV2MorePage = () => {
     const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
     const image = new window.Image();
     image.onload = () => {
-      const canvas = document.createElement("canvas");
-      canvas.width = 1440;
-      canvas.height = 840;
-      canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
-      URL.revokeObjectURL(url);
-      const link = document.createElement("a");
-      link.href = canvas.toDataURL("image/png");
-      link.download = `banner-catalogo-${sessionSnapshot.businessId}.png`;
-      link.click();
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 1440;
+        canvas.height = 840;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Canvas no disponible");
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const link = document.createElement("a");
+        link.href = canvas.toDataURL("image/png");
+        link.download = `banner-catalogo-${sessionSnapshot.businessId}.png`;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      } catch {
+        setActionMessage("No fue posible generar la imagen promocional.");
+      } finally {
+        URL.revokeObjectURL(url);
+      }
     };
     image.onerror = () => {
       URL.revokeObjectURL(url);
@@ -612,16 +640,16 @@ export const PosV2MorePage = () => {
                     <rect width="720" height="420" fill="url(#catalog-banner-gradient)" />
                     <rect x="32" y="28" width="148" height="34" rx="17" fill="#fff" fillOpacity=".2" />
                     <text x="106" y="50" fill="#fff" fontSize="15" fontWeight="700" textAnchor="middle">Catálogo digital</text>
-                    <text x="688" y="50" fill="#E5E7EB" fontSize="15" fontWeight="700" textAnchor="end">Negocio {sessionSnapshot.businessId}</text>
-                    <foreignObject x="32" y="90" width="656" height="150">
-                      <div xmlns="http://www.w3.org/1999/xhtml" style={{ color: "white", fontFamily: "Arial, sans-serif" }}>
-                        <div style={{ fontSize: 42, lineHeight: 1.1, fontWeight: 800 }}>{bannerTitle || "Promo especial"}</div>
-                        <div style={{ marginTop: 14, fontSize: 20, lineHeight: 1.35, color: "#F3F4F6" }}>{bannerSubtitle || "Escanea el QR para conocer más productos."}</div>
-                      </div>
-                    </foreignObject>
+                    <text x="688" y="50" fill="#E5E7EB" fontSize="15" fontWeight="700" textAnchor="end">{features.businessName || "Mi negocio"}</text>
+                    <text x="32" y="120" fill="#fff" fontFamily="Arial, sans-serif" fontSize="42" fontWeight="800">
+                      {bannerTitleLines.map((line, index) => <tspan key={line} x="32" dy={index === 0 ? 0 : 48}>{line}</tspan>)}
+                    </text>
+                    <text x="32" y={bannerTitleLines.length > 1 ? 226 : 178} fill="#F3F4F6" fontFamily="Arial, sans-serif" fontSize="20">
+                      {bannerSubtitleLines.map((line, index) => <tspan key={line} x="32" dy={index === 0 ? 0 : 28}>{line}</tspan>)}
+                    </text>
                     <rect x="32" y="258" width="656" height="132" rx="18" fill="#fff" fillOpacity=".16" />
                     <rect x="48" y="270" width="108" height="108" rx="12" fill="#fff" />
-                    <QRCodeSVG value={catalogUrl} size={96} level="M" className="pos-v2-more__banner-qr" />
+                    <g transform="translate(54 276)"><QRCodeSVG value={catalogUrl} size={96} level="M" /></g>
                     <rect x="182" y="278" width="474" height="48" rx="10" fill="#fff" />
                     <text x="419" y="309" fill="#111827" fontSize="19" fontWeight="700" textAnchor="middle">{bannerCta || "Escanear QR"}</text>
                     <text x="182" y="356" fill="#E5E7EB" fontSize="17">Escanéalo para ver productos y promociones.</text>
