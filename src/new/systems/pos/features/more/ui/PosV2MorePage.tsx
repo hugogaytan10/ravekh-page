@@ -213,6 +213,20 @@ export const PosV2MorePage = () => {
     return () => window.removeEventListener("keydown", onEsc);
   }, [showSignOutConfirm]);
 
+  useEffect(() => {
+    if (!showCatalogQr) return;
+    const previousOverflow = document.body.style.overflow;
+    const onEsc = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setShowCatalogQr(false);
+    };
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onEsc);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onEsc);
+    };
+  }, [showCatalogQr]);
+
   const toggleFavorite = (moduleId: string) => {
     setFavorites((current) =>
       current.includes(moduleId)
@@ -606,27 +620,30 @@ export const PosV2MorePage = () => {
               </button>
             </div>
             {showCatalogQr ? (
-              <div className="pos-v2-more__banner-editor" aria-live="polite">
-                <h4>Creador de banner</h4>
-                <p>Personaliza el contenido y descarga la imagen para compartirla.</p>
-                <div className="pos-v2-more__banner-fields">
-                  <input value={bannerTitle} onChange={(event) => setBannerTitle(event.target.value)} maxLength={48} placeholder="Título" />
-                  <textarea value={bannerSubtitle} onChange={(event) => setBannerSubtitle(event.target.value)} maxLength={110} rows={2} placeholder="Subtítulo" />
-                  <input value={bannerCta} onChange={(event) => setBannerCta(event.target.value)} maxLength={24} placeholder="Texto de llamada a la acción" />
-                </div>
-                <div className="pos-v2-more__banner-colors" aria-label="Color del banner">
-                  {BANNER_COLORS.map((color) => (
-                    <button key={color} type="button" className={bannerColor === color ? "is-active" : ""} style={{ backgroundColor: color }} onClick={() => setBannerColor(color)} aria-label={`Usar color ${color}`} />
-                  ))}
-                </div>
-                <div className="pos-v2-more__banner-image-actions">
-                  <label>
-                    Elegir imagen
-                    <input type="file" accept="image/*" onChange={(event) => chooseBannerImage(event.target.files?.[0])} />
-                  </label>
-                  {bannerImage ? <button type="button" onClick={() => setBannerImage(null)}>Quitar imagen</button> : null}
-                </div>
-                <svg ref={bannerRef} className="pos-v2-more__catalog-banner" viewBox="0 0 720 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vista previa del banner publicitario">
+              <div className="pos-v2-more__banner-modal-backdrop" role="presentation" onMouseDown={(event) => {
+                if (event.target === event.currentTarget) setShowCatalogQr(false);
+              }}>
+                <div className="pos-v2-more__banner-modal" role="dialog" aria-modal="true" aria-labelledby="catalog-banner-title">
+                  <header className="pos-v2-more__banner-modal-header">
+                    <div>
+                      <h4 id="catalog-banner-title">Creador de imagen QR</h4>
+                      <p>Edita los textos directamente sobre la imagen.</p>
+                    </div>
+                    <button type="button" className="pos-v2-more__banner-close" onClick={() => setShowCatalogQr(false)} aria-label="Cerrar creador de imagen">×</button>
+                  </header>
+                  <div className="pos-v2-more__banner-toolbar">
+                    <div className="pos-v2-more__banner-colors" aria-label="Color del banner">
+                      {BANNER_COLORS.map((color) => (
+                        <button key={color} type="button" className={bannerColor === color ? "is-active" : ""} style={{ backgroundColor: color }} onClick={() => setBannerColor(color)} aria-label={`Usar color ${color}`} />
+                      ))}
+                    </div>
+                    <div className="pos-v2-more__banner-image-actions">
+                      <label>Elegir imagen<input type="file" accept="image/*" onChange={(event) => chooseBannerImage(event.target.files?.[0])} /></label>
+                      {bannerImage ? <button type="button" onClick={() => setBannerImage(null)}>Quitar imagen</button> : null}
+                    </div>
+                  </div>
+                  <div className="pos-v2-more__banner-stage">
+                    <svg ref={bannerRef} className="pos-v2-more__catalog-banner" viewBox="0 0 720 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vista previa del banner publicitario">
                   <defs>
                     <linearGradient id="catalog-banner-gradient" x1="0" y1="0" x2="1" y2="1">
                       <stop offset="0" stopColor={bannerImage ? "#111827" : bannerColor} stopOpacity={bannerImage ? ".2" : "1"} />
@@ -641,21 +658,29 @@ export const PosV2MorePage = () => {
                     <rect x="32" y="28" width="148" height="34" rx="17" fill="#fff" fillOpacity=".2" />
                     <text x="106" y="50" fill="#fff" fontSize="15" fontWeight="700" textAnchor="middle">Catálogo digital</text>
                     <text x="688" y="50" fill="#E5E7EB" fontSize="15" fontWeight="700" textAnchor="end">{features.businessName || "Mi negocio"}</text>
-                    <text x="32" y="120" fill="#fff" fontFamily="Arial, sans-serif" fontSize="42" fontWeight="800">
+                    <text className="pos-v2-more__banner-export-text" x="32" y="120" fill="#fff" fontFamily="Arial, sans-serif" fontSize="42" fontWeight="800">
                       {bannerTitleLines.map((line, index) => <tspan key={line} x="32" dy={index === 0 ? 0 : 48}>{line}</tspan>)}
                     </text>
-                    <text x="32" y={bannerTitleLines.length > 1 ? 226 : 178} fill="#F3F4F6" fontFamily="Arial, sans-serif" fontSize="20">
+                    <text className="pos-v2-more__banner-export-text" x="32" y={bannerTitleLines.length > 1 ? 226 : 178} fill="#F3F4F6" fontFamily="Arial, sans-serif" fontSize="20">
                       {bannerSubtitleLines.map((line, index) => <tspan key={line} x="32" dy={index === 0 ? 0 : 28}>{line}</tspan>)}
                     </text>
                     <rect x="32" y="258" width="656" height="132" rx="18" fill="#fff" fillOpacity=".16" />
                     <rect x="48" y="270" width="108" height="108" rx="12" fill="#fff" />
                     <g transform="translate(54 276)"><QRCodeSVG value={catalogUrl} size={96} level="M" /></g>
                     <rect x="182" y="278" width="474" height="48" rx="10" fill="#fff" />
-                    <text x="419" y="309" fill="#111827" fontSize="19" fontWeight="700" textAnchor="middle">{bannerCta || "Escanear QR"}</text>
+                    <text className="pos-v2-more__banner-export-text" x="419" y="309" fill="#111827" fontSize="19" fontWeight="700" textAnchor="middle">{bannerCta || "Escanear QR"}</text>
                     <text x="182" y="356" fill="#E5E7EB" fontSize="17">Escanéalo para ver productos y promociones.</text>
                   </g>
-                </svg>
-                <button type="button" className="pos-v2-more__banner-download" onClick={downloadCatalogBanner}>Descargar imagen promocional</button>
+                    </svg>
+                    <textarea className={`pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--title${bannerTitleLines.length > 1 ? " is-multiline" : ""}`} value={bannerTitle} onChange={(event) => setBannerTitle(event.target.value.replace(/\n/g, " "))} maxLength={48} rows={2} placeholder="Escribe un título" aria-label="Título del banner" />
+                    <textarea className="pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--subtitle" style={{ top: bannerTitleLines.length > 1 ? "49%" : "38%" }} value={bannerSubtitle} onChange={(event) => setBannerSubtitle(event.target.value.replace(/\n/g, " "))} maxLength={110} rows={2} placeholder="Escribe un subtítulo" aria-label="Subtítulo del banner" />
+                    <input className="pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--cta" value={bannerCta} onChange={(event) => setBannerCta(event.target.value)} maxLength={24} placeholder="Llamada a la acción" aria-label="Llamada a la acción del banner" />
+                  </div>
+                  <footer className="pos-v2-more__banner-modal-footer">
+                    <span>Los campos marcados sobre la imagen son editables.</span>
+                    <button type="button" className="pos-v2-more__banner-download" onClick={downloadCatalogBanner}>Descargar imagen promocional</button>
+                  </footer>
+                </div>
               </div>
             ) : null}
           </div>
