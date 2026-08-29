@@ -30,6 +30,7 @@ import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
 import type { PosPlan } from "../../../shared/config/posPlanAccess";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import "./ProductsV2PosPage.css";
+import { parseTagInput } from "../model/parseTagInput";
 
 const API_BASE_URL = getPosApiBaseUrl();
 const DEFAULT_BUSINESS_ID = Number(import.meta.env.VITE_POS_BUSINESS_ID ?? 0);
@@ -881,14 +882,18 @@ export const ProductsV2PosPage = () => {
     setter: React.Dispatch<React.SetStateAction<string[]>>,
     inputSetter: React.Dispatch<React.SetStateAction<string>>,
   ) => {
-    const normalized = value.trim();
-    if (!normalized) return;
+    const entries = parseTagInput(value);
+    if (entries.length === 0) return;
 
     setter((current) => {
-      const alreadyExists = current.some(
-        (entry) => entry.toLowerCase() === normalized.toLowerCase(),
-      );
-      return alreadyExists ? current : [...current, normalized];
+      const known = new Set(current.map((entry) => entry.toLowerCase()));
+      const additions = entries.filter((entry) => {
+        const key = entry.toLowerCase();
+        if (known.has(key)) return false;
+        known.add(key);
+        return true;
+      });
+      return [...current, ...additions];
     });
     inputSetter("");
   };
@@ -2710,9 +2715,9 @@ export const ProductsV2PosPage = () => {
                 >
                   <div className="pos-v2-products__variants-head">
                     <h4>Categoría</h4>
-                    <small>
-                      Selecciona una opción para clasificar el producto.
-                    </small>
+                    <button type="button" onClick={openCategoryManager}>
+                      + Agregar categoría
+                    </button>
                   </div>
                   <div className="pos-v2-products__chips-carousel">
                     <button
@@ -3367,7 +3372,7 @@ export const ProductsV2PosPage = () => {
                               addSizeTag();
                             }
                           }}
-                          placeholder="Ej. S"
+                          placeholder="Ej. S o #26, #28"
                           aria-label="Agregar talla"
                         />
                         <button type="button" onClick={addSizeTag}>
