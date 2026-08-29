@@ -32,6 +32,15 @@ type PendingStripeCatalogOrder = {
 const getPendingStripeOrderKey = (businessId: number) => `catalog-v2-pending-stripe-order:${businessId}`;
 const processingStripeOrderKeys = new Set<string>();
 
+const simplifiedCheckoutFallbacks = {
+  name: "Cliente de catálogo",
+  phone: "0000000000",
+  paymentMethod: "efectivo" as PaymentMethod,
+  zipCode: "00000",
+  city: "No especificado",
+  state: "No especificado",
+};
+
 type CartItem = {
   cartKey?: string;
   productId: number;
@@ -234,6 +243,31 @@ export const CatalogOrderInfoPage = () => {
     return parts.length ? parts.join(", ") : "Entrega a domicilio";
   };
 
+  const buildOrderAddress = () => {
+    if (!usesSimplifiedCheckout || deliveryMethod !== "domicilio") return buildAddress();
+
+    const parts: string[] = [];
+    if (checkoutOptions.Street && street.trim()) parts.push(`Calle: ${street}`);
+    if (checkoutOptions.ZipCode && zipCode.trim()) {
+      parts.push(`Código Postal: ${zipCode}`);
+    } else {
+      parts.push(`Código Postal: ${simplifiedCheckoutFallbacks.zipCode}`);
+    }
+    if (checkoutOptions.City && city.trim()) {
+      parts.push(`Municipio: ${city}`);
+    } else {
+      parts.push(`Municipio: ${simplifiedCheckoutFallbacks.city}`);
+    }
+    if (checkoutOptions.State && state.trim()) {
+      parts.push(`Estado: ${state}`);
+    } else {
+      parts.push(`Estado: ${simplifiedCheckoutFallbacks.state}`);
+    }
+    if (checkoutOptions.References && references.trim()) parts.push(`Referencia: ${references}`);
+
+    return parts.join(", ");
+  };
+
   const validate = () => {
     const nextErrors: typeof errors = {};
 
@@ -295,12 +329,18 @@ export const CatalogOrderInfoPage = () => {
     try {
       const orderPayload = {
         Order: {
-          Name: checkoutOptions.ContactInformation ? name.trim() : "",
+          Name: checkoutOptions.ContactInformation
+            ? name.trim()
+            : usesSimplifiedCheckout ? simplifiedCheckoutFallbacks.name : "",
           Business_Id: businessId,
           Delivery: deliveryMethod === "domicilio" ? 1 : 0,
-          PaymentMethod: checkoutOptions.PaymentMetod ? paymentMethod : "",
-          Address: buildAddress(),
-          PhoneNumber: checkoutOptions.ContactInformation ? phone.trim() : "",
+          PaymentMethod: checkoutOptions.PaymentMetod
+            ? paymentMethod
+            : usesSimplifiedCheckout ? simplifiedCheckoutFallbacks.paymentMethod : "",
+          Address: buildOrderAddress(),
+          PhoneNumber: checkoutOptions.ContactInformation
+            ? phone.trim()
+            : usesSimplifiedCheckout ? simplifiedCheckoutFallbacks.phone : "",
         },
         OrderDetails: cart.map((item) => ({
           Quantity: Math.max(1, Number(item.quantity) || 1),
@@ -341,7 +381,7 @@ export const CatalogOrderInfoPage = () => {
           metadata: {
             deliveryMethod,
             paymentMethod,
-            address: buildAddress(),
+            address: buildOrderAddress(),
           },
         });
 
