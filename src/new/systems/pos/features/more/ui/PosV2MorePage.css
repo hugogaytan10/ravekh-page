@@ -387,6 +387,35 @@
   color: #0f172a;
 }
 
+.pos-v2-more__banner-editor {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  background: #fff;
+  color: #475569;
+}
+
+.pos-v2-more__banner-editor h4,
+.pos-v2-more__banner-editor p { margin: 0; }
+.pos-v2-more__banner-fields { display: grid; gap: .6rem; }
+.pos-v2-more__banner-fields input,
+.pos-v2-more__banner-fields textarea { width: 100%; }
+.pos-v2-more__banner-colors,
+.pos-v2-more__banner-image-actions { display: flex; gap: .6rem; align-items: center; flex-wrap: wrap; }
+.pos-v2-more__banner-colors button { width: 32px; height: 32px; min-height: 0; padding: 0; border: 3px solid transparent; border-radius: 50%; }
+.pos-v2-more__banner-colors button.is-active { border-color: #111827; }
+.pos-v2-more__banner-image-actions label { cursor: pointer; padding: .6rem .8rem; border-radius: 9px; background: #f1f5f9; font-weight: 700; }
+.pos-v2-more__banner-image-actions input { display: none; }
+.pos-v2-more__catalog-banner {
+  max-width: 100%;
+  height: auto;
+  border-radius: 18px;
+}
+.pos-v2-more__banner-qr { transform: translate(54px, 276px); }
+.pos-v2-more__banner-download { justify-self: start; }
+
 .pos-v2-more__error {
   margin: 0;
   border: 1px solid #fecaca;
@@ -526,6 +555,12 @@
 
 :root[data-theme="dark"] .pos-v2-more__catalog-copy label {
   color: #e2e8f0;
+}
+
+:root[data-theme="dark"] .pos-v2-more__banner-editor {
+  background: #0f172a;
+  border-color: #334155;
+  color: #cbd5e1;
 }
 
 :root[data-theme="dark"] .pos-v2-more__chips button.is-active {
