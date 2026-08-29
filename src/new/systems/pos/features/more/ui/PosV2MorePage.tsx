@@ -1,7 +1,8 @@
 import { ModernSystemsFactory } from "../../../../../index";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { QRCodeSVG } from "qrcode.react";
 import { MORE_MODULE_SECTIONS } from "../config/moreModules";
 import {
   MoreModuleExecutionContext,
@@ -39,6 +40,7 @@ import "./PosV2MorePage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
 const FAVORITES_KEY = POS_SESSION_STORAGE_KEYS.moreFavorites;
+const BANNER_COLORS = ["#4338CA", "#0EA5E9", "#059669", "#D946EF", "#F97316"];
 
 export const PosV2MorePage = () => {
   const navigate = useNavigate();
@@ -64,6 +66,13 @@ export const PosV2MorePage = () => {
     unlockFeature?: UnlockFeature;
   } | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [showCatalogQr, setShowCatalogQr] = useState(false);
+  const [bannerTitle, setBannerTitle] = useState("Promo especial de la semana");
+  const [bannerSubtitle, setBannerSubtitle] = useState("Escanea el QR y conoce el catálogo completo de nuestra tienda.");
+  const [bannerCta, setBannerCta] = useState("Escanear QR");
+  const [bannerColor, setBannerColor] = useState(BANNER_COLORS[0]);
+  const [bannerImage, setBannerImage] = useState<string | null>(null);
+  const bannerRef = useRef<SVGSVGElement | null>(null);
   const {
     runWithPlanAccess,
     blockedAction,
@@ -220,6 +229,36 @@ export const PosV2MorePage = () => {
         "No fue posible copiar la URL. Puedes copiarla manualmente.",
       );
     }
+  };
+
+  const chooseBannerImage = (file?: File) => {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => setBannerImage(String(reader.result || ""));
+    reader.readAsDataURL(file);
+  };
+
+  const downloadCatalogBanner = () => {
+    if (!bannerRef.current) return;
+    const svg = new XMLSerializer().serializeToString(bannerRef.current);
+    const url = URL.createObjectURL(new Blob([svg], { type: "image/svg+xml;charset=utf-8" }));
+    const image = new window.Image();
+    image.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1440;
+      canvas.height = 840;
+      canvas.getContext("2d")?.drawImage(image, 0, 0, canvas.width, canvas.height);
+      URL.revokeObjectURL(url);
+      const link = document.createElement("a");
+      link.href = canvas.toDataURL("image/png");
+      link.download = `banner-catalogo-${sessionSnapshot.businessId}.png`;
+      link.click();
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      setActionMessage("No fue posible generar la imagen promocional.");
+    };
+    image.src = url;
   };
   const currentPlanName = useMemo(() => {
     const remotePlan = features.plan?.trim();
@@ -534,7 +573,63 @@ export const PosV2MorePage = () => {
               <button type="button" onClick={() => void copyCatalogUrl()}>
                 Copiar URL
               </button>
+              <button type="button" onClick={() => setShowCatalogQr(true)}>
+                Generar imagen QR
+              </button>
             </div>
+            {showCatalogQr ? (
+              <div className="pos-v2-more__banner-editor" aria-live="polite">
+                <h4>Creador de banner</h4>
+                <p>Personaliza el contenido y descarga la imagen para compartirla.</p>
+                <div className="pos-v2-more__banner-fields">
+                  <input value={bannerTitle} onChange={(event) => setBannerTitle(event.target.value)} maxLength={48} placeholder="Título" />
+                  <textarea value={bannerSubtitle} onChange={(event) => setBannerSubtitle(event.target.value)} maxLength={110} rows={2} placeholder="Subtítulo" />
+                  <input value={bannerCta} onChange={(event) => setBannerCta(event.target.value)} maxLength={24} placeholder="Texto de llamada a la acción" />
+                </div>
+                <div className="pos-v2-more__banner-colors" aria-label="Color del banner">
+                  {BANNER_COLORS.map((color) => (
+                    <button key={color} type="button" className={bannerColor === color ? "is-active" : ""} style={{ backgroundColor: color }} onClick={() => setBannerColor(color)} aria-label={`Usar color ${color}`} />
+                  ))}
+                </div>
+                <div className="pos-v2-more__banner-image-actions">
+                  <label>
+                    Elegir imagen
+                    <input type="file" accept="image/*" onChange={(event) => chooseBannerImage(event.target.files?.[0])} />
+                  </label>
+                  {bannerImage ? <button type="button" onClick={() => setBannerImage(null)}>Quitar imagen</button> : null}
+                </div>
+                <svg ref={bannerRef} className="pos-v2-more__catalog-banner" viewBox="0 0 720 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vista previa del banner publicitario">
+                  <defs>
+                    <linearGradient id="catalog-banner-gradient" x1="0" y1="0" x2="1" y2="1">
+                      <stop offset="0" stopColor={bannerImage ? "#111827" : bannerColor} stopOpacity={bannerImage ? ".2" : "1"} />
+                      <stop offset="1" stopColor="#111827" stopOpacity={bannerImage ? ".9" : "1"} />
+                    </linearGradient>
+                    <clipPath id="catalog-banner-clip"><rect width="720" height="420" rx="24" /></clipPath>
+                  </defs>
+                  <g clipPath="url(#catalog-banner-clip)">
+                    <rect width="720" height="420" fill={bannerColor} />
+                    {bannerImage ? <image href={bannerImage} width="720" height="420" preserveAspectRatio="xMidYMid slice" /> : null}
+                    <rect width="720" height="420" fill="url(#catalog-banner-gradient)" />
+                    <rect x="32" y="28" width="148" height="34" rx="17" fill="#fff" fillOpacity=".2" />
+                    <text x="106" y="50" fill="#fff" fontSize="15" fontWeight="700" textAnchor="middle">Catálogo digital</text>
+                    <text x="688" y="50" fill="#E5E7EB" fontSize="15" fontWeight="700" textAnchor="end">Negocio {sessionSnapshot.businessId}</text>
+                    <foreignObject x="32" y="90" width="656" height="150">
+                      <div xmlns="http://www.w3.org/1999/xhtml" style={{ color: "white", fontFamily: "Arial, sans-serif" }}>
+                        <div style={{ fontSize: 42, lineHeight: 1.1, fontWeight: 800 }}>{bannerTitle || "Promo especial"}</div>
+                        <div style={{ marginTop: 14, fontSize: 20, lineHeight: 1.35, color: "#F3F4F6" }}>{bannerSubtitle || "Escanea el QR para conocer más productos."}</div>
+                      </div>
+                    </foreignObject>
+                    <rect x="32" y="258" width="656" height="132" rx="18" fill="#fff" fillOpacity=".16" />
+                    <rect x="48" y="270" width="108" height="108" rx="12" fill="#fff" />
+                    <QRCodeSVG value={catalogUrl} size={96} level="M" className="pos-v2-more__banner-qr" />
+                    <rect x="182" y="278" width="474" height="48" rx="10" fill="#fff" />
+                    <text x="419" y="309" fill="#111827" fontSize="19" fontWeight="700" textAnchor="middle">{bannerCta || "Escanear QR"}</text>
+                    <text x="182" y="356" fill="#E5E7EB" fontSize="17">Escanéalo para ver productos y promociones.</text>
+                  </g>
+                </svg>
+                <button type="button" className="pos-v2-more__banner-download" onClick={downloadCatalogBanner}>Descargar imagen promocional</button>
+              </div>
+            ) : null}
           </div>
           <div className="pos-v2-more__pdf-download">
             <div>
