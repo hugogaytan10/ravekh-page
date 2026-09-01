@@ -195,6 +195,11 @@ export const PosV2MorePage = () => {
   }, [favorites]);
 
   useEffect(() => {
+    if (!catalogUrl) return;
+    void fetch(catalogUrl, { credentials: "omit", mode: "no-cors" }).catch(() => undefined);
+  }, [catalogUrl]);
+
+  useEffect(() => {
     if (!actionMessage) return;
     const timeout = window.setTimeout(() => setActionMessage(""), 2800);
     return () => window.clearTimeout(timeout);

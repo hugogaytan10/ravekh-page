@@ -17,18 +17,12 @@ const ensureTrailingSlash = (value) => {
   return normalized.endsWith("/") ? normalized : `${normalized}/`;
 };
 
-const getEnv = (name) => {
-  if (globalThis.Deno?.env?.get) return globalThis.Deno.env.get(name) ?? "";
-  return "";
-};
-
 const getApiBaseUrl = () =>
-  ensureTrailingSlash(getEnv("VITE_API_URL") || getEnv("API_URL") || getEnv("FACTURA_ELECTRONICA_API_URL"));
-
-const getBusinessId = (url) => {
-  const match = url.pathname.match(/^\/v2\/catalogo\/([^/?#]+)/i);
-  return match ? decodeURIComponent(match[1]) : "";
-};
+  ensureTrailingSlash(
+    process.env.VITE_API_URL ||
+      process.env.API_URL ||
+      process.env.FACTURA_ELECTRONICA_API_URL,
+  );
 
 const toAbsoluteUrl = (value, origin) => {
   const normalized = String(value ?? "").trim();
@@ -58,9 +52,8 @@ const buildMetadata = (requestUrl, business) => {
   const description = name ? `Explora productos y realiza pedidos en el catálogo digital de ${name}.` : DEFAULT_DESCRIPTION;
   const image = toAbsoluteUrl(logo, requestUrl.origin);
   const url = `${requestUrl.origin}${requestUrl.pathname}`;
-  const siteName = name || DEFAULT_SITE_NAME;
 
-  return { title, description, image, url, siteName };
+  return { title, description, image, url, siteName: name || DEFAULT_SITE_NAME };
 };
 
 const renderMetaTags = ({ title, description, image, url, siteName }) => `
@@ -90,29 +83,31 @@ const stripExistingMetadata = (html) =>
 
 export default async (request, context) => {
   const requestUrl = new URL(request.url);
-  const response = await context.next();
-  const contentType = response.headers.get("content-type") ?? "";
+  const businessId = context.params.id ?? "";
 
-  if (!contentType.includes("text/html")) return response;
+  const [pageResponse, business] = await Promise.all([
+    fetch(new URL("/index.html", requestUrl)),
+    fetchBusiness(businessId).catch((error) => {
+      console.error("Unable to load catalog metadata", error);
+      return null;
+    }),
+  ]);
 
-  let business = null;
-  try {
-    business = await fetchBusiness(getBusinessId(requestUrl));
-  } catch (error) {
-    console.error("Unable to load catalog metadata", error);
-  }
-
-  const html = await response.text();
+  const html = await pageResponse.text();
   const metadata = buildMetadata(requestUrl, business);
   const enrichedHtml = stripExistingMetadata(html).replace(/<head>/i, `<head>${renderMetaTags(metadata)}`);
-
-  const headers = new Headers(response.headers);
-  headers.delete("content-length");
-  headers.set("cache-control", "public, max-age=0, must-revalidate");
-
   return new Response(enrichedHtml, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
+    status: pageResponse.status,
+    statusText: pageResponse.statusText,
+    headers: {
+      "content-type": "text/html; charset=UTF-8",
+      "cache-control": "public, max-age=0, must-revalidate",
+      "netlify-cdn-cache-control":
+        "public, durable, max-age=300, stale-while-revalidate=31536000",
+    },
   });
+};
+
+export const config = {
+  path: "/v2/catalogo/:id",
 };

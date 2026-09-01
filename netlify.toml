@@ -1,7 +1,3 @@
-[[edge_functions]]
-  function = "catalog-meta"
-  path = "/v2/catalogo/*"
-
 [[headers]]
   for = "/.well-known/apple-app-site-association"
   [headers.values]
