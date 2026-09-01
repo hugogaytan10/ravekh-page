@@ -74,7 +74,6 @@ const renderMetaTags = ({ title, description, image, url, siteName }) => `
   <meta property="og:url" content="${escapeHtml(url)}">
   <meta property="og:image" content="${escapeHtml(image)}">
   <meta property="og:image:secure_url" content="${escapeHtml(image)}">
-  <meta property="og:image:type" content="image/jpeg">
   <meta property="og:image:alt" content="${escapeHtml(siteName)}">
   <meta property="og:locale" content="es_MX">
   <meta name="twitter:card" content="summary">

@@ -540,7 +540,6 @@ export const CatalogStorefrontPage = () => {
         <meta property="og:url" content={catalogUrl} />
         <meta property="og:image" content={catalogImage} />
         <meta property="og:image:secure_url" content={catalogImage} />
-        <meta property="og:image:type" content="image/jpeg" />
         <meta property="og:image:alt" content={store?.name ? `Logo de ${store.name}` : "Ravekh"} />
         <meta property="og:locale" content="es_MX" />
         <meta name="twitter:card" content="summary" />
