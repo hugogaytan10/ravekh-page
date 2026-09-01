@@ -56,7 +56,23 @@ const buildMetadata = (requestUrl, business) => {
   return { title, description, image, url, siteName: name || DEFAULT_SITE_NAME };
 };
 
-const renderMetaTags = ({ title, description, image, url, siteName }) => `
+const fetchImageMetadata = async (image) => {
+  try {
+    const response = await fetch(image, { method: "HEAD" });
+    if (!response.ok) return {};
+    const dimensions = response.headers.get("server-timing")?.match(/width=(\d+),height=(\d+)/);
+
+    return {
+      imageType: response.headers.get("content-type")?.split(";")[0],
+      imageWidth: dimensions?.[1],
+      imageHeight: dimensions?.[2],
+    };
+  } catch {
+    return {};
+  }
+};
+
+const renderMetaTags = ({ title, description, image, url, siteName, imageType, imageWidth, imageHeight }) => `
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description)}">
   <link rel="canonical" href="${escapeHtml(url)}">
@@ -67,6 +83,9 @@ const renderMetaTags = ({ title, description, image, url, siteName }) => `
   <meta property="og:url" content="${escapeHtml(url)}">
   <meta property="og:image" content="${escapeHtml(image)}">
   <meta property="og:image:secure_url" content="${escapeHtml(image)}">
+  ${imageType ? `<meta property="og:image:type" content="${escapeHtml(imageType)}">` : ""}
+  ${imageWidth ? `<meta property="og:image:width" content="${escapeHtml(imageWidth)}">` : ""}
+  ${imageHeight ? `<meta property="og:image:height" content="${escapeHtml(imageHeight)}">` : ""}
   <meta property="og:image:alt" content="${escapeHtml(siteName)}">
   <meta property="og:locale" content="es_MX">
   <meta name="twitter:card" content="summary">
@@ -95,7 +114,11 @@ export default async (request, context) => {
 
   const html = await pageResponse.text();
   const metadata = buildMetadata(requestUrl, business);
-  const enrichedHtml = stripExistingMetadata(html).replace(/<head>/i, `<head>${renderMetaTags(metadata)}`);
+  const imageMetadata = await fetchImageMetadata(metadata.image);
+  const enrichedHtml = stripExistingMetadata(html).replace(
+    /<head>/i,
+    `<head>${renderMetaTags({ ...metadata, ...imageMetadata })}`,
+  );
   return new Response(enrichedHtml, {
     status: pageResponse.status,
     statusText: pageResponse.statusText,
