@@ -33,6 +33,21 @@ const toAbsoluteUrl = (value, origin) => {
       : new URL(normalized.startsWith("/") ? normalized : `/${normalized}`, origin).toString();
 };
 
+const buildSocialImageUrl = (image, origin) => {
+  const source = new URL(image, origin);
+  if (source.origin !== origin && source.hostname !== "res.cloudinary.com") return image;
+
+  const params = new URLSearchParams({
+    url: source.origin === origin ? `${source.pathname}${source.search}` : source.toString(),
+    w: "1200",
+    h: "630",
+    fit: "contain",
+    fm: "jpg",
+    q: "80",
+  });
+  return `${origin}/.netlify/images?${params}`;
+};
+
 const fetchBusiness = async (businessId) => {
   const apiBaseUrl = getApiBaseUrl();
   if (!apiBaseUrl || !businessId) return null;
@@ -50,7 +65,7 @@ const buildMetadata = (requestUrl, business) => {
   const logo = String(business?.Logo ?? business?.logo ?? "").trim();
   const title = name ? `${name} | Catálogo digital` : DEFAULT_TITLE;
   const description = name ? `Explora productos y realiza pedidos en el catálogo digital de ${name}.` : DEFAULT_DESCRIPTION;
-  const image = toAbsoluteUrl(logo, requestUrl.origin);
+  const image = buildSocialImageUrl(toAbsoluteUrl(logo, requestUrl.origin), requestUrl.origin);
   const url = `${requestUrl.origin}${requestUrl.pathname}`;
 
   return { title, description, image, url, siteName: name || DEFAULT_SITE_NAME };
@@ -88,7 +103,7 @@ const renderMetaTags = ({ title, description, image, url, siteName, imageType, i
   ${imageHeight ? `<meta property="og:image:height" content="${escapeHtml(imageHeight)}">` : ""}
   <meta property="og:image:alt" content="${escapeHtml(siteName)}">
   <meta property="og:locale" content="es_MX">
-  <meta name="twitter:card" content="summary">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${escapeHtml(image)}">
