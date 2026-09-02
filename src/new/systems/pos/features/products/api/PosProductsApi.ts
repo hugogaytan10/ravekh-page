@@ -2,7 +2,20 @@ import { HttpClient } from "../../../../core/api/HttpClient";
 import { POS_ENDPOINTS } from "../../../shared/api/posEndpoints";
 import { toPaginationMeta } from "../../../shared/model/Pagination";
 import { IProductsRepository, ProductImportResult, ProductsPaginatedResult } from "../interface/IProductsRepository";
-import { ManagedProduct, ProductCategory, ProductExtra, ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
+import { ManagedProduct, ProductCategory, ProductExtra, ProductVariant, SaveManagedProductDto, WholesalePriceTier } from "../model/ManagedProduct";
+
+type WholesalePriceResponse = {
+  Id?: number;
+  id?: number;
+  Product_Id?: number | null;
+  product_Id?: number | null;
+  Variant_Id?: number | null;
+  variant_Id?: number | null;
+  Price?: number | string | null;
+  price?: number | string | null;
+  MinQuantity?: number | string | null;
+  minQuantity?: number | string | null;
+};
 
 type ProductResponse = {
   Id?: number;
@@ -47,6 +60,8 @@ type ProductResponse = {
   wholesalePrice?: number | null;
   WholesaleMinQuantity?: number | null;
   wholesaleMinQuantity?: number | null;
+  WholesalePrices?: WholesalePriceResponse[] | null;
+  wholesalePrices?: WholesalePriceResponse[] | null;
   CostPerItem?: number | null;
   costPerItem?: number | null;
   Stock?: number | null;
@@ -90,6 +105,8 @@ type LegacyVariantResponse = {
   wholesalePrice?: number | null;
   WholesaleMinQuantity?: number | null;
   wholesaleMinQuantity?: number | null;
+  WholesalePrices?: WholesalePriceResponse[] | null;
+  wholesalePrices?: WholesalePriceResponse[] | null;
   CostPerItem?: number | null;
   costPerItem?: number | null;
   Stock?: number | null;
@@ -356,6 +373,13 @@ export class PosProductsApi implements IProductsRepository {
       return this.toDomain(created, this.extractCreatedExtras(response));
     }
 
+    const fallbackWholesalePrices = this.normalizeWholesalePrices(
+      payload.wholesalePrices,
+      payload.wholesalePrice,
+      payload.wholesaleMinQuantity,
+    );
+    const fallbackPrimaryWholesale = fallbackWholesalePrices[0] ?? null;
+
     return new ManagedProduct(
       payload.id ?? 0,
       payload.businessId,
@@ -383,8 +407,9 @@ export class PosProductsApi implements IProductsRepository {
       payload.variants ?? [],
       payload.extras ?? [],
       payload.variants?.length ?? 0,
-      payload.wholesalePrice ?? null,
-      payload.wholesaleMinQuantity ?? null,
+      fallbackPrimaryWholesale?.price ?? null,
+      fallbackPrimaryWholesale?.minQuantity ?? null,
+      fallbackWholesalePrices,
     );
   }
 
@@ -804,8 +829,85 @@ export class PosProductsApi implements IProductsRepository {
     return rows;
   }
 
+  private normalizeWholesalePrices(
+    prices: WholesalePriceTier[] | undefined,
+    legacyPrice?: number | null,
+    legacyMinQuantity?: number | null,
+  ): WholesalePriceTier[] {
+    const normalized = (prices ?? [])
+      .map((tier) => ({
+        ...tier,
+        price: Number(tier.price),
+        minQuantity: Number(tier.minQuantity),
+      }))
+      .filter(
+        (tier) =>
+          Number.isFinite(tier.price) &&
+          tier.price > 0 &&
+          Number.isFinite(tier.minQuantity) &&
+          tier.minQuantity > 0,
+      )
+      .sort((a, b) => a.minQuantity - b.minQuantity);
+
+    if (normalized.length > 0) return normalized;
+
+    const price = Number(legacyPrice);
+    const minQuantity = Number(legacyMinQuantity);
+    if (
+      Number.isFinite(price) &&
+      price > 0 &&
+      Number.isFinite(minQuantity) &&
+      minQuantity > 0
+    ) {
+      return [{ price, minQuantity }];
+    }
+
+    return [];
+  }
+
+  private toDomainWholesalePrices(
+    payload: WholesalePriceResponse[] | null | undefined,
+    legacyPrice?: number | null,
+    legacyMinQuantity?: number | null,
+  ): WholesalePriceTier[] {
+    const rows = Array.isArray(payload)
+      ? payload
+          .map((tier) => ({
+            id: tier.Id ?? tier.id,
+            productId: tier.Product_Id ?? tier.product_Id ?? null,
+            variantId: tier.Variant_Id ?? tier.variant_Id ?? null,
+            price: Number(tier.Price ?? tier.price),
+            minQuantity: Number(tier.MinQuantity ?? tier.minQuantity),
+          }))
+      : [];
+
+    return this.normalizeWholesalePrices(rows, legacyPrice, legacyMinQuantity);
+  }
+
+  private toLegacyWholesalePrices(
+    prices: WholesalePriceTier[] | undefined,
+    legacyPrice?: number | null,
+    legacyMinQuantity?: number | null,
+  ): WholesalePriceResponse[] {
+    return this.normalizeWholesalePrices(
+      prices,
+      legacyPrice,
+      legacyMinQuantity,
+    ).map((tier) => ({
+      Id: tier.id,
+      Price: tier.price,
+      MinQuantity: tier.minQuantity,
+    }));
+  }
+
   private toDomain(product: ProductResponse, extras: ProductExtra[] = [], forcedVariants?: ProductVariant[]): ManagedProduct {
     const variants = forcedVariants ?? (product.Variants ?? product.variants ?? []).map((variant) => this.toDomainVariant(variant));
+    const wholesalePrices = this.toDomainWholesalePrices(
+      product.WholesalePrices ?? product.wholesalePrices,
+      product.WholesalePrice ?? product.wholesalePrice,
+      product.WholesaleMinQuantity ?? product.wholesaleMinQuantity,
+    );
+    const primaryWholesalePrice = wholesalePrices[0] ?? null;
     const rawVariantsCount = product.VariantsCount ?? product.variantsCount;
     const parsedVariantsCount = typeof rawVariantsCount === "string" ? Number(rawVariantsCount.trim()) : Number(rawVariantsCount);
     const variantsCount = Number.isFinite(parsedVariantsCount) && parsedVariantsCount > 0
@@ -838,8 +940,9 @@ export class PosProductsApi implements IProductsRepository {
       variants,
       extras,
       variantsCount,
-      product.WholesalePrice ?? product.wholesalePrice ?? null,
-      product.WholesaleMinQuantity ?? product.wholesaleMinQuantity ?? null,
+      primaryWholesalePrice?.price ?? null,
+      primaryWholesalePrice?.minQuantity ?? null,
+      wholesalePrices,
     );
   }
 
@@ -872,8 +975,11 @@ export class PosProductsApi implements IProductsRepository {
       Barcode: payload.barcode,
       Price: payload.price,
       PromotionPrice: payload.promotionPrice ?? null,
-      WholesalePrice: payload.wholesalePrice ?? null,
-      WholesaleMinQuantity: payload.wholesaleMinQuantity ?? null,
+      WholesalePrices: this.toLegacyWholesalePrices(
+        payload.wholesalePrices,
+        payload.wholesalePrice,
+        payload.wholesaleMinQuantity,
+      ),
       CostPerItem: payload.costPerItem,
       Stock: payload.stock,
       ExpDate: payload.expDate ?? null,
@@ -884,6 +990,13 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   private toDomainVariant(variant: LegacyVariantResponse): ProductVariant {
+    const wholesalePrices = this.toDomainWholesalePrices(
+      variant.WholesalePrices ?? variant.wholesalePrices,
+      variant.WholesalePrice ?? variant.wholesalePrice,
+      variant.WholesaleMinQuantity ?? variant.wholesaleMinQuantity,
+    );
+    const primaryWholesalePrice = wholesalePrices[0] ?? null;
+
     return {
       id: variant.Id ?? variant.id,
       productId: variant.Product_Id ?? variant.product_Id,
@@ -894,8 +1007,9 @@ export class PosProductsApi implements IProductsRepository {
       size: variant.Size ?? variant.size ?? variant.Talla ?? variant.talla ?? null,
       price: variant.Price ?? variant.price ?? null,
       promotionPrice: variant.PromotionPrice ?? variant.promotionPrice ?? null,
-      wholesalePrice: variant.WholesalePrice ?? variant.wholesalePrice ?? null,
-      wholesaleMinQuantity: variant.WholesaleMinQuantity ?? variant.wholesaleMinQuantity ?? null,
+      wholesalePrice: primaryWholesalePrice?.price ?? null,
+      wholesaleMinQuantity: primaryWholesalePrice?.minQuantity ?? null,
+      wholesalePrices,
       costPerItem: variant.CostPerItem ?? variant.costPerItem ?? null,
       stock: variant.Stock ?? variant.stock ?? null,
       expDate: variant.ExpDate ?? variant.expDate ?? null,
@@ -917,8 +1031,11 @@ export class PosProductsApi implements IProductsRepository {
       ...(normalizedSize ? { Size: normalizedSize, Talla: normalizedSize } : {}),
       Price: variant.price ?? null,
       PromotionPrice: variant.promotionPrice ?? null,
-      WholesalePrice: variant.wholesalePrice ?? null,
-      WholesaleMinQuantity: variant.wholesaleMinQuantity ?? null,
+      WholesalePrices: this.toLegacyWholesalePrices(
+        variant.wholesalePrices,
+        variant.wholesalePrice,
+        variant.wholesaleMinQuantity,
+      ),
       CostPerItem: variant.costPerItem ?? null,
       Stock: variant.stock ?? null,
       ExpDate: variant.expDate ?? null,

@@ -1,10 +1,16 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
 import { ProductImportResult } from "../interface/IProductsRepository";
-import { ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
+import { ProductVariant, SaveManagedProductDto, WholesalePriceTier } from "../model/ManagedProduct";
 import { ProductImportModal } from "./ProductImportModal";
 import { CatalogAiImportWizard } from "./CatalogAiImportWizard";
+import { CatalogAiApi, type CatalogAiQuota } from "../api/CatalogAiApi";
+import { CATALOG_AI_API_URL } from "../config/catalgoAiEnv";
+import {
+  CATALOG_AI_BATCH_LIMIT,
+  getCatalogAiImportQuota,
+} from "../config/catalogAiPlanAccess";
 import { CatalogProductChatModal } from "./CatalogProductChatModal";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
@@ -31,6 +37,13 @@ import type { PosPlan } from "../../../shared/config/posPlanAccess";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import "./ProductsV2PosPage.css";
 import { parseTagInput } from "../model/parseTagInput";
+import {
+  createWholesalePriceTierDraft,
+  WholesalePricesEditor,
+  type WholesalePriceTierDraft,
+  type WholesalePriceTierError,
+  type WholesalePriceTierErrors,
+} from "./WholesalePricesEditor";
 
 const API_BASE_URL = getPosApiBaseUrl();
 const DEFAULT_BUSINESS_ID = Number(import.meta.env.VITE_POS_BUSINESS_ID ?? 0);
@@ -82,6 +95,7 @@ type ProductItemVm = {
   promotionPrice: number | null;
   wholesalePrice: number | null;
   wholesaleMinQuantity: number | null;
+  wholesalePrices: WholesalePriceTier[];
   stock: number | null;
   expDate: string | null;
   minStock: number | null;
@@ -102,8 +116,7 @@ type VariantFormVm = {
   color: string;
   price: string;
   promotionPrice: string;
-  wholesalePrice: string;
-  wholesaleMinQuantity: string;
+  wholesalePrices: WholesalePriceTierDraft[];
   costPerItem: string;
   stock: string;
   minStock: string;
@@ -138,10 +151,7 @@ const normalizeCategoryName = (value: string): string =>
     .toLocaleLowerCase("es-MX");
 type SaveResultState = { type: "success" | "error"; message: string } | null;
 type CategoryFormErrors = { name?: string; color?: string };
-type WholesaleFormErrors = {
-  price?: string;
-  minQuantity?: string;
-};
+type VariantWholesaleFormErrors = Record<string, WholesalePriceTierErrors>;
 
 const compareByNameAsc = (a: ProductItemVm, b: ProductItemVm) =>
   a.name.localeCompare(b.name, "es", { sensitivity: "base" });
@@ -178,8 +188,7 @@ const createVariantDraft = (): VariantFormVm => ({
   color: "",
   price: "",
   promotionPrice: "",
-  wholesalePrice: "",
-  wholesaleMinQuantity: "",
+  wholesalePrices: [],
   costPerItem: "",
   stock: "",
   minStock: "",
@@ -204,6 +213,157 @@ const toNullableNumber = (value: string): number | null => {
   if (!trimmed) return null;
   const parsed = Number(trimmed);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+
+const toWholesaleTierDrafts = (
+  prices: WholesalePriceTier[] | undefined,
+  legacyPrice?: number | null,
+  legacyMinQuantity?: number | null,
+): WholesalePriceTierDraft[] => {
+  const normalized = Array.isArray(prices) && prices.length > 0
+    ? prices
+    : legacyPrice != null && legacyMinQuantity != null
+      ? [{ price: legacyPrice, minQuantity: legacyMinQuantity }]
+      : [];
+
+  return normalized
+    .slice()
+    .sort((a, b) => Number(a.minQuantity) - Number(b.minQuantity))
+    .map((tier) =>
+      createWholesalePriceTierDraft({
+        id: tier.id,
+        price: String(tier.price),
+        minQuantity: String(tier.minQuantity),
+      }),
+    );
+};
+
+const toWholesalePrices = (
+  tiers: WholesalePriceTierDraft[],
+): WholesalePriceTier[] =>
+  tiers
+    .map((tier) => ({
+      id: tier.id,
+      price: Number(tier.price),
+      minQuantity: Number(tier.minQuantity),
+    }))
+    .filter(
+      (tier) =>
+        Number.isFinite(tier.price) &&
+        tier.price > 0 &&
+        Number.isFinite(tier.minQuantity) &&
+        tier.minQuantity >= 2,
+    )
+    .sort((a, b) => a.minQuantity - b.minQuantity);
+
+const validateWholesaleTierDrafts = (
+  tiers: WholesalePriceTierDraft[],
+  normalPrice: number | null,
+): {
+  wholesalePrices: WholesalePriceTier[];
+  errors: WholesalePriceTierErrors;
+  message: string | null;
+} => {
+  const errors: WholesalePriceTierErrors = {};
+  const quantities = new Map<number, string>();
+  const wholesalePrices: WholesalePriceTier[] = [];
+  let firstMessage: string | null = null;
+
+  const setTierError = (
+    tierKey: string,
+    field: keyof WholesalePriceTierError,
+    message: string,
+  ) => {
+    errors[tierKey] = { ...(errors[tierKey] ?? {}), [field]: message };
+    firstMessage ??= message;
+  };
+
+  for (const tier of tiers) {
+    const rawPrice = tier.price.trim();
+    const rawQuantity = tier.minQuantity.trim();
+    const parsedPrice = rawPrice === "" ? null : Number(rawPrice);
+    const parsedQuantity = rawQuantity === "" ? null : Number(rawQuantity);
+
+    if (parsedQuantity === null) {
+      setTierError(tier.key, "minQuantity", "Indica desde cuántas piezas aplica.");
+    } else if (
+      !Number.isFinite(parsedQuantity) ||
+      !Number.isInteger(parsedQuantity) ||
+      parsedQuantity < 2
+    ) {
+      setTierError(
+        tier.key,
+        "minQuantity",
+        "La cantidad debe ser un entero mayor o igual a 2.",
+      );
+    }
+
+    if (parsedPrice === null) {
+      setTierError(tier.key, "price", "Indica el precio por pieza.");
+    } else if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+      setTierError(tier.key, "price", "El precio debe ser mayor a 0.");
+    } else if (normalPrice === null) {
+      setTierError(
+        tier.key,
+        "price",
+        "Agrega el precio normal antes de configurar mayoreo.",
+      );
+    } else if (parsedPrice > normalPrice) {
+      setTierError(
+        tier.key,
+        "price",
+        "El precio por mayoreo no puede superar el precio normal.",
+      );
+    }
+
+    if (
+      parsedQuantity !== null &&
+      Number.isFinite(parsedQuantity) &&
+      Number.isInteger(parsedQuantity) &&
+      parsedQuantity >= 2
+    ) {
+      const previousTierKey = quantities.get(parsedQuantity);
+      if (previousTierKey) {
+        setTierError(
+          tier.key,
+          "minQuantity",
+          "Ya existe otro nivel con esta misma cantidad.",
+        );
+        setTierError(
+          previousTierKey,
+          "minQuantity",
+          "Ya existe otro nivel con esta misma cantidad.",
+        );
+      } else {
+        quantities.set(parsedQuantity, tier.key);
+      }
+    }
+
+    if (
+      parsedPrice !== null &&
+      Number.isFinite(parsedPrice) &&
+      parsedPrice > 0 &&
+      parsedQuantity !== null &&
+      Number.isFinite(parsedQuantity) &&
+      Number.isInteger(parsedQuantity) &&
+      parsedQuantity >= 2
+    ) {
+      wholesalePrices.push({
+        id: tier.id,
+        price: parsedPrice,
+        minQuantity: parsedQuantity,
+      });
+    }
+  }
+
+  return {
+    wholesalePrices: wholesalePrices.sort(
+      (a, b) => a.minQuantity - b.minQuantity,
+    ),
+    errors,
+    message: firstMessage,
+  };
 };
 
 export const ProductsV2PosPage = () => {
@@ -240,6 +400,8 @@ export const ProductsV2PosPage = () => {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isAiImportOpen, setIsAiImportOpen] = useState(false);
   const [isProductChatOpen, setIsProductChatOpen] = useState(false);
+  const [catalogAiServerQuota, setCatalogAiServerQuota] =
+    useState<CatalogAiQuota | null>(null);
   const [importResult, setImportResult] = useState<ProductImportResult | null>(
     null,
   );
@@ -288,10 +450,11 @@ export const ProductsV2PosPage = () => {
   const [promotionPrice, setPromotionPrice] = useState("");
   const [showPromotionPrice, setShowPromotionPrice] = useState(false);
   const [costPerItem, setCostPerItem] = useState("");
-  const [wholesalePrice, setWholesalePrice] = useState("");
-  const [wholesaleMinQuantity, setWholesaleMinQuantity] = useState("");
+  const [wholesalePrices, setWholesalePrices] = useState<WholesalePriceTierDraft[]>([]);
   const [wholesaleFormErrors, setWholesaleFormErrors] =
-    useState<WholesaleFormErrors>({});
+    useState<WholesalePriceTierErrors>({});
+  const [variantWholesaleFormErrors, setVariantWholesaleFormErrors] =
+    useState<VariantWholesaleFormErrors>({});
   const [stock, setStock] = useState("");
   const [forSale, setForSale] = useState(true);
   const [showInStore, setShowInStore] = useState(true);
@@ -313,13 +476,27 @@ export const ProductsV2PosPage = () => {
   const stockInputRef = useRef<HTMLInputElement | null>(null);
   const skipNextStockConfirmation = useRef(false);
   const categoryNameInputRef = useRef<HTMLInputElement | null>(null);
-  const wholesalePriceInputRef = useRef<HTMLInputElement | null>(null);
-  const wholesaleMinQuantityInputRef = useRef<HTMLInputElement | null>(null);
 
   const service = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
     return factory.createPosProductsService();
   }, []);
+
+  const refreshCatalogAiQuota = useCallback(async () => {
+    if (!token || !businessId) {
+      setCatalogAiServerQuota(null);
+      return;
+    }
+
+    try {
+      const api = new CatalogAiApi(CATALOG_AI_API_URL, token);
+      const quota = await api.getQuota();
+      setCatalogAiServerQuota(quota);
+    } catch {
+      // La cuota real se sigue validando en el microservicio. Si esta consulta
+      // informativa falla, conservamos el último valor conocido para la UI.
+    }
+  }, [businessId, token]);
 
   const cancelSelection = () => {
     setIsSelecting(false);
@@ -376,6 +553,10 @@ export const ProductsV2PosPage = () => {
     };
   }, []);
 
+  useEffect(() => {
+    void refreshCatalogAiQuota();
+  }, [refreshCatalogAiQuota]);
+
   const resetForm = () => {
     setEditingId(null);
     setName("");
@@ -384,9 +565,9 @@ export const ProductsV2PosPage = () => {
     setPromotionPrice("");
     setShowPromotionPrice(false);
     setCostPerItem("");
-    setWholesalePrice("");
-    setWholesaleMinQuantity("");
+    setWholesalePrices([]);
     setWholesaleFormErrors({});
+    setVariantWholesaleFormErrors({});
     setStock("");
     setForSale(true);
     setShowInStore(true);
@@ -446,6 +627,29 @@ export const ProductsV2PosPage = () => {
   const productLimitCount = Math.max(totalItems, products.length);
   const freeProductLimitReached =
     isFreePlan && productLimitCount >= FREE_PRODUCT_LIMIT;
+  const catalogAiImportQuota =
+    catalogAiServerQuota?.limit ??
+    getCatalogAiImportQuota(productsLimit, features.plan);
+  const catalogAiImportedProducts = catalogAiServerQuota?.used ?? 0;
+  const catalogAiRemainingProducts =
+    catalogAiServerQuota?.remaining ??
+    Math.max(0, catalogAiImportQuota - catalogAiImportedProducts);
+  const catalogAiBatchLimit = Math.min(
+    CATALOG_AI_BATCH_LIMIT,
+    catalogAiRemainingProducts,
+  );
+
+  const openCatalogAiUpgradeModal = () => {
+    const quotaReached = catalogAiImportQuota > 0;
+    setProductPlanUnlockModal({
+      title: quotaReached ? "Límite de importaciones alcanzado" : "Activa START",
+      message: quotaReached
+        ? `Ya utilizaste los ${catalogAiImportQuota} productos incluidos en tu cuota mensual de IA.`
+        : "Importar productos con IA está disponible desde START. La cuota mensual es de 100 productos en START, 250 en PRO y 500 en MAX.",
+      buttonText: "Continuar al pago",
+      unlockFeature: "Catalog",
+    });
+  };
 
   const openProductLimitUpgradeModal = (
     currentCount = productLimitCount,
@@ -663,6 +867,7 @@ export const ProductsV2PosPage = () => {
           promotionPrice: product.promotionPrice,
           wholesalePrice: product.wholesalePrice,
           wholesaleMinQuantity: product.wholesaleMinQuantity,
+          wholesalePrices: product.wholesalePrices,
           stock: product.stock,
           expDate: product.expDate,
           minStock: product.minStock,
@@ -804,6 +1009,7 @@ export const ProductsV2PosPage = () => {
             promotionPrice: product.promotionPrice,
             wholesalePrice: product.wholesalePrice,
             wholesaleMinQuantity: product.wholesaleMinQuantity,
+            wholesalePrices: product.wholesalePrices,
             stock: product.stock,
             expDate: product.expDate,
             minStock: product.minStock,
@@ -843,30 +1049,33 @@ export const ProductsV2PosPage = () => {
           (field) => field.trim().length > 0,
         ),
       )
-      .map((variant, index) => ({
-        description:
-          variant.description.trim() ||
-          variant.color.trim() ||
-          `Variante ${index + 1}`,
-        barcode: variant.barcode.trim() || null,
-        color: variant.color.trim() || null,
-        size: null,
-        id: variant.id,
-        productId: variant.productId,
-        price: toNullableNumber(variant.price),
-        stock: toNullableNumber(variant.stock),
-        costPerItem: toNullableNumber(variant.costPerItem),
-        promotionPrice: toNullableNumber(variant.promotionPrice),
-        wholesalePrice: toNullableNumber(variant.wholesalePrice),
-        wholesaleMinQuantity:
-          variant.wholesalePrice.trim() === ""
-            ? null
-            : toNullableNumber(variant.wholesaleMinQuantity),
-        minStock: toNullableNumber(variant.minStock),
-        optStock: toNullableNumber(variant.optStock),
-        expDate: variant.expDate.trim() || null,
-        Image: variant.Image ?? null,
-      }));
+      .map((variant, index) => {
+        const variantWholesalePrices = toWholesalePrices(variant.wholesalePrices);
+        const primaryWholesalePrice = variantWholesalePrices[0] ?? null;
+
+        return {
+          description:
+            variant.description.trim() ||
+            variant.color.trim() ||
+            `Variante ${index + 1}`,
+          barcode: variant.barcode.trim() || null,
+          color: variant.color.trim() || null,
+          size: null,
+          id: variant.id,
+          productId: variant.productId,
+          price: toNullableNumber(variant.price),
+          stock: toNullableNumber(variant.stock),
+          costPerItem: toNullableNumber(variant.costPerItem),
+          promotionPrice: toNullableNumber(variant.promotionPrice),
+          wholesalePrice: primaryWholesalePrice?.price ?? null,
+          wholesaleMinQuantity: primaryWholesalePrice?.minQuantity ?? null,
+          wholesalePrices: variantWholesalePrices,
+          minStock: toNullableNumber(variant.minStock),
+          optStock: toNullableNumber(variant.optStock),
+          expDate: variant.expDate.trim() || null,
+          Image: variant.Image ?? null,
+        };
+      });
   };
 
   const extrasFromValues = (values: string[], type: "TALLA" | "COLOR") =>
@@ -920,46 +1129,65 @@ export const ProductsV2PosPage = () => {
     pushUniqueTag(colorDraft, setColors, setColorDraft);
   };
 
-  const handleWholesalePriceChange = (value: string) => {
-    if (!canEditWholesalePrices()) return;
-    setWholesalePrice(value);
-    setWholesaleFormErrors((current) => ({ ...current, price: undefined }));
-    if (value.trim() === "") {
-      setWholesaleMinQuantity("");
-      setWholesaleFormErrors({});
-    }
-  };
-
-  const handleWholesaleMinQuantityChange = (value: string) => {
-    if (!canEditWholesalePrices()) return;
-    setWholesaleMinQuantity(value);
-    setWholesaleFormErrors((current) => ({
-      ...current,
-      minQuantity: undefined,
-    }));
-  };
-
-  const showWholesaleFieldError = (
-    field: keyof WholesaleFormErrors,
-    message: string,
+  const clearWholesaleTierError = (
+    tierKey: string,
+    field: keyof WholesalePriceTierError,
   ) => {
-    setError(message);
-    setWholesaleFormErrors({ [field]: message });
-    window.setTimeout(() => {
-      (field === "price"
-        ? wholesalePriceInputRef.current
-        : wholesaleMinQuantityInputRef.current
-      )?.focus();
-    }, 0);
+    setWholesaleFormErrors((current) => {
+      const tierErrors = current[tierKey];
+      if (!tierErrors?.[field]) return current;
+
+      const nextTierErrors = { ...tierErrors, [field]: undefined };
+      const next = { ...current };
+      if (!nextTierErrors.price && !nextTierErrors.minQuantity) {
+        delete next[tierKey];
+      } else {
+        next[tierKey] = nextTierErrors;
+      }
+      return next;
+    });
   };
 
-  const handleVariantWholesaleChange = (
-    key: string,
-    field: "wholesalePrice" | "wholesaleMinQuantity",
-    value: string,
+  const updateVariantWholesalePrices = (
+    variantKey: string,
+    nextWholesalePrices: WholesalePriceTierDraft[],
   ) => {
     if (!canEditWholesalePrices()) return;
-    updateVariant(key, field, value);
+    setVariants((current) =>
+      current.map((variant) =>
+        variant.key === variantKey
+          ? { ...variant, wholesalePrices: nextWholesalePrices }
+          : variant,
+      ),
+    );
+  };
+
+  const clearVariantWholesaleTierError = (
+    variantKey: string,
+    tierKey: string,
+    field: keyof WholesalePriceTierError,
+  ) => {
+    setVariantWholesaleFormErrors((current) => {
+      const variantErrors = current[variantKey];
+      const tierErrors = variantErrors?.[tierKey];
+      if (!tierErrors?.[field]) return current;
+
+      const nextTierErrors = { ...tierErrors, [field]: undefined };
+      const nextVariantErrors = { ...variantErrors };
+      if (!nextTierErrors.price && !nextTierErrors.minQuantity) {
+        delete nextVariantErrors[tierKey];
+      } else {
+        nextVariantErrors[tierKey] = nextTierErrors;
+      }
+
+      const next = { ...current };
+      if (Object.keys(nextVariantErrors).length === 0) {
+        delete next[variantKey];
+      } else {
+        next[variantKey] = nextVariantErrors;
+      }
+      return next;
+    });
   };
 
   const formImagePreviews = useMemo(() => {
@@ -1046,12 +1274,6 @@ export const ProductsV2PosPage = () => {
       promotionPrice.trim() === "" ? null : Number(promotionPrice);
     const parsedCostPerItem =
       costPerItem.trim() === "" ? null : Number(costPerItem);
-    const parsedWholesalePrice =
-      wholesalePrice.trim() === "" ? null : Number(wholesalePrice);
-    const parsedWholesaleMinQuantity =
-      wholesaleMinQuantity.trim() === "" ? null : Number(wholesaleMinQuantity);
-    const normalizedWholesaleMinQuantity =
-      parsedWholesalePrice === null ? null : parsedWholesaleMinQuantity;
     const parsedStock = stock.trim() === "" ? null : Number(stock);
 
     if (
@@ -1102,141 +1324,40 @@ export const ProductsV2PosPage = () => {
       return;
     }
 
-    if (
-      parsedWholesalePrice !== null &&
-      (Number.isNaN(parsedWholesalePrice) || parsedWholesalePrice <= 0)
-    ) {
-      showWholesaleFieldError(
-        "price",
-        "El precio por mayoreo debe ser un número válido mayor a 0.",
-      );
+    const productWholesaleValidation = validateWholesaleTierDrafts(
+      wholesalePrices,
+      parsedPrice,
+    );
+    setWholesaleFormErrors(productWholesaleValidation.errors);
+    if (productWholesaleValidation.message) {
+      setError(productWholesaleValidation.message);
       return;
     }
 
-    if (parsedWholesalePrice !== null && parsedPrice === null) {
-      showWholesaleFieldError(
-        "price",
-        "Agrega el precio normal antes de configurar precio por mayoreo.",
-      );
-      return;
-    }
-
-    if (
-      parsedWholesalePrice !== null &&
-      parsedPrice !== null &&
-      parsedWholesalePrice > parsedPrice
-    ) {
-      showWholesaleFieldError(
-        "price",
-        "El precio por mayoreo no puede ser mayor que el precio normal.",
-      );
-      return;
-    }
-
-    if (
-      parsedWholesalePrice !== null &&
-      normalizedWholesaleMinQuantity === null
-    ) {
-      showWholesaleFieldError(
-        "minQuantity",
-        "La cantidad mínima para mayoreo es obligatoria cuando agregas precio por mayoreo.",
-      );
-      return;
-    }
-
-    if (parsedWholesalePrice === null && parsedWholesaleMinQuantity !== null) {
-      showWholesaleFieldError(
-        "price",
-        "No puedes agregar cantidad mínima para mayoreo sin precio por mayoreo.",
-      );
-      return;
-    }
-
-    if (
-      normalizedWholesaleMinQuantity !== null &&
-      (Number.isNaN(normalizedWholesaleMinQuantity) ||
-        normalizedWholesaleMinQuantity < 2)
-    ) {
-      showWholesaleFieldError(
-        "minQuantity",
-        "La cantidad mínima para mayoreo debe ser mayor o igual a 2.",
-      );
-      return;
-    }
-
+    const nextVariantWholesaleErrors: VariantWholesaleFormErrors = {};
     for (const [index, variant] of variants.entries()) {
       const parsedVariantPrice =
         variant.price.trim() === "" ? null : Number(variant.price);
-      const parsedVariantWholesalePrice =
-        variant.wholesalePrice.trim() === ""
-          ? null
-          : Number(variant.wholesalePrice);
-      const parsedVariantWholesaleMinQuantity =
-        variant.wholesaleMinQuantity.trim() === ""
-          ? null
-          : Number(variant.wholesaleMinQuantity);
-      const variantLabel = `variante ${index + 1}`;
+      const variantWholesaleValidation = validateWholesaleTierDrafts(
+        variant.wholesalePrices,
+        parsedVariantPrice,
+      );
 
-      if (
-        parsedVariantWholesalePrice !== null &&
-        (Number.isNaN(parsedVariantWholesalePrice) ||
-          parsedVariantWholesalePrice <= 0)
-      ) {
+      if (variantWholesaleValidation.message) {
+        nextVariantWholesaleErrors[variant.key] =
+          variantWholesaleValidation.errors;
+        setVariantWholesaleFormErrors(nextVariantWholesaleErrors);
         setError(
-          `El precio por mayoreo de la ${variantLabel} debe ser mayor a 0.`,
-        );
-        return;
-      }
-
-      if (parsedVariantWholesalePrice !== null && parsedVariantPrice === null) {
-        setError(
-          `Agrega el precio normal de la ${variantLabel} antes de configurar mayoreo.`,
-        );
-        return;
-      }
-
-      if (
-        parsedVariantWholesalePrice !== null &&
-        parsedVariantPrice !== null &&
-        parsedVariantWholesalePrice > parsedVariantPrice
-      ) {
-        setError(
-          `El precio por mayoreo de la ${variantLabel} no puede ser mayor que su precio normal.`,
-        );
-        return;
-      }
-
-      if (
-        parsedVariantWholesalePrice !== null &&
-        parsedVariantWholesaleMinQuantity === null
-      ) {
-        setError(
-          `La cantidad mínima para mayoreo de la ${variantLabel} es obligatoria.`,
-        );
-        return;
-      }
-
-      if (
-        parsedVariantWholesalePrice === null &&
-        parsedVariantWholesaleMinQuantity !== null
-      ) {
-        setError(
-          `No puedes agregar cantidad mínima para mayoreo en la ${variantLabel} sin precio por mayoreo.`,
-        );
-        return;
-      }
-
-      if (
-        parsedVariantWholesaleMinQuantity !== null &&
-        (Number.isNaN(parsedVariantWholesaleMinQuantity) ||
-          parsedVariantWholesaleMinQuantity < 2)
-      ) {
-        setError(
-          `La cantidad mínima para mayoreo de la ${variantLabel} debe ser mayor o igual a 2.`,
+          `Revisa el mayoreo de la variante ${index + 1}: ${variantWholesaleValidation.message}`,
         );
         return;
       }
     }
+    setVariantWholesaleFormErrors({});
+
+    const normalizedWholesalePrices =
+      productWholesaleValidation.wholesalePrices;
+    const primaryWholesalePrice = normalizedWholesalePrices[0] ?? null;
 
     setSaving(true);
     setError(null);
@@ -1263,8 +1384,9 @@ export const ProductsV2PosPage = () => {
         volume: false,
         price: parsedPrice,
         promotionPrice: parsedPromotionPrice,
-        wholesalePrice: parsedWholesalePrice,
-        wholesaleMinQuantity: normalizedWholesaleMinQuantity,
+        wholesalePrice: primaryWholesalePrice?.price ?? null,
+        wholesaleMinQuantity: primaryWholesalePrice?.minQuantity ?? null,
+        wholesalePrices: normalizedWholesalePrices,
         stock: parsedStock,
         expDate: null,
         minStock: null,
@@ -1344,6 +1466,7 @@ export const ProductsV2PosPage = () => {
     promotionPrice: detail?.promotionPrice ?? null,
     wholesalePrice: detail?.wholesalePrice ?? null,
     wholesaleMinQuantity: detail?.wholesaleMinQuantity ?? null,
+    wholesalePrices: detail?.wholesalePrices ?? [],
     stock: detail?.stock ?? null,
     expDate: detail?.expDate ?? null,
     minStock: detail?.minStock ?? null,
@@ -1419,14 +1542,15 @@ export const ProductsV2PosPage = () => {
       setCostPerItem(
         detail.costPerItem == null ? "" : String(detail.costPerItem),
       );
-      setWholesalePrice(
-        detail.wholesalePrice == null ? "" : String(detail.wholesalePrice),
+      setWholesalePrices(
+        toWholesaleTierDrafts(
+          detail.wholesalePrices,
+          detail.wholesalePrice,
+          detail.wholesaleMinQuantity,
+        ),
       );
-      setWholesaleMinQuantity(
-        detail.wholesaleMinQuantity == null
-          ? ""
-          : String(detail.wholesaleMinQuantity),
-      );
+      setWholesaleFormErrors({});
+      setVariantWholesaleFormErrors({});
       setStock(detail.stock == null ? "" : String(detail.stock));
       setForSale(detail.forSale);
       setShowInStore(detail.showInStore);
@@ -1464,14 +1588,11 @@ export const ProductsV2PosPage = () => {
             variant.promotionPrice == null
               ? ""
               : String(variant.promotionPrice),
-          wholesalePrice:
-            variant.wholesalePrice == null
-              ? ""
-              : String(variant.wholesalePrice),
-          wholesaleMinQuantity:
-            variant.wholesaleMinQuantity == null
-              ? ""
-              : String(variant.wholesaleMinQuantity),
+          wholesalePrices: toWholesaleTierDrafts(
+            variant.wholesalePrices,
+            variant.wholesalePrice,
+            variant.wholesaleMinQuantity,
+          ),
           costPerItem:
             variant.costPerItem == null ? "" : String(variant.costPerItem),
           stock: variant.stock == null ? "" : String(variant.stock),
@@ -1588,8 +1709,6 @@ export const ProductsV2PosPage = () => {
       | "color"
       | "price"
       | "promotionPrice"
-      | "wholesalePrice"
-      | "wholesaleMinQuantity"
       | "costPerItem"
       | "stock"
       | "minStock"
@@ -1605,9 +1724,6 @@ export const ProductsV2PosPage = () => {
         return {
           ...variant,
           [field]: value,
-          ...(field === "wholesalePrice" && value.trim() === ""
-            ? { wholesaleMinQuantity: "" }
-            : {}),
         };
       }),
     );
@@ -2081,6 +2197,7 @@ export const ProductsV2PosPage = () => {
             promotionPrice: product.promotionPrice,
             wholesalePrice: product.wholesalePrice,
             wholesaleMinQuantity: product.wholesaleMinQuantity,
+            wholesalePrices: product.wholesalePrices,
             stock: product.stock,
             expDate: product.expDate,
             minStock: product.minStock,
@@ -2208,7 +2325,10 @@ export const ProductsV2PosPage = () => {
               className="pos-v2-products__secondary"
               onClick={() => {
                 if (blockBlockedProductModuleMutation()) return;
-                if (blockFreeProductCreation()) return;
+                if (!catalogAiBatchLimit) {
+                  openCatalogAiUpgradeModal();
+                  return;
+                }
                 setIsAiImportOpen(true);
               }}
               disabled={!token || !businessId}
@@ -2294,6 +2414,7 @@ export const ProductsV2PosPage = () => {
 
         <CatalogAiImportWizard
           open={isAiImportOpen}
+          maxFiles={catalogAiBatchLimit}
           businessId={businessId}
           token={token}
           categories={categories}
@@ -2303,12 +2424,16 @@ export const ProductsV2PosPage = () => {
           }
           onClose={() => setIsAiImportOpen(false)}
           onSessionRefreshed={setToken}
+          onBatchStarted={() => {
+            void refreshCatalogAiQuota();
+          }}
           onCompleted={({ created }) => {
             setIsAiImportOpen(false);
             setToast({
               type: "success",
               message: `${created} producto(s) creados con IA.`,
             });
+            void refreshCatalogAiQuota();
             void loadProducts(1);
           }}
         />
@@ -2525,10 +2650,12 @@ export const ProductsV2PosPage = () => {
                         </strong>
                         <small>Stock: {product.stock ?? "--"}</small>
                       </div>
-                      {product.wholesalePrice != null ? (
+                      {product.wholesalePrices.length > 0 ? (
                         <small className="pos-v2-products__simple-meta">
-                          Mayoreo: ${product.wholesalePrice.toFixed(2)} desde{" "}
-                          {product.wholesaleMinQuantity ?? "--"} pzas.
+                          Mayoreo: {product.wholesalePrices.length}{" "}
+                          {product.wholesalePrices.length === 1 ? "nivel" : "niveles"}
+                          {" · "}desde {product.wholesalePrices[0].minQuantity} pzas. a $
+                          {product.wholesalePrices[0].price.toFixed(2)}
                         </small>
                       ) : null}
                       {product.categoryName ? (
@@ -2807,86 +2934,19 @@ export const ProductsV2PosPage = () => {
                       </button>
                     )}
                   </div>
-                  <label
-                    className={
-                      wholesaleFormErrors.price
-                        ? "pos-v2-products__wholesale-field is-invalid"
-                        : "pos-v2-products__wholesale-field"
-                    }
-                  >
-                    Precio por mayoreo
-                    <input
-                      ref={wholesalePriceInputRef}
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      inputMode="decimal"
-                      value={wholesalePrice}
-                      onFocus={() => {
-                        if (isFreePlan) openWholesaleUpgradeModal();
-                      }}
-                      onChange={(event) =>
-                        handleWholesalePriceChange(event.target.value)
-                      }
-                      placeholder="Ej. 80"
-                      readOnly={isFreePlan}
-                      aria-invalid={Boolean(wholesaleFormErrors.price)}
-                      aria-describedby={
-                        wholesaleFormErrors.price
-                          ? "wholesale-price-error"
-                          : undefined
-                      }
-                    />
-                    {wholesaleFormErrors.price ? (
-                      <small
-                        id="wholesale-price-error"
-                        className="pos-v2-products__wholesale-error"
-                        role="alert"
-                      >
-                        {wholesaleFormErrors.price}
-                      </small>
-                    ) : null}
-                  </label>
-                  <label
-                    className={
-                      wholesaleFormErrors.minQuantity
-                        ? "pos-v2-products__wholesale-field is-invalid"
-                        : "pos-v2-products__wholesale-field"
-                    }
-                  >
-                    Cantidad mínima para mayoreo
-                    <input
-                      ref={wholesaleMinQuantityInputRef}
-                      type="number"
-                      min="2"
-                      step="1"
-                      inputMode="numeric"
-                      value={wholesaleMinQuantity}
-                      onFocus={() => {
-                        if (isFreePlan) openWholesaleUpgradeModal();
-                      }}
-                      onChange={(event) =>
-                        handleWholesaleMinQuantityChange(event.target.value)
-                      }
-                      placeholder="Ej. 3"
-                      readOnly={isFreePlan}
-                      aria-invalid={Boolean(wholesaleFormErrors.minQuantity)}
-                      aria-describedby={
-                        wholesaleFormErrors.minQuantity
-                          ? "wholesale-min-quantity-error"
-                          : undefined
-                      }
-                    />
-                    {wholesaleFormErrors.minQuantity ? (
-                      <small
-                        id="wholesale-min-quantity-error"
-                        className="pos-v2-products__wholesale-error"
-                        role="alert"
-                      >
-                        {wholesaleFormErrors.minQuantity}
-                      </small>
-                    ) : null}
-                  </label>
+                  <WholesalePricesEditor
+                    value={wholesalePrices}
+                    onChange={(next) => {
+                      if (!canEditWholesalePrices()) return;
+                      setWholesalePrices(next);
+                    }}
+                    errors={wholesaleFormErrors}
+                    onClearError={clearWholesaleTierError}
+                    locked={isFreePlan}
+                    onLockedInteraction={openWholesaleUpgradeModal}
+                    title="Precios por mayoreo"
+                    description="Define varios niveles. Ejemplo: 6 pzas. a $140, 12 pzas. a $130 y 24 pzas. a $115."
+                  />
                   <label>
                     Costo por producto (opcional)
                     <input
@@ -3211,45 +3271,25 @@ export const ProductsV2PosPage = () => {
                           />
                         </label>
 
-                        <label className="pos-v2-products__variant-field">
-                          <span>Precio por mayoreo</span>
-                          <input
-                            value={variant.wholesalePrice}
-                            onChange={(event) =>
-                              updateVariant(
-                                variant.key,
-                                "wholesalePrice",
-                                event.target.value,
-                              )
-                            }
-                            placeholder="0.00"
-                            type="number"
-                            min="0"
-                            step="0.01"
-                            inputMode="decimal"
-                            aria-label={`Precio por mayoreo de variante ${index + 1}`}
-                          />
-                        </label>
-
-                        <label className="pos-v2-products__variant-field">
-                          <span>Cantidad mínima para mayoreo</span>
-                          <input
-                            value={variant.wholesaleMinQuantity}
-                            onChange={(event) =>
-                              updateVariant(
-                                variant.key,
-                                "wholesaleMinQuantity",
-                                event.target.value,
-                              )
-                            }
-                            placeholder="Ej. 3"
-                            type="number"
-                            min="2"
-                            step="1"
-                            inputMode="numeric"
-                            aria-label={`Cantidad mínima para mayoreo de variante ${index + 1}`}
-                          />
-                        </label>
+                        <WholesalePricesEditor
+                          compact
+                          value={variant.wholesalePrices}
+                          onChange={(next) =>
+                            updateVariantWholesalePrices(variant.key, next)
+                          }
+                          errors={variantWholesaleFormErrors[variant.key]}
+                          onClearError={(tierKey, field) =>
+                            clearVariantWholesaleTierError(
+                              variant.key,
+                              tierKey,
+                              field,
+                            )
+                          }
+                          locked={isFreePlan}
+                          onLockedInteraction={openWholesaleUpgradeModal}
+                          title="Mayoreo de esta variante"
+                          description="Opcional. Si lo configuras, estos niveles aplican a esta variante."
+                        />
 
                         <label className="pos-v2-products__variant-field">
                           <span>Costo</span>

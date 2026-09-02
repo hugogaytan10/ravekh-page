@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
 import { CatalogStorefrontApi } from "../api/CatalogStorefrontApi";
+import { StorefrontCartItem } from "../model/CatalogStorefrontModels";
 import { getStripe } from "./stripeClient";
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
-import { formatCatalogPrice, getEffectiveCatalogPriceForQuantity } from "./catalogPrice";
+import { formatCatalogPrice, getApplicableWholesaleTier, getEffectiveCatalogPriceForQuantity, normalizeWholesalePriceTiers } from "./catalogPrice";
 import "./CatalogOrderInfoPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
@@ -32,22 +33,7 @@ type PendingStripeCatalogOrder = {
 const getPendingStripeOrderKey = (businessId: number) => `catalog-v2-pending-stripe-order:${businessId}`;
 const processingStripeOrderKeys = new Set<string>();
 
-type CartItem = {
-  cartKey?: string;
-  productId: number;
-  variantId?: number;
-  colorId?: number;
-  sizeId?: number;
-  colorName?: string;
-  sizeName?: string;
-  name: string;
-  price?: number | null;
-  promotionPrice?: number | null;
-  wholesalePrice?: number | null;
-  wholesaleMinQuantity?: number | null;
-  cost?: number;
-  quantity: number;
-};
+type CartItem = StorefrontCartItem;
 
 const defaultShippingOptions: ShippingOptions = {
   ContactInformation: true,
@@ -66,8 +52,26 @@ const hasAnyAddressFieldEnabled = (options: ShippingOptions) =>
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
 
-const buildWhatsAppProductLine = (item: CartItem) =>
-  `• ${item.name} x${item.quantity} - ${formatCatalogPrice(getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity), money)}`;
+const resolveCartPricing = (item: CartItem) => {
+  const wholesalePrices = normalizeWholesalePriceTiers(
+    item.wholesalePrices,
+    item.wholesalePrice,
+    item.wholesaleMinQuantity,
+  );
+  const appliedWholesaleTier = getApplicableWholesaleTier(wholesalePrices, item.quantity);
+  const unitPrice = getEffectiveCatalogPriceForQuantity(
+    item.price,
+    item.promotionPrice,
+    wholesalePrices,
+    item.quantity,
+  );
+  return { wholesalePrices, appliedWholesaleTier, unitPrice };
+};
+
+const buildWhatsAppProductLine = (item: CartItem) => {
+  const { unitPrice } = resolveCartPricing(item);
+  return `• ${item.name} x${item.quantity} - ${formatCatalogPrice(unitPrice, money)}`;
+};
 
 export const CatalogOrderInfoPage = () => {
   useCatalogThemeSync();
@@ -302,16 +306,20 @@ export const CatalogOrderInfoPage = () => {
           Address: buildAddress(),
           PhoneNumber: checkoutOptions.ContactInformation ? phone.trim() : "",
         },
-        OrderDetails: cart.map((item) => ({
-          Quantity: Math.max(1, Number(item.quantity) || 1),
-          ...(item.variantId
-            ? { Variant_Id: Number(item.variantId) || 0 }
-            : { Product_Id: Number(item.productId) || 0 }),
-          ...(item.colorId ? { Color_Id: Number(item.colorId) || 0 } : {}),
-          ...(item.sizeId ? { Size_Id: Number(item.sizeId) || 0 } : {}),
-          ...(getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity) ? { Price: getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity) ?? 0 } : {}),
-          ...(item.cost ? { Cost: Number(item.cost) || 0 } : {}),
-        })),
+        OrderDetails: cart.map((item) => {
+          const { unitPrice, appliedWholesaleTier } = resolveCartPricing(item);
+          return {
+            Quantity: Math.max(1, Number(item.quantity) || 1),
+            ...(item.variantId
+              ? { Variant_Id: Number(item.variantId) || 0 }
+              : { Product_Id: Number(item.productId) || 0 }),
+            ...(item.colorId ? { Color_Id: Number(item.colorId) || 0 } : {}),
+            ...(item.sizeId ? { Size_Id: Number(item.sizeId) || 0 } : {}),
+            ...(unitPrice ? { Price: unitPrice } : {}),
+            ...(appliedWholesaleTier?.id ? { WholesalePrice_Id: appliedWholesaleTier.id } : {}),
+            ...(item.cost ? { Cost: Number(item.cost) || 0 } : {}),
+          };
+        }),
       };
 
       if (paymentMethod === "tarjeta") {
@@ -329,7 +337,7 @@ export const CatalogOrderInfoPage = () => {
             price_data: {
               currency: businessConfig.currency.toLowerCase(),
               product_data: { name: item.name },
-              unit_amount: Math.round((getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity) ?? 0) * 100),
+              unit_amount: Math.round((resolveCartPricing(item).unitPrice ?? 0) * 100),
             },
             quantity: item.quantity,
           })),

@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { FiPlus, FiMinus, FiX } from "react-icons/fi";
 import { StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefrontApi";
-import { formatCatalogPrice, getCatalogPriceValue, getEffectiveCatalogPriceForQuantity } from "./catalogPrice";
+import type { StorefrontWholesalePrice } from "../model/CatalogStorefrontModels";
+import { formatCatalogPrice, getApplicableWholesaleTier, getEffectiveCatalogPriceForQuantity, getNextWholesaleTier, normalizeWholesalePriceTiers } from "./catalogPrice";
 
 const normalizeOptionText = (value?: string | null) => value?.trim().toLowerCase() ?? "";
 
@@ -20,6 +21,7 @@ type Props = {
   productBasePromotionPrice?: number | null;
   productBaseWholesalePrice?: number | null;
   productBaseWholesaleMinQuantity?: number | null;
+  productBaseWholesalePrices?: StorefrontWholesalePrice[];
   variants: StorefrontVariant[];
   colors: StorefrontProductExtra[];
   sizes: StorefrontProductExtra[];
@@ -36,6 +38,7 @@ export const VariantSelectionModalV2 = ({
   productBasePromotionPrice,
   productBaseWholesalePrice,
   productBaseWholesaleMinQuantity,
+  productBaseWholesalePrices,
   variants,
   colors,
   sizes,
@@ -65,11 +68,24 @@ export const VariantSelectionModalV2 = ({
   const selectedSize = useMemo(() => sizes.find((size) => size.id === selectedSizeId) || null, [selectedSizeId, sizes]);
 
   const isBaseSelected = selectedVariantId === "base";
-  const selectedWholesalePrice = selectedVariant ? selectedVariant.wholesalePrice : productBaseWholesalePrice;
-  const selectedWholesaleMinQuantity = selectedVariant ? selectedVariant.wholesaleMinQuantity : productBaseWholesaleMinQuantity;
+  const productWholesaleTiers = useMemo(
+    () => normalizeWholesalePriceTiers(productBaseWholesalePrices, productBaseWholesalePrice, productBaseWholesaleMinQuantity),
+    [productBaseWholesaleMinQuantity, productBaseWholesalePrice, productBaseWholesalePrices],
+  );
+  const variantWholesaleTiers = useMemo(
+    () => selectedVariant
+      ? normalizeWholesalePriceTiers(selectedVariant.wholesalePrices, selectedVariant.wholesalePrice, selectedVariant.wholesaleMinQuantity)
+      : [],
+    [selectedVariant],
+  );
+  const selectedWholesaleTiers = selectedVariant && variantWholesaleTiers.length > 0
+    ? variantWholesaleTiers
+    : productWholesaleTiers;
   const selectedPrice = selectedVariant
-    ? getEffectiveCatalogPriceForQuantity(selectedVariant.price, selectedVariant.promotionPrice, selectedVariant.wholesalePrice, selectedVariant.wholesaleMinQuantity, quantity)
-    : getEffectiveCatalogPriceForQuantity(productBasePrice, productBasePromotionPrice, productBaseWholesalePrice, productBaseWholesaleMinQuantity, quantity);
+    ? getEffectiveCatalogPriceForQuantity(selectedVariant.price, selectedVariant.promotionPrice, selectedWholesaleTiers, quantity)
+    : getEffectiveCatalogPriceForQuantity(productBasePrice, productBasePromotionPrice, selectedWholesaleTiers, quantity);
+  const activeWholesaleTier = getApplicableWholesaleTier(selectedWholesaleTiers, quantity);
+  const nextWholesaleTier = getNextWholesaleTier(selectedWholesaleTiers, quantity);
 
   const hasVariantSelection = variants.length === 0 || isBaseSelected || Boolean(selectedVariant);
   const hasAnyOptionSelected = hasVariantSelection || Boolean(selectedColor) || Boolean(selectedSize);
@@ -96,10 +112,28 @@ export const VariantSelectionModalV2 = ({
           <div className="grid gap-4 pt-1">
             <h3 className="text-2xl font-bold leading-tight text-[var(--text-primary)] md:text-3xl">{productName}</h3>
             <p className="text-3xl font-extrabold leading-none text-[var(--text-primary)] md:text-4xl">{formatCatalogPrice(selectedPrice, formatPrice)}</p>
-            {getCatalogPriceValue(selectedWholesalePrice) && selectedWholesaleMinQuantity ? (
-              <p className="text-sm font-semibold text-[var(--text-secondary)]">
-                Mayoreo: {formatCatalogPrice(selectedWholesalePrice, formatPrice)} desde {selectedWholesaleMinQuantity} pzas.
-              </p>
+            {selectedWholesaleTiers.length > 0 ? (
+              <div className="grid gap-2 rounded-xl border border-[var(--border-default)] bg-[var(--bg-subtle)] p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <strong className="text-sm font-extrabold text-[var(--text-primary)]">Precios por mayoreo</strong>
+                  {activeWholesaleTier ? (
+                    <span className="rounded-full bg-[var(--bg-surface)] px-2 py-1 text-xs font-bold text-[var(--text-primary)]">Aplicado</span>
+                  ) : null}
+                </div>
+                <div className="grid gap-1.5">
+                  {selectedWholesaleTiers.map((tier) => (
+                    <div key={tier.id ?? tier.minQuantity} className={`flex items-center justify-between rounded-lg px-2 py-1.5 text-sm ${activeWholesaleTier?.minQuantity === tier.minQuantity ? "bg-[var(--bg-surface)] font-extrabold text-[var(--text-primary)]" : "text-[var(--text-secondary)]"}`}>
+                      <span>Desde {tier.minQuantity} pzas.</span>
+                      <strong>{formatCatalogPrice(tier.price, formatPrice)} c/u</strong>
+                    </div>
+                  ))}
+                </div>
+                {nextWholesaleTier ? (
+                  <small className="font-semibold text-[var(--text-secondary)]">Agrega {Math.max(nextWholesaleTier.minQuantity - quantity, 0)} más para {formatCatalogPrice(nextWholesaleTier.price, formatPrice)} c/u.</small>
+                ) : activeWholesaleTier ? (
+                  <small className="font-semibold text-[var(--text-secondary)]">Ya tienes el mejor precio disponible.</small>
+                ) : null}
+              </div>
             ) : null}
 
             <div className="grid gap-1">

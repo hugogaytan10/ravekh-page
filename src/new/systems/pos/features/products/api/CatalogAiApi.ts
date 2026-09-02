@@ -22,6 +22,18 @@ export type CatalogAiBatchStatus =
   | "COMPLETED_WITH_ERRORS"
   | "CANCELLED";
 
+export type CatalogAiQuota = {
+  businessId: number;
+  plan: "GRATUITO" | "START" | "PRO" | "MAX";
+  limit: number;
+  used: number;
+  remaining: number;
+  allowed: boolean;
+  periodStart: string;
+  periodEnd: string;
+  maxBatchSize: number;
+};
+
 export type CatalogAiBatchProgress = {
   batchId: string;
   status: CatalogAiBatchStatus;
@@ -306,6 +318,10 @@ export class CatalogAiApi {
     throw lastError instanceof Error
       ? lastError
       : new Error("No se pudo consultar el progreso del lote.");
+  }
+
+  async getQuota(): Promise<CatalogAiQuota> {
+    return this.request<CatalogAiQuota>("/v1/catalog-imports/quota");
   }
 
   async createBatch(expectedItems: number): Promise<{ batchId: string; status: string; maxImages: number }> {

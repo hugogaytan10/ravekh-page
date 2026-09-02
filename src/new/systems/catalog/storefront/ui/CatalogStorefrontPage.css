@@ -300,3 +300,53 @@
 :root[data-theme="dark"] .catalog-v2-grid__wholesale-note.is-active .catalog-v2-grid__wholesale-note-head strong {
   color: #f5d0fe;
 }
+
+/* ===== Mayoreo múltiple ===== */
+.catalog-v2-grid__wholesale-tiers {
+  display: grid;
+  gap: 0.28rem;
+  margin-top: 0.1rem;
+}
+
+.catalog-v2-grid__wholesale-tiers > div {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.55rem;
+  padding: 0.32rem 0.42rem;
+  border-radius: 10px;
+  background: rgba(148, 163, 184, 0.08);
+  color: #64748b;
+  font-size: 0.66rem;
+  font-weight: 750;
+}
+
+.catalog-v2-grid__wholesale-tiers > div strong {
+  color: #111827;
+  font-size: 0.7rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.catalog-v2-grid__wholesale-tiers > div.is-current {
+  background: rgba(109, 1, 209, 0.1);
+  color: #6d01d1;
+}
+
+.catalog-v2-grid__wholesale-tiers > div.is-current strong {
+  color: #6d01d1;
+}
+
+:root[data-theme="dark"] .catalog-v2-grid__wholesale-tiers > div {
+  background: rgba(148, 163, 184, 0.1);
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .catalog-v2-grid__wholesale-tiers > div strong {
+  color: #f8fafc;
+}
+
+:root[data-theme="dark"] .catalog-v2-grid__wholesale-tiers > div.is-current,
+:root[data-theme="dark"] .catalog-v2-grid__wholesale-tiers > div.is-current strong {
+  color: #f5d0fe;
+}
