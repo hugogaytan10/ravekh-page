@@ -435,6 +435,14 @@ const friendlyTechnicalError = (rawValue: string): string | null => {
 
 const errorText = (cause: unknown): string => {
   if (cause instanceof CatalogAiApiError) {
+    if (
+      (cause.code === "AI_IMPORT_PLAN_REQUIRED" ||
+        cause.code === "AI_IMPORT_QUOTA_EXCEEDED") &&
+      cause.message.trim()
+    ) {
+      return cause.message.trim();
+    }
+
     const friendly = cause.code
       ? friendlyErrorByCode(cause.code)
       : null;
@@ -1821,6 +1829,20 @@ export const CatalogAiImportWizard = ({
           return onAddProductExtras(productId, extras);
         }),
       );
+      try {
+        await runWithSessionRecovery((client) =>
+          client.finalizeBatchQuota(batchId),
+        );
+      } catch (quotaFinalizeError) {
+        // Los productos ya se publicaron. Si esta liberación falla, la reserva
+        // expira automáticamente y la cuota autoritativa sigue siendo correcta.
+        catalogAiDebug.warn("WIZARD", "quota.finalize.failed", {
+          flowId: flowIdRef.current,
+          batchId,
+          cause: quotaFinalizeError,
+        });
+      }
+
       setPublishedProductIds(productIds);
       setFinishedAt(Date.now());
       catalogAiDebug.info("WIZARD", "publish.success", {

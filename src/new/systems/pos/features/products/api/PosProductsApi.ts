@@ -2,20 +2,7 @@ import { HttpClient } from "../../../../core/api/HttpClient";
 import { POS_ENDPOINTS } from "../../../shared/api/posEndpoints";
 import { toPaginationMeta } from "../../../shared/model/Pagination";
 import { IProductsRepository, ProductImportResult, ProductsPaginatedResult } from "../interface/IProductsRepository";
-import { ManagedProduct, ProductCategory, ProductExtra, ProductVariant, SaveManagedProductDto, WholesalePriceTier } from "../model/ManagedProduct";
-
-type WholesalePriceResponse = {
-  Id?: number;
-  id?: number;
-  Product_Id?: number | null;
-  product_Id?: number | null;
-  Variant_Id?: number | null;
-  variant_Id?: number | null;
-  Price?: number | string | null;
-  price?: number | string | null;
-  MinQuantity?: number | string | null;
-  minQuantity?: number | string | null;
-};
+import { ManagedProduct, ProductCategory, ProductExtra, ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 
 type ProductResponse = {
   Id?: number;
@@ -60,8 +47,6 @@ type ProductResponse = {
   wholesalePrice?: number | null;
   WholesaleMinQuantity?: number | null;
   wholesaleMinQuantity?: number | null;
-  WholesalePrices?: WholesalePriceResponse[] | null;
-  wholesalePrices?: WholesalePriceResponse[] | null;
   CostPerItem?: number | null;
   costPerItem?: number | null;
   Stock?: number | null;
@@ -105,8 +90,6 @@ type LegacyVariantResponse = {
   wholesalePrice?: number | null;
   WholesaleMinQuantity?: number | null;
   wholesaleMinQuantity?: number | null;
-  WholesalePrices?: WholesalePriceResponse[] | null;
-  wholesalePrices?: WholesalePriceResponse[] | null;
   CostPerItem?: number | null;
   costPerItem?: number | null;
   Stock?: number | null;
@@ -144,28 +127,6 @@ type CategoryResponse = {
   Color?: string;
   color?: string;
 };
-
-type ImportLogRegistrationResponse = {
-  message?: string;
-  error?: string;
-  code?: string;
-  allowed?: boolean;
-  businessId?: number;
-  plan?: string;
-  type?: "Importacion";
-  currentImports?: number;
-  limit?: number | null;
-};
-
-export class ProductImportPlanLimitError extends Error {
-  constructor(
-    message: string,
-    public readonly payload?: ImportLogRegistrationResponse,
-  ) {
-    super(message);
-    this.name = "ProductImportPlanLimitError";
-  }
-}
 
 export class PosProductsApi implements IProductsRepository {
   constructor(private readonly httpClient: HttpClient) {}
@@ -373,13 +334,6 @@ export class PosProductsApi implements IProductsRepository {
       return this.toDomain(created, this.extractCreatedExtras(response));
     }
 
-    const fallbackWholesalePrices = this.normalizeWholesalePrices(
-      payload.wholesalePrices,
-      payload.wholesalePrice,
-      payload.wholesaleMinQuantity,
-    );
-    const fallbackPrimaryWholesale = fallbackWholesalePrices[0] ?? null;
-
     return new ManagedProduct(
       payload.id ?? 0,
       payload.businessId,
@@ -407,9 +361,8 @@ export class PosProductsApi implements IProductsRepository {
       payload.variants ?? [],
       payload.extras ?? [],
       payload.variants?.length ?? 0,
-      fallbackPrimaryWholesale?.price ?? null,
-      fallbackPrimaryWholesale?.minQuantity ?? null,
-      fallbackWholesalePrices,
+      payload.wholesalePrice ?? null,
+      payload.wholesaleMinQuantity ?? null,
     );
   }
 
@@ -579,7 +532,6 @@ export class PosProductsApi implements IProductsRepository {
       throw new Error("El archivo no contiene registros válidos para importar.");
     }
 
-    await this.registerImportLogAttempt(businessId, token);
     await this.ensureImportCategories(businessId, rows, token);
 
     const response = await this.httpClient.request<{ imported?: number; message?: string; total?: number; created?: number; updated?: number; errors?: string[] }>({
@@ -606,8 +558,6 @@ export class PosProductsApi implements IProductsRepository {
       throw new Error("Selecciona un archivo .zip con productos.csv e imágenes.");
     }
 
-    await this.registerImportLogAttempt(businessId, token);
-
     const formData = new FormData();
     formData.append("file", file);
 
@@ -627,74 +577,6 @@ export class PosProductsApi implements IProductsRepository {
       message: response?.message ?? "Importación completada.",
       errors: Array.isArray(response?.errors) ? response.errors : [],
     };
-  }
-
-  private async registerImportLogAttempt(businessId: number, token: string): Promise<ImportLogRegistrationResponse | null> {
-    try {
-      const response = await this.httpClient.request<ImportLogRegistrationResponse | null>({
-        method: "POST",
-        path: "logs/importations",
-        token,
-        body: { Business_Id: businessId },
-      });
-
-      if (response?.allowed === false) {
-        throw this.buildImportLogError(response);
-      }
-
-      return response;
-    } catch (cause) {
-      const payload = this.extractImportLogPayload(cause);
-      if (payload) {
-        throw this.buildImportLogError(payload, cause);
-      }
-
-      throw cause;
-    }
-  }
-
-  private buildImportLogError(payload: ImportLogRegistrationResponse, cause?: unknown): ProductImportPlanLimitError {
-    const fallbackMessage =
-      payload.code === "IMPORT_LOG_PLAN_REQUIRED"
-        ? "Tu plan gratuito no permite importar productos. Actualiza a START para usar importaciones."
-        : payload.code === "IMPORT_LOG_LIMIT_REACHED"
-          ? "Has alcanzado el límite mensual de importaciones de tu plan."
-          : "Tu plan no permite realizar esta importación.";
-
-    const message =
-      payload.message ||
-      payload.error ||
-      (cause instanceof Error ? cause.message : "") ||
-      fallbackMessage;
-
-    return new ProductImportPlanLimitError(message, payload);
-  }
-
-  private extractImportLogPayload(cause: unknown): ImportLogRegistrationResponse | null {
-    if (!cause || typeof cause !== "object") return null;
-
-    const record = cause as {
-      payload?: unknown;
-      data?: unknown;
-      response?: { data?: unknown };
-    };
-
-    const candidates = [record.payload, record.data, record.response?.data];
-
-    for (const candidate of candidates) {
-      if (!candidate || typeof candidate !== "object") continue;
-
-      const payload = candidate as ImportLogRegistrationResponse;
-      if (
-        payload.code === "IMPORT_LOG_PLAN_REQUIRED" ||
-        payload.code === "IMPORT_LOG_LIMIT_REACHED" ||
-        payload.allowed === false
-      ) {
-        return payload;
-      }
-    }
-
-    return null;
   }
 
   private parseCsvRows(csvText: string): Record<string, string>[] {
@@ -829,85 +711,8 @@ export class PosProductsApi implements IProductsRepository {
     return rows;
   }
 
-  private normalizeWholesalePrices(
-    prices: WholesalePriceTier[] | undefined,
-    legacyPrice?: number | null,
-    legacyMinQuantity?: number | null,
-  ): WholesalePriceTier[] {
-    const normalized = (prices ?? [])
-      .map((tier) => ({
-        ...tier,
-        price: Number(tier.price),
-        minQuantity: Number(tier.minQuantity),
-      }))
-      .filter(
-        (tier) =>
-          Number.isFinite(tier.price) &&
-          tier.price > 0 &&
-          Number.isFinite(tier.minQuantity) &&
-          tier.minQuantity > 0,
-      )
-      .sort((a, b) => a.minQuantity - b.minQuantity);
-
-    if (normalized.length > 0) return normalized;
-
-    const price = Number(legacyPrice);
-    const minQuantity = Number(legacyMinQuantity);
-    if (
-      Number.isFinite(price) &&
-      price > 0 &&
-      Number.isFinite(minQuantity) &&
-      minQuantity > 0
-    ) {
-      return [{ price, minQuantity }];
-    }
-
-    return [];
-  }
-
-  private toDomainWholesalePrices(
-    payload: WholesalePriceResponse[] | null | undefined,
-    legacyPrice?: number | null,
-    legacyMinQuantity?: number | null,
-  ): WholesalePriceTier[] {
-    const rows = Array.isArray(payload)
-      ? payload
-          .map((tier) => ({
-            id: tier.Id ?? tier.id,
-            productId: tier.Product_Id ?? tier.product_Id ?? null,
-            variantId: tier.Variant_Id ?? tier.variant_Id ?? null,
-            price: Number(tier.Price ?? tier.price),
-            minQuantity: Number(tier.MinQuantity ?? tier.minQuantity),
-          }))
-      : [];
-
-    return this.normalizeWholesalePrices(rows, legacyPrice, legacyMinQuantity);
-  }
-
-  private toLegacyWholesalePrices(
-    prices: WholesalePriceTier[] | undefined,
-    legacyPrice?: number | null,
-    legacyMinQuantity?: number | null,
-  ): WholesalePriceResponse[] {
-    return this.normalizeWholesalePrices(
-      prices,
-      legacyPrice,
-      legacyMinQuantity,
-    ).map((tier) => ({
-      Id: tier.id,
-      Price: tier.price,
-      MinQuantity: tier.minQuantity,
-    }));
-  }
-
   private toDomain(product: ProductResponse, extras: ProductExtra[] = [], forcedVariants?: ProductVariant[]): ManagedProduct {
     const variants = forcedVariants ?? (product.Variants ?? product.variants ?? []).map((variant) => this.toDomainVariant(variant));
-    const wholesalePrices = this.toDomainWholesalePrices(
-      product.WholesalePrices ?? product.wholesalePrices,
-      product.WholesalePrice ?? product.wholesalePrice,
-      product.WholesaleMinQuantity ?? product.wholesaleMinQuantity,
-    );
-    const primaryWholesalePrice = wholesalePrices[0] ?? null;
     const rawVariantsCount = product.VariantsCount ?? product.variantsCount;
     const parsedVariantsCount = typeof rawVariantsCount === "string" ? Number(rawVariantsCount.trim()) : Number(rawVariantsCount);
     const variantsCount = Number.isFinite(parsedVariantsCount) && parsedVariantsCount > 0
@@ -940,9 +745,8 @@ export class PosProductsApi implements IProductsRepository {
       variants,
       extras,
       variantsCount,
-      primaryWholesalePrice?.price ?? null,
-      primaryWholesalePrice?.minQuantity ?? null,
-      wholesalePrices,
+      product.WholesalePrice ?? product.wholesalePrice ?? null,
+      product.WholesaleMinQuantity ?? product.wholesaleMinQuantity ?? null,
     );
   }
 
@@ -975,11 +779,8 @@ export class PosProductsApi implements IProductsRepository {
       Barcode: payload.barcode,
       Price: payload.price,
       PromotionPrice: payload.promotionPrice ?? null,
-      WholesalePrices: this.toLegacyWholesalePrices(
-        payload.wholesalePrices,
-        payload.wholesalePrice,
-        payload.wholesaleMinQuantity,
-      ),
+      WholesalePrice: payload.wholesalePrice ?? null,
+      WholesaleMinQuantity: payload.wholesaleMinQuantity ?? null,
       CostPerItem: payload.costPerItem,
       Stock: payload.stock,
       ExpDate: payload.expDate ?? null,
@@ -990,13 +791,6 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   private toDomainVariant(variant: LegacyVariantResponse): ProductVariant {
-    const wholesalePrices = this.toDomainWholesalePrices(
-      variant.WholesalePrices ?? variant.wholesalePrices,
-      variant.WholesalePrice ?? variant.wholesalePrice,
-      variant.WholesaleMinQuantity ?? variant.wholesaleMinQuantity,
-    );
-    const primaryWholesalePrice = wholesalePrices[0] ?? null;
-
     return {
       id: variant.Id ?? variant.id,
       productId: variant.Product_Id ?? variant.product_Id,
@@ -1007,9 +801,8 @@ export class PosProductsApi implements IProductsRepository {
       size: variant.Size ?? variant.size ?? variant.Talla ?? variant.talla ?? null,
       price: variant.Price ?? variant.price ?? null,
       promotionPrice: variant.PromotionPrice ?? variant.promotionPrice ?? null,
-      wholesalePrice: primaryWholesalePrice?.price ?? null,
-      wholesaleMinQuantity: primaryWholesalePrice?.minQuantity ?? null,
-      wholesalePrices,
+      wholesalePrice: variant.WholesalePrice ?? variant.wholesalePrice ?? null,
+      wholesaleMinQuantity: variant.WholesaleMinQuantity ?? variant.wholesaleMinQuantity ?? null,
       costPerItem: variant.CostPerItem ?? variant.costPerItem ?? null,
       stock: variant.Stock ?? variant.stock ?? null,
       expDate: variant.ExpDate ?? variant.expDate ?? null,
@@ -1031,11 +824,8 @@ export class PosProductsApi implements IProductsRepository {
       ...(normalizedSize ? { Size: normalizedSize, Talla: normalizedSize } : {}),
       Price: variant.price ?? null,
       PromotionPrice: variant.promotionPrice ?? null,
-      WholesalePrices: this.toLegacyWholesalePrices(
-        variant.wholesalePrices,
-        variant.wholesalePrice,
-        variant.wholesaleMinQuantity,
-      ),
+      WholesalePrice: variant.wholesalePrice ?? null,
+      WholesaleMinQuantity: variant.wholesaleMinQuantity ?? null,
       CostPerItem: variant.costPerItem ?? null,
       Stock: variant.stock ?? null,
       ExpDate: variant.expDate ?? null,

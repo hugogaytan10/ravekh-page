@@ -479,6 +479,13 @@ export class CatalogAiApi {
     );
   }
 
+  async finalizeBatchQuota(batchId: string): Promise<void> {
+    await this.request(
+      `/v1/catalog-imports/${encodeURIComponent(batchId)}/quota/finalize`,
+      { method: "POST" },
+    );
+  }
+
   async listBatchItems(batchId: string): Promise<CatalogAiItem[]> {
     const allItems: CatalogAiItem[] = [];
     let afterId: number | null = null;
