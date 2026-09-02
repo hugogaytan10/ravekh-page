@@ -1,6 +1,6 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { IBusinessSettingsRepository } from "../interface/IBusinessSettingsRepository";
-import { BusinessSettings, UpdateBusinessSettingsDto } from "../model/BusinessSettings";
+import { BusinessChangesNoticeStatus, BusinessSettings, UpdateBusinessSettingsDto } from "../model/BusinessSettings";
 
 type BusinessResponse = {
   Id: number;
@@ -8,6 +8,8 @@ type BusinessResponse = {
   Taxes_Id?: number | null;
   Plan?: string | null;
   plan?: string | null;
+  ChangesNoticeViewed?: number | boolean;
+  ChangesNoticeViewedAt?: string | null;
 };
 
 type TableZoneResponse = {
@@ -56,6 +58,30 @@ export class PosBusinessSettingsApi implements IBusinessSettingsRepository {
     return this.toDomain(updated, false);
   }
 
+  async getChangesNoticeStatus(businessId: number, token: string): Promise<BusinessChangesNoticeStatus> {
+    const business = await this.httpClient.request<BusinessResponse>({
+      method: "GET",
+      path: `business/${businessId}`,
+      token,
+    });
+
+    return {
+      viewed: Boolean(business.ChangesNoticeViewed),
+      viewedAt: business.ChangesNoticeViewedAt ?? null,
+    };
+  }
+
+  async acknowledgeChangesNotice(businessId: number, token: string): Promise<void> {
+    await this.httpClient.request({
+      method: "PUT",
+      path: `business/changes-notice/${businessId}`,
+      token,
+      body: {
+        ChangesNoticeViewed: 1,
+      },
+    });
+  }
+
   async updateTablesStatus(businessId: number, enabled: boolean, token: string): Promise<boolean> {
     const updatedZones = await this.httpClient.request<TableZoneResponse[]>({
       method: "PUT",
@@ -76,6 +102,14 @@ export class PosBusinessSettingsApi implements IBusinessSettingsRepository {
   }
 
   private toDomain(business: BusinessResponse, tablesEnabled: boolean): BusinessSettings {
-    return new BusinessSettings(business.Id, business.Name, business.Taxes_Id ?? null, tablesEnabled, business.Plan ?? business.plan ?? null);
+    return new BusinessSettings(
+      business.Id,
+      business.Name,
+      business.Taxes_Id ?? null,
+      tablesEnabled,
+      business.Plan ?? business.plan ?? null,
+      Boolean(business.ChangesNoticeViewed),
+      business.ChangesNoticeViewedAt ?? null,
+    );
   }
 }
