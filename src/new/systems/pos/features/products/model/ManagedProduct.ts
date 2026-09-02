@@ -1,5 +1,13 @@
 export type ProductExtraType = "COLOR" | "TALLA" | string;
 
+export interface WholesalePriceTier {
+  id?: number;
+  productId?: number | null;
+  variantId?: number | null;
+  price: number;
+  minQuantity: number;
+}
+
 export interface ProductVariant {
   id?: number;
   productId?: number;
@@ -10,8 +18,11 @@ export interface ProductVariant {
   Image?: string | null;
   price?: number | null;
   promotionPrice?: number | null;
+  /** @deprecated Compatibilidad temporal con el mayoreo anterior. */
   wholesalePrice?: number | null;
+  /** @deprecated Compatibilidad temporal con el mayoreo anterior. */
   wholesaleMinQuantity?: number | null;
+  wholesalePrices?: WholesalePriceTier[];
   costPerItem?: number | null;
   stock?: number | null;
   expDate?: string | null;
@@ -51,8 +62,11 @@ export interface SaveManagedProductDto {
   barcode?: string | null;
   price?: number | null;
   promotionPrice?: number | null;
+  /** @deprecated Compatibilidad temporal con clientes/API anteriores. */
   wholesalePrice?: number | null;
+  /** @deprecated Compatibilidad temporal con clientes/API anteriores. */
   wholesaleMinQuantity?: number | null;
+  wholesalePrices?: WholesalePriceTier[];
   costPerItem?: number | null;
   stock?: number | null;
   expDate?: string | null;
@@ -93,6 +107,7 @@ export class ManagedProduct {
     public readonly variantsCount: number = 0,
     public readonly wholesalePrice: number | null = null,
     public readonly wholesaleMinQuantity: number | null = null,
+    public readonly wholesalePrices: WholesalePriceTier[] = [],
   ) {}
 
   toSaveDto(): SaveManagedProductDto {
@@ -115,6 +130,7 @@ export class ManagedProduct {
       promotionPrice: this.promotionPrice,
       wholesalePrice: this.wholesalePrice,
       wholesaleMinQuantity: this.wholesaleMinQuantity,
+      wholesalePrices: this.wholesalePrices,
       costPerItem: this.costPerItem,
       stock: this.stock,
       expDate: this.expDate,

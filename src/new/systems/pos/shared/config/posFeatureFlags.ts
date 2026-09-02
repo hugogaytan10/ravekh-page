@@ -7,6 +7,7 @@ export type PosBusinessFeatures = {
   catalog: PosFeatureLevel | null;
   fidelity: PosFeatureLevel | null;
   plan: string | null;
+  businessName?: string;
 };
 
 export type PosFeatureKey = "pos" | "catalog" | "fidelity";
@@ -21,6 +22,8 @@ type BusinessFeaturesResponse = {
 };
 
 export type PosBusinessFeatureResponse = {
+  Name?: unknown;
+  name?: unknown;
   Plan?: unknown;
   plan?: unknown;
   CouponsPlan?: unknown;
@@ -55,7 +58,7 @@ const unwrapPosBusinessFeatureResponse = (payload: unknown): PosBusinessFeatureR
   if (typeof payload !== "object") return null;
 
   const record = payload as PosBusinessFeatureResponse;
-  if (record.Plan != null || record.plan != null || record.Features != null || record.features != null) return record;
+  if (record.Name != null || record.name != null || record.Plan != null || record.plan != null || record.Features != null || record.features != null) return record;
 
   return unwrapPosBusinessFeatureResponse(record.business ?? record.Business ?? record.data ?? record.Data);
 };
@@ -71,6 +74,7 @@ export const readPosBusinessFeatures = (payload?: PosBusinessFeatureResponse | n
       business.Features?.Fidelity ?? business.features?.fidelity ?? business.CouponsPlan ?? business.couponsPlan,
     ),
     plan: String(business.Plan ?? business.plan ?? "").trim() || null,
+    businessName: String(business.Name ?? business.name ?? "").trim() || undefined,
   };
 };
 

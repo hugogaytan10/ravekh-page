@@ -15,7 +15,7 @@ import { CatalogStorefrontService } from "../services/CatalogStorefrontService";
 import { StorefrontBusiness, StorefrontCartItem, StorefrontProduct } from "../model/CatalogStorefrontModels";
 import { StorefrontProductGrid } from "./StorefrontProductGrid";
 import { VariantSelectionModalV2 } from "./VariantSelectionModalV2";
-import { formatCatalogTotal, getEffectiveCatalogPrice } from "./catalogPrice";
+import { formatCatalogTotal, getEffectiveCatalogPrice, normalizeWholesalePriceTiers } from "./catalogPrice";
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import "./CatalogStorefrontPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
@@ -329,9 +329,15 @@ export const CatalogStorefrontPage = () => {
       return [...current, {
         productId: product.id,
         name: product.name,
-        price: getEffectiveCatalogPrice(product.price, product.promotionPrice),
+        price: product.price,
+        promotionPrice: product.promotionPrice,
         wholesalePrice: product.wholesalePrice,
         wholesaleMinQuantity: product.wholesaleMinQuantity,
+        wholesalePrices: normalizeWholesalePriceTiers(
+          product.wholesalePrices,
+          product.wholesalePrice,
+          product.wholesaleMinQuantity,
+        ),
         quantity: 1,
         image: product.image,
       }];
@@ -452,11 +458,26 @@ export const CatalogStorefrontPage = () => {
     const isBaseProduct = !hasVariants || variant == null;
     const cartKey = [variantProduct.id, variant?.id ?? "base", color?.id ?? "nc", size?.id ?? "ns"].join("-");
     const productIdToStore = variantProduct.id;
-    const selectedPrice = isBaseProduct
-      ? getEffectiveCatalogPrice(variantProduct.price, variantProduct.promotionPrice)
-      : getEffectiveCatalogPrice(variant.price, variant.promotionPrice);
-    const selectedWholesalePrice = isBaseProduct ? variantProduct.wholesalePrice : variant.wholesalePrice;
-    const selectedWholesaleMinQuantity = isBaseProduct ? variantProduct.wholesaleMinQuantity : variant.wholesaleMinQuantity;
+    const selectedPrice = isBaseProduct ? variantProduct.price : variant.price;
+    const selectedPromotionPrice = isBaseProduct ? variantProduct.promotionPrice : variant.promotionPrice;
+    const productWholesalePrices = normalizeWholesalePriceTiers(
+      variantProduct.wholesalePrices,
+      variantProduct.wholesalePrice,
+      variantProduct.wholesaleMinQuantity,
+    );
+    const variantWholesalePrices = isBaseProduct
+      ? []
+      : normalizeWholesalePriceTiers(
+          variant.wholesalePrices,
+          variant.wholesalePrice,
+          variant.wholesaleMinQuantity,
+        );
+    const selectedWholesalePrices = variantWholesalePrices.length > 0
+      ? variantWholesalePrices
+      : productWholesalePrices;
+    const firstSelectedWholesalePrice = selectedWholesalePrices[0] ?? null;
+    const selectedWholesalePrice = firstSelectedWholesalePrice?.price ?? null;
+    const selectedWholesaleMinQuantity = firstSelectedWholesalePrice?.minQuantity ?? null;
     const selectedCost = variant?.costPerItem ?? undefined;
     const selectedName = [
       isBaseProduct ? variantProduct.name : `${variantProduct.name} · ${variant.description}`,
@@ -481,8 +502,10 @@ export const CatalogStorefrontPage = () => {
           sizeName: size?.description,
           name: selectedName,
           price: selectedPrice,
+          promotionPrice: selectedPromotionPrice,
           wholesalePrice: selectedWholesalePrice,
           wholesaleMinQuantity: selectedWholesaleMinQuantity,
+          wholesalePrices: selectedWholesalePrices,
           cost: selectedCost,
           quantity,
           image: variantProduct.image,
@@ -797,6 +820,7 @@ export const CatalogStorefrontPage = () => {
         productBasePromotionPrice={variantProduct?.promotionPrice}
         productBaseWholesalePrice={variantProduct?.wholesalePrice}
         productBaseWholesaleMinQuantity={variantProduct?.wholesaleMinQuantity}
+        productBaseWholesalePrices={variantProduct?.wholesalePrices}
         variants={variantOptions}
         colors={colorOptions}
         sizes={sizeOptions}

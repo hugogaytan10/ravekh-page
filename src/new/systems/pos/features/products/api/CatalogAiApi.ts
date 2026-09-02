@@ -22,6 +22,18 @@ export type CatalogAiBatchStatus =
   | "COMPLETED_WITH_ERRORS"
   | "CANCELLED";
 
+export type CatalogAiQuota = {
+  businessId: number;
+  plan: "GRATUITO" | "START" | "PRO" | "MAX";
+  limit: number;
+  used: number;
+  remaining: number;
+  allowed: boolean;
+  periodStart: string;
+  periodEnd: string;
+  maxBatchSize: number;
+};
+
 export type CatalogAiBatchProgress = {
   batchId: string;
   status: CatalogAiBatchStatus;
@@ -308,6 +320,10 @@ export class CatalogAiApi {
       : new Error("No se pudo consultar el progreso del lote.");
   }
 
+  async getQuota(): Promise<CatalogAiQuota> {
+    return this.request<CatalogAiQuota>("/v1/catalog-imports/quota");
+  }
+
   async createBatch(expectedItems: number): Promise<{ batchId: string; status: string; maxImages: number }> {
     return this.request("/v1/catalog-imports", {
       method: "POST",
@@ -460,6 +476,13 @@ export class CatalogAiApi {
   async getBatch(batchId: string): Promise<CatalogAiBatchProgress> {
     return this.request(
       `/v1/catalog-imports/${encodeURIComponent(batchId)}`,
+    );
+  }
+
+  async finalizeBatchQuota(batchId: string): Promise<void> {
+    await this.request(
+      `/v1/catalog-imports/${encodeURIComponent(batchId)}/quota/finalize`,
+      { method: "POST" },
     );
   }
 
