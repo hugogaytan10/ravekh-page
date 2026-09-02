@@ -1,5 +1,5 @@
 import { ICatalogStorefrontRepository } from "../interface/ICatalogStorefrontRepository";
-import { CatalogOrderPayload, StorefrontBusiness, StorefrontProduct } from "../model/CatalogStorefrontModels";
+import { CatalogOrderPayload, StorefrontBusiness, StorefrontProduct, StorefrontWholesalePrice } from "../model/CatalogStorefrontModels";
 
 type BusinessFeaturesResponse = {
   Catalog?: number | string | null;
@@ -39,6 +39,8 @@ type ProductResponse = {
   wholesalePrice?: number | string | null;
   WholesaleMinQuantity?: number | string | null;
   wholesaleMinQuantity?: number | string | null;
+  WholesalePrices?: unknown;
+  wholesalePrices?: unknown;
   Images?: unknown;
   images?: unknown;
   VariantsCount?: number | string;
@@ -80,6 +82,7 @@ export type StorefrontVariant = {
   promotionPrice: number | null;
   wholesalePrice: number | null;
   wholesaleMinQuantity: number | null;
+  wholesalePrices: StorefrontWholesalePrice[];
   costPerItem: number | null;
   stock: number | null;
 };
@@ -135,6 +138,66 @@ const normalizeOptionalNumber = (value: unknown): number | null => {
   if (value == null) return null;
   const next = Number(value);
   return Number.isFinite(next) ? next : null;
+};
+
+type WholesalePriceResponse = {
+  Id?: number | string;
+  id?: number | string;
+  Product_Id?: number | string | null;
+  productId?: number | string | null;
+  Variant_Id?: number | string | null;
+  variantId?: number | string | null;
+  Price?: number | string;
+  price?: number | string;
+  MinQuantity?: number | string;
+  minQuantity?: number | string;
+};
+
+const normalizeWholesalePrices = (
+  raw: unknown,
+  legacyPrice?: unknown,
+  legacyMinQuantity?: unknown,
+): StorefrontWholesalePrice[] => {
+  let source: WholesalePriceResponse[] = [];
+
+  if (Array.isArray(raw)) {
+    source = raw as WholesalePriceResponse[];
+  } else if (typeof raw === "string" && raw.trim().startsWith("[")) {
+    try {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed)) source = parsed as WholesalePriceResponse[];
+    } catch {
+      source = [];
+    }
+  }
+
+  const byQuantity = new Map<number, StorefrontWholesalePrice>();
+  for (const item of source) {
+    const price = normalizeOptionalNumber(item.Price ?? item.price);
+    const minQuantity = Math.floor(parseNumber(item.MinQuantity ?? item.minQuantity));
+    if (price == null || price <= 0 || minQuantity < 2) continue;
+
+    const id = parseNumber(item.Id ?? item.id);
+    const productId = normalizeOptionalNumber(item.Product_Id ?? item.productId);
+    const variantId = normalizeOptionalNumber(item.Variant_Id ?? item.variantId);
+    byQuantity.set(minQuantity, {
+      ...(id > 0 ? { id } : {}),
+      ...(productId != null && productId > 0 ? { productId } : {}),
+      ...(variantId != null && variantId > 0 ? { variantId } : {}),
+      price,
+      minQuantity,
+    });
+  }
+
+  if (byQuantity.size === 0) {
+    const price = normalizeOptionalNumber(legacyPrice);
+    const minQuantity = Math.floor(parseNumber(legacyMinQuantity));
+    if (price != null && price > 0 && minQuantity >= 2) {
+      byQuantity.set(minQuantity, { price, minQuantity });
+    }
+  }
+
+  return Array.from(byQuantity.values()).sort((a, b) => a.minQuantity - b.minQuantity);
 };
 
 const toBoolean = (value: unknown, fallback = true) => {
@@ -238,6 +301,11 @@ const normalizeProducts = (items: ProductResponse[], businessId: string) =>
       promotionPrice: item.PromotionPrice ?? item.promotionPrice ?? null,
       wholesalePrice: item.WholesalePrice ?? item.wholesalePrice ?? null,
       wholesaleMinQuantity: item.WholesaleMinQuantity ?? item.wholesaleMinQuantity ?? null,
+      wholesalePrices: normalizeWholesalePrices(
+        item.WholesalePrices ?? item.wholesalePrices,
+        item.WholesalePrice ?? item.wholesalePrice,
+        item.WholesaleMinQuantity ?? item.wholesaleMinQuantity,
+      ),
       variantsCount: parseNumber(item.VariantsCount ?? item.variantsCount),
       forSale: toBoolean(item.ForSale ?? item.forSale, true),
       available: toBoolean(item.Available ?? item.available, true),
@@ -496,7 +564,7 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
   async getVariantsByProductId(productId: number): Promise<StorefrontVariant[]> {
     const response = await fetch(`${normalizeBase(this.baseUrl)}variants/product/${productId}`);
     if (!response.ok) return [];
-    const raw = (await response.json()) as Array<{ Id?: number; id?: number; Description?: string; description?: string; Color?: string; color?: string; Image?: string | null; image?: string | null; Price?: number | string; price?: number | string; PromotionPrice?: number | string; promotionPrice?: number | string; WholesalePrice?: number | string | null; wholesalePrice?: number | string | null; WholesaleMinQuantity?: number | string | null; wholesaleMinQuantity?: number | string | null; CostPerItem?: number | string; costPerItem?: number | string; Stock?: number | string; stock?: number | string }>;
+    const raw = (await response.json()) as Array<{ Id?: number; id?: number; Description?: string; description?: string; Color?: string; color?: string; Image?: string | null; image?: string | null; Price?: number | string; price?: number | string; PromotionPrice?: number | string; promotionPrice?: number | string; WholesalePrice?: number | string | null; wholesalePrice?: number | string | null; WholesaleMinQuantity?: number | string | null; wholesaleMinQuantity?: number | string | null; WholesalePrices?: unknown; wholesalePrices?: unknown; CostPerItem?: number | string; costPerItem?: number | string; Stock?: number | string; stock?: number | string }>;
     if (!Array.isArray(raw)) return [];
 
     return raw
@@ -509,6 +577,11 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
         promotionPrice: item.PromotionPrice != null || item.promotionPrice != null ? parseNumber(item.PromotionPrice ?? item.promotionPrice) : null,
         wholesalePrice: item.WholesalePrice != null || item.wholesalePrice != null ? parseNumber(item.WholesalePrice ?? item.wholesalePrice) : null,
         wholesaleMinQuantity: item.WholesaleMinQuantity != null || item.wholesaleMinQuantity != null ? parseNumber(item.WholesaleMinQuantity ?? item.wholesaleMinQuantity) : null,
+        wholesalePrices: normalizeWholesalePrices(
+          item.WholesalePrices ?? item.wholesalePrices,
+          item.WholesalePrice ?? item.wholesalePrice,
+          item.WholesaleMinQuantity ?? item.wholesaleMinQuantity,
+        ),
         costPerItem: item.CostPerItem != null || item.costPerItem != null ? parseNumber(item.CostPerItem ?? item.costPerItem) : null,
         stock: item.Stock != null || item.stock != null ? parseNumber(item.Stock ?? item.stock) : null,
       }))
@@ -564,6 +637,11 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
         item.WholesaleMinQuantity != null || item.wholesaleMinQuantity != null
           ? parseNumber(item.WholesaleMinQuantity ?? item.wholesaleMinQuantity)
           : null,
+      wholesalePrices: normalizeWholesalePrices(
+        item.WholesalePrices ?? item.wholesalePrices,
+        item.WholesalePrice ?? item.wholesalePrice,
+        item.WholesaleMinQuantity ?? item.wholesaleMinQuantity,
+      ),
       variantsCount: parseNumber(item.VariantsCount ?? item.variantsCount),
       forSale: toBoolean(item.ForSale ?? item.forSale, true),
       available: toBoolean(item.Available ?? item.available, true),

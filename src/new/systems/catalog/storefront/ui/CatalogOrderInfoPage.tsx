@@ -2,9 +2,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
 import { CatalogStorefrontApi } from "../api/CatalogStorefrontApi";
+import { StorefrontCartItem } from "../model/CatalogStorefrontModels";
 import { getStripe } from "./stripeClient";
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
-import { formatCatalogPrice, getEffectiveCatalogPriceForQuantity } from "./catalogPrice";
+import { formatCatalogPrice, getApplicableWholesaleTier, getEffectiveCatalogPriceForQuantity, normalizeWholesalePriceTiers } from "./catalogPrice";
 import "./CatalogOrderInfoPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
@@ -32,22 +33,7 @@ type PendingStripeCatalogOrder = {
 const getPendingStripeOrderKey = (businessId: number) => `catalog-v2-pending-stripe-order:${businessId}`;
 const processingStripeOrderKeys = new Set<string>();
 
-type CartItem = {
-  cartKey?: string;
-  productId: number;
-  variantId?: number;
-  colorId?: number;
-  sizeId?: number;
-  colorName?: string;
-  sizeName?: string;
-  name: string;
-  price?: number | null;
-  promotionPrice?: number | null;
-  wholesalePrice?: number | null;
-  wholesaleMinQuantity?: number | null;
-  cost?: number;
-  quantity: number;
-};
+type CartItem = StorefrontCartItem;
 
 const defaultShippingOptions: ShippingOptions = {
   ContactInformation: true,
@@ -66,8 +52,26 @@ const hasAnyAddressFieldEnabled = (options: ShippingOptions) =>
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
 
-const buildWhatsAppProductLine = (item: CartItem) =>
-  `• ${item.name} x${item.quantity} - ${formatCatalogPrice(getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity), money)}`;
+const resolveCartPricing = (item: CartItem) => {
+  const wholesalePrices = normalizeWholesalePriceTiers(
+    item.wholesalePrices,
+    item.wholesalePrice,
+    item.wholesaleMinQuantity,
+  );
+  const appliedWholesaleTier = getApplicableWholesaleTier(wholesalePrices, item.quantity);
+  const unitPrice = getEffectiveCatalogPriceForQuantity(
+    item.price,
+    item.promotionPrice,
+    wholesalePrices,
+    item.quantity,
+  );
+  return { wholesalePrices, appliedWholesaleTier, unitPrice };
+};
+
+const buildWhatsAppProductLine = (item: CartItem) => {
+  const { unitPrice } = resolveCartPricing(item);
+  return `• ${item.name} x${item.quantity} - ${formatCatalogPrice(unitPrice, money)}`;
+};
 
 export const CatalogOrderInfoPage = () => {
   useCatalogThemeSync();
@@ -75,6 +79,7 @@ export const CatalogOrderInfoPage = () => {
   const api = useMemo(() => new CatalogStorefrontApi(getPosApiBaseUrl()), []);
   const storeName = window.localStorage.getItem("catalog-v2-store-name") || "Catálogo";
   const businessId = Number(window.localStorage.getItem("idBusiness") || 0);
+  const usesSimplifiedCheckout = businessId === 481;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -92,6 +97,12 @@ export const CatalogOrderInfoPage = () => {
   const [shippingOptions, setShippingOptions] = useState<ShippingOptions>(defaultShippingOptions);
   const [openSection, setOpenSection] = useState<OpenSection>("contact");
   const [stripeReturnHandled, setStripeReturnHandled] = useState(false);
+  const checkoutOptions = useMemo(
+    () => usesSimplifiedCheckout
+      ? { ...shippingOptions, ZipCode: false, City: false, State: false }
+      : shippingOptions,
+    [shippingOptions, usesSimplifiedCheckout],
+  );
 
   const [errors, setErrors] = useState<{
     name?: string;
@@ -199,11 +210,11 @@ export const CatalogOrderInfoPage = () => {
 
   useEffect(() => {
     if (openSection) return;
-    if (shippingOptions.ContactInformation) return setOpenSection("contact");
-    if (shippingOptions.ShippingMetod) return setOpenSection("delivery");
-    if (hasAnyAddressFieldEnabled(shippingOptions)) return setOpenSection("address");
-    if (shippingOptions.PaymentMetod) return setOpenSection("payment");
-  }, [openSection, shippingOptions]);
+    if (checkoutOptions.ContactInformation) return setOpenSection("contact");
+    if (checkoutOptions.ShippingMetod) return setOpenSection("delivery");
+    if (hasAnyAddressFieldEnabled(checkoutOptions)) return setOpenSection("address");
+    if (checkoutOptions.PaymentMetod) return setOpenSection("payment");
+  }, [openSection, checkoutOptions]);
 
   useEffect(() => {
     const order = ["name", "email", "phone", "deliveryMethod", "street", "zipCode", "city", "state", "paymentMethod"] as const;
@@ -218,11 +229,11 @@ export const CatalogOrderInfoPage = () => {
     if (deliveryMethod !== "domicilio") return "Recoger en tienda";
 
     const parts: string[] = [];
-    if (shippingOptions.Street && street.trim()) parts.push(`Calle: ${street}`);
-    if (shippingOptions.ZipCode && zipCode.trim()) parts.push(`Código Postal: ${zipCode}`);
-    if (shippingOptions.City && city.trim()) parts.push(`Municipio: ${city}`);
-    if (shippingOptions.State && state.trim()) parts.push(`Estado: ${state}`);
-    if (shippingOptions.References && references.trim()) parts.push(`Referencia: ${references}`);
+    if (checkoutOptions.Street && street.trim()) parts.push(`Calle: ${street}`);
+    if (checkoutOptions.ZipCode && zipCode.trim()) parts.push(`Código Postal: ${zipCode}`);
+    if (checkoutOptions.City && city.trim()) parts.push(`Municipio: ${city}`);
+    if (checkoutOptions.State && state.trim()) parts.push(`Estado: ${state}`);
+    if (checkoutOptions.References && references.trim()) parts.push(`Referencia: ${references}`);
 
     return parts.length ? parts.join(", ") : "Entrega a domicilio";
   };
@@ -230,7 +241,7 @@ export const CatalogOrderInfoPage = () => {
   const validate = () => {
     const nextErrors: typeof errors = {};
 
-    if (shippingOptions.ContactInformation) {
+    if (checkoutOptions.ContactInformation) {
       if (!name.trim()) nextErrors.name = "El nombre es obligatorio.";
       if (!phone.trim()) {
         nextErrors.phone = "El teléfono es obligatorio.";
@@ -239,23 +250,23 @@ export const CatalogOrderInfoPage = () => {
       }
     }
 
-    if (email && !/^\S+@\S+\.\S+$/.test(email)) {
+    if (!usesSimplifiedCheckout && email && !/^\S+@\S+\.\S+$/.test(email)) {
       nextErrors.email = "El email no es válido.";
     }
 
-    if (shippingOptions.ShippingMetod && !deliveryMethod) {
+    if (checkoutOptions.ShippingMetod && !deliveryMethod) {
       nextErrors.deliveryMethod = "Selecciona un método de entrega.";
     }
 
-    if (shippingOptions.PaymentMetod && !paymentMethod) {
+    if (checkoutOptions.PaymentMetod && !paymentMethod) {
       nextErrors.paymentMethod = "Selecciona un método de pago.";
     }
 
-    if (deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled(shippingOptions)) {
-      if (shippingOptions.Street && !street.trim()) nextErrors.street = "La calle es obligatoria.";
-      if (shippingOptions.ZipCode && !zipCode.trim()) nextErrors.zipCode = "El código postal es obligatorio.";
-      if (shippingOptions.City && !city.trim()) nextErrors.city = "El municipio es obligatorio.";
-      if (shippingOptions.State && !state.trim()) nextErrors.state = "El estado es obligatorio.";
+    if (deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled(checkoutOptions)) {
+      if (checkoutOptions.Street && !street.trim()) nextErrors.street = "La calle es obligatoria.";
+      if (checkoutOptions.ZipCode && !zipCode.trim()) nextErrors.zipCode = "El código postal es obligatorio.";
+      if (checkoutOptions.City && !city.trim()) nextErrors.city = "El municipio es obligatorio.";
+      if (checkoutOptions.State && !state.trim()) nextErrors.state = "El estado es obligatorio.";
     }
 
     setErrors(nextErrors);
@@ -288,23 +299,27 @@ export const CatalogOrderInfoPage = () => {
     try {
       const orderPayload = {
         Order: {
-          Name: shippingOptions.ContactInformation ? name.trim() : "",
+          Name: checkoutOptions.ContactInformation ? name.trim() : "",
           Business_Id: businessId,
           Delivery: deliveryMethod === "domicilio" ? 1 : 0,
-          PaymentMethod: shippingOptions.PaymentMetod ? paymentMethod : "",
+          PaymentMethod: checkoutOptions.PaymentMetod ? paymentMethod : "",
           Address: buildAddress(),
-          PhoneNumber: shippingOptions.ContactInformation ? phone.trim() : "",
+          PhoneNumber: checkoutOptions.ContactInformation ? phone.trim() : "",
         },
-        OrderDetails: cart.map((item) => ({
-          Quantity: Math.max(1, Number(item.quantity) || 1),
-          ...(item.variantId
-            ? { Variant_Id: Number(item.variantId) || 0 }
-            : { Product_Id: Number(item.productId) || 0 }),
-          ...(item.colorId ? { Color_Id: Number(item.colorId) || 0 } : {}),
-          ...(item.sizeId ? { Size_Id: Number(item.sizeId) || 0 } : {}),
-          ...(getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity) ? { Price: getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity) ?? 0 } : {}),
-          ...(item.cost ? { Cost: Number(item.cost) || 0 } : {}),
-        })),
+        OrderDetails: cart.map((item) => {
+          const { unitPrice, appliedWholesaleTier } = resolveCartPricing(item);
+          return {
+            Quantity: Math.max(1, Number(item.quantity) || 1),
+            ...(item.variantId
+              ? { Variant_Id: Number(item.variantId) || 0 }
+              : { Product_Id: Number(item.productId) || 0 }),
+            ...(item.colorId ? { Color_Id: Number(item.colorId) || 0 } : {}),
+            ...(item.sizeId ? { Size_Id: Number(item.sizeId) || 0 } : {}),
+            ...(unitPrice ? { Price: unitPrice } : {}),
+            ...(appliedWholesaleTier?.id ? { WholesalePrice_Id: appliedWholesaleTier.id } : {}),
+            ...(item.cost ? { Cost: Number(item.cost) || 0 } : {}),
+          };
+        }),
       };
 
       if (paymentMethod === "tarjeta") {
@@ -322,7 +337,7 @@ export const CatalogOrderInfoPage = () => {
             price_data: {
               currency: businessConfig.currency.toLowerCase(),
               product_data: { name: item.name },
-              unit_amount: Math.round((getEffectiveCatalogPriceForQuantity(item.price, item.promotionPrice, item.wholesalePrice, item.wholesaleMinQuantity, item.quantity) ?? 0) * 100),
+              unit_amount: Math.round((resolveCartPricing(item).unitPrice ?? 0) * 100),
             },
             quantity: item.quantity,
           })),
@@ -370,10 +385,10 @@ export const CatalogOrderInfoPage = () => {
         "",
         `Cliente: ${name || "No proporcionado"}`,
         `Teléfono: ${phone || "No proporcionado"}`,
-        email ? `Email: ${email}` : "",
-        shippingOptions.ShippingMetod ? `Entrega: ${deliveryMethod}` : "",
-        deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled(shippingOptions) ? `Dirección: ${buildAddress()}` : "",
-        shippingOptions.PaymentMetod ? `Pago: ${paymentMethod}` : "",
+        !usesSimplifiedCheckout && email ? `Email: ${email}` : "",
+        checkoutOptions.ShippingMetod ? `Entrega: ${deliveryMethod}` : "",
+        deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled(checkoutOptions) ? `Dirección: ${buildAddress()}` : "",
+        checkoutOptions.PaymentMetod ? `Pago: ${paymentMethod}` : "",
       ]
         .filter(Boolean)
         .join("\n");
@@ -404,7 +419,7 @@ export const CatalogOrderInfoPage = () => {
         <h2>Información del pedido</h2>
         {generalError ? <p className="catalog-v2-order-info__error">{generalError}</p> : null}
 
-        {shippingOptions.ContactInformation ? (
+        {checkoutOptions.ContactInformation ? (
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "contact" ? null : "contact"))}>
               <h3>Información de contacto</h3>
@@ -416,10 +431,12 @@ export const CatalogOrderInfoPage = () => {
                   <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Introduce tu nombre" />
                   {errors.name ? <small>{errors.name}</small> : null}
                 </label>
-                <label ref={fieldRefs.email}>Email (opcional)
-                  <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Introduce tu email" />
-                  {errors.email ? <small>{errors.email}</small> : null}
-                </label>
+                {!usesSimplifiedCheckout ? (
+                  <label ref={fieldRefs.email}>Email (opcional)
+                    <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Introduce tu email" />
+                    {errors.email ? <small>{errors.email}</small> : null}
+                  </label>
+                ) : null}
                 <label className="full" ref={fieldRefs.phone}>Teléfono móvil
                   <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Introduce tu teléfono" />
                   {errors.phone ? <small>{errors.phone}</small> : null}
@@ -429,7 +446,7 @@ export const CatalogOrderInfoPage = () => {
           </article>
         ) : null}
 
-        {shippingOptions.ShippingMetod ? (
+        {checkoutOptions.ShippingMetod ? (
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "delivery" ? null : "delivery"))}>
               <h3>Método de entrega</h3>
@@ -449,7 +466,7 @@ export const CatalogOrderInfoPage = () => {
           </article>
         ) : null}
 
-        {deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled(shippingOptions) ? (
+        {deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled(checkoutOptions) ? (
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "address" ? null : "address"))}>
               <h3>Dirección de entrega</h3>
@@ -457,31 +474,31 @@ export const CatalogOrderInfoPage = () => {
             </button>
             <div className={`section-content ${openSection === "address" ? "open" : ""}`}>
               <div className="grid">
-                {shippingOptions.Street ? (
+                {checkoutOptions.Street ? (
                   <label ref={fieldRefs.street}>Calle
                     <input value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Introduce tu calle" />
                     {errors.street ? <small>{errors.street}</small> : null}
                   </label>
                 ) : null}
-                {shippingOptions.ZipCode ? (
+                {checkoutOptions.ZipCode ? (
                   <label ref={fieldRefs.zipCode}>Código Postal
                     <input value={zipCode} onChange={(e) => setZipCode(e.target.value)} placeholder="Código Postal" />
                     {errors.zipCode ? <small>{errors.zipCode}</small> : null}
                   </label>
                 ) : null}
-                {shippingOptions.City ? (
+                {checkoutOptions.City ? (
                   <label ref={fieldRefs.city}>Municipio
                     <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Municipio" />
                     {errors.city ? <small>{errors.city}</small> : null}
                   </label>
                 ) : null}
-                {shippingOptions.State ? (
+                {checkoutOptions.State ? (
                   <label ref={fieldRefs.state}>Estado
                     <input value={state} onChange={(e) => setState(e.target.value)} placeholder="Estado" />
                     {errors.state ? <small>{errors.state}</small> : null}
                   </label>
                 ) : null}
-                {shippingOptions.References ? (
+                {checkoutOptions.References ? (
                   <label className="full">Referencia (opcional)
                     <input value={references} onChange={(e) => setReferences(e.target.value)} placeholder="Introduce una referencia" />
                   </label>
@@ -491,7 +508,7 @@ export const CatalogOrderInfoPage = () => {
           </article>
         ) : null}
 
-        {shippingOptions.PaymentMetod ? (
+        {checkoutOptions.PaymentMetod ? (
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "payment" ? null : "payment"))}>
               <h3>Método de pago</h3>
@@ -503,10 +520,12 @@ export const CatalogOrderInfoPage = () => {
                   <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as PaymentMethod)}>
                     <option value="transferencia">Transferencia bancaria</option>
                     <option value="efectivo">Dinero en efectivo</option>
-                    <option value="tarjeta" disabled={!cardEnabled}>
-                      {cardEnabled ? "Tarjeta de crédito o débito" : "Tarjeta de crédito o débito (no disponible)"}
-                    </option>
-                    <option value="enlace">Enlace de pago</option>
+                    {!usesSimplifiedCheckout ? (
+                      <option value="tarjeta" disabled={!cardEnabled}>
+                        {cardEnabled ? "Tarjeta de crédito o débito" : "Tarjeta de crédito o débito (no disponible)"}
+                      </option>
+                    ) : null}
+                    {!usesSimplifiedCheckout ? <option value="enlace">Enlace de pago</option> : null}
                   </select>
                   {errors.paymentMethod ? <small>{errors.paymentMethod}</small> : null}
                 </label>

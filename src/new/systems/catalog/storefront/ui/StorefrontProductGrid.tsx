@@ -2,7 +2,14 @@ import { memo, useMemo } from "react";
 import { NavLink } from "react-router-dom";
 import { FiEye, FiShoppingCart, FiTrash2 } from "react-icons/fi";
 import { StorefrontProduct } from "../model/CatalogStorefrontModels";
-import { formatCatalogPrice, getCatalogPriceValue } from "./catalogPrice";
+import {
+  formatCatalogPrice,
+  getApplicableWholesaleTier,
+  getEffectiveCatalogPrice,
+  getEffectiveCatalogPriceForQuantity,
+  getNextWholesaleTier,
+  normalizeWholesalePriceTiers,
+} from "./catalogPrice";
 
 type ProductGridProps = {
   products: StorefrontProduct[];
@@ -42,10 +49,7 @@ const ProductCard = memo(({
 }) => {
   const qty = existingQuantities[product.id] ?? 0;
   const hasInCart = qty > 0;
-
-  const handleAdd = () => {
-    onAdd(product);
-  };
+  const priceQuantity = Math.max(1, qty);
 
   const handleQuantityChange = (value: string) => {
     let parsed = Math.floor(Number(value));
@@ -54,29 +58,36 @@ const ProductCard = memo(({
     onSetQuantity(product, parsed);
   };
 
-  const basePrice = useMemo(() => getCatalogPriceValue(product.price), [product.price]);
-  const promotionPrice = useMemo(() => getCatalogPriceValue(product.promotionPrice), [product.promotionPrice]);
-  const wholesalePrice = useMemo(() => getCatalogPriceValue(product.wholesalePrice), [product.wholesalePrice]);
-  const wholesaleMinQuantity = useMemo(
-    () => Math.floor(Number(product.wholesaleMinQuantity ?? 0)),
-    [product.wholesaleMinQuantity],
+  const wholesaleTiers = useMemo(
+    () => normalizeWholesalePriceTiers(product.wholesalePrices, product.wholesalePrice, product.wholesaleMinQuantity),
+    [product.wholesaleMinQuantity, product.wholesalePrice, product.wholesalePrices],
   );
-
-  const formattedBase = useMemo(() => formatCatalogPrice(product.price, formatPrice), [formatPrice, product.price]);
-  const formattedPromo = useMemo(
-    () => (promotionPrice ? formatCatalogPrice(product.promotionPrice, formatPrice) : null),
-    [formatPrice, product.promotionPrice, promotionPrice],
+  const activeWholesaleTier = useMemo(
+    () => getApplicableWholesaleTier(wholesaleTiers, priceQuantity),
+    [priceQuantity, wholesaleTiers],
   );
-  const formattedWholesale = useMemo(
-    () => (wholesalePrice && wholesaleMinQuantity > 0 ? formatCatalogPrice(product.wholesalePrice, formatPrice) : null),
-    [formatPrice, product.wholesalePrice, wholesaleMinQuantity, wholesalePrice],
+  const nextWholesaleTier = useMemo(
+    () => getNextWholesaleTier(wholesaleTiers, priceQuantity),
+    [priceQuantity, wholesaleTiers],
+  );
+  const regularEffectivePrice = useMemo(
+    () => getEffectiveCatalogPrice(product.price, product.promotionPrice),
+    [product.price, product.promotionPrice],
+  );
+  const effectivePrice = useMemo(
+    () => getEffectiveCatalogPriceForQuantity(
+      product.price,
+      product.promotionPrice,
+      wholesaleTiers,
+      priceQuantity,
+    ),
+    [priceQuantity, product.price, product.promotionPrice, wholesaleTiers],
   );
 
   const shouldShowPrice = product.showPrice !== false;
-  const hasWholesaleRule = Boolean(formattedWholesale && wholesaleMinQuantity > 0);
-  const isWholesaleActive = hasWholesaleRule && qty >= wholesaleMinQuantity;
-  const remainingForWholesale = hasWholesaleRule ? Math.max(wholesaleMinQuantity - qty, 0) : 0;
-  const priceLabel = formattedPromo ? "Promo" : "Precio";
+  const hasWholesaleRule = wholesaleTiers.length > 0;
+  const isWholesaleActive = Boolean(activeWholesaleTier);
+  const priceLabel = isWholesaleActive ? "Mayoreo" : product.promotionPrice ? "Promo" : "Precio";
 
   return (
     <article id={`catalog-product-${product.id}`} className={`catalog-v2-grid__card group${isWholesaleActive ? " is-wholesale-active" : ""}`}>
@@ -104,42 +115,42 @@ const ProductCard = memo(({
             {shouldShowPrice ? (
               <div className="catalog-v2-grid__price-stack">
                 <small className="catalog-v2-grid__price-label">{priceLabel}</small>
-                {formattedPromo ? (
-                  <div className="catalog-v2-grid__prices">
-                    <span>{formattedPromo}</span>
-                    {basePrice ? <small>{formattedBase}</small> : null}
-                  </div>
-                ) : (
-                  <p>{formattedBase}</p>
-                )}
+                <div className="catalog-v2-grid__prices">
+                  <span>{formatCatalogPrice(effectivePrice, formatPrice)}</span>
+                  {regularEffectivePrice && effectivePrice !== regularEffectivePrice ? (
+                    <small>{formatCatalogPrice(regularEffectivePrice, formatPrice)}</small>
+                  ) : null}
+                </div>
               </div>
             ) : null}
           </div>
 
-          <button type="button" onClick={handleAdd} aria-label={`Agregar ${product.name}`}>
+          <button type="button" onClick={() => onAdd(product)} aria-label={`Agregar ${product.name}`}>
             <FiShoppingCart />
           </button>
         </div>
 
-        {hasWholesaleRule && formattedWholesale ? (
-          <div
-            className={`catalog-v2-grid__wholesale-note${isWholesaleActive ? " is-active" : ""}`}
-            aria-label={isWholesaleActive
-              ? `Precio de mayoreo aplicado desde ${wholesaleMinQuantity} piezas`
-              : `Precio de mayoreo ${formattedWholesale} desde ${wholesaleMinQuantity} piezas`}
-          >
+        {hasWholesaleRule ? (
+          <div className={`catalog-v2-grid__wholesale-note${isWholesaleActive ? " is-active" : ""}`}>
             <div className="catalog-v2-grid__wholesale-note-head">
-              <span>
-                {isWholesaleActive
-                  ? "Activo"
-                  : hasInCart
-                    ? `Faltan ${remainingForWholesale}`
-                    : "Mayoreo"}
-              </span>
-              <strong>{formattedWholesale}</strong>
-              <small>c/u</small>
+              <span>{isWholesaleActive ? "Mayoreo activo" : `${wholesaleTiers.length} nivel${wholesaleTiers.length === 1 ? "" : "es"}`}</span>
+              {activeWholesaleTier ? <strong>{formatCatalogPrice(activeWholesaleTier.price, formatPrice)} c/u</strong> : null}
             </div>
-            <p>{isWholesaleActive ? `Aplicado desde ${wholesaleMinQuantity} pzas.` : `Desde ${wholesaleMinQuantity} pzas.`}</p>
+            <div className="catalog-v2-grid__wholesale-tiers">
+              {wholesaleTiers.map((tier) => (
+                <div key={tier.id ?? `${product.id}-${tier.minQuantity}`} className={activeWholesaleTier?.minQuantity === tier.minQuantity ? "is-current" : ""}>
+                  <span>Desde {tier.minQuantity} pzas.</span>
+                  <strong>{formatCatalogPrice(tier.price, formatPrice)}</strong>
+                </div>
+              ))}
+            </div>
+            {nextWholesaleTier ? (
+              <p>
+                {hasInCart
+                  ? `Agrega ${Math.max(nextWholesaleTier.minQuantity - qty, 0)} más para ${formatCatalogPrice(nextWholesaleTier.price, formatPrice)} c/u.`
+                  : `Mayoreo desde ${wholesaleTiers[0].minQuantity} piezas.`}
+              </p>
+            ) : isWholesaleActive ? <p>Ya tienes el mejor precio disponible.</p> : null}
           </div>
         ) : null}
       </div>
@@ -159,7 +170,7 @@ const ProductCard = memo(({
             onChange={(event) => handleQuantityChange(event.target.value)}
             aria-label={`Cantidad de ${product.name}`}
           />
-          <button type="button" onClick={handleAdd} aria-label={`Agregar otra unidad de ${product.name}`}>+</button>
+          <button type="button" onClick={() => onAdd(product)} aria-label={`Agregar otra unidad de ${product.name}`}>+</button>
         </div>
       ) : null}
     </article>
@@ -168,24 +179,22 @@ const ProductCard = memo(({
 
 ProductCard.displayName = "ProductCard";
 
-export const StorefrontProductGrid = ({ products, onAdd, onRemove, onDecrement, onSetQuantity, onQuickView, existingQuantities, formatPrice, phone, page }: ProductGridProps) => {
-  return (
-    <div className="catalog-v2-grid">
-      {products.map((product) => (
-        <ProductCard
-          key={product.id}
-          product={product}
-          onAdd={onAdd}
-          onRemove={onRemove}
-          onDecrement={onDecrement}
-          onSetQuantity={onSetQuantity}
-          onQuickView={onQuickView}
-          existingQuantities={existingQuantities}
-          formatPrice={formatPrice}
-          phone={phone}
-          page={page}
-        />
-      ))}
-    </div>
-  );
-};
+export const StorefrontProductGrid = ({ products, onAdd, onRemove, onDecrement, onSetQuantity, onQuickView, existingQuantities, formatPrice, phone, page }: ProductGridProps) => (
+  <div className="catalog-v2-grid">
+    {products.map((product) => (
+      <ProductCard
+        key={product.id}
+        product={product}
+        onAdd={onAdd}
+        onRemove={onRemove}
+        onDecrement={onDecrement}
+        onSetQuantity={onSetQuantity}
+        onQuickView={onQuickView}
+        existingQuantities={existingQuantities}
+        formatPrice={formatPrice}
+        phone={phone}
+        page={page}
+      />
+    ))}
+  </div>
+);

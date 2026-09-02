@@ -18,38 +18,9 @@ import {
 } from "../../../shared/api/productImageCompression";
 import { catalogAiDebug } from "../../../shared/debug/catalogAiDebug";
 import { CatalogAiSessionRefreshModal } from "./CatalogAiSessionRefreshModal";
+import { CATALOG_AI_API_URL } from "../config/catalgoAiEnv";
 import "./CatalogAiImportWizard.css";
 
-const DEFAULT_CATALOG_AI_URL = "http://localhost:8095";
-
-const normalizeCatalogAiApiUrl = (value: string): string => {
-  const normalized = value
-    .trim()
-    .replace(/^["']+|["']+$/g, "")
-    .replace(/\/+$/, "");
-
-  if (/^https?:\/\//i.test(normalized)) {
-    return normalized;
-  }
-
-  if (
-    normalized.startsWith("localhost") ||
-    normalized.startsWith("127.0.0.1")
-  ) {
-    return `http://${normalized}`;
-  }
-
-  return `https://${normalized}`;
-};
-
-const CATALOG_AI_API_URL = normalizeCatalogAiApiUrl(
-  String(
-    import.meta.env.VITE_CATALOG_AI_API_URL ??
-      DEFAULT_CATALOG_AI_URL,
-  ),
-);
-
-const MAX_FILES = 50;
 const MAX_FILE_SIZE_BYTES = PRODUCT_IMAGE_MAX_FILE_BYTES;
 const ALLOWED_TYPES = PRODUCT_IMAGE_ACCEPTED_TYPES;
 const PHOTO_PREVIEW_CONCURRENCY = 2;
@@ -109,6 +80,7 @@ type EditableCatalogAiItem = CatalogAiItem & {
   draftCategory: string;
   draftBarcode: string;
   draftColor: string;
+  draftSizes: string;
   draftPrice: string;
   draftStock: string;
   categoryMode: CategoryMode;
@@ -121,13 +93,18 @@ type EditableCatalogAiItem = CatalogAiItem & {
 
 type CatalogAiImportWizardProps = {
   open: boolean;
+  maxFiles: number;
   businessId: number;
   token: string;
   categories: CatalogAiCategoryOption[];
   onCreateCategory: (input: CreateCatalogAiCategoryInput) => Promise<CatalogAiCategoryOption>;
-  onAddProductColors: (productId: number, colors: string[]) => Promise<void>;
+  onAddProductExtras: (
+    productId: number,
+    extras: Array<{ description: string; type: "COLOR" | "TALLA" }>,
+  ) => Promise<void>;
   onClose: () => void;
   onSessionRefreshed?: (token: string) => void;
+  onBatchStarted: (imageCount: number) => void;
   onCompleted: (result: { created: number; productIds: number[] }) => void;
 };
 
@@ -148,7 +125,7 @@ const firstText = (...values: Array<string | null | undefined>): string => {
   return "";
 };
 
-const parseColors = (value: string): string[] =>
+const parseCommaSeparatedValues = (value: string): string[] =>
   Array.from(
     new Map(
       value
@@ -195,6 +172,8 @@ const toEditableItem = (item: CatalogAiItem): EditableCatalogAiItem => {
       item.Duplicate_Product_Color,
       item.Suggested_Color,
     ),
+    // Las tallas son exclusivamente manuales; la IA no las propone.
+    draftSizes: "",
     draftPrice: firstNumberText(
       item.Duplicate_Product_Price,
       item.Suggested_Price,
@@ -456,6 +435,14 @@ const friendlyTechnicalError = (rawValue: string): string | null => {
 
 const errorText = (cause: unknown): string => {
   if (cause instanceof CatalogAiApiError) {
+    if (
+      (cause.code === "AI_IMPORT_PLAN_REQUIRED" ||
+        cause.code === "AI_IMPORT_QUOTA_EXCEEDED") &&
+      cause.message.trim()
+    ) {
+      return cause.message.trim();
+    }
+
     const friendly = cause.code
       ? friendlyErrorByCode(cause.code)
       : null;
@@ -483,13 +470,15 @@ const errorText = (cause: unknown): string => {
 
 export const CatalogAiImportWizard = ({
   open,
+  maxFiles,
   businessId,
   token,
   categories,
   onCreateCategory,
-  onAddProductColors,
+  onAddProductExtras,
   onClose,
   onSessionRefreshed,
+  onBatchStarted,
   onCompleted,
 }: CatalogAiImportWizardProps) => {
   const [step, setStep] = useState<WizardStep>(1);
@@ -683,11 +672,11 @@ export const CatalogAiImportWizard = ({
       flowId: flowIdRef.current,
       businessId,
       apiUrl: CATALOG_AI_API_URL,
-      maxFiles: MAX_FILES,
+      maxFiles,
       debugEnabled: catalogAiDebug.enabled(),
     });
     setError(null);
-  }, [businessId, open]);
+  }, [businessId, maxFiles, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -800,7 +789,7 @@ export const CatalogAiImportWizard = ({
       flowId: flowIdRef.current,
       incoming: incoming.length,
       existing: photosRef.current.length,
-      maxFiles: MAX_FILES,
+      maxFiles,
       files: incoming.map((file) => ({
         name: file.name,
         type: file.type,
@@ -832,9 +821,9 @@ export const CatalogAiImportWizard = ({
         continue;
       }
 
-      if (currentPhotos.length + candidates.length >= MAX_FILES) {
+      if (currentPhotos.length + candidates.length >= maxFiles) {
         rejectedMessages.push(
-          `Solo puedes procesar hasta ${MAX_FILES} imágenes por lote.`,
+          `Tu plan permite importar hasta ${maxFiles} imágenes por lote.`,
         );
         break;
       }
@@ -1139,6 +1128,7 @@ export const CatalogAiImportWizard = ({
       }
 
       await runWithSessionRecovery((client) => client.startBatch(newBatchId));
+      onBatchStarted(photos.length);
       catalogAiDebug.info("WIZARD", "batch.started", {
         flowId: flowIdRef.current,
         batchId: newBatchId,
@@ -1567,6 +1557,14 @@ export const CatalogAiImportWizard = ({
       return null;
     }
   };
+  const updateManualSizes = (itemId: number, value: string) => {
+    setItems((current) =>
+      current.map((item) =>
+        item.Id === itemId ? { ...item, draftSizes: value } : item,
+      ),
+    );
+  };
+
 
   const updateDraft = (
     itemId: number,
@@ -1641,7 +1639,7 @@ export const CatalogAiImportWizard = ({
       // El catálogo utiliza una sola categoría específica por producto.
       subcategory: null,
       barcode: item.draftBarcode.trim() || null,
-      color: parseColors(item.draftColor)[0] ?? null,
+      color: parseCommaSeparatedValues(item.draftColor)[0] ?? null,
       price: parsedPrice,
       stock: parsedStock,
     };
@@ -1814,10 +1812,37 @@ export const CatalogAiImportWizard = ({
         ),
       );
       await Promise.all(
-        productIds.map((productId, index) =>
-          onAddProductColors(productId, parseColors(selectedItems[index].draftColor)),
-        ),
+        productIds.map((productId, index) => {
+          const selectedItem = selectedItems[index];
+          const extras: Array<{
+            description: string;
+            type: "COLOR" | "TALLA";
+          }> = [
+            ...parseCommaSeparatedValues(selectedItem.draftColor).map(
+              (description) => ({ description, type: "COLOR" as const }),
+            ),
+            ...parseCommaSeparatedValues(selectedItem.draftSizes).map(
+              (description) => ({ description, type: "TALLA" as const }),
+            ),
+          ];
+
+          return onAddProductExtras(productId, extras);
+        }),
       );
+      try {
+        await runWithSessionRecovery((client) =>
+          client.finalizeBatchQuota(batchId),
+        );
+      } catch (quotaFinalizeError) {
+        // Los productos ya se publicaron. Si esta liberación falla, la reserva
+        // expira automáticamente y la cuota autoritativa sigue siendo correcta.
+        catalogAiDebug.warn("WIZARD", "quota.finalize.failed", {
+          flowId: flowIdRef.current,
+          batchId,
+          cause: quotaFinalizeError,
+        });
+      }
+
       setPublishedProductIds(productIds);
       setFinishedAt(Date.now());
       catalogAiDebug.info("WIZARD", "publish.success", {
@@ -2061,13 +2086,13 @@ export const CatalogAiImportWizard = ({
                   hidden
                   onChange={handleFileInput}
                 />
-                <small>JPG, PNG o WEBP · máximo {MAX_FILES} fotos · 5 MB por archivo</small>
+                <small>JPG, PNG o WEBP · máximo {maxFiles} fotos · 5 MB por archivo</small>
               </div>
 
               <div className="catalog-ai-wizard__selection-head">
                 <div>
                   <h3>Fotos seleccionadas</h3>
-                  <p>{photos.length} de {MAX_FILES}</p>
+                  <p>{photos.length} de {maxFiles}</p>
                 </div>
                 {photos.length > 0 ? (
                   <button
@@ -2497,6 +2522,21 @@ export const CatalogAiImportWizard = ({
                               }
                             />
                             <small>Separa varios colores con comas.</small>
+                          </label>
+
+                          <label>
+                            Tallas
+                            <input
+                              value={item.draftSizes}
+                              placeholder="Ej. CH, M, G, XG"
+                              disabled={!selectable}
+                              onChange={(event) =>
+                                updateManualSizes(item.Id, event.target.value)
+                              }
+                            />
+                            <small>
+                              Opcional. Agrega varias tallas separandolas con comas.
+                            </small>
                           </label>
 
                           <label>

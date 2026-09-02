@@ -10,6 +10,7 @@ const suites = [
   { name: "unit-login-session-limit", entry: "tests/new/pos/auth/login-session-limit.unit.ts" },
   { name: "unit-products-service", entry: "tests/new/pos/products/products.service.unit.ts" },
   { name: "unit-products-discontinued", entry: "tests/new/pos/products/products.discontinued.unit.ts" },
+  { name: "unit-catalog-ai-plan-access", entry: "tests/new/pos/products/catalog-ai-plan-access.unit.ts" },
   { name: "integration-products-api-service-page", entry: "tests/new/pos/products/products.integration.ts" },
   { name: "integration-finance-api", entry: "tests/new/pos/finance/finance.api.integration.ts" },
   { name: "unit-more-module-page", entry: "tests/new/pos/more/more.module.page.unit.ts" },

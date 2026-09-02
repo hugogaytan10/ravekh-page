@@ -1,6 +1,5 @@
-[[edge_functions]]
-  function = "catalog-meta"
-  path = "/v2/catalogo/*"
+[images]
+  remote_images = ['https://res\.cloudinary\.com/.*']
 
 [[headers]]
   for = "/.well-known/apple-app-site-association"

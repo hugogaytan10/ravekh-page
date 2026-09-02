@@ -26,6 +26,7 @@ export interface IProductsRepository {
   archiveMany(productIds: number[], token: string): Promise<void>;
   restore(productId: number, token: string): Promise<void>;
   restoreMany(productIds: number[], token: string): Promise<void>;
+  addProductExtras(productId: number, extras: ProductExtra[], token: string): Promise<void>;
 
   listCategoriesByBusiness(businessId: number, token: string): Promise<ProductCategory[]>;
   createCategory(category: ProductCategory, token: string): Promise<ProductCategory>;
