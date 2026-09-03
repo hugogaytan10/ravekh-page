@@ -54,8 +54,10 @@ export class FetchHttpClient implements HttpClient {
   }
 
   private throwRequestError(status: number, responseData: unknown): never {
+    const payload = responseData as { message?: string; error?: string } | null;
+    const responseMessage = [payload?.message, payload?.error].filter(Boolean).join(" · ");
     const error = new Error(
-      (responseData as { message?: string } | null)?.message ?? `Request failed: ${status}`,
+      responseMessage || `Request failed: ${status}`,
     ) as Error & {
       status?: number;
       payload?: unknown;

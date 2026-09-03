@@ -423,7 +423,7 @@ export class PosProductsApi implements IProductsRepository {
       method: "PUT",
       path: POS_ENDPOINTS.productAvailability(productId),
       token,
-      body: { Available: false },
+      body: { Available: 0 },
     });
   }
 

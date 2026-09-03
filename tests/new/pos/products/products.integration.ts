@@ -7,6 +7,7 @@ export async function run(): Promise<void> {
   const calls: string[] = [];
   let createBody: unknown;
   let updateBody: unknown;
+  let archiveBody: unknown;
   const extraBodies: unknown[] = [];
   let importBody: unknown;
   let createCategoryBody: unknown;
@@ -44,6 +45,11 @@ export async function run(): Promise<void> {
 
       if (method === "PUT" && path === "products/9") {
         updateBody = body;
+        return null;
+      }
+
+      if (method === "PUT" && path === "products/available/8") {
+        archiveBody = body;
         return null;
       }
 
@@ -148,6 +154,7 @@ export async function run(): Promise<void> {
   );
 
   await page.archiveProduct(8, "token");
+  assert.deepEqual(archiveBody, { Available: 0 });
 
   const categories = await page.loadCategories(7, "token");
   const importResult = await page.importProducts(7, new File(["id,name\n1,Café"], "productos.csv", { type: "text/csv" }), "token");

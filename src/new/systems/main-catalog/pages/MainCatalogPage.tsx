@@ -17,9 +17,7 @@ const WHATSAPP_PHONE = "5653989702";
 const WHATSAPP_URL = `https://wa.me/${WHATSAPP_PHONE}`;
 const CONTACT_HASH = "#planes";
 const LEAD_FORM_HASH = "#solicitar-catalogo";
-const LOGIN_POS_PATH = "/login-punto-venta";
 const MAIN_SALES_PATH = "/MainSales";
-const FREE_CATALOG_PLAN_NAME = "Catálogo Gratuito";
 
 type CardItem = {
   icon: ReactNode;
@@ -410,19 +408,6 @@ const billingCycleCopy: Record<
 
 const plans: Plan[] = [
   {
-    name: FREE_CATALOG_PLAN_NAME,
-    prices: { monthly: "0.00 MXN", annual: "0.00 MXN" },
-    periodLabel: { monthly: "Gratis", annual: "Gratis" },
-    limit: "Límite de productos/fotos editable",
-    benefits: [
-      "Link de catálogo",
-      "1 Imagen por producto",
-      "50 Visitas al mes por catálogo",
-      "Sin acceso a impuesto por venta",
-      "Guardado 100% offline",
-    ],
-  },
-  {
     name: "Catálogo Básico",
     prices: { monthly: "299.00 MXN", annual: "2,988.00 MXN" },
     periodLabel: { monthly: "al mes", annual: "al año" },
@@ -801,8 +786,8 @@ const PricingSection = () => {
           <span className="main-catalog-eyebrow">Planes editables</span>
           <h2>Elige el catálogo que necesita tu negocio</h2>
           <p>
-            Compara los planes mensual y anual. Mantén el gratuito para iniciar
-            o elige un plan de pago cuando necesites más control.
+            Compara los planes mensual y anual y elige el que mejor se adapte a
+            tu negocio.
           </p>
         </div>
 
@@ -858,28 +843,26 @@ const PricingSection = () => {
               </ul>
               <a
                 className="main-catalog-button main-catalog-button--primary main-catalog-button--full"
-                href={plan.name === FREE_CATALOG_PLAN_NAME ? LOGIN_POS_PATH : "#planes"}
+                href="#planes"
                 onClick={(event) => {
                   trackMetaEvent("Contact", {
                     content_name: plan.name,
                     plan_price: plan.prices[billingCycle],
                   });
 
-                  if (plan.name !== FREE_CATALOG_PLAN_NAME) {
-                    event.preventDefault();
+                  event.preventDefault();
 
-                    const checkoutPlan = buildCatalogCheckoutPlan(plan, billingCycle);
-                    if (!checkoutPlan) {
-                      return;
-                    }
-
-                    if (!hasStoredPosSession()) {
-                      setLoginModalPlan(checkoutPlan);
-                      return;
-                    }
-
-                    setUnlockModalPlan(checkoutPlan);
+                  const checkoutPlan = buildCatalogCheckoutPlan(plan, billingCycle);
+                  if (!checkoutPlan) {
+                    return;
                   }
+
+                  if (!hasStoredPosSession()) {
+                    setLoginModalPlan(checkoutPlan);
+                    return;
+                  }
+
+                  setUnlockModalPlan(checkoutPlan);
                 }}
                 aria-label={`Elegir ${plan.name} ${billingCycleCopy[billingCycle].label.toLowerCase()}`}
               >
