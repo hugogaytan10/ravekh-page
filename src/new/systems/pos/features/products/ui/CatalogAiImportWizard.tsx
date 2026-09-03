@@ -18,6 +18,10 @@ import {
 } from "../../../shared/api/productImageCompression";
 import { catalogAiDebug } from "../../../shared/debug/catalogAiDebug";
 import { CatalogAiSessionRefreshModal } from "./CatalogAiSessionRefreshModal";
+import {
+  WholesalePricesEditor,
+  type WholesalePriceTierDraft,
+} from "./WholesalePricesEditor";
 import { CATALOG_AI_API_URL } from "../config/catalgoAiEnv";
 import "./CatalogAiImportWizard.css";
 
@@ -83,6 +87,7 @@ type EditableCatalogAiItem = CatalogAiItem & {
   draftSizes: string;
   draftPrice: string;
   draftStock: string;
+  draftWholesalePrices: WholesalePriceTierDraft[];
   categoryMode: CategoryMode;
   draftCategoryColor: string;
   creatingCategory: boolean;
@@ -183,6 +188,7 @@ const toEditableItem = (item: CatalogAiItem): EditableCatalogAiItem => {
         item.Duplicate_Product_Stock,
         item.Suggested_Stock,
       ) || "1",
+    draftWholesalePrices: [],
     // En productos existentes se conserva la clasificación actual. Para productos
     // nuevos, la sugerencia de IA queda seleccionada explícitamente y puede
     // reemplazarse por una categoría existente o por una nueva categoría manual.
@@ -225,6 +231,35 @@ const parseRequiredNonNegativeNumber = (value: string): number => {
     throw new Error("El stock debe ser un número igual o mayor que cero.");
   }
   return Math.round(parsed * 100) / 100;
+};
+
+export const parseWholesalePrices = (
+  tiers: WholesalePriceTierDraft[],
+  regularPrice: number | null,
+): Array<{ price: number; minQuantity: number }> => {
+  const parsed = tiers.map((tier) => {
+    const price = Number(tier.price);
+    const minQuantity = Number(tier.minQuantity);
+    if (!tier.price.trim() || !Number.isFinite(price) || price < 0) {
+      throw new Error("Cada nivel de mayoreo necesita un precio válido.");
+    }
+    if (!tier.minQuantity.trim() || !Number.isInteger(minQuantity) || minQuantity < 2) {
+      throw new Error("Cada nivel de mayoreo debe iniciar desde 2 piezas o más.");
+    }
+    if (regularPrice === null) {
+      throw new Error("Agrega el precio normal antes de configurar mayoreo.");
+    }
+    if (price > regularPrice) {
+      throw new Error("El precio por mayoreo no puede superar el precio normal.");
+    }
+    return { price: Math.round(price * 100) / 100, minQuantity };
+  });
+
+  if (new Set(parsed.map((tier) => tier.minQuantity)).size !== parsed.length) {
+    throw new Error("No puedes repetir la cantidad mínima entre niveles de mayoreo.");
+  }
+
+  return parsed.sort((a, b) => a.minQuantity - b.minQuantity);
 };
 
 const normalizeCategoryName = (value: string): string =>
@@ -1617,9 +1652,14 @@ export const CatalogAiImportWizard = ({
 
     let parsedPrice: number | null;
     let parsedStock: number;
+    let parsedWholesalePrices: Array<{ price: number; minQuantity: number }>;
     try {
       parsedPrice = parseOptionalNonNegativeNumber(item.draftPrice);
       parsedStock = parseRequiredNonNegativeNumber(item.draftStock);
+      parsedWholesalePrices = parseWholesalePrices(
+        item.draftWholesalePrices,
+        parsedPrice,
+      );
     } catch (cause) {
       setError(errorText(cause));
       return false;
@@ -1642,6 +1682,13 @@ export const CatalogAiImportWizard = ({
       color: parseCommaSeparatedValues(item.draftColor)[0] ?? null,
       price: parsedPrice,
       stock: parsedStock,
+      ...(parsedWholesalePrices.length > 0
+        ? {
+            wholesalePrice: parsedWholesalePrices[0].price,
+            wholesaleMinQuantity: parsedWholesalePrices[0].minQuantity,
+            wholesalePrices: parsedWholesalePrices,
+          }
+        : {}),
     };
 
     try {
@@ -2578,6 +2625,23 @@ export const CatalogAiImportWizard = ({
                             />
                           </label>
                         </div>
+
+                        <WholesalePricesEditor
+                          value={item.draftWholesalePrices}
+                          onChange={(draftWholesalePrices) =>
+                            setItems((current) =>
+                              current.map((row) =>
+                                row.Id === item.Id
+                                  ? { ...row, draftWholesalePrices, dirty: true }
+                                  : row,
+                              ),
+                            )
+                          }
+                          locked={!selectable}
+                          compact
+                          title="Niveles de precio por mayoreo"
+                          description="Opcional. Define el precio por pieza según la cantidad comprada."
+                        />
 
                         {item.Duplicate_Reason ? (
                           <p className="catalog-ai-wizard__inline-warning">
