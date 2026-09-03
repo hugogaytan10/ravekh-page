@@ -1,5 +1,5 @@
 import { IProductsRepository, ProductImportResult, ProductsPaginatedResult } from "../interface/IProductsRepository";
-import { ManagedProduct, ProductCategory, SaveManagedProductDto } from "../model/ManagedProduct";
+import { ManagedProduct, ProductCategory, ProductExtra, SaveManagedProductDto } from "../model/ManagedProduct";
 
 export class ProductsService {
   constructor(private readonly repository: IProductsRepository) {}
@@ -51,6 +51,10 @@ export class ProductsService {
 
   async restoreProducts(productIds: number[], token: string): Promise<void> {
     return this.repository.restoreMany(productIds, token);
+  }
+
+  async addProductExtras(productId: number, extras: ProductExtra[], token: string): Promise<void> {
+    return this.repository.addProductExtras(productId, extras, token);
   }
 
   async listCategories(businessId: number, token: string): Promise<ProductCategory[]> {

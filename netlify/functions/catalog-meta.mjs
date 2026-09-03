@@ -17,18 +17,12 @@ const ensureTrailingSlash = (value) => {
   return normalized.endsWith("/") ? normalized : `${normalized}/`;
 };
 
-const getEnv = (name) => {
-  if (globalThis.Deno?.env?.get) return globalThis.Deno.env.get(name) ?? "";
-  return "";
-};
-
 const getApiBaseUrl = () =>
-  ensureTrailingSlash(getEnv("VITE_API_URL") || getEnv("API_URL") || getEnv("FACTURA_ELECTRONICA_API_URL"));
-
-const getBusinessId = (url) => {
-  const match = url.pathname.match(/^\/v2\/catalogo\/([^/?#]+)/i);
-  return match ? decodeURIComponent(match[1]) : "";
-};
+  ensureTrailingSlash(
+    process.env.VITE_API_URL ||
+      process.env.API_URL ||
+      process.env.FACTURA_ELECTRONICA_API_URL,
+  );
 
 const toAbsoluteUrl = (value, origin) => {
   const normalized = String(value ?? "").trim();
@@ -37,6 +31,21 @@ const toAbsoluteUrl = (value, origin) => {
     : /^https?:\/\//i.test(normalized)
       ? normalized
       : new URL(normalized.startsWith("/") ? normalized : `/${normalized}`, origin).toString();
+};
+
+const buildSocialImageUrl = (image, origin) => {
+  const source = new URL(image, origin);
+  if (source.origin !== origin && source.hostname !== "res.cloudinary.com") return image;
+
+  const params = new URLSearchParams({
+    url: source.origin === origin ? `${source.pathname}${source.search}` : source.toString(),
+    w: "1200",
+    h: "630",
+    fit: "contain",
+    fm: "jpg",
+    q: "80",
+  });
+  return `${origin}/.netlify/images?${params}`;
 };
 
 const fetchBusiness = async (businessId) => {
@@ -56,14 +65,29 @@ const buildMetadata = (requestUrl, business) => {
   const logo = String(business?.Logo ?? business?.logo ?? "").trim();
   const title = name ? `${name} | Catálogo digital` : DEFAULT_TITLE;
   const description = name ? `Explora productos y realiza pedidos en el catálogo digital de ${name}.` : DEFAULT_DESCRIPTION;
-  const image = toAbsoluteUrl(logo, requestUrl.origin);
+  const image = buildSocialImageUrl(toAbsoluteUrl(logo, requestUrl.origin), requestUrl.origin);
   const url = `${requestUrl.origin}${requestUrl.pathname}`;
-  const siteName = name || DEFAULT_SITE_NAME;
 
-  return { title, description, image, url, siteName };
+  return { title, description, image, url, siteName: name || DEFAULT_SITE_NAME };
 };
 
-const renderMetaTags = ({ title, description, image, url, siteName }) => `
+const fetchImageMetadata = async (image) => {
+  try {
+    const response = await fetch(image, { method: "HEAD" });
+    if (!response.ok) return {};
+    const dimensions = response.headers.get("server-timing")?.match(/width=(\d+),height=(\d+)/);
+
+    return {
+      imageType: response.headers.get("content-type")?.split(";")[0],
+      imageWidth: dimensions?.[1],
+      imageHeight: dimensions?.[2],
+    };
+  } catch {
+    return {};
+  }
+};
+
+const renderMetaTags = ({ title, description, image, url, siteName, imageType, imageWidth, imageHeight }) => `
   <title>${escapeHtml(title)}</title>
   <meta name="description" content="${escapeHtml(description)}">
   <link rel="canonical" href="${escapeHtml(url)}">
@@ -74,10 +98,12 @@ const renderMetaTags = ({ title, description, image, url, siteName }) => `
   <meta property="og:url" content="${escapeHtml(url)}">
   <meta property="og:image" content="${escapeHtml(image)}">
   <meta property="og:image:secure_url" content="${escapeHtml(image)}">
-  <meta property="og:image:type" content="image/jpeg">
+  ${imageType ? `<meta property="og:image:type" content="${escapeHtml(imageType)}">` : ""}
+  ${imageWidth ? `<meta property="og:image:width" content="${escapeHtml(imageWidth)}">` : ""}
+  ${imageHeight ? `<meta property="og:image:height" content="${escapeHtml(imageHeight)}">` : ""}
   <meta property="og:image:alt" content="${escapeHtml(siteName)}">
   <meta property="og:locale" content="es_MX">
-  <meta name="twitter:card" content="summary">
+  <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(title)}">
   <meta name="twitter:description" content="${escapeHtml(description)}">
   <meta name="twitter:image" content="${escapeHtml(image)}">
@@ -91,29 +117,35 @@ const stripExistingMetadata = (html) =>
 
 export default async (request, context) => {
   const requestUrl = new URL(request.url);
-  const response = await context.next();
-  const contentType = response.headers.get("content-type") ?? "";
+  const businessId = context.params.id ?? "";
 
-  if (!contentType.includes("text/html")) return response;
+  const [pageResponse, business] = await Promise.all([
+    fetch(new URL("/index.html", requestUrl)),
+    fetchBusiness(businessId).catch((error) => {
+      console.error("Unable to load catalog metadata", error);
+      return null;
+    }),
+  ]);
 
-  let business = null;
-  try {
-    business = await fetchBusiness(getBusinessId(requestUrl));
-  } catch (error) {
-    console.error("Unable to load catalog metadata", error);
-  }
-
-  const html = await response.text();
+  const html = await pageResponse.text();
   const metadata = buildMetadata(requestUrl, business);
-  const enrichedHtml = stripExistingMetadata(html).replace(/<head>/i, `<head>${renderMetaTags(metadata)}`);
-
-  const headers = new Headers(response.headers);
-  headers.delete("content-length");
-  headers.set("cache-control", "public, max-age=0, must-revalidate");
-
+  const imageMetadata = await fetchImageMetadata(metadata.image);
+  const enrichedHtml = stripExistingMetadata(html).replace(
+    /<head>/i,
+    `<head>${renderMetaTags({ ...metadata, ...imageMetadata })}`,
+  );
   return new Response(enrichedHtml, {
-    status: response.status,
-    statusText: response.statusText,
-    headers,
+    status: pageResponse.status,
+    statusText: pageResponse.statusText,
+    headers: {
+      "content-type": "text/html; charset=UTF-8",
+      "cache-control": "public, max-age=0, must-revalidate",
+      "netlify-cdn-cache-control":
+        "public, durable, max-age=300, stale-while-revalidate=31536000",
+    },
   });
+};
+
+export const config = {
+  path: "/v2/catalogo/:id",
 };

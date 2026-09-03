@@ -1,6 +1,6 @@
 import type React from "react";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useLocation, useNavigate, useParams } from "react-router-dom";
 import { FiChevronLeft, FiChevronRight } from "react-icons/fi";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
 import {
@@ -17,9 +17,12 @@ import {
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import {
   formatCatalogPrice,
+  getApplicableWholesaleTier,
   getCatalogPriceValue,
   getEffectiveCatalogPrice,
   getEffectiveCatalogPriceForQuantity,
+  getNextWholesaleTier,
+  normalizeWholesalePriceTiers,
 } from "./catalogPrice";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 
@@ -46,6 +49,7 @@ const variantMatchesColor = (
 export const CatalogProductDetailPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
+  const location = useLocation();
   const { productId = "", phone = "" } = useParams<{
     productId: string;
     phone: string;
@@ -224,18 +228,26 @@ export const CatalogProductDetailPage = () => {
     ]
       .filter(Boolean)
       .join(" · ");
-    const priceToStore = selectedVariant
-      ? getEffectiveCatalogPrice(
-          selectedVariant.price,
-          selectedVariant.promotionPrice,
+    const priceToStore = selectedVariant ? selectedVariant.price : product.price;
+    const promotionPriceToStore = selectedVariant ? selectedVariant.promotionPrice : product.promotionPrice;
+    const productWholesalePrices = normalizeWholesalePriceTiers(
+      product.wholesalePrices,
+      product.wholesalePrice,
+      product.wholesaleMinQuantity,
+    );
+    const variantWholesalePrices = selectedVariant
+      ? normalizeWholesalePriceTiers(
+          selectedVariant.wholesalePrices,
+          selectedVariant.wholesalePrice,
+          selectedVariant.wholesaleMinQuantity,
         )
-      : getEffectiveCatalogPrice(product.price, product.promotionPrice);
-    const wholesalePriceToStore = selectedVariant
-      ? selectedVariant.wholesalePrice
-      : product.wholesalePrice;
-    const wholesaleMinQuantityToStore = selectedVariant
-      ? selectedVariant.wholesaleMinQuantity
-      : product.wholesaleMinQuantity;
+      : [];
+    const wholesalePricesToStore = selectedVariant && variantWholesalePrices.length > 0
+      ? variantWholesalePrices
+      : productWholesalePrices;
+    const firstWholesaleTier = wholesalePricesToStore[0] ?? null;
+    const wholesalePriceToStore = firstWholesaleTier?.price ?? null;
+    const wholesaleMinQuantityToStore = firstWholesaleTier?.minQuantity ?? null;
     const costToStore = selectedVariant?.costPerItem ?? undefined;
 
     const key = `catalog-v2-cart:${product.businessId}`;
@@ -262,8 +274,10 @@ export const CatalogProductDetailPage = () => {
             sizeName: selectedSize?.description,
             name: productLabel,
             price: priceToStore,
+            promotionPrice: promotionPriceToStore,
             wholesalePrice: wholesalePriceToStore,
             wholesaleMinQuantity: wholesaleMinQuantityToStore,
+            wholesalePrices: wholesalePricesToStore,
             cost: costToStore,
             quantity,
             image: selectedVariant?.image || product.image,
@@ -324,51 +338,53 @@ export const CatalogProductDetailPage = () => {
   const displayImages = selectedVariantImage ? [selectedVariantImage] : images;
   const currentImage =
     displayImages[activeImage] ?? displayImages[0] ?? product.image;
-  const selectedWholesalePrice = selectedVariant
-    ? selectedVariant.wholesalePrice
-    : product.wholesalePrice;
-  const selectedWholesaleMinQuantity = selectedVariant
-    ? selectedVariant.wholesaleMinQuantity
-    : product.wholesaleMinQuantity;
+  const productWholesaleTiers = normalizeWholesalePriceTiers(
+    product.wholesalePrices,
+    product.wholesalePrice,
+    product.wholesaleMinQuantity,
+  );
+  const variantWholesaleTiers = selectedVariant
+    ? normalizeWholesalePriceTiers(
+        selectedVariant.wholesalePrices,
+        selectedVariant.wholesalePrice,
+        selectedVariant.wholesaleMinQuantity,
+      )
+    : [];
+  const selectedWholesaleTiers = selectedVariant && variantWholesaleTiers.length > 0
+    ? variantWholesaleTiers
+    : productWholesaleTiers;
   const effectivePrice = selectedVariant
     ? getEffectiveCatalogPriceForQuantity(
         selectedVariant.price,
         selectedVariant.promotionPrice,
-        selectedVariant.wholesalePrice,
-        selectedVariant.wholesaleMinQuantity,
+        selectedWholesaleTiers,
         quantity,
       )
     : getEffectiveCatalogPriceForQuantity(
         product.price,
         product.promotionPrice,
-        product.wholesalePrice,
-        product.wholesaleMinQuantity,
+        selectedWholesaleTiers,
         quantity,
       );
   const baseDisplayPrice = selectedVariant
-    ? selectedVariant.price
-    : product.price;
-  const selectedWholesalePriceValue = getCatalogPriceValue(
-    selectedWholesalePrice,
-  );
-  const selectedWholesaleMinQuantityValue = Number(
-    selectedWholesaleMinQuantity,
-  );
-  const hasWholesaleOffer =
-    selectedWholesalePriceValue !== null &&
-    Number.isFinite(selectedWholesaleMinQuantityValue) &&
-    selectedWholesaleMinQuantityValue > 0;
-  const isWholesaleActive =
-    hasWholesaleOffer && quantity >= selectedWholesaleMinQuantityValue;
-  const remainingWholesalePieces = hasWholesaleOffer
-    ? Math.max(0, selectedWholesaleMinQuantityValue - quantity)
-    : 0;
+    ? getEffectiveCatalogPrice(selectedVariant.price, selectedVariant.promotionPrice)
+    : getEffectiveCatalogPrice(product.price, product.promotionPrice);
+  const activeWholesaleTier = getApplicableWholesaleTier(selectedWholesaleTiers, quantity);
+  const nextWholesaleTier = getNextWholesaleTier(selectedWholesaleTiers, quantity);
+  const hasWholesaleOffer = selectedWholesaleTiers.length > 0;
+  const isWholesaleActive = Boolean(activeWholesaleTier);
   return (
     <main className="mx-auto grid max-w-5xl gap-4 p-4">
       <button
         type="button"
         className="w-fit rounded-full border border-[var(--border-default)] bg-[var(--bg-surface)] px-3 py-1.5 text-sm font-semibold text-[var(--text-primary)]"
-        onClick={() => navigate(`/v2/catalogo/${product.businessId}`)}
+        onClick={() => {
+          const origin = location.state as { catalogPage?: number; catalogProductId?: number } | null;
+          const catalogPage = Math.max(1, Number(origin?.catalogPage) || 1);
+          navigate(`/v2/catalogo/${product.businessId}${catalogPage > 1 ? `?page=${catalogPage}` : ""}`, {
+            state: { restoreProductId: origin?.catalogProductId },
+          });
+        }}
       >
         ← Volver al catálogo
       </button>
@@ -507,15 +523,32 @@ export const CatalogProductDetailPage = () => {
 
             {hasWholesaleOffer ? (
               <div className="relative mt-3 grid gap-2">
-                <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold">
-                  <span className="text-[var(--text-secondary)]">
-                    {isWholesaleActive
-                      ? `Ya tienes el mejor precio`
-                      : `Agrega ${remainingWholesalePieces} ${remainingWholesalePieces === 1 ? "pieza" : "piezas"} más para activar el precio de mayoreo.`}
-                  </span>
-                  <span className="rounded-full bg-white px-2 py-1 text-[var(--text-primary)] shadow-sm">
-                    {formatCatalogPrice(selectedWholesalePrice, money)} / pza.
-                  </span>
+                <div className="grid gap-1.5">
+                  {selectedWholesaleTiers.map((tier) => (
+                    <div
+                      key={tier.id ?? tier.minQuantity}
+                      className={`flex items-center justify-between gap-3 rounded-xl border px-3 py-2 text-sm ${
+                        activeWholesaleTier?.minQuantity === tier.minQuantity
+                          ? "border-[var(--text-primary)] bg-[var(--bg-surface)] text-[var(--text-primary)]"
+                          : "border-[var(--border-default)] bg-transparent text-[var(--text-secondary)]"
+                      }`}
+                    >
+                      <span className="font-semibold">Desde {tier.minQuantity} pzas.</span>
+                      <strong>{formatCatalogPrice(tier.price, money)} c/u</strong>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-[var(--text-secondary)]">
+                  {nextWholesaleTier ? (
+                    <span>Agrega {Math.max(nextWholesaleTier.minQuantity - quantity, 0)} más para {formatCatalogPrice(nextWholesaleTier.price, money)} c/u.</span>
+                  ) : activeWholesaleTier ? (
+                    <span>Ya tienes el mejor precio disponible.</span>
+                  ) : null}
+                  {activeWholesaleTier ? (
+                    <span className="rounded-full bg-[var(--bg-surface)] px-2 py-1 text-[var(--text-primary)] shadow-sm">
+                      Aplicado: {formatCatalogPrice(activeWholesaleTier.price, money)} / pza.
+                    </span>
+                  ) : null}
                 </div>
               </div>
             ) : null}

@@ -1,11 +1,15 @@
 import assert from "node:assert/strict";
 import { ProductsService } from "../../../../src/new/systems/pos/features/products/services/ProductsService";
 import { ManagedProduct } from "../../../../src/new/systems/pos/features/products/model/ManagedProduct";
+import { parseTagInput } from "../../../../src/new/systems/pos/features/products/model/parseTagInput";
 
 const buildProduct = (id: number, available = true) =>
   new ManagedProduct(id, 10, `Product ${id}`, "desc", null, true, true, available, false, null, null, 30, null, 10, 2, null, null, null, null, null, [], null, [], []);
 
 export async function run(): Promise<void> {
+  assert.deepEqual(parseTagInput("#26, #28,, #30 "), ["#26", "#28", "#30"]);
+
+  let addedExtras: unknown[] = [];
   const createRepo = {
     listByBusiness: async () => [],
     listAllByBusiness: async () => [],
@@ -74,6 +78,9 @@ export async function run(): Promise<void> {
   const archiveService = new ProductsService(archiveRepo);
   await archiveService.archiveProduct(55, "token");
   assert.equal(archivedId, 55, "archive should call repository with product id");
+
+  await createService.addProductExtras(101, [{ description: "Rojo", type: "COLOR" }], "token");
+  assert.deepEqual(addedExtras, [{ description: "Rojo", type: "COLOR" }]);
 
   const categoryService = new ProductsService(createRepo);
   const category = await categoryService.createCategory({ businessId: 10, name: "General", color: "#111" }, "token");

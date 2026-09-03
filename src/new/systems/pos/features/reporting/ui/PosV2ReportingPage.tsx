@@ -17,7 +17,7 @@ import { HiMiniCube, HiMiniUser, HiMiniUserGroup } from "react-icons/hi2";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
-import type { IncomePoint, ReportRange, ReportSale } from "../model/SalesReport";
+import type { IncomePoint, ReportRange, ReportSale, SalesTicket } from "../model/SalesReport";
 import type { ReportSummaryViewModel } from "../pages/ReportingInsightsPage";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
@@ -106,6 +106,25 @@ const formatDate = (value: string): string => {
   return dateFormatter.format(parsed);
 };
 
+const toDateInput = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const initialSalesDates = () => {
+  const today = new Date();
+  return { from: toDateInput(new Date(today.getFullYear(), today.getMonth(), 1)), to: toDateInput(today) };
+};
+
+const escapeHtml = (value: unknown): string => String(value ?? "")
+  .replace(/&/g, "&amp;")
+  .replace(/</g, "&lt;")
+  .replace(/>/g, "&gt;")
+  .replace(/"/g, "&quot;")
+  .replace(/'/g, "&#039;");
+
 const getSafeSession = () => {
   const token = (window.localStorage.getItem(TOKEN_KEY) ?? "").trim();
   const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY) ?? "");
@@ -136,9 +155,16 @@ export const PosV2ReportingPage = () => {
   const [tableRange, setTableRange] = useState<ReportRange>("DAY");
   const [salesQuery, setSalesQuery] = useState("");
   const [salesStatus, setSalesStatus] = useState<"TODOS" | "PEDIDO" | "ENTREGADO" | "CANCELADO">("TODOS");
+  const [salesDates, setSalesDates] = useState(initialSalesDates);
+  const [salesTickets, setSalesTickets] = useState<SalesTicket[]>([]);
+  const [salesTicketsLoading, setSalesTicketsLoading] = useState(false);
+  const [salesTicketsPage, setSalesTicketsPage] = useState(1);
+  const [salesTicketsTotalPages, setSalesTicketsTotalPages] = useState(1);
+  const [salesTicketsTotalItems, setSalesTicketsTotalItems] = useState(0);
   const reportRequestRef = useRef(0);
   const salesRequestRef = useRef(0);
   const topChartsRequestRef = useRef(0);
+  const salesTicketsRequestRef = useRef(0);
 
   const { reportingPage } = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
@@ -270,6 +296,39 @@ export const PosV2ReportingPage = () => {
     }
   }, [businessId, cleanToken, hasBusinessId, hasToken, range, reportingPage, showToast]);
 
+  const loadSalesTickets = useCallback(async () => {
+    if (!hasBusinessId || !hasToken) return;
+    if (!salesDates.from || !salesDates.to || salesDates.from > salesDates.to) {
+      showToast("error", "Selecciona un rango de fechas válido.");
+      return;
+    }
+
+    const requestId = ++salesTicketsRequestRef.current;
+    setSalesTicketsLoading(true);
+    try {
+      const result = await reportingPage.loadSalesTicketsByDateRange(
+        businessId,
+        salesDates.from,
+        salesDates.to,
+        Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Mexico_City",
+        salesTicketsPage,
+        50,
+        cleanToken,
+      );
+      if (salesTicketsRequestRef.current !== requestId) return;
+      setSalesTickets(result.items);
+      setSalesTicketsTotalPages(result.pagination.totalPages);
+      setSalesTicketsTotalItems(result.pagination.totalItems);
+    } catch (cause) {
+      if (salesTicketsRequestRef.current === requestId) {
+        setSalesTickets([]);
+        showToast("error", cause instanceof Error ? cause.message : "No se pudo cargar el reporte de ventas.");
+      }
+    } finally {
+      if (salesTicketsRequestRef.current === requestId) setSalesTicketsLoading(false);
+    }
+  }, [businessId, cleanToken, hasBusinessId, hasToken, reportingPage, salesDates, salesTicketsPage, showToast]);
+
   useEffect(() => {
     if (hasBusinessId) {
       loadReporting();
@@ -283,6 +342,10 @@ export const PosV2ReportingPage = () => {
   useEffect(() => {
     loadTopCharts();
   }, [loadTopCharts]);
+
+  useEffect(() => {
+    loadSalesTickets();
+  }, [loadSalesTickets]);
 
   const trendData = useMemo(() => normalizeSeries(series), [series]);
 
@@ -501,6 +564,62 @@ export const PosV2ReportingPage = () => {
     showToast("success", "CSV exportado correctamente.");
   };
 
+  const setQuickSalesRange = (period: ReportRange) => {
+    const today = new Date();
+    const from = period === "DAY"
+      ? today
+      : period === "MONTH"
+        ? new Date(today.getFullYear(), today.getMonth(), 1)
+        : new Date(today.getFullYear(), 0, 1);
+    setSalesTicketsPage(1);
+    setSalesDates({ from: toDateInput(from), to: toDateInput(today) });
+  };
+
+  const exportSalesTicketsCsv = () => {
+    if (salesTickets.length === 0) return;
+    const rows = salesTickets.map((sale) => [
+      sale.id,
+      formatDate(sale.date),
+      sale.paymentMethod,
+      sale.employeeName ?? "",
+      sale.customerName ?? "",
+      sale.products.map((product) => `${product.quantity}x ${product.itemName}`).join(" | "),
+      sale.discountApplied,
+      sale.taxesApplied,
+      sale.total,
+      sale.currency,
+    ]);
+    const csv = [["Ticket", "Fecha", "Pago", "Empleado", "Cliente", "Productos", "Descuento", "Impuestos", "Total", "Moneda"], ...rows]
+      .map((row) => row.map((value) => `"${String(value).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const url = URL.createObjectURL(new Blob([`\ufeff${csv}`], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `reporte-ventas-${salesDates.from}-${salesDates.to}-pagina-${salesTicketsPage}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+    showToast("success", "Reporte de ventas exportado.");
+  };
+
+  const reprintTicket = (sale: SalesTicket) => {
+    const printWindow = window.open("", "_blank", "width=520,height=800");
+    if (!printWindow) {
+      showToast("error", "Permite ventanas emergentes para reimprimir el ticket.");
+      return;
+    }
+    const productRows = sale.products.map((product) => `
+      <tr><td>${escapeHtml(product.quantity)} x ${escapeHtml(product.itemName)}</td><td>${escapeHtml(moneyFormatter.format(product.detailAmount))}</td></tr>
+    `).join("");
+    printWindow.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Ticket ${sale.id}</title><style>
+      body{font-family:Arial,sans-serif;color:#111;margin:0}.actions{padding:12px;text-align:center}.ticket{width:76mm;margin:auto;padding:3mm}.ticket h1{text-align:center;font-size:18px}.meta{font-size:12px;line-height:1.5}table{width:100%;border-collapse:collapse;font-size:12px}td{padding:5px 0;border-bottom:1px dashed #aaa}td:last-child{text-align:right}.total{font-size:16px;text-align:right;margin-top:10px}@media print{.actions{display:none}.ticket{margin:0}}
+    </style></head><body><div class="actions"><button onclick="window.print()">Imprimir ticket</button></div><main class="ticket">
+      <h1>Ticket de venta #${escapeHtml(sale.id)}</h1><div class="meta">Fecha: ${escapeHtml(formatDate(sale.date))}<br>Pago: ${escapeHtml(sale.paymentMethod)}<br>Empleado: ${escapeHtml(sale.employeeName ?? "Sin empleado")}<br>Cliente: ${escapeHtml(sale.customerName ?? "Público general")}</div>
+      <table><tbody>${productRows}</tbody></table><p>Descuento: ${escapeHtml(moneyFormatter.format(sale.discountApplied))}<br>Impuestos: ${escapeHtml(moneyFormatter.format(sale.taxesApplied))}</p><p class="total"><strong>Total: ${escapeHtml(moneyFormatter.format(sale.total))}</strong></p>
+    </main></body></html>`);
+    printWindow.document.close();
+    printWindow.focus();
+  };
+
   if (!session.hasSession) {
     return (
       <PosV2Shell title="Reportes" subtitle="Analítica operacional v2 moderna y desacoplada">
@@ -592,6 +711,89 @@ export const PosV2ReportingPage = () => {
             {salesLoading ? <div className="pos-v2-reporting__chart-skeleton" aria-hidden="true" /> : null}
             {!salesLoading && filteredSales.length === 0 ? <p className="is-empty">Sin pedidos para mostrar estatus.</p> : null}
             {!salesLoading && filteredSales.length > 0 ? <div className="pos-v2-reporting__doughnut"><Doughnut data={salesStatusChartData} options={doughnutOptions} /></div> : null}
+          </article>
+
+          <article className="pos-v2-reporting__card is-full">
+            <header className="pos-v2-reporting__sales-header">
+              <div>
+                <h3>Reporte de ventas</h3>
+                <span>Consulta, exporta y reimprime tickets por rango de fechas.</span>
+              </div>
+              <div className="pos-v2-reporting__sales-controls">
+                <div className="pos-v2-reporting__payment-tabs" aria-label="Rangos rápidos">
+                  {RANGE_OPTIONS.map((option) => (
+                    <button key={`sales-range-${option.value}`} type="button" onClick={() => setQuickSalesRange(option.value)} disabled={salesTicketsLoading}>
+                      {option.label}
+                    </button>
+                  ))}
+                </div>
+                <label>
+                  Desde
+                  <input
+                    type="date"
+                    value={salesDates.from}
+                    max={salesDates.to}
+                    onChange={(event) => {
+                      setSalesTicketsPage(1);
+                      setSalesDates((current) => ({ ...current, from: event.target.value }));
+                    }}
+                  />
+                </label>
+                <label>
+                  Hasta
+                  <input
+                    type="date"
+                    value={salesDates.to}
+                    min={salesDates.from}
+                    onChange={(event) => {
+                      setSalesTicketsPage(1);
+                      setSalesDates((current) => ({ ...current, to: event.target.value }));
+                    }}
+                  />
+                </label>
+                <button type="button" onClick={exportSalesTicketsCsv} disabled={salesTicketsLoading || salesTickets.length === 0}>
+                  Exportar CSV
+                </button>
+              </div>
+            </header>
+            <p className="pos-v2-reporting__table-summary">
+              {salesTicketsTotalItems} tickets · Página {salesTicketsPage} de {salesTicketsTotalPages}
+            </p>
+            {salesTicketsLoading ? (
+              <div className="pos-v2-reporting__table-skeleton" aria-hidden="true">
+                {Array.from({ length: 4 }).map((_, index) => <span key={`sales-ticket-skeleton-${index}`} />)}
+              </div>
+            ) : null}
+            {!salesTicketsLoading && salesTickets.length === 0 ? <p className="is-empty">No hay ventas en el rango seleccionado.</p> : null}
+            {!salesTicketsLoading && salesTickets.length > 0 ? (
+              <>
+                <div className="pos-v2-reporting__table-wrap">
+                  <table className="pos-v2-reporting__table">
+                    <thead>
+                      <tr><th>Ticket</th><th>Fecha</th><th>Pago</th><th>Empleado</th><th>Productos</th><th>Total</th><th>Acciones</th></tr>
+                    </thead>
+                    <tbody>
+                      {salesTickets.map((sale) => (
+                        <tr key={`${sale.type}-${sale.id}`}>
+                          <td>#{sale.id}</td>
+                          <td>{formatDate(sale.date)}</td>
+                          <td>{sale.paymentMethod}</td>
+                          <td>{sale.employeeName ?? "Sin empleado"}</td>
+                          <td>{sale.products.map((product) => `${product.quantity}x ${product.itemName}`).join(", ") || "Sin detalle"}</td>
+                          <td>{moneyFormatter.format(sale.total)}</td>
+                          <td><button type="button" onClick={() => reprintTicket(sale)}>Reimprimir</button></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <nav className="pos-v2-reporting__pagination" aria-label="Paginación del reporte de ventas">
+                  <button type="button" onClick={() => setSalesTicketsPage((page) => Math.max(1, page - 1))} disabled={salesTicketsPage <= 1}>Anterior</button>
+                  <span>Página {salesTicketsPage} de {salesTicketsTotalPages}</span>
+                  <button type="button" onClick={() => setSalesTicketsPage((page) => Math.min(salesTicketsTotalPages, page + 1))} disabled={salesTicketsPage >= salesTicketsTotalPages}>Siguiente</button>
+                </nav>
+              </>
+            ) : null}
           </article>
 
           <article className="pos-v2-reporting__card is-full">

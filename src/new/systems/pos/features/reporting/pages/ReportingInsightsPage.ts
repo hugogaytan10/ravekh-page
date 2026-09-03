@@ -1,4 +1,4 @@
-import { IncomePoint, ReportLeaderboardItem, ReportProductItem, ReportRange, ReportSale, SalesSummary } from "../model/SalesReport";
+import { IncomePoint, ReportLeaderboardItem, ReportProductItem, ReportRange, ReportSale, SalesSummary, SalesTicketsPage } from "../model/SalesReport";
 import { ReportingService } from "../services/ReportingService";
 
 export interface ReportSummaryViewModel {
@@ -44,6 +44,10 @@ export class ReportingInsightsPage {
     token: string,
   ): Promise<ReportSale[]> {
     return this.service.getSalesDetails(businessId, range, payment, token.trim());
+  }
+
+  async loadSalesTicketsByDateRange(businessId: number, from: string, to: string, timezone: string, page: number, pageSize: number, token: string): Promise<SalesTicketsPage> {
+    return this.service.getSalesTicketsByDateRange(businessId, from, to, timezone, page, pageSize, token.trim());
   }
 
   async loadProductsLeaderboard(businessId: number, range: ReportRange, token: string): Promise<ReportProductItem[]> {

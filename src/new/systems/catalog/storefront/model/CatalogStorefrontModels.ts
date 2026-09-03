@@ -1,3 +1,11 @@
+export type StorefrontWholesalePrice = {
+  id?: number;
+  productId?: number | null;
+  variantId?: number | null;
+  price: number;
+  minQuantity: number;
+};
+
 export type StorefrontProduct = {
   id: number;
   businessId: number;
@@ -8,8 +16,11 @@ export type StorefrontProduct = {
   images?: string[];
   price: number;
   promotionPrice?: number | null;
+  /** Legacy fields kept while old records/front versions still exist. */
   wholesalePrice?: number | null;
   wholesaleMinQuantity?: number | null;
+  /** Current source of truth for multiple wholesale tiers. */
+  wholesalePrices?: StorefrontWholesalePrice[];
   variantsCount?: number;
   forSale?: boolean;
   available?: boolean;
@@ -37,8 +48,10 @@ export type StorefrontCartItem = {
   name: string;
   price?: number | null;
   promotionPrice?: number | null;
+  /** Legacy fields for carts created before wholesale tiers existed. */
   wholesalePrice?: number | null;
   wholesaleMinQuantity?: number | null;
+  wholesalePrices?: StorefrontWholesalePrice[];
   cost?: number;
   quantity: number;
   image: string;
@@ -61,5 +74,6 @@ export type CatalogOrderPayload = {
     Size_Id?: number;
     Price?: number;
     Cost?: number;
+    WholesalePrice_Id?: number;
   }>;
 };
