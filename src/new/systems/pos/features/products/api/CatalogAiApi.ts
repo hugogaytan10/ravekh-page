@@ -94,6 +94,9 @@ export type CatalogAiItemPatch = {
   color?: string | null;
   price?: number | null;
   stock?: number;
+  wholesalePrice?: number | null;
+  wholesaleMinQuantity?: number | null;
+  wholesalePrices?: Array<{ price: number; minQuantity: number }>;
 };
 
 export type SignedCatalogUpload = {
