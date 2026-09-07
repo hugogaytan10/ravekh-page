@@ -91,7 +91,7 @@
 .catalog-product-chat__content {
   min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 340px;
+  grid-template-columns: minmax(0, 1fr) 380px;
 }
 
 .catalog-product-chat__conversation {
@@ -347,8 +347,10 @@
 .catalog-product-chat__summary {
   min-width: 0;
   min-height: 0;
-  overflow-y: auto;
-  padding: 18px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  overflow: hidden;
+  padding: 12px;
   background: var(--product-soft-bg, #fafafa);
 }
 
@@ -357,7 +359,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 16px;
+  padding: 10px;
   border: 1px solid var(--product-border, #e5e7eb);
   border-radius: 14px;
   background: #ffffff;
@@ -392,6 +394,9 @@
 }
 
 .catalog-product-chat__draft {
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
@@ -428,24 +433,14 @@
 }
 
 .catalog-product-chat__missing {
-  padding: 12px 14px;
+  padding: 8px 10px;
   border: 1px solid #ffe69c;
   border-radius: 12px;
   color: #6b4f00;
   background: #fff8db;
   font-size: 0.78rem;
-}
-
-.catalog-product-chat__missing ul {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 3px 16px;
-  margin: 7px 0 0;
-  padding-left: 18px;
-}
-
-.catalog-product-chat__missing li + li {
-  margin-top: 0;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
 }
 
 .catalog-product-chat__ready-copy {
@@ -461,14 +456,16 @@
 
 .catalog-product-chat__summary-actions {
   display: grid;
-  gap: 10px;
-  margin-top: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .catalog-product-chat__summary-actions button {
   min-height: 44px;
   border-radius: 12px;
   padding: 10px 12px;
+  font-size: 0.8rem;
   font-weight: 800;
   cursor: pointer;
 }
@@ -773,6 +770,7 @@
   }
 
   .catalog-product-chat__summary-actions {
+    grid-template-columns: minmax(0, 1fr);
     gap: 6px;
     margin-top: 8px;
   }

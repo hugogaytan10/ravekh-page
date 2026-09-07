@@ -685,12 +685,8 @@ export const CatalogProductChatModal = ({
 
             {missingFields.length > 0 ? (
               <div className="catalog-product-chat__missing">
-                <strong>Falta por completar</strong>
-                <ul>
-                  {missingFields.map((field) => (
-                    <li key={field}>{fieldLabels[field] ?? field}</li>
-                  ))}
-                </ul>
+                <strong>Falta por completar: </strong>
+                {missingFields.map((field) => fieldLabels[field] ?? field).join(", ")}.
               </div>
             ) : (
               <p className="catalog-product-chat__ready-copy">
