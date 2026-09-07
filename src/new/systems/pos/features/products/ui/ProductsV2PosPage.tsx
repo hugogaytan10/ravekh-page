@@ -2318,7 +2318,7 @@ export const ProductsV2PosPage = () => {
               }}
               disabled={!token || !businessId}
             >
-              ✦ Crear con chat
+              Crear con chat
             </button>
             <button
               type="button"
