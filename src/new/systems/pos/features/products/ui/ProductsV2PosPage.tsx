@@ -1,5 +1,7 @@
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Repeat from "../../../../../../assets/POS/Repeat";
+import { ChevronGo } from "../../../../../../assets/POS/ChevronGo";
 import { ModernSystemsFactory } from "../../../../../index";
 import { ProductImportResult } from "../interface/IProductsRepository";
 import { ProductVariant, SaveManagedProductDto, WholesalePriceTier } from "../model/ManagedProduct";
@@ -2296,21 +2298,32 @@ export const ProductsV2PosPage = () => {
             </button>
             <button
               type="button"
-              className="pos-v2-products__secondary"
+              className="pos-v2-products__primary"
               onClick={openCreateModal}
             >
-              + Nuevo
+              + Nuevo producto
             </button>
+            <details
+              className="pos-v2-products__create-menu"
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.currentTarget.open = false;
+                  event.currentTarget.querySelector("summary")?.focus();
+                }
+              }}
+            >
+              <summary className="pos-v2-products__secondary">✦ Crear con IA <span className="pos-v2-products__create-chevron" aria-hidden="true"><ChevronGo width={18} height={18} stroke="currentColor" viewBox="-5.848095 -1.15625 24 24" /></span></summary>
+              <div className="pos-v2-products__create-options" onClick={(event) => {
+                if ((event.target as HTMLElement).closest("button")) {
+                  event.currentTarget.closest("details")?.removeAttribute("open");
+                }
+              }}>
             <button
               type="button"
               className="pos-v2-products__secondary"
-              onClick={() => setShowCategoryManager(true)}
-            >
-              Categorías
-            </button>
-            <button
-              type="button"
-              className="pos-v2-products__primary"
               onClick={() => {
                 if (blockBlockedProductModuleMutation()) return;
                 if (blockFreeProductCreation()) return;
@@ -2343,22 +2356,34 @@ export const ProductsV2PosPage = () => {
             >
               {importing ? "Importando..." : "Importar CSV"}
             </button>
+              </div>
+            </details>
+            <button
+              type="button"
+              className="pos-v2-products__secondary"
+              onClick={() => setShowCategoryManager(true)}
+            >
+              Categorías
+            </button>
             <button
               type="button"
               className="pos-v2-products__secondary"
               onClick={handleExportProducts}
               disabled={!isVipPlan || !token || !businessId}
             >
-              Exportar productos {isVipPlan ? "" : "(VIP)"}
+              Exportar {isVipPlan ? "" : "(VIP)"}
             </button>
             <button
               type="button"
               className="pos-v2-products__refresh"
+              aria-label={loading ? "Actualizando productos" : "Actualizar productos"}
+              title="Actualizar productos"
               onClick={() => loadProducts(currentPage)}
               disabled={loading || !token || !businessId}
             >
-              {loading ? "Actualizando..." : "Actualizar"}
+              <span aria-hidden="true"><Repeat width={20} height={20} strokeColor="currentColor" /></span>
             </button>
+            <div className="pos-v2-products__view-actions">
             <button
               type="button"
               className={
@@ -2393,6 +2418,7 @@ export const ProductsV2PosPage = () => {
             >
               {isSelecting ? "Cancelar" : "Seleccionar"}
             </button>
+            </div>
           </div>
         </header>
 

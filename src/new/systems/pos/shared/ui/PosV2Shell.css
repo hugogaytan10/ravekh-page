@@ -9,7 +9,7 @@
   background: #f3f4f6;
   color: #111827;
   color-scheme: light;
-  padding-bottom: 72px;
+  padding-bottom: calc(72px + env(safe-area-inset-bottom, 0px));
   overflow-x: hidden;
 }
 
@@ -146,14 +146,9 @@
   text-align: center;
 }
 
-@media (min-width: 768px) {
-  .pos-v2-shell {
-    padding-bottom: 0;
-  }
-}
-
 @media (min-width: 1024px) {
   .pos-v2-shell {
+    padding-bottom: 0;
     padding-left: 116px;
   }
 
