@@ -3,7 +3,7 @@ import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
-import { FiBox, FiShoppingCart, FiStar } from "react-icons/fi";
+import { FiBox, FiChevronDown, FiShoppingCart, FiStar } from "react-icons/fi";
 import { MORE_MODULE_SECTIONS } from "../config/moreModules";
 import {
   MoreModuleExecutionContext,
@@ -488,8 +488,8 @@ export const PosV2MorePage = () => {
         </header>
         <section className="pos-v2-more__plan-banner" aria-label="Cambiar plan">
           <div>
-            <span className="pos-v2-more__plan-eyebrow">Plan actual</span>
-            <h3>Cambiar de plan</h3>
+            <span className="pos-v2-more__plan-eyebrow">Plan actual</span><h3>Cambiar de plan</h3>
+
             <p>
               Tu negocio está en el plan <strong>{currentPlanName}</strong>.
               Elige un plan con más espacio para productos y herramientas para vender en línea.
@@ -510,8 +510,7 @@ export const PosV2MorePage = () => {
             className="pos-v2-more__favorites"
             aria-label="Accesos rápidos"
           >
-            <div className="pos-v2-more__section-head">
-              <h3>Accesos rápidos</h3>
+            <div className="pos-v2-more__section-head"><h3>Accesos rápidos</h3>
               <p>
                 Tus herramientas favoritas, siempre a la mano.
               </p>
@@ -556,8 +555,7 @@ export const PosV2MorePage = () => {
           className="pos-v2-more__quick-tools"
           aria-label="Herramientas rápidas"
         >
-          <div className="pos-v2-more__section-head">
-            <h3>Herramientas rápidas</h3>
+          <div className="pos-v2-more__section-head"><h3>Herramientas rápidas</h3>
             <p>Comparte tu catálogo o descárgalo para tus clientes.</p>
           </div>
           <div className="pos-v2-more__quick-tools-grid">
@@ -701,13 +699,12 @@ export const PosV2MorePage = () => {
         </section>
 
         {filteredSections.map((section) => (
-          <section
+          <details open
             key={section.title}
             className="pos-v2-more__section"
             aria-label={section.title}
           >
-            <div className="pos-v2-more__section-head">
-              <h3>{section.title}</h3>
+            <summary className="pos-v2-more__collapse-title"><h3>{section.title}</h3><FiChevronDown aria-hidden="true" /></summary><div className="pos-v2-more__section-head">
               <p>{section.subtitle}</p>
             </div>
             <div className="pos-v2-more__grid">
@@ -744,7 +741,7 @@ export const PosV2MorePage = () => {
                 </article>
               ))}
             </div>
-          </section>
+          </details>
         ))}
 
         {filteredSections.length === 0 ? (
@@ -763,13 +760,13 @@ export const PosV2MorePage = () => {
 
         <section className="pos-v2-more__actions">
           <article>
-            <h3>Tu cuenta</h3>
+            <details open><summary className="pos-v2-more__collapse-title"><h3>Tu cuenta</h3><FiChevronDown aria-hidden="true" /></summary>
             <p>
               Cierra sesión para entrar con otra cuenta o cambiar de negocio.
             </p>
             <button type="button" onClick={() => setShowSignOutConfirm(true)}>
               Cambiar usuario / cerrar sesión
-            </button>
+            </button></details>
           </article>
         </section>
 

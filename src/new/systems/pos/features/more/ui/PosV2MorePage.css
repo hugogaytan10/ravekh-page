@@ -267,6 +267,45 @@
   gap: 0.5rem;
 }
 
+.pos-v2-more__collapse-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  list-style: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+  padding-block: .35rem;
+}
+
+.pos-v2-more__collapse-title::-webkit-details-marker {
+  display: none;
+}
+
+.pos-v2-more__collapse-title > svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+details[open] > .pos-v2-more__collapse-title > svg {
+  transform: rotate(180deg);
+}
+
+.pos-v2-more__collapse-title h3 {
+  display: inline;
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.pos-v2-more__collapse-title:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
 .pos-v2-more__favorite-chips {
   display: flex;
   flex-wrap: wrap;
