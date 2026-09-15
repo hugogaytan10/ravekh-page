@@ -35,6 +35,10 @@ import {
   readPosBusinessFeatures,
 } from "../../../shared/config/posFeatureFlags";
 import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
+import {
+  formatRemainingStock,
+  getStockLimitMessage,
+} from "../model/cartStock";
 
 const ALL_PRODUCTS_SEARCH_DEBOUNCE_MS = 450;
 const FREE_PLAN_ORDER_LIMIT_CODE = "FREE_PLAN_ORDER_LIMIT_REACHED";
@@ -68,6 +72,7 @@ type CartItemVm = {
   name: string;
   price: number;
   quantity: number;
+  stock: number | null;
   variantId: number | null;
   variantLabel: string | null;
   colorId: number | null;
@@ -323,6 +328,7 @@ export const PosV2SalesHomePage = () => {
   const [searchingGlobalCatalog, setSearchingGlobalCatalog] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [cart, setCart] = useState<Record<string, CartItemVm>>({});
+  const [stockRevision, setStockRevision] = useState(0);
   const [discountPercent, setDiscountPercent] = useState("0");
   const [fixedDiscount, setFixedDiscount] = useState("0");
   const discountSourceRef = useRef<"percent" | "fixed">("percent");
@@ -596,7 +602,7 @@ export const PosV2SalesHomePage = () => {
         );
       })
       .finally(() => setLoadingProducts(false));
-  }, [categoryKey, currentPage, isPlanLimitReady, planLimit]);
+  }, [categoryKey, currentPage, isPlanLimitReady, planLimit, stockRevision]);
 
 
   useEffect(() => {
@@ -1114,6 +1120,9 @@ export const PosV2SalesHomePage = () => {
       name: productCatalog?.name ?? (fallbackName || `Producto #${productId}`),
       price: variantFromCatalog?.price ?? safePrice,
       quantity,
+      stock: variantFromCatalog
+        ? variantFromCatalog.stock
+        : (productCatalog?.stock ?? null),
       variantId,
       variantLabel,
       colorId: null,
@@ -1482,7 +1491,7 @@ export const PosV2SalesHomePage = () => {
     quantity = 1,
     colorOption?: ProductExtraOptionVm | null,
     sizeOption?: ProductExtraOptionVm | null,
-  ) => {
+  ): boolean => {
     const cartKey = toCartKey(
       product.id,
       variant?.id ?? null,
@@ -1495,6 +1504,24 @@ export const PosV2SalesHomePage = () => {
       colorOption?.description ?? variant?.color ?? product.color ?? null;
     const normalizedQuantity = Math.max(1, Math.floor(quantity));
     const itemName = product.name;
+    const stock = variant ? variant.stock : product.stock;
+    const currentQuantity = Object.values(cart)
+      .filter(
+        (item) =>
+          item.productId === product.id &&
+          item.variantId === (variant?.id ?? null),
+      )
+      .reduce((total, item) => total + item.quantity, 0);
+    const stockError = getStockLimitMessage(
+      stock,
+      currentQuantity + normalizedQuantity,
+    );
+    if (stockError) {
+      const message = `${stockError} de ${itemName}`;
+      setValidationError(message);
+      setVariantModalError(message);
+      return false;
+    }
 
     setCart((current) => {
       const existing = current[cartKey];
@@ -1506,6 +1533,7 @@ export const PosV2SalesHomePage = () => {
           name: itemName,
           price: basePrice,
           quantity: (existing?.quantity ?? 0) + normalizedQuantity,
+          stock,
           variantId: variant?.id ?? null,
           variantLabel,
           colorId: colorOption?.id ?? null,
@@ -1518,6 +1546,7 @@ export const PosV2SalesHomePage = () => {
     setUiMessage(`${itemName} agregado al carrito.`);
     setValidationError(null);
     setVariantModalError(null);
+    return true;
   };
 
   const addToCart = async (product: SaleItemVm) => {
@@ -1589,43 +1618,43 @@ export const PosV2SalesHomePage = () => {
       ? 0
       : Math.max(0, Math.floor(quantity));
 
-    setCart((current) => {
-      const target = current[cartKey];
-      if (!target) return current;
-      if (safeQuantity <= 0) {
-        const { [cartKey]: _, ...rest } = current;
-        return rest;
-      }
+    const target = cart[cartKey];
+    if (!target) return;
+    if (safeQuantity <= 0) {
+      const { [cartKey]: _, ...rest } = cart;
+      setCart(rest);
+      setValidationError(null);
+      return;
+    }
 
-      return {
-        ...current,
-        [cartKey]: {
-          ...target,
-          quantity: safeQuantity,
-        },
-      };
+    const quantityInOtherRows = Object.values(cart)
+      .filter(
+        (item) =>
+          item.cartKey !== cartKey &&
+          item.productId === target.productId &&
+          item.variantId === target.variantId,
+      )
+      .reduce((total, item) => total + item.quantity, 0);
+    const stockError = getStockLimitMessage(
+      target.stock,
+      quantityInOtherRows + safeQuantity,
+    );
+    if (stockError) {
+      setValidationError(`${stockError} de ${target.name}`);
+      return;
+    }
+
+    setCart({
+      ...cart,
+      [cartKey]: { ...target, quantity: safeQuantity },
     });
+    setValidationError(null);
   };
 
   const updateQuantity = (cartKey: string, delta: number) => {
-    setCart((current) => {
-      const target = current[cartKey];
-      if (!target) return current;
-
-      const nextQuantity = target.quantity + delta;
-      if (nextQuantity <= 0) {
-        const { [cartKey]: _, ...rest } = current;
-        return rest;
-      }
-
-      return {
-        ...current,
-        [cartKey]: {
-          ...target,
-          quantity: nextQuantity,
-        },
-      };
-    });
+    const target = cart[cartKey];
+    if (!target) return;
+    setQuantity(cartKey, target.quantity + delta);
   };
 
   const confirmVariantSelection = () => {
@@ -1656,13 +1685,14 @@ export const PosV2SalesHomePage = () => {
       1,
       Math.floor(variantSelection.quantities[selectedKey] ?? 1),
     );
-    addToCartEntry(
+    const wasAdded = addToCartEntry(
       variantSelection.product,
       variant,
       quantity,
       null,
       selectedSize,
     );
+    if (!wasAdded) return;
     setVariantSelection(null);
     setValidationError(null);
     setVariantModalError(null);
@@ -1711,6 +1741,31 @@ export const PosV2SalesHomePage = () => {
   const handleCompleteSale = async () => {
     if (!totals.items) {
       setValidationError("Agrega productos antes de finalizar la venta.");
+      return;
+    }
+
+    const stockLimitedItem = cartItems.find((item) => {
+      if (item.stock === null) return false;
+      const requestedQuantity = cartItems
+        .filter(
+          (candidate) =>
+            candidate.productId === item.productId &&
+            candidate.variantId === item.variantId,
+        )
+        .reduce((total, candidate) => total + candidate.quantity, 0);
+      return getStockLimitMessage(item.stock, requestedQuantity) !== null;
+    });
+    if (stockLimitedItem) {
+      const requestedQuantity = cartItems
+        .filter(
+          (item) =>
+            item.productId === stockLimitedItem.productId &&
+            item.variantId === stockLimitedItem.variantId,
+        )
+        .reduce((total, item) => total + item.quantity, 0);
+      setValidationError(
+        `${getStockLimitMessage(stockLimitedItem.stock, requestedQuantity)} de ${stockLimitedItem.name}`,
+      );
       return;
     }
 
@@ -1895,6 +1950,7 @@ export const PosV2SalesHomePage = () => {
         }
       }
       setCart({});
+      setStockRevision((current) => current + 1);
       setDiscountPercent("0");
       setFixedDiscount("0");
       discountSourceRef.current = "percent";
@@ -2380,6 +2436,9 @@ export const PosV2SalesHomePage = () => {
                         variantes disponibles
                       </small>
                     ) : null}
+                    {product.variants.length === 0 && product.stock !== null ? (
+                      <small>{formatRemainingStock(product.stock)}</small>
+                    ) : null}
                   </div>
                   <div className="pos-v2-sales-home__product-side">
                     <strong>${product.price.toFixed(2)}</strong>
@@ -2504,6 +2563,9 @@ export const PosV2SalesHomePage = () => {
                           .filter(Boolean)
                           .join(" · ") || "Sin variante"}
                       </small>
+                      {item.stock !== null ? (
+                        <small>{formatRemainingStock(item.stock)}</small>
+                      ) : null}
                     </div>
                     <div className="pos-v2-sales-home__qty-controls">
                       <button
@@ -2945,8 +3007,8 @@ export const PosV2SalesHomePage = () => {
                     .join(" · ");
                   const stockLabel =
                     variant.stock == null
-                      ? "Stock abierto"
-                      : `Stock ${variant.stock}`;
+                      ? null
+                      : formatRemainingStock(variant.stock);
 
                   return (
                     <label
@@ -2983,7 +3045,7 @@ export const PosV2SalesHomePage = () => {
                       >
                         <strong>{variant.description || "Variante"}</strong>
                         <small>{chips || "Sin atributos adicionales"}</small>
-                        <small>{stockLabel}</small>
+                        {stockLabel ? <small>{stockLabel}</small> : null}
                         <span>${variant.price.toFixed(2)}</span>
                       </button>
                       <div
