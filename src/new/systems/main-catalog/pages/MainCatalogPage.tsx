@@ -415,7 +415,8 @@ const plans: Plan[] = [
     benefits: [
       "Importación masiva",
       "Acceso a reportes",
-      "Productos Ilimitados 1 imagen por producto",
+      "Productos ilimitados",
+      "Hasta 3 imágenes por producto",
       "Sincronización en la nube",
     ],
     recommended: true,
@@ -429,6 +430,7 @@ const plans: Plan[] = [
     limit: "Para negocios con más variedad de productos",
     benefits: [
       "Todo lo del plan Básico",
+      "Hasta 10 imágenes por producto",
       "Mayor capacidad de productos",
       "Mejor seguimiento comercial",
       "Preparado para crecer a POS",
@@ -440,9 +442,10 @@ const plans: Plan[] = [
     name: "Catálogo Pro",
     prices: { monthly: "1299.00 MXN", annual: "13,788.00 MXN" },
     periodLabel: { monthly: "al mes", annual: "al año" },
-    limit: "Límite de productos/fotos editable",
+    limit: "Para catálogos con máxima flexibilidad",
     benefits: [
       "Todo lo del plan Intermedio",
+      "Imágenes ilimitadas por producto",
       "Capacidad de productos personalizada",
       "Soporte prioritario",
       "100 Facturas timbradas al mes ante el SAT",

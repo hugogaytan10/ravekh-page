@@ -43,6 +43,20 @@ const POS_PLAN_ALIASES: Record<string, PosPlan> = {
   INTERMEDIO: "PRO",
 };
 
+const PRODUCT_IMAGE_LIMITS: Record<PosPlan, number> = {
+  GRATUITO: 1,
+  START: 3,
+  PRO: 10,
+  MAX: Infinity,
+};
+
+export const getProductImageLimit = (rawPlan?: string | null): number => {
+  const plan = String(rawPlan ?? "").trim().toUpperCase();
+  return PRODUCT_IMAGE_LIMITS[
+    plan === "EMPRENDEDOR" ? "START" : normalizePosPlan(plan)
+  ];
+};
+
 export const POS_PLAN_ACTION_RULES: Record<PlanProtectedAction, PlanActionRule> = {
   "products.printPdf": {
     requiredPlan: "START",

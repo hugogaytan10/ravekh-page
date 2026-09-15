@@ -33,7 +33,10 @@ import {
   type UnlockFeature,
 } from "../../../shared/ui/FeatureUnlockModal";
 import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
-import type { PosPlan } from "../../../shared/config/posPlanAccess";
+import {
+  getProductImageLimit,
+  type PosPlan,
+} from "../../../shared/config/posPlanAccess";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import "./ProductsV2PosPage.css";
 import { parseTagInput } from "../model/parseTagInput";
@@ -623,6 +626,9 @@ export const ProductsV2PosPage = () => {
       START_PRODUCT_PLAN_VALUES.has(rawFeaturePlan)
     );
   }, [features.plan, productsLimit]);
+
+  const productImageLimit = getProductImageLimit(features.plan ?? productsLimit);
+  const productImageCount = storedImages.length + selectedImageFiles.length;
 
   const productLimitCount = Math.max(totalItems, products.length);
   const freeProductLimitReached =
@@ -1686,7 +1692,14 @@ export const ProductsV2PosPage = () => {
       return !validationError;
     });
     if (validFiles.length === 0) return;
-    setSelectedImageFiles((current) => [...current, ...validFiles]);
+    const remaining = Math.max(0, productImageLimit - productImageCount);
+    const acceptedFiles = validFiles.slice(0, remaining);
+    if (acceptedFiles.length < validFiles.length) {
+      setError(
+        `Tu plan permite hasta ${productImageLimit} ${productImageLimit === 1 ? "imagen" : "imágenes"} por producto.`,
+      );
+    }
+    setSelectedImageFiles((current) => [...current, ...acceptedFiles]);
     event.target.value = "";
   };
 
@@ -3006,8 +3019,14 @@ export const ProductsV2PosPage = () => {
                     type="file"
                     accept="image/jpeg,image/jpg,image/png,image/webp"
                     multiple
+                    disabled={productImageCount >= productImageLimit}
                     onChange={handleImageInput}
                   />
+                  <small className="pos-v2-products__hint">
+                    {Number.isFinite(productImageLimit)
+                      ? `${productImageCount} de ${productImageLimit} imágenes permitidas por tu plan`
+                      : `${productImageCount} imágenes · sin límite en MAX`}
+                  </small>
                 </label>
 
                 {formImagePreviews.length > 0 ? (
