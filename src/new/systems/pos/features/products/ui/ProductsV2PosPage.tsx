@@ -413,6 +413,7 @@ export const ProductsV2PosPage = () => {
   const [importError, setImportError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [catalogRevision, setCatalogRevision] = useState(0);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [showArchived, setShowArchived] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -888,7 +889,7 @@ export const ProductsV2PosPage = () => {
           extras: product.extras,
         })),
       );
-      setSearchCatalogProducts([]);
+      setCatalogRevision((current) => current + 1);
       setCurrentPage(response.pagination.page);
       setTotalPages(response.pagination.totalPages);
       setTotalItems(response.pagination.total);
@@ -1039,7 +1040,7 @@ export const ProductsV2PosPage = () => {
     }, 320);
 
     return () => window.clearTimeout(timeout);
-  }, [search, categoryFilter, businessId, token, service, productsLimit]);
+  }, [search, categoryFilter, catalogRevision, businessId, token, service, productsLimit]);
 
   const stats = useMemo(() => {
     const active = products.filter((product) => product.available).length;
