@@ -163,24 +163,22 @@
   border: 1px solid #cbd5e1 !important;
 }
 
-.pos-v2-more__item-actions {
-  display: inline-flex;
-  gap: 0.4rem;
-  flex-wrap: wrap;
-}
-
-.pos-v2-more__favorite {
+.pos-v2-more .pos-v2-more__favorite {
+  position: absolute;
+  top: .35rem;
+  right: .35rem;
+  z-index: 1;
   min-width: 40px;
-  background: #f8fafc !important;
+  width: 40px;
+  height: 40px;
+  background: transparent !important;
   color: #334155 !important;
-  border: 1px solid #cbd5e1 !important;
+  border: 0 !important;
   font-size: 1rem;
 }
 
 .pos-v2-more__favorite.is-active {
   color: #a16207 !important;
-  border-color: #facc15 !important;
-  background: #fef9c3 !important;
 }
 
 .pos-v2-more__qa h3,
@@ -262,8 +260,107 @@
 }
 
 .pos-v2-more__item {
+  position: relative;
   display: grid;
+  grid-template-rows: auto 1fr;
+  align-items: start;
   gap: 0.5rem;
+}
+
+.pos-v2-more__collapse-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: .75rem;
+  list-style: none;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: pointer;
+  padding-block: .35rem;
+}
+
+.pos-v2-more__collapse-title::-webkit-details-marker {
+  display: none;
+}
+
+.pos-v2-more__collapse-title > svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  color: currentColor;
+}
+
+details[open] > .pos-v2-more__collapse-title > svg {
+  transform: rotate(180deg);
+}
+
+.pos-v2-more__collapse-title h3 {
+  display: inline;
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.pos-v2-more__collapse-title:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+.pos-v2-more__favorite-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+}
+
+.pos-v2-more .pos-v2-more__favorite-chips .pos-v2-more__favorite-chip {
+  width: auto;
+  max-width: 100%;
+  min-height: 34px;
+  gap: .4rem;
+  padding: .35rem .75rem;
+  border: 1px solid #7c3aed;
+  border-radius: 999px;
+  background: #f5f3ff;
+  color: #5b21b6;
+  font-size: .8rem;
+}
+
+.pos-v2-more__favorite-chip svg {
+  flex-shrink: 0;
+}
+
+.pos-v2-more__favorite-chip:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
+}
+
+:root[data-theme="dark"] .pos-v2-more .pos-v2-more__favorite-chip {
+  background: #221735;
+  color: #ede9fe;
+}
+
+.pos-v2-more__item .pos-v2-more__meta {
+  padding-right: 36px;
+}
+
+.pos-v2-more .pos-v2-more__card-open {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border-radius: inherit;
+  background: transparent !important;
+}
+
+.pos-v2-more .pos-v2-more__card-open:hover:not(:disabled) {
+  transform: none;
+  box-shadow: inset 0 0 0 1px #7c3aed;
+}
+
+.pos-v2-more .pos-v2-more__card-open:focus-visible,
+.pos-v2-more__favorite:focus-visible {
+  transform: none;
+  outline: 2px solid #7c3aed;
+  outline-offset: 2px;
 }
 
 .pos-v2-more button {
@@ -819,15 +916,11 @@
 }
 
 :root[data-theme="dark"] .pos-v2-more__favorite {
-  background: #0f172a !important;
   color: #e2e8f0 !important;
-  border-color: #475569 !important;
 }
 
 :root[data-theme="dark"] .pos-v2-more__favorite.is-active {
   color: #fde68a !important;
-  border-color: #ca8a04 !important;
-  background: rgba(202, 138, 4, 0.2) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-more__warnings {

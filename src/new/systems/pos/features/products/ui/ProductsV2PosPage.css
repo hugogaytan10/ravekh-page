@@ -14,6 +14,22 @@
 .pos-v2-products__header p { margin: .3rem 0 0; color: var(--product-muted); max-width: 70ch; }
 .pos-v2-products__header-actions { display: flex; flex-wrap: wrap; gap: .5rem; }
 
+.pos-v2-products__header-actions { align-items: center; width: 100%; }
+.pos-v2-products__header-actions button,
+.pos-v2-products__header-actions summary { min-height: 36px; padding: .45rem .7rem; border-radius: 9px; font-size: .8rem; }
+.pos-v2-products__create-menu { position: relative; }
+.pos-v2-products__create-menu summary { display: flex; align-items: center; gap: .5rem; cursor: pointer; list-style: none; }
+.pos-v2-products__create-menu summary::-webkit-details-marker { display: none; }
+.pos-v2-products__create-chevron { display: inline-flex; }
+.pos-v2-products__create-chevron svg { transform: rotate(90deg); }
+.pos-v2-products__create-menu[open] .pos-v2-products__create-chevron svg { transform: rotate(-90deg); }
+.pos-v2-products__create-options { position: absolute; top: calc(100% + 6px); left: 0; z-index: 10; display: grid; gap: .2rem; width: 200px; max-width: calc(100vw - 2rem); padding: .35rem; border: 1px solid var(--product-border); border-radius: 10px; background: var(--product-bg); box-shadow: 0 8px 24px rgba(0, 0, 0, .18); }
+.pos-v2-products__create-options button { width: 100%; border: 0; text-align: left; }
+.pos-v2-products__create-options button:hover:not(:disabled) { background: var(--product-soft-bg); }
+.pos-v2-products__view-actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: flex-end; gap: .5rem; margin-left: auto; }
+.pos-v2-products__view-actions > .pos-v2-products__secondary:first-child { border-color: transparent; background: transparent; color: var(--product-muted); }
+.pos-v2-products__header-actions .pos-v2-products__refresh { display: grid; place-items: center; width: 36px; padding: 0; }
+
 .pos-v2-products__refresh, .pos-v2-products__secondary { border: 1px solid #d1d5db; border-radius: 12px; background: var(--product-bg); color: var(--product-text); padding: .7rem .95rem; font-weight: 700; min-height: 42px; }
 .pos-v2-products__primary { border: none; border-radius: 12px; background: #6d01d1; color: #fff; font-weight: 700; padding: .72rem .95rem; min-height: 44px; }
 .pos-v2-products__primary.is-danger { background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); }

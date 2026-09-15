@@ -1,5 +1,6 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import Repeat from "../../../../../../assets/POS/Repeat";
 import { ModernSystemsFactory } from "../../../../../index";
 import { ManagedProduct } from "../model/ManagedProduct";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
@@ -135,8 +136,8 @@ export const DiscontinuedProductsV2PosPage = () => {
             <button type="button" className="pos-v2-products__secondary" onClick={() => navigate(POS_V2_PATHS.products)}>
               ← Volver a productos
             </button>
-            <button type="button" className="pos-v2-products__refresh" onClick={() => loadProducts(currentPage)} disabled={loading}>
-              {loading ? "Actualizando..." : "Actualizar"}
+            <button type="button" className="pos-v2-products__refresh" onClick={() => loadProducts(currentPage)} disabled={loading} aria-label={loading ? "Actualizando productos" : "Actualizar productos"} title="Actualizar productos">
+              <span aria-hidden="true"><Repeat width={20} height={20} strokeColor="currentColor" /></span>
             </button>
             {isSelecting ? (
               <button
