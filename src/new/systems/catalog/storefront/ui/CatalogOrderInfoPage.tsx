@@ -8,6 +8,7 @@ import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import { formatCatalogPrice, getApplicableWholesaleTier, getEffectiveCatalogPriceForQuantity, normalizeWholesalePriceTiers } from "./catalogPrice";
 import "./CatalogOrderInfoPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
+import { buildCatalogPath, getCatalogCartKey, getPendingStripeCatalogOrderKey, readCatalogBranchContext } from "./catalogBranchContext";
 
 type PaymentMethod = "efectivo" | "transferencia" | "tarjeta" | "enlace";
 type OpenSection = "contact" | "delivery" | "address" | "payment" | null;
@@ -30,7 +31,6 @@ type PendingStripeCatalogOrder = {
   orderPayload: CatalogOrderPayload;
 };
 
-const getPendingStripeOrderKey = (businessId: number) => `catalog-v2-pending-stripe-order:${businessId}`;
 const processingStripeOrderKeys = new Set<string>();
 
 type CartItem = StorefrontCartItem;
@@ -76,9 +76,13 @@ const buildWhatsAppProductLine = (item: CartItem) => {
 export const CatalogOrderInfoPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
-  const api = useMemo(() => new CatalogStorefrontApi(getPosApiBaseUrl()), []);
+  const branchContext = readCatalogBranchContext();
   const storeName = window.localStorage.getItem("catalog-v2-store-name") || "Catálogo";
-  const businessId = Number(window.localStorage.getItem("idBusiness") || 0);
+  const businessId = Number(branchContext.businessId || 0);
+  const api = useMemo(
+    () => new CatalogStorefrontApi(getPosApiBaseUrl(), branchContext.branchSlug, businessId),
+    [branchContext.branchSlug, businessId],
+  );
   const usesSimplifiedCheckout = businessId === 481;
 
   const [name, setName] = useState("");
@@ -139,8 +143,9 @@ export const CatalogOrderInfoPage = () => {
         ),
       ]);
 
-      setCardEnabled(Boolean(businessConfig?.stripeAccountId && businessConfig?.chargesEnabled));
-      if (!businessConfig?.stripeAccountId || !businessConfig?.chargesEnabled) {
+      const cardAvailable = branchContext.isMain && Boolean(businessConfig?.stripeAccountId && businessConfig?.chargesEnabled);
+      setCardEnabled(cardAvailable);
+      if (!cardAvailable) {
         setPaymentMethod("efectivo");
       }
 
@@ -160,7 +165,7 @@ export const CatalogOrderInfoPage = () => {
     };
 
     void run();
-  }, [api, businessId]);
+  }, [api, branchContext.isMain, businessId]);
 
   useEffect(() => {
     if (!businessId || stripeReturnHandled) return;
@@ -181,7 +186,7 @@ export const CatalogOrderInfoPage = () => {
       setGeneralError(null);
 
       try {
-        const pendingOrderKey = getPendingStripeOrderKey(businessId);
+        const pendingOrderKey = getPendingStripeCatalogOrderKey(businessId, branchContext.branchSlug);
         const pendingRaw = window.localStorage.getItem(pendingOrderKey);
         window.localStorage.removeItem(pendingOrderKey);
         const pending = pendingRaw ? (JSON.parse(pendingRaw) as PendingStripeCatalogOrder) : null;
@@ -195,8 +200,8 @@ export const CatalogOrderInfoPage = () => {
           throw new Error("El pago fue exitoso, pero no se pudo registrar el pedido en el servidor.");
         }
 
-        window.localStorage.removeItem(`catalog-v2-cart:${businessId}`);
-        navigate(`/v2/catalogo/${businessId}`, { replace: true });
+        window.localStorage.removeItem(getCatalogCartKey(businessId, branchContext.branchSlug));
+        navigate(buildCatalogPath(businessId, branchContext.branchSlug), { replace: true });
       } catch (e: any) {
         setGeneralError(e?.message || "El pago fue exitoso, pero no se pudo registrar el pedido.");
       } finally {
@@ -206,7 +211,7 @@ export const CatalogOrderInfoPage = () => {
     };
 
     void completeStripeOrder();
-  }, [api, businessId, navigate, stripeReturnHandled]);
+  }, [api, branchContext.branchSlug, businessId, navigate, stripeReturnHandled]);
 
   useEffect(() => {
     if (openSection) return;
@@ -286,7 +291,7 @@ export const CatalogOrderInfoPage = () => {
   const handleSubmit = async () => {
     if (!validate()) return;
 
-    const raw = window.localStorage.getItem(`catalog-v2-cart:${businessId}`);
+    const raw = window.localStorage.getItem(getCatalogCartKey(businessId, branchContext.branchSlug));
     const cart = raw ? (JSON.parse(raw) as CartItem[]) : [];
     if (!cart.length) {
       setGeneralError("Tu carrito está vacío.");
@@ -323,6 +328,9 @@ export const CatalogOrderInfoPage = () => {
       };
 
       if (paymentMethod === "tarjeta") {
+        if (!branchContext.isMain) {
+          throw new Error("El pago con tarjeta para esta sucursal se habilitará cuando el pedido de catálogo sea multi-sucursal en el backend.");
+        }
         const [stripeConfig, businessConfig] = await Promise.all([
           api.getStripeConfig(),
           api.getBusinessCheckoutConfig(String(businessId)),
@@ -358,26 +366,31 @@ export const CatalogOrderInfoPage = () => {
         }
 
         window.localStorage.setItem(
-          getPendingStripeOrderKey(businessId),
+          getPendingStripeCatalogOrderKey(businessId, branchContext.branchSlug),
           JSON.stringify({ businessId, orderPayload } satisfies PendingStripeCatalogOrder),
         );
 
         const stripe = await getStripe(stripeConfig.publishableKey);
         const result = await stripe.redirectToCheckout({ sessionId: session.sessionId });
         if (result?.error?.message) {
-          window.localStorage.removeItem(getPendingStripeOrderKey(businessId));
+          window.localStorage.removeItem(getPendingStripeCatalogOrderKey(businessId, branchContext.branchSlug));
           throw new Error(result.error.message);
         }
 
         return;
       }
 
-      const orderResult = await api.createCatalogOrder(orderPayload);
-      if (!orderResult) {
-        throw new Error("No se pudo registrar el pedido en el servidor.");
+      // El endpoint legacy ordersCatalog todavía descuenta el inventario global de Principal.
+      // Por seguridad sólo registramos ahí los pedidos de la sucursal principal. Las sucursales
+      // secundarias continúan el pedido por WhatsApp hasta que orders_catalog sea branch-aware.
+      if (branchContext.isMain) {
+        const orderResult = await api.createCatalogOrder(orderPayload);
+        if (!orderResult) {
+          throw new Error("No se pudo registrar el pedido en el servidor.");
+        }
       }
 
-      const storePhone = (window.localStorage.getItem("telefono") || "").replace(/\D/g, "");
+      const storePhone = (branchContext.phone || window.localStorage.getItem("telefono") || "").replace(/\D/g, "");
       const lines = cart.map(buildWhatsAppProductLine);
       const message = [
         `Hola ${storeName}, quiero hacer mi pedido:`,
@@ -399,8 +412,8 @@ export const CatalogOrderInfoPage = () => {
 
       const whatsappUrl = `https://wa.me/${storePhone}?text=${encodeURIComponent(message)}`;
       window.location.href = whatsappUrl;
-      window.localStorage.removeItem(`catalog-v2-cart:${businessId}`);
-      navigate(`/v2/catalogo/${businessId}`);
+      window.localStorage.removeItem(getCatalogCartKey(businessId, branchContext.branchSlug));
+      navigate(buildCatalogPath(businessId, branchContext.branchSlug));
     } catch (e: any) {
       setGeneralError(e?.message || "No se pudo preparar el pedido.");
     } finally {

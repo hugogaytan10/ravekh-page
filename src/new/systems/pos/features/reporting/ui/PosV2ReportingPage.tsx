@@ -19,7 +19,13 @@ import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import type { IncomePoint, ReportRange, ReportSale, SalesTicket } from "../model/SalesReport";
 import type { ReportSummaryViewModel } from "../pages/ReportingInsightsPage";
-import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
+import {
+  POS_SESSION_STORAGE_KEYS,
+  resolvePosOperatorRole,
+} from "../../../shared/config/posSession";
+import { readActivePosBranchId, type PosBranch } from "../../../shared/config/posBranch";
+import { PosBranchApi } from "../../../shared/api/PosBranchApi";
+import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import "./PosV2ReportingPage.css";
 
@@ -132,12 +138,18 @@ const getSafeSession = () => {
   return {
     token,
     businessId,
+    role: resolvePosOperatorRole(token),
     hasSession: token.length > 0 && Number.isFinite(businessId) && businessId > 0,
   };
 };
 
 export const PosV2ReportingPage = () => {
   const [session] = useState(() => getSafeSession());
+  const [reportBranches, setReportBranches] = useState<PosBranch[]>([]);
+  const [reportBranchId, setReportBranchId] = useState(() => readActivePosBranchId());
+  const [branchesLoading, setBranchesLoading] = useState(false);
+  const [branchError, setBranchError] = useState<string | null>(null);
+
   const [range, setRange] = useState<ReportRange>("MONTH");
   const [paymentFilter, setPaymentFilter] = useState<"TODOS" | "EFECTIVO" | "TARJETA">("TODOS");
   const [summary, setSummary] = useState<ReportSummaryViewModel>(DEFAULT_SUMMARY);
@@ -173,11 +185,24 @@ export const PosV2ReportingPage = () => {
     };
   }, []);
 
+  const branchApi = useMemo(
+    () => new PosBranchApi(new FetchHttpClient(API_BASE_URL)),
+    [],
+  );
+
   const businessId = session.businessId;
   const cleanToken = session.token;
   const hasBusinessId = session.hasSession;
   const hasToken = session.hasSession;
+  const isAdmin = session.role === "admin";
   const navigate = useNavigate();
+
+  const selectedReportBranch = useMemo(
+    () => reportBranches.find((branch) => branch.id === reportBranchId) ?? null,
+    [reportBranchId, reportBranches],
+  );
+
+  const selectedBranchLabel = selectedReportBranch?.name ?? "Sucursal activa";
 
   const showToast = useCallback((type: "success" | "error", message: string) => {
     setToast({ type, message });
@@ -203,8 +228,8 @@ export const PosV2ReportingPage = () => {
 
     try {
       const [summaryResult, incomeResult] = await Promise.allSettled([
-        reportingPage.loadSummary(businessId, range, cleanToken),
-        reportingPage.loadIncomeSeries(businessId, range, cleanToken),
+        reportingPage.loadSummary(businessId, range, cleanToken, reportBranchId || undefined),
+        reportingPage.loadIncomeSeries(businessId, range, cleanToken, reportBranchId || undefined),
       ]);
 
       if (reportRequestRef.current !== reportRequestId) {
@@ -224,7 +249,7 @@ export const PosV2ReportingPage = () => {
         setLoading(false);
       }
     }
-  }, [businessId, cleanToken, hasBusinessId, reportingPage, range, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, reportBranchId, reportingPage, range, showToast]);
 
   const loadSales = useCallback(async () => {
     if (!hasBusinessId || !hasToken) {
@@ -236,7 +261,7 @@ export const PosV2ReportingPage = () => {
     salesRequestRef.current = salesRequestId;
     setSalesLoading(true);
     try {
-      const details = await reportingPage.loadSalesDetails(businessId, tableRange, paymentFilter, cleanToken);
+      const details = await reportingPage.loadSalesDetails(businessId, tableRange, paymentFilter, cleanToken, reportBranchId || undefined);
       if (salesRequestRef.current !== salesRequestId) {
         return;
       }
@@ -251,7 +276,7 @@ export const PosV2ReportingPage = () => {
         setSalesLoading(false);
       }
     }
-  }, [businessId, cleanToken, hasBusinessId, hasToken, reportingPage, paymentFilter, tableRange, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, hasToken, paymentFilter, reportBranchId, reportingPage, tableRange, showToast]);
 
   const loadTopCharts = useCallback(async () => {
     if (!hasBusinessId || !hasToken) {
@@ -267,9 +292,9 @@ export const PosV2ReportingPage = () => {
 
     try {
       const [productsRows, employeeRows, customerRows] = await Promise.all([
-        reportingPage.loadProductsLeaderboard(businessId, range, cleanToken),
-        reportingPage.loadEmployeesLeaderboard(businessId, range, cleanToken),
-        reportingPage.loadCustomersLeaderboard(businessId, range, cleanToken),
+        reportingPage.loadProductsLeaderboard(businessId, range, cleanToken, reportBranchId || undefined),
+        reportingPage.loadEmployeesLeaderboard(businessId, range, cleanToken, reportBranchId || undefined),
+        reportingPage.loadCustomersLeaderboard(businessId, range, cleanToken, reportBranchId || undefined),
       ]);
       if (topChartsRequestRef.current !== requestId) {
         return;
@@ -294,7 +319,7 @@ export const PosV2ReportingPage = () => {
         setTopChartsLoading(false);
       }
     }
-  }, [businessId, cleanToken, hasBusinessId, hasToken, range, reportingPage, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, hasToken, range, reportBranchId, reportingPage, showToast]);
 
   const loadSalesTickets = useCallback(async () => {
     if (!hasBusinessId || !hasToken) return;
@@ -314,6 +339,7 @@ export const PosV2ReportingPage = () => {
         salesTicketsPage,
         50,
         cleanToken,
+        reportBranchId || undefined,
       );
       if (salesTicketsRequestRef.current !== requestId) return;
       setSalesTickets(result.items);
@@ -327,13 +353,67 @@ export const PosV2ReportingPage = () => {
     } finally {
       if (salesTicketsRequestRef.current === requestId) setSalesTicketsLoading(false);
     }
-  }, [businessId, cleanToken, hasBusinessId, hasToken, reportingPage, salesDates, salesTicketsPage, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, hasToken, reportBranchId, reportingPage, salesDates, salesTicketsPage, showToast]);
 
   useEffect(() => {
-    if (hasBusinessId) {
+    if (!session.hasSession || !isAdmin) {
+      return;
+    }
+
+    let cancelled = false;
+    setBranchesLoading(true);
+    setBranchError(null);
+
+    branchApi
+      .list(cleanToken)
+      .then((branches) => {
+        if (cancelled) return;
+
+        setReportBranches(branches);
+
+        const globalBranchId = readActivePosBranchId(businessId);
+        const selectedExists = branches.some((branch) => branch.id === reportBranchId);
+        const fallback =
+          branches.find((branch) => branch.id === globalBranchId) ??
+          branches.find((branch) => branch.isMain) ??
+          branches[0] ??
+          null;
+
+        if (!selectedExists && fallback) {
+          setReportBranchId(fallback.id);
+        }
+      })
+      .catch((cause) => {
+        if (cancelled) return;
+        setBranchError(
+          cause instanceof Error
+            ? cause.message
+            : "No se pudieron cargar las sucursales para reportes.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setBranchesLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    branchApi,
+    businessId,
+    cleanToken,
+    isAdmin,
+    reportBranchId,
+    session.hasSession,
+  ]);
+
+  useEffect(() => {
+    if (hasBusinessId && reportBranchId > 0) {
       loadReporting();
     }
-  }, [hasBusinessId, loadReporting]);
+  }, [hasBusinessId, loadReporting, reportBranchId]);
 
   useEffect(() => {
     loadSales();
@@ -642,6 +722,28 @@ export const PosV2ReportingPage = () => {
             <h2>Insights de ventas</h2>
           </div>
           <div className="pos-v2-reporting__filters">
+            {isAdmin ? (
+              <label className="pos-v2-reporting__branch-filter">
+                Sucursal
+                <select
+                  value={reportBranchId || ""}
+                  onChange={(event) => {
+                    setReportBranchId(Number(event.target.value));
+                    setSalesTicketsPage(1);
+                  }}
+                  disabled={branchesLoading || reportBranches.length === 0}
+                >
+                  {branchesLoading ? <option value="">Cargando sucursales…</option> : null}
+                  {!branchesLoading && reportBranches.length === 0 ? <option value="">Sin sucursales</option> : null}
+                  {reportBranches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}{branch.isMain ? " · Principal" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
             <label>
               Rango
               <select value={range} onChange={(event) => setRange(event.target.value as ReportRange)}>
@@ -653,6 +755,13 @@ export const PosV2ReportingPage = () => {
           </div>
         </header>
 
+        <div className="pos-v2-reporting__scope">
+          <span>Reporte de:</span>
+          <strong>{selectedBranchLabel}</strong>
+          <small>{isAdmin ? "Vista administrativa por sucursal" : "Sucursal operativa actual"}</small>
+        </div>
+
+        {branchError ? <p className="pos-v2-reporting__error">{branchError}</p> : null}
         {error ? <p className="pos-v2-reporting__error">{error}</p> : null}
         {toast ? <p className={`pos-v2-reporting__toast is-${toast.type}`}>{toast.message}</p> : null}
 

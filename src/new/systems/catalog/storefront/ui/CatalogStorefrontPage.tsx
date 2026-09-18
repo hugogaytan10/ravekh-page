@@ -19,6 +19,7 @@ import { formatCatalogTotal, getEffectiveCatalogPrice, normalizeWholesalePriceTi
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import "./CatalogStorefrontPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
+import { buildCatalogPath, getCatalogCartKey, persistCatalogBranchContext } from "./catalogBranchContext";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
@@ -78,8 +79,9 @@ export const CatalogStorefrontPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
   const location = useLocation();
-  const params = useParams<{ businessId?: string; Id?: string }>();
+  const params = useParams<{ businessId?: string; Id?: string; branchSlug?: string }>();
   const businessId = params.businessId ?? params.Id ?? "";
+  const branchSlug = params.branchSlug?.trim() || null;
   const [store, setStore] = useState<StorefrontBusiness | null>(null);
   const [planLimit, setPlanLimit] = useState<string | undefined>(undefined);
   const [businessContextLoaded, setBusinessContextLoaded] = useState(false);
@@ -120,10 +122,10 @@ export const CatalogStorefrontPage = () => {
   const catalogImage = buildAbsoluteCatalogUrl(store?.logo);
 
   const pageLogic = useMemo(() => {
-    const repository = new CatalogStorefrontApi(getPosApiBaseUrl());
+    const repository = new CatalogStorefrontApi(getPosApiBaseUrl(), branchSlug, businessId);
     const service = new CatalogStorefrontService(repository);
     return new CatalogStorefrontExperiencePage(service);
-  }, []);
+  }, [branchSlug, businessId]);
   const catalogUnavailable = useMemo(
     () =>
       visitLimitReached ||
@@ -140,7 +142,7 @@ export const CatalogStorefrontPage = () => {
     setPriceMax(DEFAULT_PRICE_MAX_BOUND);
     setPriceCeiling(DEFAULT_PRICE_MAX_BOUND);
     setVisitLimitReached(false);
-  }, [businessId]);
+  }, [businessId, branchSlug]);
 
   useEffect(() => {
     const productId = Number((location.state as { restoreProductId?: number } | null)?.restoreProductId);
@@ -210,8 +212,14 @@ export const CatalogStorefrontPage = () => {
         setCategories(categoriesResponse);
         setPlanLimit(business?.plan?.trim() || undefined);
         window.localStorage.setItem("catalog-v2-store-name", business?.name ?? "Catálogo");
-        window.localStorage.setItem("idBusiness", businessId);
-        window.localStorage.setItem("telefono", business?.phone ?? "");
+        persistCatalogBranchContext({
+          businessId,
+          branchId: business?.branch?.id ?? null,
+          branchSlug: business?.branch?.isMain ? null : (business?.branch?.slug || branchSlug),
+          branchName: business?.branch?.name ?? null,
+          isMain: business?.branch?.isMain ?? branchSlug == null,
+          phone: business?.phone ?? null,
+        });
       } catch {
         if (requestId !== businessContextRequestRef.current) return;
         setError("No fue posible cargar la información del negocio.");
@@ -280,7 +288,8 @@ export const CatalogStorefrontPage = () => {
 
   useEffect(() => {
     if (!businessId) return;
-    const saved = window.localStorage.getItem(`catalog-v2-cart:${businessId}`);
+    setCartReady(false);
+    const saved = window.localStorage.getItem(getCatalogCartKey(businessId, branchSlug));
     if (!saved) {
       setCart([]);
       setCartReady(true);
@@ -295,12 +304,12 @@ export const CatalogStorefrontPage = () => {
     } finally {
       setCartReady(true);
     }
-  }, [businessId]);
+  }, [businessId, branchSlug]);
 
   useEffect(() => {
     if (!businessId || !cartReady) return;
-    window.localStorage.setItem(`catalog-v2-cart:${businessId}`, JSON.stringify(cart));
-  }, [businessId, cart, cartReady]);
+    window.localStorage.setItem(getCatalogCartKey(businessId, branchSlug), JSON.stringify(cart));
+  }, [businessId, branchSlug, cart, cartReady]);
 
   useEffect(() => {
     if (!toast) return;
@@ -514,7 +523,7 @@ export const CatalogStorefrontPage = () => {
 
     setCart(nextCart);
     if (businessId) {
-      window.localStorage.setItem(`catalog-v2-cart:${businessId}`, JSON.stringify(nextCart));
+      window.localStorage.setItem(getCatalogCartKey(businessId, branchSlug), JSON.stringify(nextCart));
     }
 
     setVariantModalOpen(false);
@@ -550,6 +559,13 @@ export const CatalogStorefrontPage = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const handleBranchChange = (nextBranchId: number) => {
+    const nextBranch = store?.availableBranches?.find((branch) => branch.id === nextBranchId);
+    if (!nextBranch || !businessId) return;
+    const nextPath = buildCatalogPath(businessId, nextBranch.isMain ? null : nextBranch.slug);
+    navigate(nextPath);
+  };
+
   return (
     <main className="catalog-v2">
       <Helmet>
@@ -582,12 +598,30 @@ export const CatalogStorefrontPage = () => {
           </span>
           <h1>{store?.name || "Catálogo digital"}</h1>
         </div>
-        {!catalogUnavailable ? (
+        <div className="catalog-v2__header-actions">
+          {(store?.availableBranches?.length ?? 0) > 1 ? (
+            <label className="catalog-v2__branch-picker">
+              <span>Sucursal</span>
+              <select
+                value={store?.branch?.id ?? ""}
+                onChange={(event) => handleBranchChange(Number(event.target.value))}
+                aria-label="Cambiar sucursal del catálogo"
+              >
+                {store?.availableBranches?.map((branch) => (
+                  <option key={branch.id} value={branch.id}>{branch.name}</option>
+                ))}
+              </select>
+            </label>
+          ) : store?.branch?.name ? (
+            <span className="catalog-v2__branch-name">{store.branch.name}</span>
+          ) : null}
+          {!catalogUnavailable ? (
           <Link to="/catalogo/pedido" className="catalog-v2__cart-link" aria-label="Ver carrito">
             <FiShoppingCart />
             {totalItems > 0 ? <span>{totalItems}</span> : null}
           </Link>
-        ) : null}
+          ) : null}
+        </div>
       </header>
 
 

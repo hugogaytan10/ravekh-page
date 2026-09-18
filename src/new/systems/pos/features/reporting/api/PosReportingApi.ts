@@ -2,482 +2,75 @@ import { HttpClient } from "../../../../core/api/HttpClient";
 import { IReportingRepository } from "../interface/IReportingRepository";
 import { IncomePoint, ReportLeaderboardItem, ReportProductItem, ReportRange, ReportSale, SalesReport, SalesSummary, SalesTicketsPage } from "../model/SalesReport";
 
-type NullableNumber = number | string | null | undefined;
-type NullableText = string | null | undefined;
+type OverviewCurrency={MoneyTipe?:string;sales?:number;transactions?:number;items?:number;cost?:number;estimatedGrossProfit?:number;averageTicket?:number};
+type OverviewResponse={data?:{byCurrency?:OverviewCurrency[]}}|{byCurrency?:OverviewCurrency[]};
+type PaymentRow={MoneyTipe?:string;paymentMethod?:string;transactions?:number;total?:number};
+type ListWrapper<T>={data?:T[]};
+type TimelineRow={day?:string;Day?:string;MoneyTipe?:string;total?:number};
+type TopItemRow={itemId?:number;productId?:number;productName?:string;variantDescription?:string|null;quantity?:number;revenue?:number;estimatedProfit?:number};
+type EmployeeRow={employeeId?:number;name?:string;transactions?:number;total?:number};
+type IncomeRow={Id?:number;Name?:string;Amount?:number;Date?:string;MoneyTipe?:string;Order_Id?:number|null;Command_Id?:number|null;Source?:string};
 
-type LegacyReportPeriodResponse = {
-  Balance?: NullableNumber;
-  balance?: NullableNumber;
-  Income?: NullableNumber;
-  income?: NullableNumber;
-  Earnings?: NullableNumber;
-  earnings?: NullableNumber;
-  AverageSale?: NullableNumber;
-  averageSale?: NullableNumber;
-  SalesTotal?: NullableNumber;
-  salesTotal?: NullableNumber;
-  CashSales?: NullableNumber;
-  cashSales?: NullableNumber;
-  CardSales?: NullableNumber;
-  cardSales?: NullableNumber;
-  MostSoldProduct?: NullableText;
-  mostSoldProduct?: NullableText;
-  MostSoldCategory?: NullableText;
-  mostSoldCategory?: NullableText;
-};
+const iso=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const rangeDates=(range:ReportRange)=>{const now=new Date();if(range==="DAY"){const x=iso(now);return{from:x,to:x}}if(range==="MONTH")return{from:iso(new Date(now.getFullYear(),now.getMonth(),1)),to:iso(new Date(now.getFullYear(),now.getMonth()+1,0))};return{from:iso(new Date(now.getFullYear(),0,1)),to:iso(new Date(now.getFullYear(),11,31))}};
+const unwrap=<T,>(payload:T|ListWrapper<T>):T[]=>Array.isArray(payload)?payload:(payload as ListWrapper<T>)?.data??[];
+const currencyRow=(rows:OverviewCurrency[])=>rows.find(row=>String(row.MoneyTipe??"").toUpperCase()==="MXN")??rows[0]??{};
 
-type LegacyReportResponse = {
-  Day?: LegacyReportPeriodResponse | null;
-  day?: LegacyReportPeriodResponse | null;
-  Dia?: LegacyReportPeriodResponse | null;
-  dia?: LegacyReportPeriodResponse | null;
-  Month?: LegacyReportPeriodResponse | null;
-  month?: LegacyReportPeriodResponse | null;
-  Mes?: LegacyReportPeriodResponse | null;
-  mes?: LegacyReportPeriodResponse | null;
-  Year?: LegacyReportPeriodResponse | null;
-  year?: LegacyReportPeriodResponse | null;
-  Anio?: LegacyReportPeriodResponse | null;
-  anio?: LegacyReportPeriodResponse | null;
-  Año?: LegacyReportPeriodResponse | null;
-  año?: LegacyReportPeriodResponse | null;
-  Data?: LegacyReportResponse;
-  data?: LegacyReportResponse;
-};
+export class PosReportingApi implements IReportingRepository{
+  constructor(private readonly httpClient:HttpClient){}
 
-type LegacyIncomePointResponse = {
-  Date?: NullableText;
-  date?: NullableText;
-  Amount?: NullableNumber;
-  amount?: NullableNumber;
-};
-
-type LegacyDataWrapper<T> = {
-  Data?: T;
-  data?: T;
-  Result?: T;
-  result?: T;
-  Payload?: T;
-  payload?: T;
-};
-
-type LegacySalesItem = {
-  Id?: string | number;
-  id?: string | number;
-  Date?: string;
-  date?: string;
-  PaymentMethod?: string;
-  paymentMethod?: string;
-  CoinName?: string;
-  coinName?: string;
-  Total?: NullableNumber;
-  total?: NullableNumber;
-  Status?: string;
-  status?: string;
-  Quantity?: NullableNumber;
-  quantity?: NullableNumber;
-  ProductName?: string;
-  productName?: string;
-  Name?: string;
-  name?: string;
-  Address?: string;
-  address?: string;
-};
-
-type LegacySalesResponse = {
-  Orders?: LegacySalesItem[];
-  orders?: LegacySalesItem[];
-  Commands?: LegacySalesItem[];
-  commands?: LegacySalesItem[];
-};
-
-type CatalogDetailProductResponse = {
-  detailId?: NullableNumber;
-  name?: NullableText;
-  quantity?: NullableNumber;
-  price?: NullableNumber;
-  amount?: NullableNumber;
-  detailAmount?: NullableNumber;
-};
-
-type CatalogDetailOrderResponse = {
-  id?: NullableNumber;
-  idType?: NullableText;
-  type?: NullableText;
-  address?: NullableText;
-  date?: NullableText;
-  status?: NullableText;
-  products?: CatalogDetailProductResponse[];
-};
-
-type SalesTicketResponse = {
-  Id?: NullableNumber;
-  Type?: NullableText;
-  Date?: NullableText;
-  PaymentMethod?: NullableText;
-  MoneyTipe?: NullableText;
-  Customer_Name?: NullableText;
-  Employee_Name?: NullableText;
-  Total?: NullableNumber;
-  DiscountApplied?: NullableNumber;
-  TaxesApplied?: NullableNumber;
-  products?: Array<{
-    Detail_Id?: NullableNumber;
-    Item_Name?: NullableText;
-    Quantity?: NullableNumber;
-    UnitPrice?: NullableNumber;
-    DetailAmount?: NullableNumber;
-    Notes?: NullableText;
-  }>;
-};
-
-type SalesTicketsRangeResponse = {
-  items?: SalesTicketResponse[];
-  pagination?: { page?: NullableNumber; pageSize?: NullableNumber; totalItems?: NullableNumber; totalPages?: NullableNumber };
-};
-
-type BackendCustomerItem = {
-  CustomerId?: NullableNumber;
-  CustomerName?: NullableText;
-  TotalSales?: NullableNumber;
-  TotalOrders?: NullableNumber;
-};
-
-type BackendEmployeeItem = {
-  EmployeeId?: NullableNumber;
-  EmployeeName?: NullableText;
-  TotalSales?: NullableNumber;
-  TotalOrders?: NullableNumber;
-};
-
-type BackendProductItem = {
-  Id?: NullableNumber;
-  Name?: NullableText;
-  Quantity?: NullableNumber;
-  TotalSales?: NullableNumber;
-  Earnings?: NullableNumber;
-};
-
-const toNumber = (value: NullableNumber): number => {
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-};
-
-const toNumericValue = (value: unknown): number => {
-  if (typeof value === "number" || typeof value === "string") {
-    return toNumber(value);
+  async getSalesReport(businessId:number,token?:string,branchId?:number):Promise<SalesReport>{
+    if(!token)return SalesReport.empty(businessId);
+    const [day,month,year]=await Promise.all([this.summary("DAY",token,branchId),this.summary("MONTH",token,branchId),this.summary("YEAR",token,branchId)]);
+    return new SalesReport(businessId,day,month,year);
   }
 
-  if (Array.isArray(value)) {
-    return value.reduce((accumulator, row) => accumulator + toNumericValue(row), 0);
+  async getIncomeSeries(_businessId:number,range:ReportRange,token?:string,branchId?:number):Promise<IncomePoint[]>{
+    if(!token)return[];const dates=rangeDates(range);
+    const response=await this.httpClient.request<ListWrapper<TimelineRow>|TimelineRow[]>({method:"GET",path:"reports/branch/timeline",token,branchId,query:dates});
+    return unwrap(response).map(row=>new IncomePoint(String(row.day??row.Day??""),Number(row.total??0)));
   }
 
-  if (value && typeof value === "object") {
-    const record = value as Record<string, unknown>;
-    const directValue = record.total ?? record.Total ?? record.amount ?? record.Amount ?? record.value ?? record.Value;
-    if (directValue !== undefined) {
-      return toNumericValue(directValue);
-    }
-
-    const nestedCurrencyList = record.TotalsByCurrency ?? record.totalsByCurrency;
-    if (nestedCurrencyList !== undefined) {
-      return toNumericValue(nestedCurrencyList);
-    }
+  async getSalesDetails(_businessId:number,range:ReportRange,_payment:"TODOS"|"EFECTIVO"|"TARJETA",token:string,branchId?:number):Promise<ReportSale[]>{
+    const dates=rangeDates(range);const rows=await this.incomeRows(dates.from,dates.to,token,branchId);
+    return rows.filter(row=>row.Order_Id||row.Command_Id).map(row=>new ReportSale(
+      String(row.Order_Id??row.Command_Id??row.Id??0),row.Command_Id?"COMMAND":"ORDER",String(row.Date??""),"OTROS",String(row.MoneyTipe??"MXN"),Number(row.Amount??0),row.Command_Id?"Venta restaurante":"Venta POS","Sin dirección",1,"Entregado",
+    )).sort((a,b)=>new Date(b.date).getTime()-new Date(a.date).getTime());
   }
 
-  return 0;
-};
-
-const toText = (value: NullableText, fallback = "Sin datos"): string => {
-  const normalized = `${value ?? ""}`.trim();
-  return normalized.length > 0 ? normalized : fallback;
-};
-
-const toIncomePoint = (item: LegacyIncomePointResponse): IncomePoint =>
-  IncomePoint.normalize({
-    dateLabel: item.Date ?? item.date,
-    amount: item.Amount ?? item.amount,
-  });
-
-const mapRangeToLegacyDate = (range: ReportRange): "DÍA" | "MES" | "AÑO" => {
-  if (range === "DAY") return "DÍA";
-  if (range === "MONTH") return "MES";
-  return "AÑO";
-};
-
-const mapRangeToSuffix = (range: ReportRange): "today" | "month" | "year" => {
-  if (range === "DAY") return "today";
-  if (range === "MONTH") return "month";
-  return "year";
-};
-
-const mapRangeToCatalogDetailsSuffix = (range: ReportRange): "today" | "month" => {
-  if (range === "DAY") return "today";
-  return "month";
-};
-
-const unwrapPayload = <T>(payload: T | LegacyDataWrapper<T>): T => {
-  if (payload && typeof payload === "object") {
-    const wrappedPayload = payload as LegacyDataWrapper<T>;
-    return wrappedPayload.data ?? wrappedPayload.Data ?? wrappedPayload.result ?? wrappedPayload.Result ?? wrappedPayload.payload ?? wrappedPayload.Payload ?? (payload as T);
+  async getSalesTicketsByDateRange(_businessId:number,from:string,to:string,_timezone:string,page:number,pageSize:number,token:string,branchId?:number):Promise<SalesTicketsPage>{
+    const rows=(await this.incomeRows(from,to,token,branchId)).filter(row=>row.Order_Id||row.Command_Id).sort((a,b)=>new Date(String(b.Date??"")).getTime()-new Date(String(a.Date??"")).getTime());
+    const safePage=Math.max(1,page);const safeSize=Math.max(1,pageSize);const start=(safePage-1)*safeSize;const selected=rows.slice(start,start+safeSize);
+    return{items:selected.map(row=>({id:Number(row.Order_Id??row.Command_Id??row.Id??0),type:row.Command_Id?"COMMAND":"ORDER",date:String(row.Date??""),paymentMethod:"OTROS",currency:String(row.MoneyTipe??"MXN"),customerName:null,employeeName:null,total:Number(row.Amount??0),discountApplied:0,taxesApplied:0,products:[]})),pagination:{page:safePage,pageSize:safeSize,totalItems:rows.length,totalPages:rows.length?Math.ceil(rows.length/safeSize):0}};
   }
 
-  return payload as T;
-};
-
-export class PosReportingApi implements IReportingRepository {
-  constructor(private readonly httpClient: HttpClient) {}
-
-  async getSalesReport(businessId: number, token?: string): Promise<SalesReport> {
-    try {
-      const payload = await this.httpClient.request<LegacyReportResponse>({
-        method: "GET",
-        path: `report/${businessId}`,
-        token,
-      });
-
-      const report = this.unwrapReport(unwrapPayload(payload));
-
-      return new SalesReport(
-        businessId,
-        this.toSummary(report.Day ?? report.day ?? report.Dia ?? report.dia),
-        this.toSummary(report.Month ?? report.month ?? report.Mes ?? report.mes),
-        this.toSummary(report.Year ?? report.year ?? report.Anio ?? report.anio ?? report.Año ?? report.año),
-      );
-    } catch {
-      return SalesReport.empty(businessId);
-    }
+  async getProductsLeaderboard(_businessId:number,range:ReportRange,token:string,branchId?:number):Promise<ReportProductItem[]>{
+    const dates=rangeDates(range);const response=await this.httpClient.request<ListWrapper<TopItemRow>|TopItemRow[]>({method:"GET",path:"reports/branch/top-items",token,branchId,query:{...dates,limit:20}});
+    return unwrap(response).map(row=>new ReportProductItem(Number(row.itemId??row.productId??0),[row.productName,row.variantDescription].filter(Boolean).join(" · "),Number(row.quantity??0),Number(row.revenue??0),Number(row.estimatedProfit??0)));
   }
 
-  async getIncomeSeries(businessId: number, range: ReportRange, token?: string): Promise<IncomePoint[]> {
-    const suffix = mapRangeToSuffix(range);
-
-    const response = await this.httpClient.request<LegacyIncomePointResponse[] | LegacyDataWrapper<LegacyIncomePointResponse[]>>({
-      method: "GET",
-      path: `income/${suffix}/${businessId}`,
-      token,
-    });
-
-    const rowsCandidate = unwrapPayload(response);
-    const rows = Array.isArray(rowsCandidate) ? rowsCandidate : [];
-
-    if (rows.length === 0) {
-      return [];
-    }
-
-    return rows.map(toIncomePoint).filter((point) => Number.isFinite(point.amount));
+  async getEmployeesLeaderboard(_businessId:number,range:ReportRange,token:string,branchId?:number):Promise<ReportLeaderboardItem[]>{
+    const dates=rangeDates(range);const response=await this.httpClient.request<ListWrapper<EmployeeRow>|EmployeeRow[]>({method:"GET",path:"reports/branch/employees",token,branchId,query:dates});
+    return unwrap(response).map(row=>new ReportLeaderboardItem(Number(row.employeeId??0),String(row.name??"Empleado"),Number(row.total??0),Number(row.transactions??0)));
   }
 
-  async getSalesDetails(
-    businessId: number,
-    range: ReportRange,
-    payment: "TODOS" | "EFECTIVO" | "TARJETA",
-    token: string,
-  ): Promise<ReportSale[]> {
-    void payment;
-
-    const suffix = mapRangeToCatalogDetailsSuffix(range);
-    const payload = await this.httpClient.request<CatalogDetailOrderResponse[] | LegacyDataWrapper<CatalogDetailOrderResponse[]>>({
-      method: "GET",
-      path: `report2/catalog-details-${suffix}/${businessId}`,
-      token,
-    });
-
-    const rows = unwrapPayload(payload);
-    if (!Array.isArray(rows)) return [];
-
-    return rows
-      .flatMap((row) => this.toCatalogSales(row))
-      .filter((sale) => sale.id !== "0")
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  async getCustomersLeaderboard(_businessId:number,_range:ReportRange,_token:string,_branchId?:number):Promise<ReportLeaderboardItem[]>{
+    // El backend multi-sucursal aún no expone leaderboard por cliente. Evitamos mezclar datos globales legacy.
+    return[];
   }
 
-  async getSalesTicketsByDateRange(
-    businessId: number,
-    from: string,
-    to: string,
-    timezone: string,
-    page: number,
-    pageSize: number,
-    token: string,
-  ): Promise<SalesTicketsPage> {
-    const query = new URLSearchParams({
-      from,
-      to,
-      timezone,
-      page: String(page),
-      pageSize: String(pageSize),
-      source: "all",
-    });
-    const payload = await this.httpClient.request<SalesTicketsRangeResponse>({
-      method: "GET",
-      path: `report2/details-range/${businessId}?${query.toString()}`,
-      token,
-    });
-    const pagination = payload?.pagination;
-
-    return {
-      items: (payload?.items ?? []).map((sale) => ({
-        id: Math.round(toNumber(sale.Id)),
-        type: toText(sale.Type, "ORDER"),
-        date: toText(sale.Date, ""),
-        paymentMethod: toText(sale.PaymentMethod, "N/A"),
-        currency: toText(sale.MoneyTipe, "MXN"),
-        customerName: sale.Customer_Name?.trim() || null,
-        employeeName: sale.Employee_Name?.trim() || null,
-        total: toNumber(sale.Total),
-        discountApplied: toNumber(sale.DiscountApplied),
-        taxesApplied: toNumber(sale.TaxesApplied),
-        products: (sale.products ?? []).map((product) => ({
-          detailId: Math.round(toNumber(product.Detail_Id)),
-          itemName: toText(product.Item_Name, "Sin detalle"),
-          quantity: toNumber(product.Quantity),
-          unitPrice: toNumber(product.UnitPrice),
-          detailAmount: toNumber(product.DetailAmount),
-          notes: product.Notes?.trim() || null,
-        })),
-      })),
-      pagination: {
-        page: Math.max(1, Math.round(toNumber(pagination?.page) || page)),
-        pageSize: Math.max(1, Math.round(toNumber(pagination?.pageSize) || pageSize)),
-        totalItems: Math.max(0, Math.round(toNumber(pagination?.totalItems))),
-        totalPages: Math.max(1, Math.round(toNumber(pagination?.totalPages) || 1)),
-      },
-    };
+  private async summary(range:ReportRange,token:string,branchId?:number):Promise<SalesSummary>{
+    const dates=rangeDates(range);
+    const [overview,payments]=await Promise.all([
+      this.httpClient.request<OverviewResponse>({method:"GET",path:"reports/branch/overview",token,branchId,query:dates}),
+      this.httpClient.request<ListWrapper<PaymentRow>|PaymentRow[]>({method:"GET",path:"reports/branch/payment-methods",token,branchId,query:dates}),
+    ]);
+    const data="data" in overview?(overview.data??{}):overview;const row=currencyRow(data.byCurrency??[]);const paymentRows=unwrap(payments).filter(item=>String(item.MoneyTipe??"MXN").toUpperCase()===String(row.MoneyTipe??"MXN").toUpperCase());
+    const tx=Math.max(0,Number(row.transactions??0));const cash=paymentRows.filter(item=>String(item.paymentMethod??"").toUpperCase()==="EFECTIVO").reduce((n,item)=>n+Number(item.transactions??0),0);const card=paymentRows.filter(item=>String(item.paymentMethod??"").toUpperCase().includes("TARJETA")).reduce((n,item)=>n+Number(item.transactions??0),0);
+    return new SalesSummary(Number(row.estimatedGrossProfit??0),Number(row.sales??0),Number(row.estimatedGrossProfit??0),Number(row.averageTicket??0),tx,tx?cash/tx*100:0,tx?card/tx*100:0,"Sin datos","Sin datos");
   }
 
-  async getProductsLeaderboard(businessId: number, range: ReportRange, token: string): Promise<ReportProductItem[]> {
-    const suffix = mapRangeToSuffix(range);
-    const payload = await this.httpClient.request<BackendProductItem[] | LegacyDataWrapper<BackendProductItem[]>>({
-      method: "GET",
-      path: `report/products/${suffix}/${businessId}`,
-      token,
-    });
-
-    const rows = unwrapPayload(payload);
-    if (!Array.isArray(rows)) return [];
-
-    return rows
-      .map((item) => new ReportProductItem(
-        toNumber(item.Id),
-        toText(item.Name, "Sin producto"),
-        Math.max(0, Math.round(toNumber(item.Quantity))),
-        toNumber(item.TotalSales),
-        toNumber(item.Earnings),
-      ))
-      .filter((item) => item.name.trim().length > 0)
-      .sort((a, b) => b.quantity - a.quantity || b.totalSales - a.totalSales);
-  }
-
-  async getEmployeesLeaderboard(businessId: number, range: ReportRange, token: string): Promise<ReportLeaderboardItem[]> {
-    const suffix = mapRangeToSuffix(range);
-    const payload = await this.httpClient.request<BackendEmployeeItem[] | LegacyDataWrapper<BackendEmployeeItem[]>>({
-      method: "GET",
-      path: `report/employee/${suffix}/${businessId}`,
-      token,
-    });
-
-    const rows = unwrapPayload(payload);
-    if (!Array.isArray(rows)) return [];
-
-    return rows
-      .map((item) => new ReportLeaderboardItem(
-        Math.round(toNumber(item.EmployeeId)),
-        toText(item.EmployeeName, "Sin empleado"),
-        toNumber(item.TotalSales),
-        Math.max(0, Math.round(toNumber(item.TotalOrders))),
-      ))
-      .filter((item) => item.name.trim().length > 0)
-      .sort((a, b) => b.totalSales - a.totalSales || b.totalOrders - a.totalOrders);
-  }
-
-  async getCustomersLeaderboard(businessId: number, range: ReportRange, token: string): Promise<ReportLeaderboardItem[]> {
-    const suffix = mapRangeToSuffix(range);
-    const payload = await this.httpClient.request<BackendCustomerItem[] | LegacyDataWrapper<BackendCustomerItem[]>>({
-      method: "GET",
-      path: `report/customer/${suffix}/${businessId}`,
-      token,
-    });
-
-    const rows = unwrapPayload(payload);
-    if (!Array.isArray(rows)) return [];
-
-    return rows
-      .map((item) => new ReportLeaderboardItem(
-        Math.round(toNumber(item.CustomerId)),
-        toText(item.CustomerName, "Sin cliente"),
-        toNumber(item.TotalSales),
-        Math.max(0, Math.round(toNumber(item.TotalOrders))),
-      ))
-      .filter((item) => item.name.trim().length > 0)
-      .sort((a, b) => b.totalSales - a.totalSales || b.totalOrders - a.totalOrders);
-  }
-
-  private unwrapReport(payload: LegacyReportResponse): LegacyReportResponse {
-    if (payload.data) return payload.data;
-    if (payload.Data) return payload.Data;
-    return payload;
-  }
-
-  private toSummary(period?: LegacyReportPeriodResponse | null): SalesSummary {
-    if (!period) {
-      return SalesSummary.empty();
-    }
-
-    return SalesSummary.normalize({
-      balance: toNumericValue(period.Balance ?? period.balance),
-      income: toNumericValue(period.Income ?? period.income),
-      earnings: toNumericValue(period.Earnings ?? period.earnings),
-      averageSale: toNumericValue(period.AverageSale ?? period.averageSale),
-      totalSales: toNumericValue(period.SalesTotal ?? period.salesTotal),
-      cashSalesPercentage: toNumericValue(period.CashSales ?? period.cashSales),
-      cardSalesPercentage: toNumericValue(period.CardSales ?? period.cardSales),
-      bestSeller: toText(period.MostSoldProduct ?? period.mostSoldProduct),
-      bestCategory: toText(period.MostSoldCategory ?? period.mostSoldCategory),
-    });
-  }
-
-  private toSale(row: LegacySalesItem, type: "ORDER" | "COMMAND"): ReportSale {
-    const fallbackDate = new Date().toISOString();
-
-    return new ReportSale(
-      String(row.Id ?? row.id ?? "0"),
-      type,
-      row.Date ?? row.date ?? fallbackDate,
-      toText(row.PaymentMethod ?? row.paymentMethod, "N/A"),
-      toText(row.CoinName ?? row.coinName, "MXN"),
-      toNumber(row.Total ?? row.total),
-      toText(row.ProductName ?? row.productName ?? row.Name ?? row.name, "Sin detalle"),
-      toText(row.Address ?? row.address, "Sin dirección"),
-      Math.max(1, Math.round(toNumber(row.Quantity ?? row.quantity) || 1)),
-      toText(row.Status ?? row.status, "Pendiente"),
-    );
-  }
-
-  private toCatalogSales(row: CatalogDetailOrderResponse): ReportSale[] {
-    const baseId = String(row.id ?? "0");
-    const createdAt = toText(row.date, new Date().toISOString());
-    const address = toText(row.address, "Sin dirección");
-    const status = toText(row.status, "Pendiente");
-    const products = Array.isArray(row.products) ? row.products : [];
-
-    return products.map((product, index) => {
-      const productId = String(product.detailId ?? `${baseId}-${index}`);
-      const quantity = Math.max(1, Math.round(toNumber(product.quantity) || 1));
-      const total = toNumber(product.detailAmount) || (toNumber(product.amount) * quantity);
-
-      return new ReportSale(
-        `${baseId}-${productId}`,
-        "ORDER",
-        createdAt,
-        "N/A",
-        "MXN",
-        total,
-        toText(product.name, "Sin detalle"),
-        address,
-        quantity,
-        status,
-      );
-    });
+  private async incomeRows(from:string,to:string,token:string,branchId?:number):Promise<IncomeRow[]>{
+    const response=await this.httpClient.request<ListWrapper<IncomeRow>|IncomeRow[]>({method:"GET",path:"finances/branch/income",token,branchId,query:{from,to}});return unwrap(response);
   }
 }

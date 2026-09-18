@@ -15,6 +15,7 @@ import { PosV2ModulePreviewPage } from "../features/more/ui/PosV2ModulePreviewPa
 import { PosV2CustomersPage } from "../features/customers/ui/PosV2CustomersPage";
 import { PosV2EmployeesPage } from "../features/employees/ui/PosV2EmployeesPage";
 import { PosV2TableZonesPage } from "../features/settings/table-zones/ui/PosV2TableZonesPage";
+import { PosV2BranchesPage } from "../features/settings/branches/PosV2BranchesPage";
 import { PosV2PrintersPage } from "../features/settings/printers/ui/PosV2PrintersPage";
 import { PosV2OnlineOrdersPage } from "../features/online-orders/ui/PosV2OnlineOrdersPage";
 import { PosV2CashClosingPage } from "../features/cash-closing/ui/PosV2CashClosingPage";
@@ -43,6 +44,7 @@ export const POS_V2_PRIMARY_ROUTES = [
   { path: POS_V2_PATHS.customers, element: withAuth(<PosV2CustomersPage />) },
   { path: POS_V2_PATHS.employees, element: withAuth(<PosV2EmployeesPage />) },
   { path: POS_V2_PATHS.tableZones, element: withAuth(<PosV2TableZonesPage />) },
+  { path: POS_V2_PATHS.branches, element: withAuth(<PosV2BranchesPage />) },
   { path: POS_V2_PATHS.printers, element: withAuth(<PosV2PrintersPage />) },
   { path: POS_V2_PATHS.cashClosing, element: withAuth(<PosV2CashClosingPage />) },
   { path: POS_V2_PATHS.inventory, element: withAuth(<PosV2InventoryPage />) },
@@ -78,6 +80,7 @@ export const POS_V2_PRIMARY_ROUTES = [
   { path: POS_V2_LEGACY_PATHS.posReportsAlias, element: <Navigate to={POS_V2_PATHS.reports} replace /> },
   { path: POS_V2_LEGACY_PATHS.posMoreAlias, element: <Navigate to={POS_V2_PATHS.more} replace /> },
   { path: POS_V2_LEGACY_PATHS.posTablesAlias, element: <Navigate to={POS_V2_PATHS.tableZones} replace /> },
+  { path: POS_V2_LEGACY_PATHS.posBranchesAlias, element: <Navigate to={POS_V2_PATHS.branches} replace /> },
   { path: POS_V2_LEGACY_PATHS.posPrintersAlias, element: <Navigate to={POS_V2_PATHS.printers} replace /> },
   { path: POS_V2_LEGACY_PATHS.posCouponsAlias, element: <Navigate to={POS_V2_PATHS.coupons} replace /> },
   { path: POS_V2_LEGACY_PATHS.posVisitsAlias, element: <Navigate to={POS_V2_PATHS.visits} replace /> },

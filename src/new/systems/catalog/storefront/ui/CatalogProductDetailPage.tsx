@@ -25,6 +25,7 @@ import {
   normalizeWholesalePriceTiers,
 } from "./catalogPrice";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
+import { buildCatalogPath, getCatalogCartKey, readCatalogBranchContext } from "./catalogBranchContext";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", {
@@ -76,12 +77,13 @@ export const CatalogProductDetailPage = () => {
     yPercent: 50,
   });
   const [showMagnifier, setShowMagnifier] = useState(false);
+  const branchContext = readCatalogBranchContext();
 
   const pageLogic = useMemo(() => {
-    const repository = new CatalogStorefrontApi(getPosApiBaseUrl());
+    const repository = new CatalogStorefrontApi(getPosApiBaseUrl(), branchContext.branchSlug, branchContext.businessId);
     const service = new CatalogStorefrontService(repository);
     return new CatalogStorefrontExperiencePage(service);
-  }, []);
+  }, [branchContext.branchSlug, branchContext.businessId]);
 
   useEffect(() => {
     const run = async () => {
@@ -250,7 +252,7 @@ export const CatalogProductDetailPage = () => {
     const wholesaleMinQuantityToStore = firstWholesaleTier?.minQuantity ?? null;
     const costToStore = selectedVariant?.costPerItem ?? undefined;
 
-    const key = `catalog-v2-cart:${product.businessId}`;
+    const key = getCatalogCartKey(product.businessId, branchContext.branchSlug);
     const raw = window.localStorage.getItem(key);
     const current = raw ? (JSON.parse(raw) as StorefrontCartItem[]) : [];
     const existing = current.find(
@@ -296,7 +298,7 @@ export const CatalogProductDetailPage = () => {
       return;
     }
 
-    navigate(`/v2/catalogo/${product!.businessId}`);
+    navigate(buildCatalogPath(product!.businessId, branchContext.branchSlug));
   };
 
   const buyNow = () => {
@@ -381,7 +383,8 @@ export const CatalogProductDetailPage = () => {
         onClick={() => {
           const origin = location.state as { catalogPage?: number; catalogProductId?: number } | null;
           const catalogPage = Math.max(1, Number(origin?.catalogPage) || 1);
-          navigate(`/v2/catalogo/${product.businessId}${catalogPage > 1 ? `?page=${catalogPage}` : ""}`, {
+          const catalogPath = buildCatalogPath(product.businessId, branchContext.branchSlug);
+          navigate(`${catalogPath}${catalogPage > 1 ? `?page=${catalogPage}` : ""}`, {
             state: { restoreProductId: origin?.catalogProductId },
           });
         }}

@@ -804,3 +804,66 @@
   min-height: 34px;
   padding: 0.35rem 0.65rem;
 }
+
+
+/* =========================================================
+   ADMINISTRADOR — selector de sucursal en Reportes
+   ========================================================= */
+
+.pos-v2-reporting__branch-filter {
+  min-width: min(270px, 100%);
+}
+
+.pos-v2-reporting__scope {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  width: fit-content;
+  max-width: 100%;
+  margin: 0 0 0.25rem;
+  border: 1px solid #ddd6fe;
+  border-radius: 999px;
+  padding: 0.4rem 0.72rem;
+  background: #f5f3ff;
+  color: #475569;
+  font-size: 0.8rem;
+}
+
+.pos-v2-reporting__scope strong {
+  color: #5b21b6;
+}
+
+.pos-v2-reporting__scope small {
+  color: #64748b;
+}
+
+:root[data-theme="dark"] .pos-v2-reporting__scope {
+  border-color: rgba(167, 139, 250, 0.35);
+  background: rgba(124, 58, 237, 0.16);
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-reporting__scope strong {
+  color: #ddd6fe;
+}
+
+:root[data-theme="dark"] .pos-v2-reporting__scope small {
+  color: #94a3b8;
+}
+
+@media (max-width: 680px) {
+  .pos-v2-reporting__branch-filter {
+    width: 100%;
+  }
+
+  .pos-v2-reporting__branch-filter select {
+    width: 100%;
+  }
+
+  .pos-v2-reporting__scope {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 12px;
+  }
+}

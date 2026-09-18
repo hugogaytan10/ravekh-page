@@ -28,6 +28,14 @@ export type StorefrontProduct = {
   showPrice?: boolean;
 };
 
+export type StorefrontBranchSummary = {
+  id: number;
+  name: string;
+  code: string;
+  slug: string;
+  isMain: boolean;
+};
+
 export type StorefrontBusiness = {
   id: number;
   name: string;
@@ -35,6 +43,13 @@ export type StorefrontBusiness = {
   plan: string | null;
   logo: string | null;
   catalogFeature: number | null;
+  branch?: StorefrontBranchSummary & {
+    phoneNumber?: string | null;
+    whatsApp?: string | null;
+    address?: string | null;
+    references?: string | null;
+  };
+  availableBranches?: StorefrontBranchSummary[];
 };
 
 export type StorefrontCartItem = {

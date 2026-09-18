@@ -17,6 +17,7 @@ import {
 import "./PosV2SalesHomePage.css";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
+import { buildPosAuthHeaders } from "../../../shared/config/posBranch";
 import {
   POS_SESSION_STORAGE_KEYS,
   readPosSessionSnapshot,
@@ -213,6 +214,13 @@ type TableProductDetailApiResponse = {
   ProductPrice?: number | null;
   Price1?: number | null;
   ProductId?: number | null;
+  Item_Id?: number | null;
+  Item_Quantity?: number | null;
+  Item_Name?: string | null;
+  Item_Description?: string | null;
+  Item_Price?: number | null;
+  Color_Id?: number | null;
+  Size_Id?: number | null;
 };
 type TableApiResponse = {
   Id?: number | null;
@@ -771,16 +779,12 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
-    const headers = {
-      "Content-Type": "application/json",
-      token,
-      Authorization: `Bearer ${token}`,
-    };
+    const headers = buildPosAuthHeaders(token);
 
     setLoadingTables(true);
 
     fetch(
-      new URL(`table_zones/business/${businessId}`, API_BASE_URL).toString(),
+      new URL("restaurant/branch/zones", API_BASE_URL).toString(),
       { headers },
     )
       .then(async (zonesResponse) => {
@@ -792,8 +796,9 @@ export const PosV2SalesHomePage = () => {
 
         const zonesPayload = (await zonesResponse.json().catch(() => null)) as
           | TableZoneApiResponse[]
+          | { data?: TableZoneApiResponse[] }
           | null;
-        const rawZones = Array.isArray(zonesPayload) ? zonesPayload : [];
+        const rawZones = Array.isArray(zonesPayload) ? zonesPayload : zonesPayload?.data ?? [];
         const normalizedZones = rawZones
           .map((zone) => ({
             id: Number(zone.Id ?? 0),
@@ -811,7 +816,7 @@ export const PosV2SalesHomePage = () => {
         rawZones.forEach((zone) => {
           const zoneId = Number(zone.Id ?? 0);
           const rows = Array.isArray(zone.Tables) ? zone.Tables : [];
-          if (zoneId <= 0 || rows.length === 0) return;
+          if (zoneId <= 0) return;
 
           preloadedTables[zoneId] = rows
             .map((table) => ({
@@ -827,10 +832,7 @@ export const PosV2SalesHomePage = () => {
                     zoneId,
                 ) || zoneId,
             }))
-            .filter(
-              (table) =>
-                table.id > 0 && table.name.length > 0 && table.isAvailable,
-            )
+            .filter((table) => table.id > 0 && table.name.length > 0)
             .map(({ id, name, zoneId }) => ({ id, name, zoneId }))
             .sort((a, b) => a.id - b.id);
         });
@@ -839,7 +841,7 @@ export const PosV2SalesHomePage = () => {
       })
       .then(({ normalizedZones, preloadedTables }) => {
         debugLog(
-          "Zonas cargadas desde endpoint /table_zones/business/:businessId",
+          "Zonas cargadas desde endpoint /restaurant/branch/zones",
           normalizedZones,
         );
         setTableZones(normalizedZones);
@@ -890,11 +892,7 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
-    const headers = {
-      "Content-Type": "application/json",
-      token,
-      Authorization: `Bearer ${token}`,
-    };
+    const headers = buildPosAuthHeaders(token);
 
     setLoadingTables(true);
     fetch(
@@ -1062,7 +1060,7 @@ export const PosV2SalesHomePage = () => {
     productCatalog?: SaleItemVm,
   ): CartItemVm | null => {
     const directProductId = Number(row.Product_Id ?? row.ProductId ?? 0);
-    const fallbackId = Number(row.Id ?? 0);
+    const fallbackId = Number(row.Item_Id ?? row.Id ?? 0);
     const productId =
       Number.isFinite(directProductId) && directProductId > 0
         ? directProductId
@@ -1076,7 +1074,7 @@ export const PosV2SalesHomePage = () => {
       Number.isFinite(variantIdCandidate) && variantIdCandidate > 0
         ? variantIdCandidate
         : null;
-    const quantityCandidate = Number(row.Quantity ?? 1);
+    const quantityCandidate = Number(row.Item_Quantity ?? row.Quantity ?? 1);
     const quantity =
       Number.isFinite(quantityCandidate) && quantityCandidate > 0
         ? Math.floor(quantityCandidate)
@@ -1088,12 +1086,13 @@ export const PosV2SalesHomePage = () => {
           null)
         : null;
 
-    const fallbackName = String(row.ProductName ?? row.Name ?? "").trim();
+    const fallbackName = String(row.Item_Name ?? row.ProductName ?? row.Name ?? "").trim();
     const fallbackVariantLabel = String(
-      row.VariantName ?? row.Description ?? "",
+      row.VariantName ?? row.Item_Description ?? row.Description ?? "",
     ).trim();
     const rawPrice = Number(
       row.VariantPrice ??
+        row.Item_Price ??
         row.Price ??
         row.Price1 ??
         row.ProductPrice ??
@@ -1116,8 +1115,8 @@ export const PosV2SalesHomePage = () => {
       quantity,
       variantId,
       variantLabel,
-      colorId: null,
-      sizeId: null,
+      colorId: row.Color_Id ? Number(row.Color_Id) : null,
+      sizeId: row.Size_Id ? Number(row.Size_Id) : null,
       colorLabel: variantFromCatalog?.color ?? null,
       sizeLabel: variantFromCatalog?.size ?? null,
     };
@@ -1135,17 +1134,13 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
-    const headers = {
-      "Content-Type": "application/json",
-      token,
-      Authorization: `Bearer ${token}`,
-    };
+    const headers = buildPosAuthHeaders(token);
 
     loadingTableDraftRef.current = true;
     skippingDraftSyncRef.current = true;
 
     fetch(
-      new URL(`table_products/products/${tableId}`, API_BASE_URL).toString(),
+      new URL(`restaurant/branch/tables/${tableId}/items`, API_BASE_URL).toString(),
       { headers },
     )
       .then(async (response) => {
@@ -1157,8 +1152,9 @@ export const PosV2SalesHomePage = () => {
 
         const payload = (await response.json().catch(() => [])) as
           | TableProductDetailApiResponse[]
+          | { data?: TableProductDetailApiResponse[] }
           | null;
-        const rows = Array.isArray(payload) ? payload : [];
+        const rows = Array.isArray(payload) ? payload : payload?.data ?? [];
 
         const nextCart = rows.reduce<Record<string, CartItemVm>>(
           (accumulator, row) => {
@@ -1208,58 +1204,27 @@ export const PosV2SalesHomePage = () => {
     const tableId = Number(selectedTableId);
     if (!Number.isFinite(tableId) || tableId <= 0) return;
 
-    const headers = {
-      "Content-Type": "application/json",
-      token,
-      Authorization: `Bearer ${token}`,
-    };
+    const headers = buildPosAuthHeaders(token);
 
     const syncDraft = async () => {
-      const payload = Object.values(cart).map((item) => ({
-        Table_Id: tableId,
-        Product_Id: item.productId,
-        Variant_Id: item.variantId ?? undefined,
+      const items = Object.values(cart).map((item) => ({
+        ...(item.variantId ? { Variant_Id: item.variantId } : { Product_Id: item.productId }),
         Quantity: item.quantity,
+        Color_Id: item.colorId ?? undefined,
+        Size_Id: item.sizeId ?? undefined,
       }));
 
-      if (payload.length === 0) {
-        const existingResponse = await fetch(
-          new URL(`table_products/table/${tableId}`, API_BASE_URL).toString(),
-          { headers },
-        );
-        const existingPayload = (await existingResponse
-          .json()
-          .catch(() => [])) as TableProductApiResponse[] | null;
-        const existingRows = Array.isArray(existingPayload)
-          ? existingPayload
-          : [];
-        await Promise.all(
-          existingRows
-            .map((row) => Number(row.Id))
-            .filter((id) => Number.isFinite(id) && id > 0)
-            .map((id) =>
-              fetch(new URL(`table_products/${id}`, API_BASE_URL).toString(), {
-                method: "DELETE",
-                headers,
-              }),
-            ),
-        );
-        return;
-      }
-
       const response = await fetch(
-        new URL("table_products", API_BASE_URL).toString(),
+        new URL(`restaurant/branch/tables/${tableId}/items`, API_BASE_URL).toString(),
         {
-          method: "POST",
+          method: items.length === 0 ? "DELETE" : "PUT",
           headers,
-          body: JSON.stringify(payload),
+          body: items.length === 0 ? undefined : JSON.stringify({ items }),
         },
       );
 
       if (!response.ok) {
-        throw new Error(
-          `No se pudo guardar borrador en mesa (${response.status}).`,
-        );
+        throw new Error(`No se pudo guardar borrador en mesa (${response.status}).`);
       }
     };
 
@@ -1353,11 +1318,7 @@ export const PosV2SalesHomePage = () => {
       const response = await fetch(
         new URL(`extras/product/${productId}`, API_BASE_URL).toString(),
         {
-          headers: {
-            "Content-Type": "application/json",
-            token,
-            Authorization: `Bearer ${token}`,
-          },
+          headers: buildPosAuthHeaders(token),
         },
       );
 
@@ -1422,13 +1383,9 @@ export const PosV2SalesHomePage = () => {
 
     try {
       const response = await fetch(
-        new URL(`variants/product/${product.id}`, API_BASE_URL).toString(),
+        new URL(`variants/product/${product.id}/branch`, API_BASE_URL).toString(),
         {
-          headers: {
-            "Content-Type": "application/json",
-            token,
-            Authorization: `Bearer ${token}`,
-          },
+          headers: buildPosAuthHeaders(token),
         },
       );
 
@@ -1438,9 +1395,11 @@ export const PosV2SalesHomePage = () => {
 
       const payload = (await response.json().catch(() => [])) as
         | VariantApiResponse[]
+        | { data?: VariantApiResponse[] }
         | null;
-      const normalized = Array.isArray(payload)
-        ? payload.map((variant) => ({
+      const variantRows = Array.isArray(payload) ? payload : payload?.data ?? [];
+      const normalized = variantRows
+        .map((variant) => ({
             id:
               typeof variant.Id === "number" && Number.isFinite(variant.Id)
                 ? variant.Id
@@ -1461,8 +1420,7 @@ export const PosV2SalesHomePage = () => {
               Number.isFinite(variant.Stock)
                 ? variant.Stock
                 : null,
-          }))
-        : [];
+          }));
 
       const resolved = normalized.length > 0 ? normalized : product.variants;
       setVariantsCache((current) => ({ ...current, [product.id]: resolved }));
@@ -1746,22 +1704,23 @@ export const PosV2SalesHomePage = () => {
     }
 
     const lineItems = cartItems.map((item) => ({
-      Product_Id: item.productId,
+      ...(item.variantId ? { Variant_Id: item.variantId } : { Product_Id: item.productId }),
       Quantity: item.quantity,
-      Price: item.price,
-      Cost: 0,
-      Variant_Id: item.variantId ?? undefined,
       Color_Id: item.colorId ?? undefined,
       Size_Id: item.sizeId ?? undefined,
     }));
 
-    const payloadByTable = {
-      Employee_Id: employeeId,
+    const checkoutPayload = {
       Customer_Id: selectedCustomerId ? Number(selectedCustomerId) : undefined,
       PaymentMethod: paymentMethod,
       Total: totals.total,
-      Discount: discountValue,
+      Discount: totals.discount,
       Tax: Boolean(salesTax && applyTax),
+      TaxValue: salesTax && applyTax ? salesTax.value : null,
+      IsPercent: salesTax && applyTax ? salesTax.isPercent : false,
+      TotalTaxes: totals.taxAmount,
+      TotalDiscount: totals.discount,
+      MoneyTipe: "MXN",
     };
 
     setIsCompletingSale(true);
@@ -1777,27 +1736,34 @@ export const PosV2SalesHomePage = () => {
     });
 
     try {
-      const endpoint = selectedTableId ? "commands" : "orders";
-      const payload = selectedTableId
-        ? {
-            Command: {
-              ...payloadByTable,
-              Table_Id: Number(selectedTableId),
-            },
-            Commands_has_Products: lineItems,
-          }
-        : {
-            Order: payloadByTable,
-            OrderDetails: lineItems,
-          };
+      const tableId = selectedTableId ? Number(selectedTableId) : 0;
+
+      if (tableId) {
+        // Fuerza la última versión del borrador antes de cobrar para evitar carreras entre effects.
+        const draftResponse = await fetch(
+          new URL(`restaurant/branch/tables/${tableId}/items`, API_BASE_URL).toString(),
+          {
+            method: "PUT",
+            headers: buildPosAuthHeaders(token),
+            body: JSON.stringify({ items: lineItems }),
+          },
+        );
+        if (!draftResponse.ok) {
+          const draftError = await draftResponse.json().catch(() => null) as { message?: string } | null;
+          throw new Error(draftError?.message ?? "No pudimos guardar la comanda antes del cobro.");
+        }
+      }
+
+      const endpoint = tableId
+        ? `commands/branch/tables/${tableId}/checkout`
+        : "orders/branch";
+      const payload = tableId
+        ? checkoutPayload
+        : { ...checkoutPayload, Status: "ENTREGADO", Details: lineItems };
 
       const response = await fetch(new URL(endpoint, API_BASE_URL).toString(), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          token,
-          Authorization: `Bearer ${token}`,
-        },
+        headers: buildPosAuthHeaders(token),
         body: JSON.stringify(payload),
       });
 
@@ -1849,51 +1815,6 @@ export const PosV2SalesHomePage = () => {
         createdAt: new Date().toISOString(),
         items: printableItems,
       });
-      if (selectedTableId) {
-        const tableId = Number(selectedTableId);
-        if (Number.isFinite(tableId) && tableId > 0) {
-          fetch(
-            new URL(`table_products/table/${tableId}`, API_BASE_URL).toString(),
-            {
-              headers: {
-                "Content-Type": "application/json",
-                token,
-                Authorization: `Bearer ${token}`,
-              },
-            },
-          )
-            .then(async (response) => {
-              const payload = (await response.json().catch(() => [])) as
-                | TableProductApiResponse[]
-                | null;
-              const rows = Array.isArray(payload) ? payload : [];
-              await Promise.all(
-                rows
-                  .map((row) => Number(row.Id))
-                  .filter((id) => Number.isFinite(id) && id > 0)
-                  .map((id) =>
-                    fetch(
-                      new URL(`table_products/${id}`, API_BASE_URL).toString(),
-                      {
-                        method: "DELETE",
-                        headers: {
-                          "Content-Type": "application/json",
-                          token,
-                          Authorization: `Bearer ${token}`,
-                        },
-                      },
-                    ),
-                  ),
-              );
-            })
-            .catch((error) => {
-              console.error(
-                "[POS-V2-SALES] Error al limpiar borrador de mesa al finalizar venta",
-                error,
-              );
-            });
-        }
-      }
       setCart({});
       setDiscountPercent("0");
       setFixedDiscount("0");
@@ -1933,11 +1854,7 @@ export const PosV2SalesHomePage = () => {
         new URL("visits/qr/dynamic/next", API_BASE_URL).toString(),
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            token,
-            Authorization: `Bearer ${token}`,
-          },
+          headers: buildPosAuthHeaders(token),
           body: JSON.stringify({ businessId, domain: couponsDomain }),
         },
       );
@@ -1965,11 +1882,7 @@ export const PosV2SalesHomePage = () => {
       new URL("visits/qr/generate", API_BASE_URL).toString(),
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          token,
-          Authorization: `Bearer ${token}`,
-        },
+        headers: buildPosAuthHeaders(token),
         body: JSON.stringify({
           businessId,
           quantity: 1,

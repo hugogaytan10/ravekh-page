@@ -350,75 +350,261 @@ export class CatalogVisitLimitReachedError extends Error {
   }
 }
 
-export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
-  constructor(private readonly baseUrl: string) {}
+type PublicCatalogBranch = {
+  id?: number;
+  name?: string;
+  code?: string;
+  slug?: string;
+  isMain?: boolean;
+  phoneNumber?: string | null;
+  whatsApp?: string | null;
+  address?: string | null;
+  references?: string | null;
+};
 
-  async getBusinessById(businessId: string): Promise<StorefrontBusiness | null> {
-    logCatalogDebug("business:request", { businessId });
-    const response = await fetch(`${normalizeBase(this.baseUrl)}business/${businessId}`);
-    logCatalogDebug("business:response", { businessId, ok: response.ok, status: response.status });
-    if (!response.ok) return null;
-    const data = (await response.json()) as BusinessResponse;
-    const catalogFeature = normalizeOptionalNumber(data.Features?.Catalog ?? data.features?.catalog);
-    logCatalogDebug("business:data", { businessId, plan: data.Plan ?? data.plan ?? null, catalogFeature, name: data.Name ?? null });
+type PublicCatalogProduct = {
+  id?: number;
+  barcode?: string | null;
+  name?: string;
+  description?: string | null;
+  category?: { id?: number; name?: string } | null;
+  price?: number | string | null;
+  promotionPrice?: number | string | null;
+  effectivePrice?: number | string | null;
+  showPrice?: boolean;
+  stock?: number | string | null;
+  inStock?: boolean;
+  images?: Array<{ id?: number; image?: string; isPrimary?: boolean }>;
+  variants?: Array<{
+    id?: number;
+    barcode?: string | null;
+    description?: string;
+    color?: string | null;
+    image?: string | null;
+    price?: number | string | null;
+    promotionPrice?: number | string | null;
+    effectivePrice?: number | string | null;
+    stock?: number | string | null;
+    inStock?: boolean;
+    wholesalePrices?: WholesalePriceResponse[];
+  }>;
+  wholesalePrices?: WholesalePriceResponse[];
+};
+
+type PublicCatalogSnapshot = {
+  business?: {
+    id?: number;
+    name?: string;
+    logo?: string | null;
+    color?: string | null;
+    MoneyTipe?: string | null;
+  };
+  branch?: PublicCatalogBranch;
+  availableBranches?: PublicCatalogBranch[];
+  categories?: Array<{ id?: number; name?: string; products?: number }>;
+  products?: PublicCatalogProduct[];
+  shippingOptions?: unknown;
+  socialNetworks?: unknown;
+  meta?: Record<string, unknown>;
+};
+
+type PublicCatalogEnvelope = {
+  success?: boolean;
+  data?: PublicCatalogSnapshot;
+};
+
+const PUBLIC_CATALOG_PAGE_SIZE = 24;
+
+export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
+  private readonly branchSlug: string | null;
+  private lastBusinessId: string | null;
+  private snapshotPromise: Promise<PublicCatalogSnapshot | null> | null = null;
+  private snapshotKey: string | null = null;
+
+  constructor(
+    private readonly baseUrl: string,
+    branchSlug?: string | null,
+    businessIdHint?: string | number | null,
+  ) {
+    const normalizedSlug = String(branchSlug ?? "").trim();
+    this.branchSlug = normalizedSlug || null;
+    const normalizedBusinessId = String(businessIdHint ?? "").trim();
+    this.lastBusinessId = normalizedBusinessId || null;
+  }
+
+  private getPublicCatalogUrl(businessId: string) {
+    const base = `${normalizeBase(this.baseUrl)}public-catalog/${encodeURIComponent(businessId)}`;
+    return this.branchSlug ? `${base}/${encodeURIComponent(this.branchSlug)}` : base;
+  }
+
+  private async getPublicSnapshot(businessId: string): Promise<PublicCatalogSnapshot | null> {
+    const normalizedBusinessId = String(businessId ?? "").trim();
+    if (!normalizedBusinessId) return null;
+    this.lastBusinessId = normalizedBusinessId;
+
+    const key = `${normalizedBusinessId}:${this.branchSlug ?? "main"}`;
+    if (this.snapshotPromise && this.snapshotKey === key) return this.snapshotPromise;
+
+    this.snapshotKey = key;
+    this.snapshotPromise = (async () => {
+      const response = await fetch(this.getPublicCatalogUrl(normalizedBusinessId));
+      if (!response.ok) return null;
+      const envelope = (await response.json()) as PublicCatalogEnvelope | PublicCatalogSnapshot;
+      const snapshot = (envelope as PublicCatalogEnvelope).data ?? (envelope as PublicCatalogSnapshot);
+      return snapshot && typeof snapshot === "object" ? snapshot : null;
+    })();
+
+    return this.snapshotPromise;
+  }
+
+  private normalizePublicProduct(item: PublicCatalogProduct, businessId: string): StorefrontProduct {
+    const imageRows = Array.isArray(item.images) ? item.images : [];
+    const images = imageRows
+      .map((image) => asString(image?.image))
+      .filter(Boolean);
 
     return {
-      id: Number(data.Id ?? 0),
-      name: data.Name?.trim() || "Tienda",
-      phone: data.PhoneNumber ?? null,
-      plan: String(data.Plan ?? data.plan ?? "").trim() || null,
-      logo: String(data.Logo ?? data.logo ?? "").trim() || null,
+      id: parseNumber(item.id),
+      businessId: parseNumber(businessId),
+      categoryId: item.category?.id != null ? parseNumber(item.category.id) : null,
+      name: asString(item.name) || "Producto",
+      description: asString(item.description),
+      image: images[0] ?? "",
+      images,
+      price: parseNumber(item.price),
+      promotionPrice: normalizeOptionalNumber(item.promotionPrice),
+      wholesalePrice: null,
+      wholesaleMinQuantity: null,
+      wholesalePrices: normalizeWholesalePrices(item.wholesalePrices),
+      variantsCount: Array.isArray(item.variants) ? item.variants.length : 0,
+      forSale: true,
+      available: true,
+      showInStore: true,
+      showPrice: item.showPrice !== false,
+    };
+  }
+
+  private normalizePublicVariant(item: NonNullable<PublicCatalogProduct["variants"]>[number]): StorefrontVariant {
+    const tiers = normalizeWholesalePrices(item.wholesalePrices);
+    return {
+      id: parseNumber(item.id),
+      description: asString(item.description) || "Variante",
+      color: asString(item.color),
+      image: asString(item.image),
+      price: parseNumber(item.price),
+      promotionPrice: normalizeOptionalNumber(item.promotionPrice),
+      wholesalePrice: tiers[0]?.price ?? null,
+      wholesaleMinQuantity: tiers[0]?.minQuantity ?? null,
+      wholesalePrices: tiers,
+      costPerItem: null,
+      stock: normalizeOptionalNumber(item.stock),
+    };
+  }
+
+  private async getPublicProducts(businessId: string): Promise<StorefrontProduct[]> {
+    const snapshot = await this.getPublicSnapshot(businessId);
+    const rows = Array.isArray(snapshot?.products) ? snapshot.products : [];
+    return rows
+      .map((item) => this.normalizePublicProduct(item, businessId))
+      .filter((item) => item.id > 0);
+  }
+
+  async getBusinessById(businessId: string): Promise<StorefrontBusiness | null> {
+    logCatalogDebug("business:request", { businessId, branchSlug: this.branchSlug });
+
+    const [snapshot, legacyResponse] = await Promise.all([
+      this.getPublicSnapshot(businessId),
+      fetch(`${normalizeBase(this.baseUrl)}business/${businessId}`).catch(() => null),
+    ]);
+
+    if (!snapshot?.business) return null;
+
+    let legacy: BusinessResponse | null = null;
+    if (legacyResponse?.ok) {
+      legacy = (await legacyResponse.json().catch(() => null)) as BusinessResponse | null;
+    }
+
+    const catalogFeature = normalizeOptionalNumber(legacy?.Features?.Catalog ?? legacy?.features?.Catalog ?? legacy?.features?.catalog);
+    const branch = snapshot.branch;
+    const availableBranches = Array.isArray(snapshot.availableBranches) ? snapshot.availableBranches : [];
+
+    return {
+      id: parseNumber(snapshot.business.id ?? businessId),
+      name: asString(snapshot.business.name) || asString(legacy?.Name) || "Tienda",
+      phone: asString(branch?.whatsApp) || asString(branch?.phoneNumber) || asString(legacy?.PhoneNumber) || null,
+      plan: asString(legacy?.Plan ?? legacy?.plan) || null,
+      logo: asString(snapshot.business.logo) || asString(legacy?.Logo ?? legacy?.logo) || null,
       catalogFeature,
+      branch: branch
+        ? {
+            id: parseNumber(branch.id),
+            name: asString(branch.name) || "Sucursal",
+            code: asString(branch.code),
+            slug: asString(branch.slug),
+            isMain: Boolean(branch.isMain),
+            phoneNumber: asString(branch.phoneNumber) || null,
+            whatsApp: asString(branch.whatsApp) || null,
+            address: asString(branch.address) || null,
+            references: asString(branch.references) || null,
+          }
+        : undefined,
+      availableBranches: availableBranches
+        .map((row) => ({
+          id: parseNumber(row.id),
+          name: asString(row.name) || "Sucursal",
+          code: asString(row.code),
+          slug: asString(row.slug),
+          isMain: Boolean(row.isMain),
+        }))
+        .filter((row) => row.id > 0 && row.slug.length > 0),
     };
   }
 
   async getCategoriesByBusiness(businessId: string): Promise<StorefrontCategory[]> {
-    logCatalogDebug("categories:request", { businessId });
-    const response = await fetch(`${normalizeBase(this.baseUrl)}categories/business/${businessId}`);
-    logCatalogDebug("categories:response", { businessId, ok: response.ok, status: response.status });
-    if (!response.ok) return [];
-    const raw = (await response.json()) as CategoryResponse[];
-    if (!Array.isArray(raw)) return [];
-
-    const categories = raw
-      .map((item) => ({ id: parseNumber(item.Id ?? item.id), name: (item.Name ?? item.name ?? "").toString().trim() }))
-      .filter((item) => item.id > 0 && item.name.length > 0);
-    logCatalogDebug("categories:data", { businessId, count: categories.length });
-    return categories;
+    const snapshot = await this.getPublicSnapshot(businessId);
+    const rows = Array.isArray(snapshot?.categories) ? snapshot.categories : [];
+    return rows
+      .map((row) => ({ id: parseNumber(row.id), name: asString(row.name) }))
+      .filter((row) => row.id > 0 && row.name.length > 0);
   }
 
-  async getProductsByBusinessPage(businessId: string, page = 1, planLimit?: string): Promise<StorefrontProductsPage> {
-    const visit = getVisitValue(businessId);
-    const limit = String(planLimit ?? "30");
-    const url = `${normalizeBase(this.baseUrl)}products/showstore/stockgtzero/${businessId}/1?page=${page}&visit=${visit}`;
-    logCatalogDebug("products-by-business:request", { businessId, page, visit, limit, url });
+  async getProductsByBusinessPage(businessId: string, page = 1, _planLimit?: string): Promise<StorefrontProductsPage> {
+    const all = await this.getPublicProducts(businessId);
+    const safePage = Math.max(1, Math.floor(Number(page) || 1));
+    const totalPages = Math.max(1, Math.ceil(all.length / PUBLIC_CATALOG_PAGE_SIZE));
+    const currentPage = Math.min(safePage, totalPages);
+    const start = (currentPage - 1) * PUBLIC_CATALOG_PAGE_SIZE;
+    return {
+      products: all.slice(start, start + PUBLIC_CATALOG_PAGE_SIZE),
+      pagination: {
+        currentPage,
+        totalPages,
+        hasNext: currentPage < totalPages,
+        hasPrev: currentPage > 1,
+      },
+    };
+  }
 
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ Limit: limit }),
-    });
-    logCatalogDebug("products-by-business:response", { businessId, page, ok: response.ok, status: response.status });
+  async getProductsByCategoryPage(categoryId: number, page = 1, _planLimit?: string): Promise<StorefrontProductsPage> {
+    const businessId = this.lastBusinessId ?? "";
+    if (!businessId) return { products: [], pagination: { currentPage: 1, totalPages: 1, hasNext: false, hasPrev: false } };
+    const all = (await this.getPublicProducts(businessId)).filter((product) => product.categoryId === categoryId);
+    const safePage = Math.max(1, Math.floor(Number(page) || 1));
+    const totalPages = Math.max(1, Math.ceil(all.length / PUBLIC_CATALOG_PAGE_SIZE));
+    const currentPage = Math.min(safePage, totalPages);
+    const start = (currentPage - 1) * PUBLIC_CATALOG_PAGE_SIZE;
+    return {
+      products: all.slice(start, start + PUBLIC_CATALOG_PAGE_SIZE),
+      pagination: { currentPage, totalPages, hasNext: currentPage < totalPages, hasPrev: currentPage > 1 },
+    };
+  }
 
-    if (!response.ok) {
-      return {
-        products: [],
-        pagination: { currentPage: page, totalPages: 1, hasNext: false, hasPrev: page > 1 },
-      };
-    }
+  async getAllProductsByBusiness(businessId: string, _planLimit?: string): Promise<StorefrontProduct[]> {
+    return this.getPublicProducts(businessId);
+  }
 
-    const raw = (await response.json()) as
-      | { data?: ProductResponse[]; products?: ProductResponse[]; pagination?: { currentPage?: number; totalPages?: number; hasNext?: boolean; hasPrev?: boolean } }
-      | ProductResponse[];
-
-    const normalized = normalizeProductsPage(raw, page, businessId);
-    logCatalogDebug("products-by-business:data", {
-      businessId,
-      page,
-      count: normalized.products.length,
-      totalPages: normalized.pagination.totalPages,
-    });
-    return normalized;
+  async getAllProductsByCategory(categoryId: number, businessId: string, _planLimit?: string): Promise<StorefrontProduct[]> {
+    return (await this.getPublicProducts(businessId)).filter((product) => product.categoryId === categoryId);
   }
 
   async registerBusinessVisit(businessId: string, mode: "unique" | "always" = "unique"): Promise<boolean> {
@@ -437,94 +623,21 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ Business_Id: normalizedBusinessId }),
       });
-
-      const payload = await response.json().catch(() => null) as {
-        message?: string;
-        code?: string;
-      } | null;
-
+      const payload = await response.json().catch(() => null) as { message?: string; code?: string } | null;
       if (response.status === 403 && payload?.code === CATALOG_VISIT_LIMIT_REACHED_CODE) {
         throw new CatalogVisitLimitReachedError(payload.message);
       }
-
       return response.ok;
     } catch (cause) {
-      if (cause instanceof CatalogVisitLimitReachedError) {
-        throw cause;
-      }
-
+      if (cause instanceof CatalogVisitLimitReachedError) throw cause;
       return false;
     }
   }
-
-  async getProductsByCategoryPage(categoryId: number, page = 1, planLimit?: string): Promise<StorefrontProductsPage> {
-    const limit = String(planLimit ?? "30");
-    const url = `${normalizeBase(this.baseUrl)}products/category/availablegtzero/${categoryId}?page=${page}`;
-    logCatalogDebug("products-by-category:request", { categoryId, page, limit, url });
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ Limit: limit }),
-    });
-    logCatalogDebug("products-by-category:response", { categoryId, page, ok: response.ok, status: response.status });
-
-    if (!response.ok) {
-      return {
-        products: [],
-        pagination: { currentPage: page, totalPages: 1, hasNext: false, hasPrev: page > 1 },
-      };
-    }
-
-    const raw = (await response.json()) as
-      | { data?: ProductResponse[]; products?: ProductResponse[]; pagination?: { currentPage?: number; totalPages?: number; hasNext?: boolean; hasPrev?: boolean } }
-      | ProductResponse[];
-
-    const normalized = normalizeProductsPage(raw, page, String(categoryId));
-    logCatalogDebug("products-by-category:data", {
-      categoryId,
-      page,
-      count: normalized.products.length,
-      totalPages: normalized.pagination.totalPages,
-    });
-    return normalized;
-  }
-
-  async getAllProductsByBusiness(businessId: string, planLimit?: string): Promise<StorefrontProduct[]> {
-    const limit = String(planLimit ?? "30");
-    const url = `${normalizeBase(this.baseUrl)}products/showstore/stockgtzero/all/${businessId}/1`;
-    logCatalogDebug("products-by-business-all:request", { businessId, limit, url });
-
-    const response = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ Limit: limit }),
-    });
-    logCatalogDebug("products-by-business-all:response", { businessId, ok: response.ok, status: response.status });
-
-    if (!response.ok) return [];
-
-    const raw = (await response.json()) as
-      | { data?: ProductResponse[]; products?: ProductResponse[] }
-      | ProductResponse[];
-    const rows = Array.isArray(raw) ? raw : raw.data ?? raw.products ?? [];
-    const normalized = normalizeProducts(rows, businessId);
-    logCatalogDebug("products-by-business-all:data", { businessId, count: normalized.length });
-
-    return normalized;
-  }
-
-  async getAllProductsByCategory(categoryId: number, businessId: string, planLimit?: string): Promise<StorefrontProduct[]> {
-    const products = await this.getAllProductsByBusiness(businessId, planLimit);
-    return products.filter((product) => product.categoryId === categoryId);
-  }
-
 
   async getBusinessCheckoutConfig(businessId: string): Promise<StorefrontBusinessCheckoutConfig | null> {
     const response = await fetch(`${normalizeBase(this.baseUrl)}business/${businessId}`);
     if (!response.ok) return null;
     const data = (await response.json()) as { StripeAccountId?: string | null; ChargesEnabled?: number | string; MoneyTipe?: string | null };
-
     return {
       stripeAccountId: data.StripeAccountId ?? null,
       chargesEnabled: Number(data.ChargesEnabled ?? 0) === 1,
@@ -545,7 +658,6 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-
     if (!response.ok) return null;
     return (await response.json()) as { sessionId?: string; message?: string } | null;
   }
@@ -556,36 +668,40 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-
     if (!response.ok) return null;
     return (await response.json()) as { Id?: number; Message?: string } | null;
   }
 
   async getVariantsByProductId(productId: number): Promise<StorefrontVariant[]> {
+    const businessId = this.lastBusinessId ?? "";
+    if (businessId) {
+      const snapshot = await this.getPublicSnapshot(businessId);
+      const product = (snapshot?.products ?? []).find((item) => parseNumber(item.id) === productId);
+      if (product) {
+        return (product.variants ?? [])
+          .map((variant) => this.normalizePublicVariant(variant))
+          .filter((variant) => variant.id > 0);
+      }
+    }
+
+    // Compatibilidad para vistas antiguas que abran un detalle sin contexto de catálogo.
     const response = await fetch(`${normalizeBase(this.baseUrl)}variants/product/${productId}`);
     if (!response.ok) return [];
-    const raw = (await response.json()) as Array<{ Id?: number; id?: number; Description?: string; description?: string; Color?: string; color?: string; Image?: string | null; image?: string | null; Price?: number | string; price?: number | string; PromotionPrice?: number | string; promotionPrice?: number | string; WholesalePrice?: number | string | null; wholesalePrice?: number | string | null; WholesaleMinQuantity?: number | string | null; wholesaleMinQuantity?: number | string | null; WholesalePrices?: unknown; wholesalePrices?: unknown; CostPerItem?: number | string; costPerItem?: number | string; Stock?: number | string; stock?: number | string }>;
+    const raw = (await response.json()) as Array<{ Id?: number; id?: number; Description?: string; description?: string; Color?: string; color?: string; Image?: string; image?: string; Price?: number | string; price?: number | string; PromotionPrice?: number | string; promotionPrice?: number | string; WholesalePrice?: number | string | null; wholesalePrice?: number | string | null; WholesaleMinQuantity?: number | string | null; wholesaleMinQuantity?: number | string | null; WholesalePrices?: unknown; wholesalePrices?: unknown; CostPerItem?: number | string; costPerItem?: number | string; Stock?: number | string; stock?: number | string }>;
     if (!Array.isArray(raw)) return [];
-
-    return raw
-      .map((item) => ({
-        id: parseNumber(item.Id ?? item.id),
-        description: (item.Description ?? item.description ?? "Variante").trim(),
-        color: (item.Color ?? item.color)?.trim() || "",
-        image: asString(item.Image ?? item.image),
-        price: parseNumber(item.Price ?? item.price),
-        promotionPrice: item.PromotionPrice != null || item.promotionPrice != null ? parseNumber(item.PromotionPrice ?? item.promotionPrice) : null,
-        wholesalePrice: item.WholesalePrice != null || item.wholesalePrice != null ? parseNumber(item.WholesalePrice ?? item.wholesalePrice) : null,
-        wholesaleMinQuantity: item.WholesaleMinQuantity != null || item.wholesaleMinQuantity != null ? parseNumber(item.WholesaleMinQuantity ?? item.wholesaleMinQuantity) : null,
-        wholesalePrices: normalizeWholesalePrices(
-          item.WholesalePrices ?? item.wholesalePrices,
-          item.WholesalePrice ?? item.wholesalePrice,
-          item.WholesaleMinQuantity ?? item.wholesaleMinQuantity,
-        ),
-        costPerItem: item.CostPerItem != null || item.costPerItem != null ? parseNumber(item.CostPerItem ?? item.costPerItem) : null,
-        stock: item.Stock != null || item.stock != null ? parseNumber(item.Stock ?? item.stock) : null,
-      }))
-      .filter((item) => item.id > 0);
+    return raw.map((item) => ({
+      id: parseNumber(item.Id ?? item.id),
+      description: asString(item.Description ?? item.description) || "Variante",
+      color: asString(item.Color ?? item.color),
+      image: asString(item.Image ?? item.image),
+      price: parseNumber(item.Price ?? item.price),
+      promotionPrice: normalizeOptionalNumber(item.PromotionPrice ?? item.promotionPrice),
+      wholesalePrice: normalizeOptionalNumber(item.WholesalePrice ?? item.wholesalePrice),
+      wholesaleMinQuantity: normalizeOptionalNumber(item.WholesaleMinQuantity ?? item.wholesaleMinQuantity),
+      wholesalePrices: normalizeWholesalePrices(item.WholesalePrices ?? item.wholesalePrices, item.WholesalePrice ?? item.wholesalePrice, item.WholesaleMinQuantity ?? item.wholesaleMinQuantity),
+      costPerItem: normalizeOptionalNumber(item.CostPerItem ?? item.costPerItem),
+      stock: normalizeOptionalNumber(item.Stock ?? item.stock),
+    })).filter((item) => item.id > 0);
   }
 
   async getProductExtrasByProductId(productId: number): Promise<StorefrontProductExtras> {
@@ -594,58 +710,30 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
     if (!response.ok) return empty;
     const raw = (await response.json()) as Record<string, Array<{ Id?: number; Product_Id?: number; Description?: string; Type?: string }>>;
     if (!raw || typeof raw !== "object") return empty;
-
     const normalizeExtras = (values: Array<{ Id?: number; Product_Id?: number; Description?: string; Type?: string }> | undefined) =>
       (Array.isArray(values) ? values : [])
         .map((item) => ({
           id: parseNumber(item.Id),
           productId: parseNumber(item.Product_Id),
-          description: (item.Description ?? "").trim(),
-          type: (item.Type ?? "").trim().toUpperCase(),
+          description: asString(item.Description),
+          type: asString(item.Type).toUpperCase(),
         }))
         .filter((item) => item.id > 0 && item.description.length > 0);
-
-    return {
-      colors: normalizeExtras(raw.COLOR),
-      sizes: normalizeExtras(raw.TALLA),
-    };
+    return { colors: normalizeExtras(raw.COLOR), sizes: normalizeExtras(raw.TALLA) };
   }
 
   async getProductById(productId: string): Promise<StorefrontProduct | null> {
+    const businessId = this.lastBusinessId ?? "";
+    if (businessId) {
+      const products = await this.getPublicProducts(businessId);
+      const found = products.find((product) => product.id === parseNumber(productId));
+      if (found) return found;
+    }
+
     const response = await fetch(`${normalizeBase(this.baseUrl)}products/${productId}`);
     if (!response.ok) return null;
     const item = (await response.json()) as ProductResponse | null;
     if (!item || !parseNumber(item.Id ?? item.id)) return null;
-
-    return {
-      id: parseNumber(item.Id ?? item.id),
-      businessId: parseNumber(item.Business_Id ?? item.businessId),
-      name: (item.Name ?? item.name ?? "Producto").toString().trim(),
-      description: (item.Description ?? item.description ?? "").toString().trim(),
-      image: normalizeImage(item.Image ?? item.image, item.Images ?? item.images),
-      images: normalizeImages(item.Image ?? item.image, item.Images ?? item.images),
-      price: parseNumber(item.Price ?? item.price),
-      promotionPrice:
-        item.PromotionPrice != null || item.promotionPrice != null
-          ? parseNumber(item.PromotionPrice ?? item.promotionPrice)
-          : null,
-      wholesalePrice:
-        item.WholesalePrice != null || item.wholesalePrice != null
-          ? parseNumber(item.WholesalePrice ?? item.wholesalePrice)
-          : null,
-      wholesaleMinQuantity:
-        item.WholesaleMinQuantity != null || item.wholesaleMinQuantity != null
-          ? parseNumber(item.WholesaleMinQuantity ?? item.wholesaleMinQuantity)
-          : null,
-      wholesalePrices: normalizeWholesalePrices(
-        item.WholesalePrices ?? item.wholesalePrices,
-        item.WholesalePrice ?? item.wholesalePrice,
-        item.WholesaleMinQuantity ?? item.wholesaleMinQuantity,
-      ),
-      variantsCount: parseNumber(item.VariantsCount ?? item.variantsCount),
-      forSale: toBoolean(item.ForSale ?? item.forSale, true),
-      available: toBoolean(item.Available ?? item.available, true),
-      showInStore: toBoolean(item.ShowInStore ?? item.showInStore, true),
-    };
+    return normalizeProducts([item], String(item.Business_Id ?? item.businessId ?? businessId))[0] ?? null;
   }
 }

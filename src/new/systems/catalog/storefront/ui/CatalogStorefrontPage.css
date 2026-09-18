@@ -350,3 +350,65 @@
 :root[data-theme="dark"] .catalog-v2-grid__wholesale-tiers > div.is-current strong {
   color: #f5d0fe;
 }
+
+/* Multi-sucursal */
+.catalog-v2__header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.catalog-v2__branch-picker {
+  display: grid;
+  gap: 0.2rem;
+  min-width: 150px;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.catalog-v2__branch-picker select {
+  min-height: 38px;
+  max-width: 220px;
+  border: 1px solid var(--border-default);
+  border-radius: 10px;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  padding: 0 0.65rem;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.catalog-v2__branch-name {
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+@media (max-width: 640px) {
+  .catalog-v2__header {
+    align-items: flex-start;
+  }
+
+  .catalog-v2__header-actions {
+    gap: 0.5rem;
+  }
+
+  .catalog-v2__branch-picker {
+    min-width: 112px;
+  }
+
+  .catalog-v2__branch-picker span {
+    display: none;
+  }
+
+  .catalog-v2__branch-picker select {
+    max-width: 145px;
+    min-height: 36px;
+  }
+}

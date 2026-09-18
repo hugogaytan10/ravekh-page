@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../../shared/ui/PosV2Shell";
 import { POS_SESSION_STORAGE_KEYS } from "../../../../shared/config/posSession";
+import { buildPosAuthHeaders } from "../../../../shared/config/posBranch";
 import { usePlanActionGuard } from "../../../../shared/hooks/usePlanActionGuard";
 import { PlanUpgradeModal } from "../../../../shared/ui/PlanUpgradeModal";
 import { POS_V2_PATHS } from "../../../../routing/PosV2Paths";
@@ -18,6 +19,7 @@ type ZoneVm = {
   id: number;
   name: string;
   isActive: boolean;
+  tables: TableVm[];
 };
 
 type TableVm = {
@@ -57,6 +59,9 @@ const toZoneVm = (row: ZoneApiResponse): ZoneVm => ({
   id: Number(row.Id ?? 0),
   name: String(row.Name ?? "").trim(),
   isActive: toBoolean(row.Active),
+  tables: (Array.isArray(row.Tables) ? row.Tables : [])
+    .map(toTableVm)
+    .filter((table) => table.id > 0 && table.zoneId > 0),
 });
 
 const toTableVm = (row: TableApiResponse): TableVm => ({
@@ -109,11 +114,7 @@ export const PosV2TableZonesPage = () => {
   const totalKnownTables = Math.max(knownTablesCount, tables.length);
 
   const headers = useMemo(
-    () => ({
-      "Content-Type": "application/json",
-      token: cleanToken,
-      Authorization: `Bearer ${cleanToken}`,
-    }),
+    () => buildPosAuthHeaders(cleanToken),
     [cleanToken],
   );
 
@@ -165,13 +166,13 @@ export const PosV2TableZonesPage = () => {
     setError(null);
 
     try {
-      const response = await fetch(new URL(`table_zones/business/${businessId}`, API_BASE_URL).toString(), { headers });
+      const response = await fetch(new URL("restaurant/branch/zones", API_BASE_URL).toString(), { headers });
       if (!response.ok) {
         throw new Error(`No se pudieron cargar zonas (${response.status}).`);
       }
 
-      const payload = (await response.json().catch(() => null)) as ZoneApiResponse[] | null;
-      const rawZones = Array.isArray(payload) ? payload : [];
+      const payload = (await response.json().catch(() => null)) as { data?: ZoneApiResponse[] } | ZoneApiResponse[] | null;
+      const rawZones = Array.isArray(payload) ? payload : (Array.isArray(payload?.data) ? payload.data : []);
       const preloadedTablesCount = rawZones.reduce(
         (count, zone) => count + (Array.isArray(zone.Tables) ? zone.Tables.length : 0),
         0,
@@ -203,26 +204,18 @@ export const PosV2TableZonesPage = () => {
     setError(null);
 
     try {
-      const response = await fetch(new URL(`tables/zone/${zoneId}`, API_BASE_URL).toString(), { headers });
-      if (!response.ok) {
-        throw new Error(`No se pudieron cargar mesas (${response.status}).`);
-      }
-
-      const payload = (await response.json().catch(() => null)) as TableApiResponse[] | null;
-      const tableRows = (Array.isArray(payload) ? payload : [])
-        .map(toTableVm)
-        .filter((table) => table.id > 0 && table.name.length > 0 && table.zoneId > 0)
-        .sort((a, b) => a.id - b.id);
-
+      const zone = zones.find((item) => item.id === zoneId);
+      const tableRows = (zone?.tables ?? []).slice().sort((a, b) => a.id - b.id);
       setTables(tableRows);
-      setKnownTablesCount((current) => Math.max(current, tableRows.length));
+      const totalTables = zones.reduce((count, item) => count + item.tables.length, 0);
+      setKnownTablesCount((current) => Math.max(current, totalTables));
     } catch (cause) {
       setTables([]);
       setError(cause instanceof Error ? cause.message : "No se pudieron cargar las mesas.");
     } finally {
       setLoadingTables(false);
     }
-  }, [hasSession, headers]);
+  }, [hasSession, zones]);
 
   useEffect(() => {
     if (hasSession) {
@@ -311,15 +304,15 @@ export const PosV2TableZonesPage = () => {
 
       try {
         const nextValue = !isTableOrderEnabled;
-      const response = await fetch(new URL(`table_zones/active/${businessId}`, API_BASE_URL).toString(), {
-        method: "PUT",
-        headers,
-        body: JSON.stringify({ active: nextValue }),
-      });
+        const responses = await Promise.all(zones.map((zone) => fetch(new URL(`table_zones/${zone.id}`, API_BASE_URL).toString(), {
+          method: "PUT",
+          headers,
+          body: JSON.stringify({ Business_Id: businessId, Name: zone.name, Active: nextValue }),
+        })));
 
-      if (!response.ok) {
-        throw new Error(`No se pudo actualizar pedidos con mesa (${response.status}).`);
-      }
+        if (responses.some((response) => !response.ok)) {
+          throw new Error("No se pudo actualizar una o más zonas de la sucursal.");
+        }
 
       setSuccessMessage(nextValue ? "Pedidos con mesa activados." : "Pedidos con mesa desactivados.");
       await loadZones();
@@ -350,12 +343,14 @@ export const PosV2TableZonesPage = () => {
       setError(null);
 
       try {
-        const endpoint = zoneEditId ? `table_zones/${zoneEditId}` : "table_zones";
-      const response = await fetch(new URL(endpoint, API_BASE_URL).toString(), {
-        method: zoneEditId ? "PUT" : "POST",
-        headers,
-        body: JSON.stringify({ Business_Id: businessId, Name: safeName, Active: true }),
-      });
+        const endpoint = zoneEditId ? `table_zones/${zoneEditId}` : "restaurant/branch/zones";
+        const response = await fetch(new URL(endpoint, API_BASE_URL).toString(), {
+          method: zoneEditId ? "PUT" : "POST",
+          headers,
+          body: JSON.stringify(zoneEditId
+            ? { Business_Id: businessId, Name: safeName, Active: true }
+            : { zoneName: safeName, numTables: 1, isAvailable: true, chairs: 4 }),
+        });
 
       if (!response.ok) {
         throw new Error(`No se pudo guardar la zona (${response.status}).`);
@@ -400,7 +395,7 @@ export const PosV2TableZonesPage = () => {
       setSaving(true);
       setError(null);
       try {
-        const response = await fetch(new URL(`table_zones/zone/${businessId}`, API_BASE_URL).toString(), {
+        const response = await fetch(new URL("restaurant/branch/zones", API_BASE_URL).toString(), {
         method: "POST",
         headers,
         body: JSON.stringify({
@@ -484,7 +479,7 @@ export const PosV2TableZonesPage = () => {
       setTableEditId(null);
       setSuccessMessage(tableEditId ? "Mesa actualizada correctamente." : "Mesa creada correctamente.");
       setIsTableModalOpen(false);
-      await loadTablesByZone(Number(selectedZoneId));
+      await loadZones();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo guardar la mesa.");
       } finally {
@@ -546,7 +541,7 @@ export const PosV2TableZonesPage = () => {
       }
 
       setSuccessMessage("Mesa eliminada correctamente.");
-      await loadTablesByZone(Number(selectedZoneId));
+      await loadZones();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo eliminar la mesa.");
       } finally {

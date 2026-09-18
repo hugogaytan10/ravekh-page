@@ -1,0 +1,568 @@
+/* =========================================================
+   RAVEKH — Sucursales
+   Estilos autosuficientes.
+   No dependen de variables de PosV2Shell.
+   ========================================================= */
+
+.pos-branches {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  gap: 18px;
+  width: 100%;
+  max-width: 1120px;
+  margin: 0 auto;
+  color: #111827;
+}
+
+.pos-branches__sidebar,
+.pos-branches__card,
+.pos-branches__notice {
+  border: 1px solid #e2e8f0;
+  border-radius: 18px;
+  background: #ffffff;
+  color: #111827;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.pos-branches__sidebar {
+  position: sticky;
+  top: 16px;
+  align-self: start;
+  height: max-content;
+  padding: 14px;
+}
+
+.pos-branches__sidebar-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px;
+}
+
+.pos-branches__sidebar-title > div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.pos-branches__sidebar-title strong {
+  color: #111827;
+  font-size: 15px;
+}
+
+.pos-branches__sidebar-title span {
+  color: #64748b;
+  font-size: 12px;
+}
+
+.pos-branches__sidebar-title button {
+  min-height: 38px;
+  border: 1px solid rgba(109, 1, 209, 0.28);
+  border-radius: 10px;
+  padding: 8px 11px;
+  background: rgba(109, 1, 209, 0.08);
+  color: #6d01d1;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pos-branches__sidebar-title button:hover {
+  background: rgba(109, 1, 209, 0.14);
+}
+
+.pos-branches__list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.pos-branches__item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  width: 100%;
+  min-width: 0;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  padding: 11px;
+  background: transparent;
+  color: #111827;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pos-branches__item:hover {
+  border-color: #e2e8f0;
+  background: #f8fafc;
+}
+
+.pos-branches__item > span {
+  overflow: hidden;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-branches__item small {
+  color: #64748b;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pos-branches__item.is-active {
+  border-color: rgba(109, 1, 209, 0.3);
+  background: rgba(109, 1, 209, 0.09);
+  color: #5b21b6;
+}
+
+.pos-branches__content {
+  min-width: 0;
+  display: grid;
+  gap: 18px;
+}
+
+.pos-branches__card {
+  padding: 22px;
+}
+
+.pos-branches__card-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 15px;
+  margin-bottom: 18px;
+}
+
+.pos-branches__card-heading > div {
+  min-width: 0;
+}
+
+.pos-branches__card-heading h2 {
+  margin: 0 0 5px;
+  color: #111827;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.pos-branches__card-heading p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.pos-branches__badge {
+  flex: 0 0 auto;
+  border: 1px solid rgba(109, 1, 209, 0.22);
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(109, 1, 209, 0.10);
+  color: #6d01d1;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.pos-branches__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.pos-branches__grid label,
+.pos-branches__copy {
+  display: grid;
+  gap: 6px;
+  color: #374151;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.pos-branches__grid input,
+.pos-branches__grid textarea,
+.pos-branches__copy select {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #cbd5e1;
+  border-radius: 11px;
+  outline: none;
+  background: #ffffff;
+  color: #111827;
+  font: inherit;
+  font-weight: 500;
+}
+
+.pos-branches__grid input,
+.pos-branches__copy select {
+  min-height: 44px;
+  padding: 10px 12px;
+}
+
+.pos-branches__grid textarea {
+  min-height: 76px;
+  padding: 10px 12px;
+  resize: vertical;
+  line-height: 1.45;
+}
+
+.pos-branches__grid input::placeholder,
+.pos-branches__grid textarea::placeholder {
+  color: #94a3b8;
+}
+
+.pos-branches__grid input:focus,
+.pos-branches__grid textarea:focus,
+.pos-branches__copy select:focus {
+  border-color: #7c3aed;
+  box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
+}
+
+.pos-branches__span-2 {
+  grid-column: 1 / -1;
+}
+
+.pos-branches__toggle {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: fit-content;
+  margin-top: 16px;
+  color: #374151;
+  font-weight: 700;
+}
+
+.pos-branches__toggle input,
+.pos-branches__employee input {
+  width: 17px;
+  height: 17px;
+  margin: 0;
+  accent-color: #6d01d1;
+}
+
+.pos-branches__copy {
+  margin-top: 16px;
+}
+
+.pos-branches__copy small {
+  color: #64748b;
+  font-weight: 400;
+}
+
+.pos-branches__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.pos-branches__actions button {
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  padding: 9px 13px;
+  font: inherit;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.pos-branches__actions .is-primary {
+  border-color: #6d01d1;
+  background: #6d01d1;
+  color: #ffffff;
+}
+
+.pos-branches__actions .is-primary:hover:not(:disabled) {
+  border-color: #5b21b6;
+  background: #5b21b6;
+}
+
+.pos-branches__actions .is-danger {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.pos-branches__actions button:disabled,
+.pos-branches__sidebar-title button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.pos-branches__error,
+.pos-branches__success {
+  margin-top: 14px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  padding: 10px 12px;
+  font-weight: 650;
+}
+
+.pos-branches__error {
+  border-color: #fecdd3;
+  background: #fff1f2;
+  color: #be123c;
+}
+
+.pos-branches__success {
+  border-color: #a7f3d0;
+  background: #ecfdf5;
+  color: #047857;
+}
+
+.pos-branches__employees {
+  display: grid;
+  gap: 8px;
+}
+
+.pos-branches__employee {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  min-height: 54px;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 11px 12px;
+  background: #f8fafc;
+  color: #111827;
+}
+
+.pos-branches__employee > span {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.pos-branches__employee strong {
+  overflow: hidden;
+  color: #111827;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-branches__employee small {
+  overflow: hidden;
+  color: #64748b;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pos-branches__notice {
+  max-width: 760px;
+  margin: 40px auto;
+  padding: 25px;
+}
+
+.pos-branches__notice h2 {
+  margin: 0 0 8px;
+  color: #111827;
+}
+
+.pos-branches__notice p {
+  margin: 0;
+  color: #64748b;
+  line-height: 1.5;
+}
+
+
+/* =========================================================
+   OSCURO — usa EXACTAMENTE el atributo del toggle de RAVEKH
+   Se usan !important en propiedades visuales críticas para
+   vencer cualquier CSS legacy que aún cargue después.
+   ========================================================= */
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches {
+  color: #f8fafc !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__sidebar,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__card,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__notice {
+  background: #111827 !important;
+  background-color: #111827 !important;
+  border-color: #334155 !important;
+  color: #f8fafc !important;
+  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.32) !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__sidebar-title strong,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__card-heading h2,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__grid label,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__toggle,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__copy,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__employee strong,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__notice h2 {
+  color: #f8fafc !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__sidebar-title span,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__card-heading p,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__copy small,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__employee small,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__notice p {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__sidebar-title button {
+  border-color: rgba(167, 139, 250, 0.38) !important;
+  background: rgba(124, 58, 237, 0.18) !important;
+  color: #ddd6fe !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__sidebar-title button:hover {
+  background: rgba(124, 58, 237, 0.28) !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__item {
+  background: transparent !important;
+  color: #e2e8f0 !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__item small {
+  color: #94a3b8 !important;
+  opacity: 1 !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__item:hover {
+  border-color: #475569 !important;
+  background: #172033 !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__item.is-active {
+  border-color: rgba(167, 139, 250, 0.48) !important;
+  background: rgba(124, 58, 237, 0.20) !important;
+  color: #f5f3ff !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__item.is-active small {
+  color: #c4b5fd !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__badge {
+  border-color: rgba(167, 139, 250, 0.35) !important;
+  background: rgba(124, 58, 237, 0.20) !important;
+  color: #ede9fe !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__grid input,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__grid textarea,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__copy select {
+  border-color: #475569 !important;
+  background: #0f172a !important;
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+  caret-color: #f8fafc !important;
+  color-scheme: dark !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__grid input::placeholder,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__grid textarea::placeholder {
+  color: #64748b !important;
+  opacity: 1 !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__grid input:focus,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__grid textarea:focus,
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__copy select:focus {
+  border-color: #a78bfa !important;
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.20) !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__copy select option {
+  background: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__employee {
+  border-color: #334155 !important;
+  background: #0f172a !important;
+  background-color: #0f172a !important;
+  color: #f8fafc !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__employee:hover {
+  border-color: #475569 !important;
+  background: #172033 !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__actions .is-primary {
+  border-color: #7c3aed !important;
+  background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%) !important;
+  color: #ffffff !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__actions .is-primary:hover:not(:disabled) {
+  border-color: #a78bfa !important;
+  background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%) !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__actions .is-danger {
+  border-color: rgba(248, 113, 113, 0.32) !important;
+  background: rgba(127, 29, 29, 0.30) !important;
+  color: #fecaca !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__error {
+  border-color: rgba(248, 113, 113, 0.32) !important;
+  background: rgba(127, 29, 29, 0.30) !important;
+  color: #fecaca !important;
+}
+
+:root[data-theme="dark"] .pos-v2-shell .pos-branches__success {
+  border-color: rgba(74, 222, 128, 0.28) !important;
+  background: rgba(20, 83, 45, 0.32) !important;
+  color: #bbf7d0 !important;
+}
+
+
+/* =========================================================
+   RESPONSIVE
+   ========================================================= */
+
+@media (max-width: 820px) {
+  .pos-branches {
+    grid-template-columns: 1fr;
+  }
+
+  .pos-branches__sidebar {
+    position: static;
+  }
+
+  .pos-branches__list {
+    display: flex;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .pos-branches__item {
+    flex: 0 0 auto;
+    min-width: 165px;
+  }
+}
+
+@media (max-width: 620px) {
+  .pos-branches__card {
+    padding: 16px;
+  }
+
+  .pos-branches__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .pos-branches__span-2 {
+    grid-column: auto;
+  }
+
+  .pos-branches__actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .pos-branches__actions button {
+    width: 100%;
+  }
+}

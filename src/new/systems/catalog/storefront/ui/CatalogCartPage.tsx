@@ -14,17 +14,18 @@ import {
   normalizeWholesalePriceTiers,
 } from "./catalogPrice";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
+import { buildCatalogPath, getCatalogCartKey, readCatalogBranchContext } from "./catalogBranchContext";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
 
-const getBusinessId = () => window.localStorage.getItem("idBusiness") ?? "";
-const getCartKey = (businessId: string) => `catalog-v2-cart:${businessId}`;
+const getBusinessId = () => readCatalogBranchContext().businessId;
 const getItemKey = (item: StorefrontCartItem) => item.cartKey ?? `${item.productId}-${item.variantId ?? "base"}-${item.colorId ?? "nc"}-${item.sizeId ?? "ns"}`;
 
 const loadCart = (businessId: string): StorefrontCartItem[] => {
   if (!businessId) return [];
-  const raw = window.localStorage.getItem(getCartKey(businessId));
+  const context = readCatalogBranchContext();
+  const raw = window.localStorage.getItem(getCatalogCartKey(businessId, context.branchSlug));
   if (!raw) return [];
   try {
     const parsed = JSON.parse(raw) as StorefrontCartItem[];
@@ -38,6 +39,7 @@ export const CatalogCartPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
   const businessId = getBusinessId();
+  const branchContext = readCatalogBranchContext();
   const [cart, setCart] = useState<StorefrontCartItem[]>(() => loadCart(businessId));
   const [showClearModal, setShowClearModal] = useState(false);
   const [deletingItemKey, setDeletingItemKey] = useState<string | null>(null);
@@ -47,7 +49,7 @@ export const CatalogCartPage = () => {
   const persist = (next: StorefrontCartItem[]) => {
     if (!businessId) return;
     setCart(next);
-    window.localStorage.setItem(getCartKey(businessId), JSON.stringify(next));
+    window.localStorage.setItem(getCatalogCartKey(businessId, branchContext.branchSlug), JSON.stringify(next));
   };
 
   const increment = (itemKey: string) => {
@@ -142,7 +144,7 @@ export const CatalogCartPage = () => {
               <p><span>Total</span><strong>{totalLabel}</strong></p>
             </div>
             <button type="button" className="primary" onClick={() => navigate("/catalogo/pedido-info")} disabled={cart.length === 0}>Pagar</button>
-            <button type="button" className="secondary" onClick={() => navigate(`/v2/catalogo/${businessId}`)}>Seguir comprando</button>
+            <button type="button" className="secondary" onClick={() => navigate(buildCatalogPath(businessId, branchContext.branchSlug))}>Seguir comprando</button>
             {cart.length > 0 ? <button type="button" className="ghost" onClick={() => setShowClearModal(true)}>Limpiar carrito</button> : null}
           </aside>
         </div>

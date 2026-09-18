@@ -5,6 +5,22 @@
   --pos-v2-bg-dark: #090014;
   --pos-v2-surface-dark: #120826;
   --pos-v2-border-dark: #312e81;
+
+  /* Semantic tokens shared by POS pages. */
+  --pos-v2-surface: #ffffff;
+  --pos-v2-surface-alt: #f8fafc;
+  --pos-v2-surface-hover: #f1f5f9;
+  --pos-v2-border: #e2e8f0;
+  --pos-v2-border-strong: #cbd5e1;
+  --pos-v2-text: #111827;
+  --pos-v2-text-muted: #64748b;
+  --pos-v2-input-bg: #ffffff;
+  --pos-v2-success-bg: #ecfdf5;
+  --pos-v2-success-border: #a7f3d0;
+  --pos-v2-success-text: #047857;
+  --pos-v2-danger-bg: #fff1f2;
+  --pos-v2-danger-border: #fecdd3;
+  --pos-v2-danger-text: #be123c;
   min-height: 100vh;
   background: #f3f4f6;
   color: #111827;
@@ -188,11 +204,26 @@
 
 /* Respect explicit light/dark theme toggles while keeping system fallback. */
 :root[data-theme="dark"] .pos-v2-shell {
+  --pos-v2-surface: #111827;
+  --pos-v2-surface-alt: #0f172a;
+  --pos-v2-surface-hover: #172033;
+  --pos-v2-border: #334155;
+  --pos-v2-border-strong: #475569;
+  --pos-v2-text: #f8fafc;
+  --pos-v2-text-muted: #94a3b8;
+  --pos-v2-input-bg: #0f172a;
+  --pos-v2-success-bg: rgba(20, 83, 45, 0.34);
+  --pos-v2-success-border: rgba(74, 222, 128, 0.28);
+  --pos-v2-success-text: #bbf7d0;
+  --pos-v2-danger-bg: rgba(127, 29, 29, 0.32);
+  --pos-v2-danger-border: rgba(248, 113, 113, 0.30);
+  --pos-v2-danger-text: #fecaca;
+
   background:
     radial-gradient(circle at 8% -10%, rgba(167, 139, 250, 0.2), transparent 35%),
     radial-gradient(circle at 100% 0%, rgba(192, 132, 252, 0.18), transparent 30%),
     linear-gradient(180deg, #090014 0%, #0b1022 100%);
-  color: #f9fafb;
+  color: var(--pos-v2-text);
   color-scheme: dark;
 }
 
@@ -228,11 +259,26 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .pos-v2-shell {
+    --pos-v2-surface: #111827;
+    --pos-v2-surface-alt: #0f172a;
+    --pos-v2-surface-hover: #172033;
+    --pos-v2-border: #334155;
+    --pos-v2-border-strong: #475569;
+    --pos-v2-text: #f8fafc;
+    --pos-v2-text-muted: #94a3b8;
+    --pos-v2-input-bg: #0f172a;
+    --pos-v2-success-bg: rgba(20, 83, 45, 0.34);
+    --pos-v2-success-border: rgba(74, 222, 128, 0.28);
+    --pos-v2-success-text: #bbf7d0;
+    --pos-v2-danger-bg: rgba(127, 29, 29, 0.32);
+    --pos-v2-danger-border: rgba(248, 113, 113, 0.30);
+    --pos-v2-danger-text: #fecaca;
+
     background:
       radial-gradient(circle at 8% -10%, rgba(167, 139, 250, 0.2), transparent 35%),
       radial-gradient(circle at 100% 0%, rgba(192, 132, 252, 0.18), transparent 30%),
       linear-gradient(180deg, #090014 0%, #0b1022 100%);
-    color: #f9fafb;
+    color: var(--pos-v2-text);
     color-scheme: dark;
   }
 

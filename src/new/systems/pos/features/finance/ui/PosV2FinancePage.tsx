@@ -4,7 +4,13 @@ import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
-import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
+import {
+  POS_SESSION_STORAGE_KEYS,
+  resolvePosOperatorRole,
+} from "../../../shared/config/posSession";
+import { onPosBranchUpdated, readActivePosBranchId, type PosBranch } from "../../../shared/config/posBranch";
+import { PosBranchApi } from "../../../shared/api/PosBranchApi";
+import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
 import type { FinanceEntry } from "../model/FinanceEntry";
 import "./PosV2FinancePage.css";
 
@@ -19,10 +25,14 @@ type PeriodView = "month" | "today";
 type FinanceTransactionViewModel = {
   id: string;
   concept: string;
+  detail?: string;
   amount: number;
   type: FinanceFormMode;
   createdAt?: string;
   occurredAt?: Date | null;
+  source?: string;
+  orderId?: number | null;
+  commandId?: number | null;
 };
 
 const dateFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
@@ -72,6 +82,7 @@ const getSafeSession = () => {
   return {
     token,
     businessId,
+    role: resolvePosOperatorRole(token),
     hasSession: Boolean(token) && Number.isFinite(businessId) && businessId > 0,
   };
 };
@@ -88,6 +99,11 @@ export const PosV2FinancePage = () => {
   const [search, setSearch] = useState("");
   const [openFormModal, setOpenFormModal] = useState(false);
 
+  const [financeBranches, setFinanceBranches] = useState<PosBranch[]>([]);
+  const [financeBranchId, setFinanceBranchId] = useState(() => readActivePosBranchId());
+  const [branchesLoading, setBranchesLoading] = useState(false);
+  const [branchError, setBranchError] = useState<string | null>(null);
+
   const [overview, setOverview] = useState({ monthIncome: 0, monthExpenses: 0, monthBalance: 0, todayIncome: 0, todayExpenses: 0 });
   const [movement, setMovement] = useState<{ income: FinanceEntry[]; expenses: FinanceEntry[] }>({ income: [], expenses: [] });
   const [todayMovement, setTodayMovement] = useState<{ income: FinanceEntry[]; expenses: FinanceEntry[] }>({ income: [], expenses: [] });
@@ -102,12 +118,25 @@ export const PosV2FinancePage = () => {
     return factory.createPosFinanceTrackingPage();
   }, []);
 
+  const branchApi = useMemo(
+    () => new PosBranchApi(new FetchHttpClient(API_BASE_URL)),
+    [],
+  );
+
   const monthOptions = useMemo(
     () => Array.from({ length: 12 }, (_, index) => new Date(new Date().getFullYear(), index, 1).toLocaleString("es-MX", { month: "long" })),
     [],
   );
 
   const hasSession = session.hasSession;
+  const isAdmin = session.role === "admin";
+
+  const activeFinanceBranch = useMemo(
+    () => financeBranches.find((branch) => branch.id === financeBranchId) ?? null,
+    [financeBranchId, financeBranches],
+  );
+
+  const selectedBranchLabel = activeFinanceBranch?.name ?? "Sucursal activa";
 
   const financeTimeline = useMemo<FinanceTransactionViewModel[]>(() => {
     const fallbackTodayMovement = {
@@ -117,14 +146,36 @@ export const PosV2FinancePage = () => {
     const hasTodayEndpointsData = todayMovement.income.length > 0 || todayMovement.expenses.length > 0;
     const sourceMovement = periodView === "today" ? (hasTodayEndpointsData ? todayMovement : fallbackTodayMovement) : movement;
     const base = [
-      ...sourceMovement.income.map((entry, index) => ({
-        id: `income-${index}-${entry.name}`,
-        concept: entry.name?.trim() || "Ingreso",
-        amount: Math.abs(Number(entry.amount ?? 0)),
-        type: "income" as const,
-        createdAt: entry.createdAt,
-        occurredAt: parseFinanceDate(entry.createdAt),
-      })),
+      ...sourceMovement.income.map((entry, index) => {
+        const isPosSale = Boolean(entry.orderId) || entry.source === "POS";
+        const isRestaurantSale = Boolean(entry.commandId) || entry.source === "RESTAURANT";
+        const concept = isPosSale
+          ? `Venta POS${entry.orderId ? ` #${entry.orderId}` : ""}`
+          : isRestaurantSale
+            ? `Venta restaurante${entry.commandId ? ` #${entry.commandId}` : ""}`
+            : entry.name?.trim() || "Ingreso";
+
+        const detail = isPosSale || isRestaurantSale
+          ? entry.name?.trim() && entry.name.trim().toUpperCase() !== "VENTA"
+            ? entry.name.trim()
+            : undefined
+          : entry.source === "MANUAL"
+            ? "Ingreso manual"
+            : undefined;
+
+        return {
+          id: `income-${entry.id ?? index}-${entry.orderId ?? entry.commandId ?? entry.name}`,
+          concept,
+          detail,
+          amount: Math.abs(Number(entry.amount ?? 0)),
+          type: "income" as const,
+          createdAt: entry.createdAt,
+          occurredAt: parseFinanceDate(entry.createdAt),
+          source: entry.source,
+          orderId: entry.orderId,
+          commandId: entry.commandId,
+        };
+      }),
       ...sourceMovement.expenses.map((entry, index) => ({
         id: `expense-${index}-${entry.name}`,
         concept: entry.name?.trim() || "Egreso",
@@ -144,6 +195,16 @@ export const PosV2FinancePage = () => {
   }, [movement, todayMovement, periodView, typeFilter, search]);
 
   const activeCategories = formMode === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
+
+  const monthSales = useMemo(
+    () => movement.income.filter((entry) => entry.isSale),
+    [movement.income],
+  );
+
+  const monthSalesTotal = useMemo(
+    () => sumAmounts(monthSales),
+    [monthSales],
+  );
 
   const derivedOverview = useMemo(() => {
     const fallbackMonthIncome = sumAmounts(movement.income);
@@ -185,10 +246,12 @@ export const PosV2FinancePage = () => {
     setLoading(true);
     setError(null);
 
+    const branchId = financeBranchId > 0 ? financeBranchId : undefined;
+
     const [overviewResult, movementResult, todayMovementResult] = await Promise.allSettled([
-      page.loadOverview(session.businessId, session.token),
-      page.loadMonthMovement(session.businessId, month, session.token),
-      page.loadTodayMovement(session.businessId, session.token),
+      page.loadOverview(session.businessId, session.token, branchId),
+      page.loadMonthMovement(session.businessId, month, session.token, branchId),
+      page.loadTodayMovement(session.businessId, session.token, branchId),
     ]);
 
     if (overviewResult.status === "fulfilled") {
@@ -216,13 +279,68 @@ export const PosV2FinancePage = () => {
     }
 
     setLoading(false);
-  }, [hasSession, month, page, session.businessId, session.token]);
+  }, [financeBranchId, hasSession, month, page, session.businessId, session.token]);
 
   useEffect(() => {
-    if (hasSession) {
+    return onPosBranchUpdated((branch) => {
+      if (!isAdmin) {
+        setFinanceBranchId(branch.id);
+      }
+    });
+  }, [isAdmin]);
+
+  useEffect(() => {
+    if (!hasSession || !isAdmin) {
+      return;
+    }
+
+    let cancelled = false;
+    setBranchesLoading(true);
+    setBranchError(null);
+
+    branchApi
+      .list(session.token)
+      .then((rows) => {
+        if (cancelled) return;
+
+        setFinanceBranches(rows);
+
+        const activeGlobalBranchId = readActivePosBranchId(session.businessId);
+        const fallback =
+          rows.find((branch) => branch.id === activeGlobalBranchId) ??
+          rows.find((branch) => branch.isMain) ??
+          rows[0] ??
+          null;
+
+        setFinanceBranchId((current) => {
+          const currentExists = rows.some((branch) => branch.id === current);
+          return currentExists ? current : fallback?.id ?? 0;
+        });
+      })
+      .catch((cause) => {
+        if (cancelled) return;
+        setBranchError(cause instanceof Error ? cause.message : "No se pudieron cargar las sucursales.");
+      })
+      .finally(() => {
+        if (!cancelled) setBranchesLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    branchApi,
+    hasSession,
+    isAdmin,
+    session.businessId,
+    session.token,
+  ]);
+
+  useEffect(() => {
+    if (hasSession && financeBranchId > 0) {
       refreshData();
     }
-  }, [hasSession, refreshData]);
+  }, [financeBranchId, hasSession, refreshData]);
 
   useEffect(() => {
     if (!toast) return;
@@ -258,9 +376,9 @@ export const PosV2FinancePage = () => {
     try {
       const payload = { businessId: session.businessId, name: safeName, amount: Number(parsedAmount.toFixed(2)) };
       if (formMode === "income") {
-        await page.createIncome(payload, session.token);
+        await page.createIncome(payload, session.token, financeBranchId || undefined);
       } else {
-        await page.createExpense(payload, session.token);
+        await page.createExpense(payload, session.token, financeBranchId || undefined);
       }
 
       setName("");
@@ -278,7 +396,7 @@ export const PosV2FinancePage = () => {
 
   const renderMovementForm = () => (
     <form className="pos-v2-finance__form" onSubmit={handleSubmit}>
-      <h3>Registrar movimiento</h3>
+      <h3>Registrar movimiento · {selectedBranchLabel}</h3>
       <div className="pos-v2-finance__mode-toggle" role="tablist" aria-label="Tipo de movimiento">
         <button type="button" className={formMode === "income" ? "is-active" : ""} onClick={() => setFormMode("income")}>Ingreso</button>
         <button type="button" className={formMode === "expense" ? "is-active" : ""} onClick={() => setFormMode("expense")}>Egreso</button>
@@ -326,16 +444,47 @@ export const PosV2FinancePage = () => {
           </div>
 
           <div className="pos-v2-finance__filters">
+            {isAdmin ? (
+              <label className="pos-v2-finance__branch-filter">
+                Sucursal
+                <select
+                  value={financeBranchId || ""}
+                  onChange={(event) => setFinanceBranchId(Number(event.target.value))}
+                  disabled={branchesLoading || financeBranches.length === 0}
+                >
+                  {branchesLoading ? <option value="">Cargando sucursales…</option> : null}
+                  {!branchesLoading && financeBranches.length === 0 ? <option value="">Sin sucursales</option> : null}
+                  {financeBranches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}{branch.isMain ? " · Principal" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
             <label>
               Mes
               <select value={month} onChange={(event) => setMonth(Number(event.target.value))}>
                 {monthOptions.map((monthLabel, index) => <option key={monthLabel} value={index}>{monthLabel}</option>)}
               </select>
             </label>
+
+            <button type="button" className="pos-v2-finance__refresh" onClick={() => refreshData()} disabled={loading}>
+              {loading ? "Actualizando…" : "Actualizar"}
+            </button>
+
             <button type="button" className="pos-v2-finance__new-mobile" onClick={() => setOpenFormModal(true)}>+ Nuevo</button>
           </div>
         </header>
 
+        <div className="pos-v2-finance__scope">
+          <span>Consultando:</span>
+          <strong>{selectedBranchLabel}</strong>
+          {isAdmin ? <small>Vista administrativa por sucursal</small> : <small>Sucursal operativa actual</small>}
+        </div>
+
+        {branchError ? <p className="pos-v2-finance__error">{branchError}</p> : null}
         {error ? <p className="pos-v2-finance__error">{error}</p> : null}
         {toast ? <p className={`pos-v2-finance__toast is-${toast.type}`}>{toast.message}</p> : null}
 
@@ -347,6 +496,8 @@ export const PosV2FinancePage = () => {
           ) : (
             <>
               <article><span>Entradas del mes</span><strong>{moneyFormatter.format(derivedOverview.monthIncome)}</strong></article>
+              <article><span>Ventas del mes</span><strong>{moneyFormatter.format(monthSalesTotal)}</strong></article>
+              <article><span>Transacciones de venta</span><strong>{monthSales.length}</strong></article>
               <article><span>Salidas del mes</span><strong>{moneyFormatter.format(derivedOverview.monthExpenses)}</strong></article>
               <article><span>Resultado operativo hoy</span><strong className={derivedOverview.todayNet >= 0 ? "is-income" : "is-expense"}>{derivedOverview.todayNet >= 0 ? "+" : ""}{moneyFormatter.format(derivedOverview.todayNet)}</strong></article>
               <article><span>Movimientos registrados</span><strong>{financeTimeline.length}</strong></article>
@@ -407,6 +558,7 @@ export const PosV2FinancePage = () => {
                 <li key={entry.id}>
                   <div>
                     <strong>{entry.concept || "Sin concepto"}</strong>
+                    {entry.detail ? <small className="pos-v2-finance__movement-detail">{entry.detail}</small> : null}
                     <span>{toPresentationDate(entry.createdAt)}</span>
                   </div>
                   <strong className={entry.type === "income" ? "is-income" : "is-expense"}>{entry.type === "income" ? "+" : "-"}{moneyFormatter.format(entry.amount)}</strong>

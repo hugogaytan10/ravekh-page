@@ -475,3 +475,72 @@
   color: #bbf7d0;
   background: rgba(20, 83, 45, 0.35);
 }
+
+
+/* =========================================================
+   ADMINISTRADOR — consulta financiera por sucursal
+   ========================================================= */
+
+.pos-v2-finance__branch-filter {
+  min-width: min(260px, 100%);
+}
+
+.pos-v2-finance__scope {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  width: fit-content;
+  max-width: 100%;
+  border: 1px solid #ddd6fe;
+  border-radius: 999px;
+  padding: 0.38rem 0.7rem;
+  background: #f5f3ff;
+  color: #475569;
+  font-size: 0.8rem;
+}
+
+.pos-v2-finance__scope strong {
+  color: #5b21b6;
+}
+
+.pos-v2-finance__scope small {
+  color: #64748b;
+}
+
+.pos-v2-finance__movement-detail {
+  color: #64748b;
+  font-size: 0.72rem;
+  line-height: 1.25;
+}
+
+:root[data-theme="dark"] .pos-v2-finance__scope {
+  border-color: rgba(167, 139, 250, 0.35);
+  background: rgba(124, 58, 237, 0.16);
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-v2-finance__scope strong {
+  color: #ddd6fe;
+}
+
+:root[data-theme="dark"] .pos-v2-finance__scope small,
+:root[data-theme="dark"] .pos-v2-finance__movement-detail {
+  color: #94a3b8;
+}
+
+@media (max-width: 680px) {
+  .pos-v2-finance__branch-filter {
+    width: 100%;
+  }
+
+  .pos-v2-finance__branch-filter select {
+    width: 100%;
+  }
+
+  .pos-v2-finance__scope {
+    width: 100%;
+    box-sizing: border-box;
+    border-radius: 12px;
+  }
+}

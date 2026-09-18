@@ -20,6 +20,7 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
     subtitle: "Paridad estructural con Ajustes previos, implementado con servicios modernos.",
     items: [
       { id: "tables", title: "Mesas y zonas", description: "Gestión de mesas para consumo en salón.", path: POS_V2_PATHS.tableZones, status: "available", actionType: "route" },
+      { id: "branches", title: "Sucursales", description: "Ubicaciones, catálogo, contacto y acceso del personal.", path: POS_V2_PATHS.branches, status: "available", actionType: "route" },
       { id: "business", title: "Información del negocio", description: "Datos fiscales/comerciales del negocio.", path: previewPath("business"), status: "available", actionType: "route" },
       { id: "social-networks", title: "Redes sociales", description: "Configura los enlaces públicos de Facebook, Instagram y TikTok.", path: previewPath("social-networks"), status: "available", actionType: "route" },
       { id: "sales-tax", title: "Impuesto de venta", description: "Ajustes de impuestos aplicados en ventas.", path: previewPath("sales-tax"), status: "available", actionType: "route" },

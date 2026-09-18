@@ -17,8 +17,12 @@ export type FinanceMonthMovementViewModel = {
 export class FinanceTrackingPage {
   constructor(private readonly service: FinanceTrackingService) {}
 
-  async loadOverview(businessId: number, token: string): Promise<FinanceOverviewViewModel> {
-    const overview = await this.service.getOverview(businessId, token);
+  async loadOverview(
+    businessId: number,
+    token: string,
+    branchId?: number,
+  ): Promise<FinanceOverviewViewModel> {
+    const overview = await this.service.getOverview(businessId, token, branchId);
 
     return {
       monthIncome: overview.monthIncome,
@@ -29,19 +33,36 @@ export class FinanceTrackingPage {
     };
   }
 
-  async loadMonthMovement(businessId: number, month: number, token: string): Promise<FinanceMonthMovementViewModel> {
-    return this.service.getMonthMovement(businessId, month, token);
+  async loadMonthMovement(
+    businessId: number,
+    month: number,
+    token: string,
+    branchId?: number,
+  ): Promise<FinanceMonthMovementViewModel> {
+    return this.service.getMonthMovement(businessId, month, token, branchId);
   }
 
-  async loadTodayMovement(businessId: number, token: string): Promise<FinanceMonthMovementViewModel> {
-    return this.service.getTodayMovement(businessId, token);
+  async loadTodayMovement(
+    businessId: number,
+    token: string,
+    branchId?: number,
+  ): Promise<FinanceMonthMovementViewModel> {
+    return this.service.getTodayMovement(businessId, token, branchId);
   }
 
-  async createIncome(input: CreateFinanceEntryInput, token: string): Promise<FinanceEntry> {
-    return this.service.registerIncome(input, token);
+  async createIncome(
+    input: CreateFinanceEntryInput,
+    token: string,
+    branchId?: number,
+  ): Promise<FinanceEntry> {
+    return this.service.registerIncome(input, token, branchId);
   }
 
-  async createExpense(input: CreateFinanceEntryInput, token: string): Promise<FinanceEntry> {
-    return this.service.registerExpense(input, token);
+  async createExpense(
+    input: CreateFinanceEntryInput,
+    token: string,
+    branchId?: number,
+  ): Promise<FinanceEntry> {
+    return this.service.registerExpense(input, token, branchId);
   }
 }
