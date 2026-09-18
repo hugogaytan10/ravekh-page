@@ -494,7 +494,7 @@ export const CatalogProductDetailPage = () => {
             <h1 className="text-2xl font-bold leading-tight text-[var(--text-primary)]">
               {product.name}
             </h1>
-            <p className="text-sm text-[var(--text-secondary)]">
+            <p className="whitespace-pre-line text-sm text-[var(--text-secondary)]">
               {product.description || "Sin descripción."}
             </p>
           </header>
