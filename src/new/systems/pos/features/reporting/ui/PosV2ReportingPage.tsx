@@ -143,6 +143,71 @@ const getSafeSession = () => {
   };
 };
 
+
+const combineReportSummaries = (rows: ReportSummaryViewModel[]): ReportSummaryViewModel => {
+  if (rows.length === 0) return DEFAULT_SUMMARY;
+
+  const income = rows.reduce((sum, row) => sum + Number(row.income || 0), 0);
+  const earnings = rows.reduce((sum, row) => sum + Number(row.earnings || 0), 0);
+  const balance = rows.reduce((sum, row) => sum + Number(row.balance || 0), 0);
+  const totalSales = rows.reduce((sum, row) => sum + Number(row.totalSales || 0), 0);
+
+  const cashTransactions = rows.reduce(
+    (sum, row) => sum + (Number(row.cashSalesPercentage || 0) / 100) * Number(row.totalSales || 0),
+    0,
+  );
+  const cardTransactions = rows.reduce(
+    (sum, row) => sum + (Number(row.cardSalesPercentage || 0) / 100) * Number(row.totalSales || 0),
+    0,
+  );
+
+  return {
+    balance,
+    income,
+    earnings,
+    averageSale: totalSales > 0 ? income / totalSales : 0,
+    totalSales,
+    cashSalesPercentage: totalSales > 0 ? (cashTransactions / totalSales) * 100 : 0,
+    cardSalesPercentage: totalSales > 0 ? (cardTransactions / totalSales) * 100 : 0,
+    bestSeller: "Sin datos",
+    bestCategory: "Sin datos",
+  };
+};
+
+const combineIncomeSeries = (sets: IncomePoint[][]): IncomePoint[] => {
+  const byDate = new Map<string, number>();
+
+  for (const series of sets) {
+    for (const point of series) {
+      byDate.set(
+        point.dateLabel,
+        (byDate.get(point.dateLabel) ?? 0) + Number(point.amount || 0),
+      );
+    }
+  }
+
+  return Array.from(byDate.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([dateLabel, amount]) => ({ dateLabel, amount }));
+};
+
+const combineTopItems = (sets: Array<Array<{ name: string; quantity?: number; totalSales?: number }>>): TopChartItem[] => {
+  const grouped = new Map<string, number>();
+
+  for (const rows of sets) {
+    for (const row of rows) {
+      const key = row.name?.trim() || "Sin datos";
+      const value = Number(row.quantity ?? row.totalSales ?? 0);
+      grouped.set(key, (grouped.get(key) ?? 0) + value);
+    }
+  }
+
+  return Array.from(grouped.entries())
+    .map(([name, quantity]) => ({ name, quantity }))
+    .sort((a, b) => b.quantity - a.quantity)
+    .slice(0, 5);
+};
+
 export const PosV2ReportingPage = () => {
   const [session] = useState(() => getSafeSession());
   const [reportBranches, setReportBranches] = useState<PosBranch[]>([]);
@@ -197,12 +262,24 @@ export const PosV2ReportingPage = () => {
   const isAdmin = session.role === "admin";
   const navigate = useNavigate();
 
+  const isAllBranches = isAdmin && reportBranchId === 0;
+
   const selectedReportBranch = useMemo(
     () => reportBranches.find((branch) => branch.id === reportBranchId) ?? null,
     [reportBranchId, reportBranches],
   );
 
-  const selectedBranchLabel = selectedReportBranch?.name ?? "Sucursal activa";
+  const reportBranchIds = useMemo(() => {
+    if (isAllBranches) {
+      return reportBranches.map((branch) => branch.id);
+    }
+
+    return reportBranchId > 0 ? [reportBranchId] : [];
+  }, [isAllBranches, reportBranchId, reportBranches]);
+
+  const selectedBranchLabel = isAllBranches
+    ? "Todas las sucursales"
+    : selectedReportBranch?.name ?? "Sucursal activa";
 
   const showToast = useCallback((type: "success" | "error", message: string) => {
     setToast({ type, message });
@@ -227,9 +304,27 @@ export const PosV2ReportingPage = () => {
     setError(null);
 
     try {
+      if (reportBranchIds.length === 0) {
+        setSummary(DEFAULT_SUMMARY);
+        setSeries([]);
+        return;
+      }
+
+      const summaryPromise = Promise.all(
+        reportBranchIds.map((branchId) =>
+          reportingPage.loadSummary(businessId, range, cleanToken, branchId),
+        ),
+      ).then(combineReportSummaries);
+
+      const incomePromise = Promise.all(
+        reportBranchIds.map((branchId) =>
+          reportingPage.loadIncomeSeries(businessId, range, cleanToken, branchId),
+        ),
+      ).then(combineIncomeSeries);
+
       const [summaryResult, incomeResult] = await Promise.allSettled([
-        reportingPage.loadSummary(businessId, range, cleanToken, reportBranchId || undefined),
-        reportingPage.loadIncomeSeries(businessId, range, cleanToken, reportBranchId || undefined),
+        summaryPromise,
+        incomePromise,
       ]);
 
       if (reportRequestRef.current !== reportRequestId) {
@@ -249,7 +344,7 @@ export const PosV2ReportingPage = () => {
         setLoading(false);
       }
     }
-  }, [businessId, cleanToken, hasBusinessId, reportBranchId, reportingPage, range, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, reportBranchIds, reportingPage, range, showToast]);
 
   const loadSales = useCallback(async () => {
     if (!hasBusinessId || !hasToken) {
@@ -261,11 +356,32 @@ export const PosV2ReportingPage = () => {
     salesRequestRef.current = salesRequestId;
     setSalesLoading(true);
     try {
-      const details = await reportingPage.loadSalesDetails(businessId, tableRange, paymentFilter, cleanToken, reportBranchId || undefined);
+      if (reportBranchIds.length === 0) {
+        setSales([]);
+        return;
+      }
+
+      const detailSets = await Promise.all(
+        reportBranchIds.map((branchId) =>
+          reportingPage.loadSalesDetails(
+            businessId,
+            tableRange,
+            paymentFilter,
+            cleanToken,
+            branchId,
+          ),
+        ),
+      );
+
       if (salesRequestRef.current !== salesRequestId) {
         return;
       }
-      setSales(details);
+
+      setSales(
+        detailSets
+          .flat()
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+      );
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "No se pudieron cargar ventas detalladas.";
       if (salesRequestRef.current === salesRequestId) {
@@ -276,7 +392,7 @@ export const PosV2ReportingPage = () => {
         setSalesLoading(false);
       }
     }
-  }, [businessId, cleanToken, hasBusinessId, hasToken, paymentFilter, reportBranchId, reportingPage, tableRange, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, hasToken, paymentFilter, reportBranchIds, reportingPage, tableRange, showToast]);
 
   const loadTopCharts = useCallback(async () => {
     if (!hasBusinessId || !hasToken) {
@@ -291,21 +407,48 @@ export const PosV2ReportingPage = () => {
     setTopChartsLoading(true);
 
     try {
-      const [productsRows, employeeRows, customerRows] = await Promise.all([
-        reportingPage.loadProductsLeaderboard(businessId, range, cleanToken, reportBranchId || undefined),
-        reportingPage.loadEmployeesLeaderboard(businessId, range, cleanToken, reportBranchId || undefined),
-        reportingPage.loadCustomersLeaderboard(businessId, range, cleanToken, reportBranchId || undefined),
+      if (reportBranchIds.length === 0) {
+        setTopProducts([]);
+        setTopEmployees([]);
+        setTopCustomers([]);
+        return;
+      }
+
+      const [productSets, employeeSets, customerSets] = await Promise.all([
+        Promise.all(
+          reportBranchIds.map((branchId) =>
+            reportingPage.loadProductsLeaderboard(businessId, range, cleanToken, branchId),
+          ),
+        ),
+        Promise.all(
+          reportBranchIds.map((branchId) =>
+            reportingPage.loadEmployeesLeaderboard(businessId, range, cleanToken, branchId),
+          ),
+        ),
+        Promise.all(
+          reportBranchIds.map((branchId) =>
+            reportingPage.loadCustomersLeaderboard(businessId, range, cleanToken, branchId),
+          ),
+        ),
       ]);
+
       if (topChartsRequestRef.current !== requestId) {
         return;
       }
 
-      setTopProducts(productsRows.slice(0, 5).map((item) => ({ name: item.name, quantity: item.quantity || item.totalSales })));
-      setTopEmployees(employeeRows.slice(0, 5).map((item) => ({ name: item.name, quantity: item.totalSales })));
-      setTopCustomers(customerRows.slice(0, 5).map((item) => ({ name: item.name, quantity: item.totalSales })));
+      const combinedProducts = combineTopItems(productSets);
+      const combinedEmployees = combineTopItems(employeeSets);
+      const combinedCustomers = combineTopItems(customerSets);
+
+      setTopProducts(combinedProducts);
+      setTopEmployees(combinedEmployees);
+      setTopCustomers(combinedCustomers);
       setSummary((previous) => ({
         ...previous,
-        bestSeller: previous.bestSeller !== "Sin datos" ? previous.bestSeller : (productsRows[0]?.name ?? "Sin datos"),
+        bestSeller:
+          previous.bestSeller !== "Sin datos"
+            ? previous.bestSeller
+            : combinedProducts[0]?.name ?? "Sin datos",
       }));
     } catch (cause) {
       if (topChartsRequestRef.current === requestId) {
@@ -319,7 +462,7 @@ export const PosV2ReportingPage = () => {
         setTopChartsLoading(false);
       }
     }
-  }, [businessId, cleanToken, hasBusinessId, hasToken, range, reportBranchId, reportingPage, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, hasToken, range, reportBranchIds, reportingPage, showToast]);
 
   const loadSalesTickets = useCallback(async () => {
     if (!hasBusinessId || !hasToken) return;
@@ -331,20 +474,63 @@ export const PosV2ReportingPage = () => {
     const requestId = ++salesTicketsRequestRef.current;
     setSalesTicketsLoading(true);
     try {
-      const result = await reportingPage.loadSalesTicketsByDateRange(
-        businessId,
-        salesDates.from,
-        salesDates.to,
-        Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Mexico_City",
-        salesTicketsPage,
-        50,
-        cleanToken,
-        reportBranchId || undefined,
-      );
-      if (salesTicketsRequestRef.current !== requestId) return;
-      setSalesTickets(result.items);
-      setSalesTicketsTotalPages(result.pagination.totalPages);
-      setSalesTicketsTotalItems(result.pagination.totalItems);
+      if (reportBranchIds.length === 0) {
+        setSalesTickets([]);
+        setSalesTicketsTotalPages(0);
+        setSalesTicketsTotalItems(0);
+        return;
+      }
+
+      const timezone =
+        Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Mexico_City";
+
+      if (isAllBranches) {
+        const resultSets = await Promise.all(
+          reportBranchIds.map((branchId) =>
+            reportingPage.loadSalesTicketsByDateRange(
+              businessId,
+              salesDates.from,
+              salesDates.to,
+              timezone,
+              1,
+              10000,
+              cleanToken,
+              branchId,
+            ),
+          ),
+        );
+
+        if (salesTicketsRequestRef.current !== requestId) return;
+
+        const merged = resultSets
+          .flatMap((result) => result.items)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        const pageSize = 50;
+        const totalItems = merged.length;
+        const totalPages = totalItems > 0 ? Math.ceil(totalItems / pageSize) : 0;
+        const start = (salesTicketsPage - 1) * pageSize;
+
+        setSalesTickets(merged.slice(start, start + pageSize));
+        setSalesTicketsTotalPages(totalPages);
+        setSalesTicketsTotalItems(totalItems);
+      } else {
+        const result = await reportingPage.loadSalesTicketsByDateRange(
+          businessId,
+          salesDates.from,
+          salesDates.to,
+          timezone,
+          salesTicketsPage,
+          50,
+          cleanToken,
+          reportBranchIds[0],
+        );
+
+        if (salesTicketsRequestRef.current !== requestId) return;
+        setSalesTickets(result.items);
+        setSalesTicketsTotalPages(result.pagination.totalPages);
+        setSalesTicketsTotalItems(result.pagination.totalItems);
+      }
     } catch (cause) {
       if (salesTicketsRequestRef.current === requestId) {
         setSalesTickets([]);
@@ -353,7 +539,7 @@ export const PosV2ReportingPage = () => {
     } finally {
       if (salesTicketsRequestRef.current === requestId) setSalesTicketsLoading(false);
     }
-  }, [businessId, cleanToken, hasBusinessId, hasToken, reportBranchId, reportingPage, salesDates, salesTicketsPage, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, hasToken, isAllBranches, reportBranchIds, reportingPage, salesDates, salesTicketsPage, showToast]);
 
   useEffect(() => {
     if (!session.hasSession || !isAdmin) {
@@ -372,16 +558,20 @@ export const PosV2ReportingPage = () => {
         setReportBranches(branches);
 
         const globalBranchId = readActivePosBranchId(businessId);
-        const selectedExists = branches.some((branch) => branch.id === reportBranchId);
         const fallback =
           branches.find((branch) => branch.id === globalBranchId) ??
           branches.find((branch) => branch.isMain) ??
           branches[0] ??
           null;
 
-        if (!selectedExists && fallback) {
-          setReportBranchId(fallback.id);
-        }
+        setReportBranchId((current) => {
+          if (current === 0) {
+            return 0;
+          }
+
+          const selectedExists = branches.some((branch) => branch.id === current);
+          return selectedExists ? current : fallback?.id ?? 0;
+        });
       })
       .catch((cause) => {
         if (cancelled) return;
@@ -405,15 +595,18 @@ export const PosV2ReportingPage = () => {
     businessId,
     cleanToken,
     isAdmin,
-    reportBranchId,
     session.hasSession,
   ]);
 
   useEffect(() => {
-    if (hasBusinessId && reportBranchId > 0) {
+    const hasValidScope =
+      reportBranchId > 0 ||
+      (isAdmin && reportBranchId === 0 && reportBranches.length > 0);
+
+    if (hasBusinessId && hasValidScope) {
       loadReporting();
     }
-  }, [hasBusinessId, loadReporting, reportBranchId]);
+  }, [hasBusinessId, isAdmin, loadReporting, reportBranchId, reportBranches.length]);
 
   useEffect(() => {
     loadSales();
@@ -726,15 +919,18 @@ export const PosV2ReportingPage = () => {
               <label className="pos-v2-reporting__branch-filter">
                 Sucursal
                 <select
-                  value={reportBranchId || ""}
+                  value={reportBranchId}
                   onChange={(event) => {
                     setReportBranchId(Number(event.target.value));
                     setSalesTicketsPage(1);
                   }}
                   disabled={branchesLoading || reportBranches.length === 0}
                 >
-                  {branchesLoading ? <option value="">Cargando sucursales…</option> : null}
-                  {!branchesLoading && reportBranches.length === 0 ? <option value="">Sin sucursales</option> : null}
+                  {branchesLoading ? <option value={reportBranchId}>Cargando sucursales…</option> : null}
+                  {!branchesLoading && reportBranches.length === 0 ? <option value={reportBranchId}>Sin sucursales</option> : null}
+                  {!branchesLoading && reportBranches.length > 0 ? (
+                    <option value={0}>Todas las sucursales</option>
+                  ) : null}
                   {reportBranches.map((branch) => (
                     <option key={branch.id} value={branch.id}>
                       {branch.name}{branch.isMain ? " · Principal" : ""}
@@ -758,7 +954,13 @@ export const PosV2ReportingPage = () => {
         <div className="pos-v2-reporting__scope">
           <span>Reporte de:</span>
           <strong>{selectedBranchLabel}</strong>
-          <small>{isAdmin ? "Vista administrativa por sucursal" : "Sucursal operativa actual"}</small>
+          <small>
+            {isAllBranches
+              ? `Consolidado de ${reportBranches.length} sucursales`
+              : isAdmin
+                ? "Vista administrativa por sucursal"
+                : "Sucursal operativa actual"}
+          </small>
         </div>
 
         {branchError ? <p className="pos-v2-reporting__error">{branchError}</p> : null}

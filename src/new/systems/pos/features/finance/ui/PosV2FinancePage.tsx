@@ -33,6 +33,7 @@ type FinanceTransactionViewModel = {
   source?: string;
   orderId?: number | null;
   commandId?: number | null;
+  branchId?: number;
 };
 
 const dateFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
@@ -131,12 +132,29 @@ export const PosV2FinancePage = () => {
   const hasSession = session.hasSession;
   const isAdmin = session.role === "admin";
 
+  const isAllBranches = isAdmin && financeBranchId === 0;
+
   const activeFinanceBranch = useMemo(
     () => financeBranches.find((branch) => branch.id === financeBranchId) ?? null,
     [financeBranchId, financeBranches],
   );
 
-  const selectedBranchLabel = activeFinanceBranch?.name ?? "Sucursal activa";
+  const financeBranchIds = useMemo(() => {
+    if (isAllBranches) {
+      return financeBranches.map((branch) => branch.id);
+    }
+
+    return financeBranchId > 0 ? [financeBranchId] : [];
+  }, [financeBranchId, financeBranches, isAllBranches]);
+
+  const selectedBranchLabel = isAllBranches
+    ? "Todas las sucursales"
+    : activeFinanceBranch?.name ?? "Sucursal activa";
+
+  const branchNameById = useMemo(
+    () => new Map(financeBranches.map((branch) => [branch.id, branch.name] as const)),
+    [financeBranches],
+  );
 
   const financeTimeline = useMemo<FinanceTransactionViewModel[]>(() => {
     const fallbackTodayMovement = {
@@ -155,18 +173,24 @@ export const PosV2FinancePage = () => {
             ? `Venta restaurante${entry.commandId ? ` #${entry.commandId}` : ""}`
             : entry.name?.trim() || "Ingreso";
 
-        const detail = isPosSale || isRestaurantSale
-          ? entry.name?.trim() && entry.name.trim().toUpperCase() !== "VENTA"
-            ? entry.name.trim()
-            : undefined
-          : entry.source === "MANUAL"
-            ? "Ingreso manual"
-            : undefined;
+        const detailParts: string[] = [];
+
+        if (isPosSale || isRestaurantSale) {
+          if (entry.name?.trim() && entry.name.trim().toUpperCase() !== "VENTA") {
+            detailParts.push(entry.name.trim());
+          }
+        } else if (entry.source === "MANUAL") {
+          detailParts.push("Ingreso manual");
+        }
+
+        if (isAllBranches && entry.branchId) {
+          detailParts.push(branchNameById.get(entry.branchId) ?? `Sucursal ${entry.branchId}`);
+        }
 
         return {
-          id: `income-${entry.id ?? index}-${entry.orderId ?? entry.commandId ?? entry.name}`,
+          id: `income-${entry.id ?? index}-${entry.orderId ?? entry.commandId ?? entry.name}-${entry.branchId ?? "branch"}`,
           concept,
-          detail,
+          detail: detailParts.length > 0 ? detailParts.join(" · ") : undefined,
           amount: Math.abs(Number(entry.amount ?? 0)),
           type: "income" as const,
           createdAt: entry.createdAt,
@@ -174,15 +198,20 @@ export const PosV2FinancePage = () => {
           source: entry.source,
           orderId: entry.orderId,
           commandId: entry.commandId,
+          branchId: entry.branchId,
         };
       }),
       ...sourceMovement.expenses.map((entry, index) => ({
-        id: `expense-${index}-${entry.name}`,
+        id: `expense-${entry.id ?? index}-${entry.name}-${entry.branchId ?? "branch"}`,
         concept: entry.name?.trim() || "Egreso",
+        detail: isAllBranches && entry.branchId
+          ? branchNameById.get(entry.branchId) ?? `Sucursal ${entry.branchId}`
+          : undefined,
         amount: Math.abs(Number(entry.amount ?? 0)),
         type: "expense" as const,
         createdAt: entry.createdAt,
         occurredAt: parseFinanceDate(entry.createdAt),
+        branchId: entry.branchId,
       })),
     ];
 
@@ -192,7 +221,7 @@ export const PosV2FinancePage = () => {
       .filter((item) => (typeFilter === "all" ? true : item.type === typeFilter))
       .filter((item) => (normalizedSearch ? item.concept.toLowerCase().includes(normalizedSearch) : true))
       .sort((a, b) => (b.occurredAt?.getTime() ?? 0) - (a.occurredAt?.getTime() ?? 0));
-  }, [movement, todayMovement, periodView, typeFilter, search]);
+  }, [branchNameById, isAllBranches, movement, todayMovement, periodView, typeFilter, search]);
 
   const activeCategories = formMode === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
@@ -246,12 +275,50 @@ export const PosV2FinancePage = () => {
     setLoading(true);
     setError(null);
 
-    const branchId = financeBranchId > 0 ? financeBranchId : undefined;
+    if (financeBranchIds.length === 0) {
+      setLoading(false);
+      return;
+    }
+
+    const overviewPromise = Promise.all(
+      financeBranchIds.map((branchId) =>
+        page.loadOverview(session.businessId, session.token, branchId),
+      ),
+    ).then((rows) =>
+      rows.reduce(
+        (acc, row) => ({
+          monthIncome: acc.monthIncome + Number(row.monthIncome ?? 0),
+          monthExpenses: acc.monthExpenses + Number(row.monthExpenses ?? 0),
+          monthBalance: acc.monthBalance + Number(row.monthBalance ?? 0),
+          todayIncome: acc.todayIncome + Number(row.todayIncome ?? 0),
+          todayExpenses: acc.todayExpenses + Number(row.todayExpenses ?? 0),
+        }),
+        { monthIncome: 0, monthExpenses: 0, monthBalance: 0, todayIncome: 0, todayExpenses: 0 },
+      ),
+    );
+
+    const movementPromise = Promise.all(
+      financeBranchIds.map((branchId) =>
+        page.loadMonthMovement(session.businessId, month, session.token, branchId),
+      ),
+    ).then((rows) => ({
+      income: rows.flatMap((row) => row.income),
+      expenses: rows.flatMap((row) => row.expenses),
+    }));
+
+    const todayMovementPromise = Promise.all(
+      financeBranchIds.map((branchId) =>
+        page.loadTodayMovement(session.businessId, session.token, branchId),
+      ),
+    ).then((rows) => ({
+      income: rows.flatMap((row) => row.income),
+      expenses: rows.flatMap((row) => row.expenses),
+    }));
 
     const [overviewResult, movementResult, todayMovementResult] = await Promise.allSettled([
-      page.loadOverview(session.businessId, session.token, branchId),
-      page.loadMonthMovement(session.businessId, month, session.token, branchId),
-      page.loadTodayMovement(session.businessId, session.token, branchId),
+      overviewPromise,
+      movementPromise,
+      todayMovementPromise,
     ]);
 
     if (overviewResult.status === "fulfilled") {
@@ -279,7 +346,7 @@ export const PosV2FinancePage = () => {
     }
 
     setLoading(false);
-  }, [financeBranchId, hasSession, month, page, session.businessId, session.token]);
+  }, [financeBranchIds, hasSession, month, page, session.businessId, session.token]);
 
   useEffect(() => {
     return onPosBranchUpdated((branch) => {
@@ -313,6 +380,10 @@ export const PosV2FinancePage = () => {
           null;
 
         setFinanceBranchId((current) => {
+          if (current === 0) {
+            return 0;
+          }
+
           const currentExists = rows.some((branch) => branch.id === current);
           return currentExists ? current : fallback?.id ?? 0;
         });
@@ -337,10 +408,14 @@ export const PosV2FinancePage = () => {
   ]);
 
   useEffect(() => {
-    if (hasSession && financeBranchId > 0) {
+    const hasValidScope =
+      financeBranchId > 0 ||
+      (isAdmin && financeBranchId === 0 && financeBranches.length > 0);
+
+    if (hasSession && hasValidScope) {
       refreshData();
     }
-  }, [financeBranchId, hasSession, refreshData]);
+  }, [financeBranchId, financeBranches.length, hasSession, isAdmin, refreshData]);
 
   useEffect(() => {
     if (!toast) return;
@@ -355,6 +430,11 @@ export const PosV2FinancePage = () => {
 
     if (!hasSession) {
       setError("Necesitas iniciar sesión para registrar movimientos.");
+      return;
+    }
+
+    if (isAllBranches) {
+      setError("Selecciona una sucursal específica antes de registrar un movimiento manual.");
       return;
     }
 
@@ -448,12 +528,15 @@ export const PosV2FinancePage = () => {
               <label className="pos-v2-finance__branch-filter">
                 Sucursal
                 <select
-                  value={financeBranchId || ""}
+                  value={financeBranchId}
                   onChange={(event) => setFinanceBranchId(Number(event.target.value))}
                   disabled={branchesLoading || financeBranches.length === 0}
                 >
-                  {branchesLoading ? <option value="">Cargando sucursales…</option> : null}
-                  {!branchesLoading && financeBranches.length === 0 ? <option value="">Sin sucursales</option> : null}
+                  {branchesLoading ? <option value={financeBranchId}>Cargando sucursales…</option> : null}
+                  {!branchesLoading && financeBranches.length === 0 ? <option value={financeBranchId}>Sin sucursales</option> : null}
+                  {!branchesLoading && financeBranches.length > 0 ? (
+                    <option value={0}>Todas las sucursales</option>
+                  ) : null}
                   {financeBranches.map((branch) => (
                     <option key={branch.id} value={branch.id}>
                       {branch.name}{branch.isMain ? " · Principal" : ""}
@@ -474,14 +557,26 @@ export const PosV2FinancePage = () => {
               {loading ? "Actualizando…" : "Actualizar"}
             </button>
 
-            <button type="button" className="pos-v2-finance__new-mobile" onClick={() => setOpenFormModal(true)}>+ Nuevo</button>
+            <button
+              type="button"
+              className="pos-v2-finance__new-mobile"
+              onClick={() => setOpenFormModal(true)}
+              disabled={isAllBranches}
+              title={isAllBranches ? "Selecciona una sucursal específica para registrar movimientos." : undefined}
+            >
+              + Nuevo
+            </button>
           </div>
         </header>
 
         <div className="pos-v2-finance__scope">
           <span>Consultando:</span>
           <strong>{selectedBranchLabel}</strong>
-          {isAdmin ? <small>Vista administrativa por sucursal</small> : <small>Sucursal operativa actual</small>}
+          {isAllBranches
+            ? <small>Consolidado de {financeBranches.length} sucursales</small>
+            : isAdmin
+              ? <small>Vista administrativa por sucursal</small>
+              : <small>Sucursal operativa actual</small>}
         </div>
 
         {branchError ? <p className="pos-v2-finance__error">{branchError}</p> : null}
@@ -529,7 +624,14 @@ export const PosV2FinancePage = () => {
         </section>
 
         <section className="pos-v2-finance__content">
-          <div className="pos-v2-finance__desktop-form">{renderMovementForm()}</div>
+          <div className="pos-v2-finance__desktop-form">
+            {isAllBranches ? (
+              <div className="pos-v2-finance__all-branches-note">
+                <strong>Vista consolidada</strong>
+                <p>Selecciona una sucursal específica para registrar un ingreso o egreso manual.</p>
+              </div>
+            ) : renderMovementForm()}
+          </div>
 
           <article className="pos-v2-finance__timeline">
             <header>

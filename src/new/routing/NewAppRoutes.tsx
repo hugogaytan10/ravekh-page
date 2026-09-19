@@ -185,6 +185,7 @@ export const NewAppRoutes = () => {
       {/* Catálogo v2 moderno y desacoplado */}
         <Route path="/v2/catalogo/:Id/:branchSlug" element={<CatalogStorefrontPage />} />
         <Route path="/v2/catalogo/:Id" element={<CatalogStorefrontPage />} />
+        <Route path="/catalogo/:Id/:branchSlug" element={<CatalogStorefrontPage />} />
         <Route path="/catalogo/producto/:productId/:phone" element={<CatalogProductDetailPage />} />
         <Route path="/catalogo/pedido" element={<CatalogCartPage />} />
         <Route path="/catalogo/pedido-info" element={<CatalogOrderInfoPage />} />

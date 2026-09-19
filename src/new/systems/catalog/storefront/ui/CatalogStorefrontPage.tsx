@@ -538,8 +538,10 @@ export const CatalogStorefrontPage = () => {
     }
   };
 
+  // Un producto publicado no debe desaparecer sólo porque todavía no tenga foto.
+  // StorefrontProductGrid ya renderiza el placeholder "Sin imagen".
   const productsWithImage = useMemo(
-    () => filteredProducts.filter((product) => Boolean(product.image && product.image.trim().length > 0)),
+    () => filteredProducts,
     [filteredProducts],
   );
   const handleSelectCategory = (categoryId: number | null) => {

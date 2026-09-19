@@ -447,11 +447,55 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
 
     this.snapshotKey = key;
     this.snapshotPromise = (async () => {
-      const response = await fetch(this.getPublicCatalogUrl(normalizedBusinessId));
-      if (!response.ok) return null;
-      const envelope = (await response.json()) as PublicCatalogEnvelope | PublicCatalogSnapshot;
-      const snapshot = (envelope as PublicCatalogEnvelope).data ?? (envelope as PublicCatalogSnapshot);
-      return snapshot && typeof snapshot === "object" ? snapshot : null;
+      const url = this.getPublicCatalogUrl(normalizedBusinessId);
+
+      try {
+        const response = await fetch(url);
+
+        if (!response.ok) {
+          const payload = await response.json().catch(() => null) as {
+            code?: string;
+            message?: string;
+          } | null;
+
+          logCatalogDebug("public-catalog:error", {
+            businessId: normalizedBusinessId,
+            branchSlug: this.branchSlug,
+            url,
+            status: response.status,
+            code: payload?.code ?? null,
+            message: payload?.message ?? null,
+          });
+
+          return null;
+        }
+
+        const envelope = (await response.json()) as PublicCatalogEnvelope | PublicCatalogSnapshot;
+        const snapshot =
+          (envelope as PublicCatalogEnvelope).data ??
+          (envelope as PublicCatalogSnapshot);
+
+        logCatalogDebug("public-catalog:success", {
+          businessId: normalizedBusinessId,
+          branchSlug: this.branchSlug,
+          url,
+          productCount: Array.isArray(snapshot?.products)
+            ? snapshot.products.length
+            : 0,
+          businessName: snapshot?.business?.name ?? null,
+        });
+
+        return snapshot && typeof snapshot === "object" ? snapshot : null;
+      } catch (cause) {
+        logCatalogDebug("public-catalog:network-error", {
+          businessId: normalizedBusinessId,
+          branchSlug: this.branchSlug,
+          url,
+          message: cause instanceof Error ? cause.message : String(cause),
+        });
+
+        return null;
+      }
     })();
 
     return this.snapshotPromise;
@@ -517,23 +561,41 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
       fetch(`${normalizeBase(this.baseUrl)}business/${businessId}`).catch(() => null),
     ]);
 
-    if (!snapshot?.business) return null;
-
     let legacy: BusinessResponse | null = null;
     if (legacyResponse?.ok) {
       legacy = (await legacyResponse.json().catch(() => null)) as BusinessResponse | null;
     }
 
-    const catalogFeature = normalizeOptionalNumber(legacy?.Features?.Catalog ?? legacy?.features?.Catalog ?? legacy?.features?.catalog);
-    const branch = snapshot.branch;
-    const availableBranches = Array.isArray(snapshot.availableBranches) ? snapshot.availableBranches : [];
+    if (!snapshot?.business && !legacy) {
+      return null;
+    }
+
+    const catalogFeature = normalizeOptionalNumber(
+      legacy?.Features?.Catalog ??
+      legacy?.features?.Catalog ??
+      legacy?.features?.catalog,
+    );
+    const branch = snapshot?.branch;
+    const availableBranches = Array.isArray(snapshot?.availableBranches)
+      ? snapshot.availableBranches
+      : [];
 
     return {
-      id: parseNumber(snapshot.business.id ?? businessId),
-      name: asString(snapshot.business.name) || asString(legacy?.Name) || "Tienda",
-      phone: asString(branch?.whatsApp) || asString(branch?.phoneNumber) || asString(legacy?.PhoneNumber) || null,
+      id: parseNumber(snapshot?.business?.id ?? legacy?.Id ?? businessId),
+      name:
+        asString(snapshot?.business?.name) ||
+        asString(legacy?.Name) ||
+        "Tienda",
+      phone:
+        asString(branch?.whatsApp) ||
+        asString(branch?.phoneNumber) ||
+        asString(legacy?.PhoneNumber) ||
+        null,
       plan: asString(legacy?.Plan ?? legacy?.plan) || null,
-      logo: asString(snapshot.business.logo) || asString(legacy?.Logo ?? legacy?.logo) || null,
+      logo:
+        asString(snapshot?.business?.logo) ||
+        asString(legacy?.Logo ?? legacy?.logo) ||
+        null,
       catalogFeature,
       branch: branch
         ? {
@@ -562,45 +624,244 @@ export class CatalogStorefrontApi implements ICatalogStorefrontRepository {
 
   async getCategoriesByBusiness(businessId: string): Promise<StorefrontCategory[]> {
     const snapshot = await this.getPublicSnapshot(businessId);
-    const rows = Array.isArray(snapshot?.categories) ? snapshot.categories : [];
-    return rows
-      .map((row) => ({ id: parseNumber(row.id), name: asString(row.name) }))
-      .filter((row) => row.id > 0 && row.name.length > 0);
+
+    if (snapshot) {
+      const rows = Array.isArray(snapshot.categories) ? snapshot.categories : [];
+      return rows
+        .map((row) => ({ id: parseNumber(row.id), name: asString(row.name) }))
+        .filter((row) => row.id > 0 && row.name.length > 0);
+    }
+
+    // Fallback legacy únicamente para Principal.
+    // En una sucursal secundaria nunca mostramos accidentalmente datos de Principal.
+    if (this.branchSlug) {
+      return [];
+    }
+
+    const response = await fetch(
+      `${normalizeBase(this.baseUrl)}categories/business/${encodeURIComponent(businessId)}`,
+    ).catch(() => null);
+
+    if (!response?.ok) return [];
+
+    const raw = (await response.json().catch(() => [])) as CategoryResponse[];
+    if (!Array.isArray(raw)) return [];
+
+    return raw
+      .map((item) => ({
+        id: parseNumber(item.Id ?? item.id),
+        name: asString(item.Name ?? item.name),
+      }))
+      .filter((item) => item.id > 0 && item.name.length > 0);
   }
 
-  async getProductsByBusinessPage(businessId: string, page = 1, _planLimit?: string): Promise<StorefrontProductsPage> {
-    const all = await this.getPublicProducts(businessId);
-    const safePage = Math.max(1, Math.floor(Number(page) || 1));
-    const totalPages = Math.max(1, Math.ceil(all.length / PUBLIC_CATALOG_PAGE_SIZE));
-    const currentPage = Math.min(safePage, totalPages);
-    const start = (currentPage - 1) * PUBLIC_CATALOG_PAGE_SIZE;
-    return {
-      products: all.slice(start, start + PUBLIC_CATALOG_PAGE_SIZE),
-      pagination: {
-        currentPage,
-        totalPages,
-        hasNext: currentPage < totalPages,
-        hasPrev: currentPage > 1,
-      },
-    };
+  async getProductsByBusinessPage(
+    businessId: string,
+    page = 1,
+    planLimit?: string,
+  ): Promise<StorefrontProductsPage> {
+    const snapshot = await this.getPublicSnapshot(businessId);
+
+    if (snapshot) {
+      const all = (Array.isArray(snapshot.products) ? snapshot.products : [])
+        .map((item) => this.normalizePublicProduct(item, businessId))
+        .filter((item) => item.id > 0);
+
+      const safePage = Math.max(1, Math.floor(Number(page) || 1));
+      const totalPages = Math.max(1, Math.ceil(all.length / PUBLIC_CATALOG_PAGE_SIZE));
+      const currentPage = Math.min(safePage, totalPages);
+      const start = (currentPage - 1) * PUBLIC_CATALOG_PAGE_SIZE;
+
+      return {
+        products: all.slice(start, start + PUBLIC_CATALOG_PAGE_SIZE),
+        pagination: {
+          currentPage,
+          totalPages,
+          hasNext: currentPage < totalPages,
+          hasPrev: currentPage > 1,
+        },
+      };
+    }
+
+    if (this.branchSlug) {
+      throw new Error(
+        `No fue posible cargar el catálogo de la sucursal "${this.branchSlug}".`,
+      );
+    }
+
+    // Compatibilidad inmediata para el catálogo Principal si el backend nuevo
+    // todavía no fue desplegado.
+    const visit = getVisitValue(businessId);
+    const limit = String(planLimit ?? "30");
+    const url =
+      `${normalizeBase(this.baseUrl)}products/showstore/stockgtzero/` +
+      `${encodeURIComponent(businessId)}/1?page=${page}&visit=${visit}`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ Limit: limit }),
+    }).catch(() => null);
+
+    if (!response?.ok) {
+      return {
+        products: [],
+        pagination: {
+          currentPage: page,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: page > 1,
+        },
+      };
+    }
+
+    const raw = (await response.json()) as
+      | {
+          data?: ProductResponse[];
+          products?: ProductResponse[];
+          pagination?: {
+            currentPage?: number;
+            totalPages?: number;
+            hasNext?: boolean;
+            hasPrev?: boolean;
+          };
+        }
+      | ProductResponse[];
+
+    return normalizeProductsPage(raw, page, businessId);
   }
 
-  async getProductsByCategoryPage(categoryId: number, page = 1, _planLimit?: string): Promise<StorefrontProductsPage> {
+  async getProductsByCategoryPage(
+    categoryId: number,
+    page = 1,
+    planLimit?: string,
+  ): Promise<StorefrontProductsPage> {
     const businessId = this.lastBusinessId ?? "";
-    if (!businessId) return { products: [], pagination: { currentPage: 1, totalPages: 1, hasNext: false, hasPrev: false } };
-    const all = (await this.getPublicProducts(businessId)).filter((product) => product.categoryId === categoryId);
-    const safePage = Math.max(1, Math.floor(Number(page) || 1));
-    const totalPages = Math.max(1, Math.ceil(all.length / PUBLIC_CATALOG_PAGE_SIZE));
-    const currentPage = Math.min(safePage, totalPages);
-    const start = (currentPage - 1) * PUBLIC_CATALOG_PAGE_SIZE;
-    return {
-      products: all.slice(start, start + PUBLIC_CATALOG_PAGE_SIZE),
-      pagination: { currentPage, totalPages, hasNext: currentPage < totalPages, hasPrev: currentPage > 1 },
-    };
+
+    if (!businessId) {
+      return {
+        products: [],
+        pagination: {
+          currentPage: 1,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: false,
+        },
+      };
+    }
+
+    const snapshot = await this.getPublicSnapshot(businessId);
+
+    if (snapshot) {
+      const all = (Array.isArray(snapshot.products) ? snapshot.products : [])
+        .map((item) => this.normalizePublicProduct(item, businessId))
+        .filter(
+          (product) =>
+            product.id > 0 &&
+            product.categoryId === categoryId,
+        );
+
+      const safePage = Math.max(1, Math.floor(Number(page) || 1));
+      const totalPages = Math.max(1, Math.ceil(all.length / PUBLIC_CATALOG_PAGE_SIZE));
+      const currentPage = Math.min(safePage, totalPages);
+      const start = (currentPage - 1) * PUBLIC_CATALOG_PAGE_SIZE;
+
+      return {
+        products: all.slice(start, start + PUBLIC_CATALOG_PAGE_SIZE),
+        pagination: {
+          currentPage,
+          totalPages,
+          hasNext: currentPage < totalPages,
+          hasPrev: currentPage > 1,
+        },
+      };
+    }
+
+    if (this.branchSlug) {
+      throw new Error(
+        `No fue posible cargar el catálogo de la sucursal "${this.branchSlug}".`,
+      );
+    }
+
+    const limit = String(planLimit ?? "30");
+    const url =
+      `${normalizeBase(this.baseUrl)}products/category/availablegtzero/` +
+      `${categoryId}?page=${page}`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ Limit: limit }),
+    }).catch(() => null);
+
+    if (!response?.ok) {
+      return {
+        products: [],
+        pagination: {
+          currentPage: page,
+          totalPages: 1,
+          hasNext: false,
+          hasPrev: page > 1,
+        },
+      };
+    }
+
+    const raw = (await response.json()) as
+      | {
+          data?: ProductResponse[];
+          products?: ProductResponse[];
+          pagination?: {
+            currentPage?: number;
+            totalPages?: number;
+            hasNext?: boolean;
+            hasPrev?: boolean;
+          };
+        }
+      | ProductResponse[];
+
+    return normalizeProductsPage(raw, page, businessId);
   }
 
-  async getAllProductsByBusiness(businessId: string, _planLimit?: string): Promise<StorefrontProduct[]> {
-    return this.getPublicProducts(businessId);
+  async getAllProductsByBusiness(
+    businessId: string,
+    planLimit?: string,
+  ): Promise<StorefrontProduct[]> {
+    const snapshot = await this.getPublicSnapshot(businessId);
+
+    if (snapshot) {
+      return (Array.isArray(snapshot.products) ? snapshot.products : [])
+        .map((item) => this.normalizePublicProduct(item, businessId))
+        .filter((item) => item.id > 0);
+    }
+
+    if (this.branchSlug) {
+      throw new Error(
+        `No fue posible cargar el catálogo de la sucursal "${this.branchSlug}".`,
+      );
+    }
+
+    const limit = String(planLimit ?? "30");
+    const url =
+      `${normalizeBase(this.baseUrl)}products/showstore/stockgtzero/all/` +
+      `${encodeURIComponent(businessId)}/1`;
+
+    const response = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ Limit: limit }),
+    }).catch(() => null);
+
+    if (!response?.ok) return [];
+
+    const raw = (await response.json()) as
+      | { data?: ProductResponse[]; products?: ProductResponse[] }
+      | ProductResponse[];
+
+    const rows = Array.isArray(raw)
+      ? raw
+      : raw.data ?? raw.products ?? [];
+
+    return normalizeProducts(rows, businessId);
   }
 
   async getAllProductsByCategory(categoryId: number, businessId: string, _planLimit?: string): Promise<StorefrontProduct[]> {

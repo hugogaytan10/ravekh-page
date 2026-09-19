@@ -21,6 +21,12 @@ import {
 } from "../../../shared/config/posSession";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { buildPosPublicCatalogUrl } from "../../../shared/config/posExternalLinks";
+import {
+  PosBranch,
+  readPosBranchSnapshot,
+} from "../../../shared/config/posBranch";
+import { PosBranchApi } from "../../../shared/api/PosBranchApi";
+import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
 import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
 import {
   fetchPosBusinessFeatures,
@@ -80,6 +86,13 @@ export const PosV2MorePage = () => {
   } | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [showCatalogQr, setShowCatalogQr] = useState(false);
+  const [catalogBranches, setCatalogBranches] = useState<PosBranch[]>([]);
+  const [catalogBranchId, setCatalogBranchId] = useState(() => {
+    const snapshot = readPosBranchSnapshot();
+    return snapshot.branchId;
+  });
+  const [catalogBranchesLoading, setCatalogBranchesLoading] = useState(false);
+  const [catalogBranchesError, setCatalogBranchesError] = useState("");
   const [bannerTitle, setBannerTitle] = useState("Promo especial de la semana");
   const [bannerSubtitle, setBannerSubtitle] = useState("Escanea el QR y conoce el catálogo completo de nuestra tienda.");
   const [bannerCta, setBannerCta] = useState("Escanear QR");
@@ -103,15 +116,41 @@ export const PosV2MorePage = () => {
     return factory.createPosProductsService();
   }, []);
   const sessionSnapshot = useMemo(() => readPosSessionSnapshot(), []);
+  const branchApi = useMemo(
+    () => new PosBranchApi(new FetchHttpClient(API_BASE_URL)),
+    [],
+  );
   const isSalesOnlyUser = useMemo(
     () => isSalesOnlyOperator(sessionSnapshot.token),
     [sessionSnapshot.token],
   );
   const allowedModuleIdsForSalesOnly = useMemo(() => new Set(["printers"]), []);
-  const catalogUrl = useMemo(
-    () => buildPosPublicCatalogUrl(sessionSnapshot.businessId),
-    [sessionSnapshot.businessId],
+
+  const selectedCatalogBranch = useMemo(
+    () =>
+      catalogBranches.find((branch) => branch.id === catalogBranchId) ??
+      catalogBranches.find((branch) => branch.isMain) ??
+      catalogBranches[0] ??
+      null,
+    [catalogBranchId, catalogBranches],
   );
+
+  const catalogUrl = useMemo(
+    () =>
+      buildPosPublicCatalogUrl(
+        sessionSnapshot.businessId,
+        selectedCatalogBranch?.slug || null,
+      ),
+    [selectedCatalogBranch?.slug, sessionSnapshot.businessId],
+  );
+
+  const catalogBranchLabel =
+    selectedCatalogBranch?.name ||
+    selectedCatalogBranch?.slug ||
+    "Principal";
+
+  const selectedCatalogEnabled =
+    selectedCatalogBranch?.catalogEnabled !== false;
   const bannerTitleLines = wrapBannerText(bannerTitle || "Promo especial", 29, 2);
   const bannerSubtitleLines = wrapBannerText(
     bannerSubtitle || "Escanea el QR para conocer más productos.",
@@ -167,6 +206,71 @@ export const PosV2MorePage = () => {
     isSalesOnlyUser,
     normalizedQuery,
     modulePage,
+  ]);
+
+  useEffect(() => {
+    if (!sessionSnapshot.token || !sessionSnapshot.businessId) {
+      setCatalogBranches([]);
+      setCatalogBranchId(0);
+      return;
+    }
+
+    let cancelled = false;
+
+    setCatalogBranchesLoading(true);
+    setCatalogBranchesError("");
+
+    branchApi
+      .list(sessionSnapshot.token)
+      .then((branches) => {
+        if (cancelled) return;
+
+        setCatalogBranches(branches);
+
+        const activeSnapshot = readPosBranchSnapshot();
+
+        setCatalogBranchId((current) => {
+          if (branches.some((branch) => branch.id === current)) {
+            return current;
+          }
+
+          if (
+            activeSnapshot.businessId === sessionSnapshot.businessId &&
+            branches.some((branch) => branch.id === activeSnapshot.branchId)
+          ) {
+            return activeSnapshot.branchId;
+          }
+
+          return (
+            branches.find((branch) => branch.isMain)?.id ??
+            branches[0]?.id ??
+            0
+          );
+        });
+      })
+      .catch((cause) => {
+        if (cancelled) return;
+
+        setCatalogBranches([]);
+        setCatalogBranchesError(
+          cause instanceof Error
+            ? cause.message
+            : "No fue posible cargar las sucursales.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setCatalogBranchesLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    branchApi,
+    sessionSnapshot.businessId,
+    sessionSnapshot.token,
   ]);
 
   useEffect(() => {
@@ -241,6 +345,18 @@ export const PosV2MorePage = () => {
   };
 
   const copyCatalogUrl = async () => {
+    if (!selectedCatalogBranch) {
+      setActionMessage("Selecciona una sucursal para copiar su catálogo.");
+      return;
+    }
+
+    if (!selectedCatalogEnabled) {
+      setActionMessage(
+        `El catálogo público de ${catalogBranchLabel} está desactivado.`,
+      );
+      return;
+    }
+
     try {
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(catalogUrl);
@@ -592,33 +708,169 @@ export const PosV2MorePage = () => {
               ))}
           </div>
           <div className="pos-v2-more__catalog-copy">
-            <label htmlFor="public-catalog-url">URL pública de catálogo</label>
-            <input id="public-catalog-url" value={catalogUrl} readOnly />
-            <div className="pos-v2-more__quick-tools-grid">
-              <button
-                type="button"
-                onClick={() => {
-                  if (isPosFeatureBlocked(features.catalog)) {
-                    openUnlockModal(
-                      "Desbloquea tu tienda en línea",
-                      "Activa el catálogo para vender en línea, mostrar tus productos y recibir pedidos desde tu tienda digital.",
-                      "Desbloquear catálogo",
-                      "Catalog",
-                    );
-                    return;
-                  }
-                  window.open(catalogUrl, "_blank", "noopener,noreferrer");
-                }}
-              >
-                Abrir catálogo
-              </button>
-              <button type="button" onClick={() => void copyCatalogUrl()}>
-                Copiar URL
-              </button>
-              <button type="button" onClick={() => setShowCatalogQr(true)}>
-                Generar imagen QR
-              </button>
+            <div className="pos-v2-more__catalog-heading">
+              <div>
+                <strong>Catálogos por sucursal</strong>
+                <span>
+                  Abre, copia o genera el QR del catálogo público de cada sucursal.
+                </span>
+              </div>
+
+              {catalogBranches.length > 1 ? (
+                <span className="pos-v2-more__catalog-count">
+                  {catalogBranches.length} sucursales
+                </span>
+              ) : null}
             </div>
+
+            {catalogBranchesLoading ? (
+              <div className="pos-v2-more__catalog-status">
+                Cargando sucursales…
+              </div>
+            ) : null}
+
+            {catalogBranchesError ? (
+              <div className="pos-v2-more__catalog-status is-error">
+                {catalogBranchesError}
+              </div>
+            ) : null}
+
+            {!catalogBranchesLoading && !catalogBranchesError && catalogBranches.length === 0 ? (
+              <div className="pos-v2-more__catalog-status">
+                No hay sucursales disponibles.
+              </div>
+            ) : null}
+
+            {catalogBranches.length > 0 ? (
+              <>
+                <div
+                  className="pos-v2-more__catalog-branches"
+                  role="list"
+                  aria-label="Catálogos por sucursal"
+                >
+                  {catalogBranches.map((branch) => {
+                    const branchUrl = buildPosPublicCatalogUrl(
+                      sessionSnapshot.businessId,
+                      branch.slug || null,
+                    );
+                    const selected = branch.id === selectedCatalogBranch?.id;
+
+                    return (
+                      <button
+                        key={branch.id}
+                        type="button"
+                        role="listitem"
+                        className={`pos-v2-more__catalog-branch${selected ? " is-active" : ""}`}
+                        onClick={() => setCatalogBranchId(branch.id)}
+                      >
+                        <span className="pos-v2-more__catalog-branch-name">
+                          {branch.name}
+                          {branch.isMain ? (
+                            <small>Principal</small>
+                          ) : null}
+                        </span>
+
+                        <span
+                          className={`pos-v2-more__catalog-branch-state${
+                            branch.catalogEnabled ? " is-enabled" : " is-disabled"
+                          }`}
+                        >
+                          {branch.catalogEnabled ? "Publicado" : "Desactivado"}
+                        </span>
+
+                        <small className="pos-v2-more__catalog-branch-url">
+                          {branch.slug
+                            ? `/${branch.slug}`
+                            : branchUrl}
+                        </small>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <label htmlFor="public-catalog-branch">
+                  Catálogo seleccionado
+                </label>
+                <select
+                  id="public-catalog-branch"
+                  className="pos-v2-more__catalog-select"
+                  value={selectedCatalogBranch?.id ?? ""}
+                  onChange={(event) =>
+                    setCatalogBranchId(Number(event.target.value))
+                  }
+                >
+                  {catalogBranches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
+                      {branch.isMain ? " · Principal" : ""}
+                      {!branch.catalogEnabled ? " · Catálogo desactivado" : ""}
+                    </option>
+                  ))}
+                </select>
+
+                <label htmlFor="public-catalog-url">
+                  URL pública de catálogo · {catalogBranchLabel}
+                </label>
+                <input
+                  id="public-catalog-url"
+                  value={catalogUrl}
+                  readOnly
+                />
+
+                {!selectedCatalogEnabled ? (
+                  <div className="pos-v2-more__catalog-status is-warning">
+                    El catálogo de <strong>{catalogBranchLabel}</strong> está
+                    desactivado. Actívalo en Sucursales antes de compartirlo.
+                  </div>
+                ) : null}
+
+                <div className="pos-v2-more__quick-tools-grid">
+                  <button
+                    type="button"
+                    disabled={!selectedCatalogBranch || !selectedCatalogEnabled}
+                    onClick={() => {
+                      if (isPosFeatureBlocked(features.catalog)) {
+                        openUnlockModal(
+                          "Desbloquea tu tienda en línea",
+                          "Activa el catálogo para vender en línea, mostrar tus productos y recibir pedidos desde tu tienda digital.",
+                          "Desbloquear catálogo",
+                          "Catalog",
+                        );
+                        return;
+                      }
+
+                      if (!selectedCatalogBranch || !selectedCatalogEnabled) {
+                        return;
+                      }
+
+                      window.open(
+                        catalogUrl,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                    }}
+                  >
+                    Abrir catálogo
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!selectedCatalogBranch || !selectedCatalogEnabled}
+                    onClick={() => void copyCatalogUrl()}
+                  >
+                    Copiar URL
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!selectedCatalogBranch || !selectedCatalogEnabled}
+                    onClick={() => setShowCatalogQr(true)}
+                  >
+                    Generar imagen QR
+                  </button>
+                </div>
+              </>
+            ) : null}
             {showCatalogQr ? (
               <div className="pos-v2-more__banner-modal-backdrop" role="presentation" onMouseDown={(event) => {
                 if (event.target === event.currentTarget) setShowCatalogQr(false);
