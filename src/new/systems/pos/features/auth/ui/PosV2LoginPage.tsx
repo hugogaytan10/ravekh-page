@@ -1,6 +1,13 @@
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
+import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
+import { PosBranchApi } from "../../../shared/api/PosBranchApi";
+import {
+  clearPosBranchSelection,
+  persistPosBranch,
+  readActivePosBranchId,
+} from "../../../shared/config/posBranch";
 import { getBusinessLogoDimensionWarning, uploadBusinessLogoToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import {
@@ -139,6 +146,20 @@ export const PosV2LoginPage = () => {
     source: "login" | "signup",
   ) => {
     persistPosSession(session);
+
+    try {
+      const branches = await new PosBranchApi(new FetchHttpClient(API_BASE_URL)).list(session.token);
+      const storedBranchId = readActivePosBranchId(session.businessId);
+      const activeBranch =
+        branches.find((branch) => branch.id === storedBranchId) ??
+        branches.find((branch) => branch.isMain) ??
+        branches[0];
+
+      if (activeBranch) persistPosBranch(activeBranch);
+      else clearPosBranchSelection();
+    } catch (cause) {
+      console.warn("No se pudo resolver la sucursal de la sesión:", cause);
+    }
 
     try {
       const status = await authPage.getSecurityQuestionStatus(

@@ -19,6 +19,9 @@ export async function run(): Promise<void> {
     update: async () => buildProduct(999),
     archive: async () => undefined,
     restore: async () => undefined,
+    addProductExtras: async (_productId: number, extras: unknown[]) => {
+      addedExtras = extras;
+    },
     listCategoriesByBusiness: async () => [],
     createCategory: async () => ({ id: 1, businessId: 10, parentId: null, name: "General", color: "#111" }),
     updateCategory: async () => ({ id: 1, businessId: 10, parentId: null, name: "General", color: "#222" }),
