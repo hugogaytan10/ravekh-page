@@ -22,6 +22,7 @@ import {
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { buildPosPublicCatalogUrl } from "../../../shared/config/posExternalLinks";
 import {
+  persistPosBranch,
   PosBranch,
   readPosBranchSnapshot,
 } from "../../../shared/config/posBranch";
@@ -91,6 +92,9 @@ export const PosV2MorePage = () => {
     const snapshot = readPosBranchSnapshot();
     return snapshot.branchId;
   });
+  const [activeBranchId, setActiveBranchId] = useState(
+    () => readPosBranchSnapshot().branchId,
+  );
   const [catalogBranchesLoading, setCatalogBranchesLoading] = useState(false);
   const [catalogBranchesError, setCatalogBranchesError] = useState("");
   const [bannerTitle, setBannerTitle] = useState("Promo especial de la semana");
@@ -228,6 +232,16 @@ export const PosV2MorePage = () => {
         setCatalogBranches(branches);
 
         const activeSnapshot = readPosBranchSnapshot();
+        const activeBranch =
+          branches.find((branch) => branch.id === activeSnapshot.branchId) ??
+          branches.find((branch) => branch.isMain) ??
+          branches[0] ??
+          null;
+
+        setActiveBranchId(activeBranch?.id ?? 0);
+        if (activeBranch && activeBranch.id !== activeSnapshot.branchId) {
+          persistPosBranch(activeBranch);
+        }
 
         setCatalogBranchId((current) => {
           if (branches.some((branch) => branch.id === current)) {
@@ -486,6 +500,15 @@ export const PosV2MorePage = () => {
     setUnlockModal({ title, message, buttonText, unlockFeature });
   };
 
+  const changeActiveBranch = (branchId: number) => {
+    const branch = catalogBranches.find((item) => item.id === branchId);
+    if (!branch) return;
+    persistPosBranch(branch);
+    setActiveBranchId(branch.id);
+    setCatalogBranchId(branch.id);
+    setActionMessage(`Sucursal activa: ${branch.name}.`);
+  };
+
   const getLockedModule = (
     item: MoreModuleLink,
   ): {
@@ -601,6 +624,28 @@ export const PosV2MorePage = () => {
         <header className="pos-v2-more__header">
           <h2>Centro de operaciones</h2>
         </header>
+        <section className="pos-v2-more__branch-switcher" aria-label="Sucursal operativa">
+          <div>
+            <strong>Sucursal operativa</strong>
+            <span>Las siguientes operaciones usarán esta sucursal.</span>
+          </div>
+          <select
+            value={activeBranchId || ""}
+            onChange={(event) => changeActiveBranch(Number(event.target.value))}
+            disabled={catalogBranchesLoading || catalogBranches.length === 0}
+            aria-label="Cambiar sucursal operativa"
+          >
+            {catalogBranchesLoading ? <option value="">Cargando sucursales…</option> : null}
+            {!catalogBranchesLoading && catalogBranches.length === 0 ? (
+              <option value="">Sin sucursales disponibles</option>
+            ) : null}
+            {catalogBranches.map((branch) => (
+              <option key={branch.id} value={branch.id}>
+                {branch.name}{branch.isMain ? " · Principal" : ""}
+              </option>
+            ))}
+          </select>
+        </section>
         <section className="pos-v2-more__plan-banner" aria-label="Cambiar plan">
           <div>
             <span className="pos-v2-more__plan-eyebrow">Plan actual</span>

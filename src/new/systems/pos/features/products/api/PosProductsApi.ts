@@ -3,6 +3,7 @@ import { POS_ENDPOINTS } from "../../../shared/api/posEndpoints";
 import { toPaginationMeta } from "../../../shared/model/Pagination";
 import { IProductsRepository, ProductImportResult, ProductsPaginatedResult } from "../interface/IProductsRepository";
 import { ManagedProduct, ProductCategory, ProductExtra, ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
+import { createIdempotencyKey } from "../../../../../core/api/FetchHttpClient";
 
 type ProductResponse = {
   Id?: number;
@@ -133,6 +134,7 @@ type CategoryResponse = {
 };
 
 export class PosProductsApi implements IProductsRepository {
+  private pendingCreate: { fingerprint: string; idempotencyKey: string } | null = null;
   constructor(private readonly httpClient: HttpClient) {}
 
   private async requestBranchProducts(
@@ -269,12 +271,19 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   async create(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct> {
-    const created = await this.httpClient.request<{ success?: boolean; data?: { productId?: number } } | { productId?: number }>({ method: "POST", path: POS_ENDPOINTS.productsByBusinessBranch(payload.businessId), token, body: this.toBranchProductPayload(payload) });
+    const body = this.toBranchProductPayload(payload);
+    const fingerprint = JSON.stringify(body);
+    if (this.pendingCreate?.fingerprint !== fingerprint) {
+      this.pendingCreate = { fingerprint, idempotencyKey: createIdempotencyKey() };
+    }
+    const idempotencyKey = this.pendingCreate.idempotencyKey;
+    const created = await this.httpClient.request<{ success?: boolean; data?: { productId?: number } } | { productId?: number }>({ method: "POST", path: POS_ENDPOINTS.productsByBusinessBranch(payload.businessId), token, idempotencyKey, body });
     const wrapper = created as { data?: { productId?: number }; productId?: number };
     const productId = Number(wrapper.data?.productId ?? wrapper.productId ?? 0);
     if (!productId) throw new Error("El backend no devolvió el id del producto creado.");
     await this.httpClient.request<unknown>({ method: "PUT", path: POS_ENDPOINTS.productById(productId), token, body: this.toLegacyMasterPayload({ ...payload, id: productId }) });
     await Promise.all([this.syncExtras(productId, payload.extras ?? [], token), this.syncVariants(productId, payload.variants ?? [], token)]);
+    this.pendingCreate = null;
     return (await this.getById(productId, token)) ?? this.toDomain({ ...this.toLegacy(payload), Id: productId }, payload.extras ?? [], payload.variants ?? []);
   }
 

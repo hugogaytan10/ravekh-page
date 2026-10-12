@@ -70,6 +70,64 @@ body {
     
 }
 
+/* Base compartida: evita que textos largos o la flecha nativa desborden layouts. */
+select:not([multiple]) {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -webkit-appearance: none;
+    appearance: none;
+    padding-inline-end: 2.35rem !important;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #6d01d1 50%),
+        linear-gradient(135deg, #6d01d1 50%, transparent 50%) !important;
+    background-position:
+        calc(100% - 17px) 50%,
+        calc(100% - 11px) 50% !important;
+    background-size: 6px 6px, 6px 6px !important;
+    background-repeat: no-repeat !important;
+}
+
+select:not([multiple]):focus-visible {
+    outline: 2px solid #7c3aed;
+    outline-offset: 2px;
+}
+
+select:not([multiple]):disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+:root[data-theme="dark"] select:not([multiple]) {
+    color-scheme: dark;
+    background-image:
+        linear-gradient(45deg, transparent 50%, #c4b5fd 50%),
+        linear-gradient(135deg, #c4b5fd 50%, transparent 50%) !important;
+}
+
+@supports (appearance: base-select) {
+    select:not([multiple]),
+    ::picker(select) {
+        appearance: base-select;
+    }
+
+    select:not([multiple])::picker-icon {
+        display: none;
+    }
+
+    ::picker(select) {
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        background: var(--bg-surface);
+        color: var(--text-primary);
+        box-shadow: 0 14px 35px rgba(15, 23, 42, 0.18);
+        overflow: hidden;
+    }
+}
+
 .theme-icon {
     filter: var(--icon-filter);
 }

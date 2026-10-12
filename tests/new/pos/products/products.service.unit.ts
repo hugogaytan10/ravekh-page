@@ -15,6 +15,9 @@ export async function run(): Promise<void> {
     listAllByBusiness: async () => [],
     listByBusinessNoAvailablePaginated: async () => ({ products: [], pagination: { page: 1, pageSize: 20, total: 0, totalPages: 1, hasNext: false, hasPrev: false, categoryIds: [] } }),
     getById: async () => null,
+    addProductExtras: async (_productId: number, extras: unknown[]) => {
+      addedExtras = extras;
+    },
     create: async () => buildProduct(101),
     update: async () => buildProduct(999),
     archive: async () => undefined,

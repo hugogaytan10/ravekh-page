@@ -1,6 +1,10 @@
 import { HttpClient, HttpRequest } from "./HttpClient";
 import { readActivePosBranchId } from "../../systems/pos/shared/config/posBranch";
 
+export const createIdempotencyKey = (): string =>
+  globalThis.crypto?.randomUUID?.() ??
+  `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+
 export class FetchHttpClient implements HttpClient {
   constructor(private readonly baseUrl: string) {}
 
@@ -37,6 +41,10 @@ export class FetchHttpClient implements HttpClient {
 
     const isFormData = request.body instanceof FormData;
     const headers: Record<string, string> = isFormData ? {} : { "Content-Type": "application/json" };
+
+    if (request.method === "POST") {
+      headers["Idempotency-Key"] = request.idempotencyKey ?? createIdempotencyKey();
+    }
 
     if (request.token) {
       headers.Authorization = `Bearer ${request.token}`;

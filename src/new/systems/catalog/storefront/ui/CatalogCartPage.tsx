@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { FiArrowLeft, FiMinus, FiPlus, FiTrash2 } from "react-icons/fi";
 import { StorefrontCartItem } from "../model/CatalogStorefrontModels";
@@ -15,6 +15,9 @@ import {
 } from "./catalogPrice";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 import { buildCatalogPath, getCatalogCartKey, readCatalogBranchContext } from "./catalogBranchContext";
+import { CatalogStorefrontApi } from "../api/CatalogStorefrontApi";
+import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
+import { loadCatalogCheckoutOptions } from "./catalogCheckoutOptions";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
@@ -40,11 +43,35 @@ export const CatalogCartPage = () => {
   const navigate = useNavigate();
   const businessId = getBusinessId();
   const branchContext = readCatalogBranchContext();
+  const api = useMemo(
+    () => new CatalogStorefrontApi(getPosApiBaseUrl(), branchContext.branchSlug, businessId),
+    [branchContext.branchSlug, businessId],
+  );
   const [cart, setCart] = useState<StorefrontCartItem[]>(() => loadCart(businessId));
   const [showClearModal, setShowClearModal] = useState(false);
   const [deletingItemKey, setDeletingItemKey] = useState<string | null>(null);
   const [quantityWarnings, setQuantityWarnings] = useState<Record<string, string | null>>({});
+  const [preparingCheckout, setPreparingCheckout] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
   const storeName = window.localStorage.getItem("catalog-v2-store-name") || "Catálogo";
+
+  useEffect(() => {
+    if (businessId) void loadCatalogCheckoutOptions(api, Number(businessId)).catch(() => undefined);
+  }, [api, businessId]);
+
+  const goToCheckout = async () => {
+    if (!businessId || preparingCheckout) return;
+    setPreparingCheckout(true);
+    setCheckoutError("");
+    try {
+      await loadCatalogCheckoutOptions(api, Number(businessId));
+      navigate("/catalogo/pedido-info");
+    } catch {
+      setCheckoutError("No fue posible preparar las opciones del pedido.");
+    } finally {
+      setPreparingCheckout(false);
+    }
+  };
 
   const persist = (next: StorefrontCartItem[]) => {
     if (!businessId) return;
@@ -143,7 +170,10 @@ export const CatalogCartPage = () => {
               <p><span>Total de artículos</span><strong>{totalItems}</strong></p>
               <p><span>Total</span><strong>{totalLabel}</strong></p>
             </div>
-            <button type="button" className="primary" onClick={() => navigate("/catalogo/pedido-info")} disabled={cart.length === 0}>Pagar</button>
+            <button type="button" className="primary" onClick={() => void goToCheckout()} disabled={cart.length === 0 || preparingCheckout}>
+              {preparingCheckout ? "Preparando…" : "Pagar"}
+            </button>
+            {checkoutError ? <small className="warning">{checkoutError}</small> : null}
             <button type="button" className="secondary" onClick={() => navigate(buildCatalogPath(businessId, branchContext.branchSlug))}>Seguir comprando</button>
             {cart.length > 0 ? <button type="button" className="ghost" onClick={() => setShowClearModal(true)}>Limpiar carrito</button> : null}
           </aside>

@@ -9,6 +9,7 @@ import { formatCatalogPrice, getApplicableWholesaleTier, getEffectiveCatalogPric
 import "./CatalogOrderInfoPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
 import { buildCatalogPath, getCatalogCartKey, getPendingStripeCatalogOrderKey, readCatalogBranchContext } from "./catalogBranchContext";
+import { getCachedCatalogCheckoutOptions, loadCatalogCheckoutOptions } from "./catalogCheckoutOptions";
 
 type PaymentMethod = "efectivo" | "transferencia" | "tarjeta" | "enlace";
 type OpenSection = "contact" | "delivery" | "address" | "payment" | null;
@@ -44,6 +45,21 @@ const defaultShippingOptions: ShippingOptions = {
   State: true,
   References: true,
   PaymentMetod: true,
+};
+
+const toShippingOptions = (payload: any): ShippingOptions => {
+  const row = Array.isArray(payload) ? payload[0] : payload;
+  if (!row) return defaultShippingOptions;
+  return {
+    ContactInformation: Number(row.ContactInformation) === 1,
+    ShippingMetod: Number(row.ShippingMetod) === 1,
+    Street: Number(row.Street) === 1,
+    ZipCode: Number(row.ZipCode) === 1,
+    City: Number(row.City) === 1,
+    State: Number(row.State) === 1,
+    References: Number(row.References) === 1,
+    PaymentMetod: Number(row.PaymentMetod) === 1,
+  };
 };
 
 const hasAnyAddressFieldEnabled = (options: ShippingOptions) =>
@@ -83,6 +99,7 @@ export const CatalogOrderInfoPage = () => {
     () => new CatalogStorefrontApi(getPosApiBaseUrl(), branchContext.branchSlug, businessId),
     [branchContext.branchSlug, businessId],
   );
+  const cachedCheckoutOptions = getCachedCatalogCheckoutOptions(businessId);
   const usesSimplifiedCheckout = businessId === 481;
 
   const [name, setName] = useState("");
@@ -97,8 +114,13 @@ export const CatalogOrderInfoPage = () => {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("efectivo");
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [cardEnabled, setCardEnabled] = useState(false);
-  const [shippingOptions, setShippingOptions] = useState<ShippingOptions>(defaultShippingOptions);
+  const [cardEnabled, setCardEnabled] = useState(
+    () => branchContext.isMain && Boolean(cachedCheckoutOptions?.businessConfig?.stripeAccountId && cachedCheckoutOptions.businessConfig.chargesEnabled),
+  );
+  const [shippingOptions, setShippingOptions] = useState<ShippingOptions>(
+    () => toShippingOptions(cachedCheckoutOptions?.shippingResponse),
+  );
+  const [checkoutOptionsLoading, setCheckoutOptionsLoading] = useState(!cachedCheckoutOptions);
   const [openSection, setOpenSection] = useState<OpenSection>("contact");
   const [stripeReturnHandled, setStripeReturnHandled] = useState(false);
   const checkoutOptions = useMemo(
@@ -133,38 +155,37 @@ export const CatalogOrderInfoPage = () => {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     const run = async () => {
-      if (!businessId) return;
-
-      const [businessConfig, shippingResponse] = await Promise.all([
-        api.getBusinessCheckoutConfig(String(businessId)),
-        fetch(`${getPosApiBaseUrl().replace(/\/$/, "")}/shippingoptions/business/${businessId}`).then((response) =>
-          response.ok ? response.json() : null,
-        ),
-      ]);
-
-      const cardAvailable = branchContext.isMain && Boolean(businessConfig?.stripeAccountId && businessConfig?.chargesEnabled);
-      setCardEnabled(cardAvailable);
-      if (!cardAvailable) {
-        setPaymentMethod("efectivo");
+      if (!businessId) {
+        setCheckoutOptionsLoading(false);
+        return;
       }
 
-      const row = Array.isArray(shippingResponse) ? shippingResponse[0] : shippingResponse;
-      if (!row) return;
+      try {
+        const { businessConfig, shippingResponse } =
+          await loadCatalogCheckoutOptions(api, businessId);
+        if (cancelled) return;
 
-      setShippingOptions({
-        ContactInformation: Number(row.ContactInformation) === 1,
-        ShippingMetod: Number(row.ShippingMetod) === 1,
-        Street: Number(row.Street) === 1,
-        ZipCode: Number(row.ZipCode) === 1,
-        City: Number(row.City) === 1,
-        State: Number(row.State) === 1,
-        References: Number(row.References) === 1,
-        PaymentMetod: Number(row.PaymentMetod) === 1,
-      });
+        const cardAvailable = branchContext.isMain && Boolean(businessConfig?.stripeAccountId && businessConfig?.chargesEnabled);
+        setCardEnabled(cardAvailable);
+        if (!cardAvailable) setPaymentMethod("efectivo");
+
+        setShippingOptions(toShippingOptions(shippingResponse));
+      } catch {
+        if (!cancelled) {
+          setGeneralError("No fue posible cargar las opciones del pedido.");
+        }
+      } finally {
+        if (!cancelled) setCheckoutOptionsLoading(false);
+      }
     };
 
     void run();
+    return () => {
+      cancelled = true;
+    };
   }, [api, branchContext.isMain, businessId]);
 
   useEffect(() => {
@@ -431,8 +452,9 @@ export const CatalogOrderInfoPage = () => {
       <section className="catalog-v2-order-info__content">
         <h2>Información del pedido</h2>
         {generalError ? <p className="catalog-v2-order-info__error">{generalError}</p> : null}
+        {checkoutOptionsLoading ? <p>Preparando las opciones del pedido…</p> : null}
 
-        {checkoutOptions.ContactInformation ? (
+        {!checkoutOptionsLoading && checkoutOptions.ContactInformation ? (
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "contact" ? null : "contact"))}>
               <h3>Información de contacto</h3>
@@ -459,7 +481,7 @@ export const CatalogOrderInfoPage = () => {
           </article>
         ) : null}
 
-        {checkoutOptions.ShippingMetod ? (
+        {!checkoutOptionsLoading && checkoutOptions.ShippingMetod ? (
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "delivery" ? null : "delivery"))}>
               <h3>Método de entrega</h3>
@@ -479,7 +501,7 @@ export const CatalogOrderInfoPage = () => {
           </article>
         ) : null}
 
-        {deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled(checkoutOptions) ? (
+        {!checkoutOptionsLoading && deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled(checkoutOptions) ? (
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "address" ? null : "address"))}>
               <h3>Dirección de entrega</h3>
@@ -521,7 +543,7 @@ export const CatalogOrderInfoPage = () => {
           </article>
         ) : null}
 
-        {checkoutOptions.PaymentMetod ? (
+        {!checkoutOptionsLoading && checkoutOptions.PaymentMetod ? (
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "payment" ? null : "payment"))}>
               <h3>Método de pago</h3>
@@ -547,7 +569,7 @@ export const CatalogOrderInfoPage = () => {
           </article>
         ) : null}
 
-        <button type="button" className="submit" onClick={handleSubmit} disabled={submitting}>
+        <button type="button" className="submit" onClick={handleSubmit} disabled={submitting || checkoutOptionsLoading}>
           {submitting ? "Procesando..." : "Preparar pedido"}
         </button>
       </section>

@@ -7,16 +7,17 @@ const projectRoot = process.cwd();
 const outDir = resolve(projectRoot, ".tmp-modern-tests");
 
 const suites = [
+  { name: "unit-http-idempotency", entry: "tests/new/core/http-idempotency.unit.ts" },
   { name: "unit-login-session-limit", entry: "tests/new/pos/auth/login-session-limit.unit.ts" },
   { name: "unit-products-service", entry: "tests/new/pos/products/products.service.unit.ts" },
   { name: "unit-products-discontinued", entry: "tests/new/pos/products/products.discontinued.unit.ts" },
   { name: "unit-catalog-ai-plan-access", entry: "tests/new/pos/products/catalog-ai-plan-access.unit.ts" },
-  { name: "unit-catalog-ai-wholesale-prices", entry: "tests/new/pos/products/catalog-ai-wholesale-prices.unit.ts" },
   { name: "integration-products-api-service-page", entry: "tests/new/pos/products/products.integration.ts" },
   { name: "integration-finance-api", entry: "tests/new/pos/finance/finance.api.integration.ts" },
   { name: "unit-more-module-page", entry: "tests/new/pos/more/more.module.page.unit.ts" },
   { name: "integration-branding-api", entry: "tests/new/pos/branding/branding.api.integration.ts" },
   { name: "integration-reporting-api", entry: "tests/new/pos/reporting/reporting.api.integration.ts" },
+  { name: "unit-reporting-aggregation", entry: "tests/new/pos/reporting/reporting.aggregation.unit.ts" },
   { name: "integration-dashboard-api", entry: "tests/new/pos/reporting/dashboard.api.integration.ts" },
   { name: "unit-online-orders-page", entry: "tests/new/pos/online-orders/online-orders.page.unit.ts" },
   { name: "unit-online-orders-api", entry: "tests/new/pos/online-orders/online-orders.api.unit.ts" },

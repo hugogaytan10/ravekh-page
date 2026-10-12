@@ -36,6 +36,7 @@ import {
   readPosBusinessFeatures,
 } from "../../../shared/config/posFeatureFlags";
 import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
+import { createIdempotencyKey } from "../../../../../core/api/FetchHttpClient";
 
 const ALL_PRODUCTS_SEARCH_DEBOUNCE_MS = 450;
 const FREE_PLAN_ORDER_LIMIT_CODE = "FREE_PLAN_ORDER_LIMIT_REACHED";
@@ -318,6 +319,7 @@ const toVariantLabel = (variant: SaleVariantVm): string => {
 };
 
 export const PosV2SalesHomePage = () => {
+  const saleIdempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [categoryKey, setCategoryKey] = useState("all");
@@ -1760,10 +1762,15 @@ export const PosV2SalesHomePage = () => {
       const payload = tableId
         ? checkoutPayload
         : { ...checkoutPayload, Status: "ENTREGADO", Details: lineItems };
+      const fingerprint = JSON.stringify({ endpoint, payload });
+      if (saleIdempotencyRef.current?.fingerprint !== fingerprint) {
+        saleIdempotencyRef.current = { fingerprint, key: createIdempotencyKey() };
+      }
+      const idempotencyKey = saleIdempotencyRef.current.key;
 
       const response = await fetch(new URL(endpoint, API_BASE_URL).toString(), {
         method: "POST",
-        headers: buildPosAuthHeaders(token),
+        headers: buildPosAuthHeaders(token, { idempotencyKey }),
         body: JSON.stringify(payload),
       });
 
@@ -1784,6 +1791,7 @@ export const PosV2SalesHomePage = () => {
         );
       }
       debugLog("Venta registrada correctamente.", responseData);
+      saleIdempotencyRef.current = null;
 
       const folio = `RVK-${Date.now().toString().slice(-6)}`;
       const paymentMethodLabel =

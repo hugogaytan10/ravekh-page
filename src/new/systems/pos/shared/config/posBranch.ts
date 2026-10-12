@@ -109,6 +109,7 @@ export const buildPosAuthHeaders = (
     contentType?: boolean;
     branchId?: number;
     skipBranch?: boolean;
+    idempotencyKey?: string;
   } = {},
 ): Record<string, string> => {
   const headers: Record<string, string> = {};
@@ -127,6 +128,10 @@ export const buildPosAuthHeaders = (
     if (Number.isInteger(branchId) && branchId > 0) {
       headers["X-Branch-Id"] = String(branchId);
     }
+  }
+
+  if (options.idempotencyKey) {
+    headers["Idempotency-Key"] = options.idempotencyKey;
   }
 
   return headers;

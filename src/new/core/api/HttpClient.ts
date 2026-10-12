@@ -4,6 +4,8 @@ export interface HttpRequest {
   query?: Record<string, string | number | boolean | undefined>;
   body?: unknown;
   token?: string;
+  /** Conserva la misma clave al reintentar una mutación. */
+  idempotencyKey?: string;
   /** Override de sucursal para una petición autenticada. */
   branchId?: number;
   /** Evita enviar X-Branch-Id (útil para /branches y autenticación). */

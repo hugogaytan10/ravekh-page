@@ -27,6 +27,7 @@ import { readActivePosBranchId, type PosBranch } from "../../../shared/config/po
 import { PosBranchApi } from "../../../shared/api/PosBranchApi";
 import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
+import { combineTopItems, loadAllTicketPages, type TopChartItem } from "./reportingAggregation";
 import "./PosV2ReportingPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
@@ -79,8 +80,6 @@ type TrendPoint = IncomePoint & {
   widthPercentage: number;
   deltaLabel: string;
 };
-
-type TopChartItem = { name: string; quantity: number };
 
 const clampPercentage = (value: number): number => {
   if (!Number.isFinite(value)) return 0;
@@ -189,23 +188,6 @@ const combineIncomeSeries = (sets: IncomePoint[][]): IncomePoint[] => {
   return Array.from(byDate.entries())
     .sort(([left], [right]) => left.localeCompare(right))
     .map(([dateLabel, amount]) => ({ dateLabel, amount }));
-};
-
-const combineTopItems = (sets: Array<Array<{ name: string; quantity?: number; totalSales?: number }>>): TopChartItem[] => {
-  const grouped = new Map<string, number>();
-
-  for (const rows of sets) {
-    for (const row of rows) {
-      const key = row.name?.trim() || "Sin datos";
-      const value = Number(row.quantity ?? row.totalSales ?? 0);
-      grouped.set(key, (grouped.get(key) ?? 0) + value);
-    }
-  }
-
-  return Array.from(grouped.entries())
-    .map(([name, quantity]) => ({ name, quantity }))
-    .sort((a, b) => b.quantity - a.quantity)
-    .slice(0, 5);
 };
 
 export const PosV2ReportingPage = () => {
@@ -485,25 +467,27 @@ export const PosV2ReportingPage = () => {
         Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Mexico_City";
 
       if (isAllBranches) {
-        const resultSets = await Promise.all(
+        const ticketSets = await Promise.all(
           reportBranchIds.map((branchId) =>
-            reportingPage.loadSalesTicketsByDateRange(
-              businessId,
-              salesDates.from,
-              salesDates.to,
-              timezone,
-              1,
-              10000,
-              cleanToken,
-              branchId,
+            loadAllTicketPages((page, pageSize) =>
+              reportingPage.loadSalesTicketsByDateRange(
+                businessId,
+                salesDates.from,
+                salesDates.to,
+                timezone,
+                page,
+                pageSize,
+                cleanToken,
+                branchId,
+              ),
             ),
           ),
         );
 
         if (salesTicketsRequestRef.current !== requestId) return;
 
-        const merged = resultSets
-          .flatMap((result) => result.items)
+        const merged = ticketSets
+          .flat()
           .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
         const pageSize = 50;
