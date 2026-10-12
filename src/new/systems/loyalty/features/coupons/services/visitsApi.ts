@@ -1,11 +1,18 @@
 import { COUPONS_API_URL } from "../config/couponsEnv";
 import type { Visits } from "../models/coupon";
+import {
+  getCuponesToken,
+  setCuponesSession,
+  setCuponesToken,
+  setCuponesUserId,
+} from "./session";
 
 type RedeemVisitResponse = { visitCreated: boolean; couponGenerated: boolean };
 
 type RedeemVisitPayload = Partial<RedeemVisitResponse> & {
   success?: boolean;
   message?: string;
+  error?: string;
 };
 
 const getVisitsByUserId = async (userId: number): Promise<Visits[]> => {
@@ -54,6 +61,7 @@ const redeemVisitQr = async (
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      token: getCuponesToken(),
     },
     body: JSON.stringify({ token, userId, regenerateDynamicQr: options?.regenerateDynamicQr ?? true }),
     signal: options?.signal,
@@ -61,13 +69,19 @@ const redeemVisitQr = async (
   
   const payload = await parseResponsePayload(response);
   if (!response.ok) {
+    if (response.status === 401 || response.status === 403) {
+      setCuponesSession(false);
+      setCuponesToken();
+      setCuponesUserId();
+      throw new Error("Tu sesión expiró. Inicia sesión para registrar la visita.");
+    }
     const hasSuccessSignal = payload?.visitCreated || payload?.couponGenerated || payload?.success;
 
     if (hasSuccessSignal) {
       return normalizeRedeemResponse(payload);
     }
 
-    throw new Error(payload?.message || "No se pudo registrar la visita.");
+    throw new Error(payload?.error || payload?.message || "No se pudo registrar la visita.");
   }
 
   return normalizeRedeemResponse(payload);

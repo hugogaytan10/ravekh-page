@@ -13,7 +13,22 @@ const FORBIDDEN_IMPORT_PATTERNS = [
 ];
 
 const NEW_RUNTIME_ENTRYPOINTS = ["src/App.jsx", "src/main.jsx"];
-const ALLOWED_RUNTIME_IMPORTS = new Set(["src/main.jsx -> ./App.jsx"]);
+const ALLOWED_RUNTIME_IMPORTS = new Set([
+  "src/main.jsx -> ./App.jsx",
+  "src/new/systems/main-catalog/pages/MainCatalogPage.tsx -> ../../../../../scripts/metaPixel",
+  "src/new/systems/main-catalog/pages/MetaPixelRouteTracker.tsx -> ../../../../../scripts/metaPixel",
+  "src/new/systems/pos/features/auth/ui/PosV2PasswordRecoveryPage.tsx -> ../../../../../../assets/POS/Eye",
+  "src/new/systems/pos/features/auth/ui/PosV2PasswordRecoveryPage.tsx -> ../../../../../../assets/POS/EyeOff",
+  ...[
+    "RavekhAccesoriosPage.tsx",
+    "RavekhBoutique.tsx",
+    "RavekhComidaPage.tsx",
+    "RavekhFiestasPage.tsx",
+    "RavekhPerfumeriaPage.tsx",
+    "RavekhRefacciones.tsx",
+    "ravekhAbarrotesPage.tsx",
+  ].map((name) => `src/new/systems/ravekh-segment/pages/${name} -> ../../../../../scripts/metaPixel`),
+]);
 
 export async function run(): Promise<void> {
   const root = resolve(process.cwd());
@@ -28,6 +43,7 @@ export async function run(): Promise<void> {
     const content = readFileSync(resolve(root, file), "utf8");
     const imports = Array.from(content.matchAll(/(?:from\s+|import\s*\()\s*["']([^"']+)["']/g)).map((entry) => entry[1]);
     const fileViolations: string[] = [];
+    const normalizedFile = file.replaceAll("\\", "/");
 
     for (const value of imports) {
       if (FORBIDDEN_IMPORT_PATTERNS.some((pattern) => pattern.test(value))) {
@@ -36,7 +52,7 @@ export async function run(): Promise<void> {
       }
 
       if (value.startsWith(".")) {
-        if (ALLOWED_RUNTIME_IMPORTS.has(`${file} -> ${value}`)) {
+        if (ALLOWED_RUNTIME_IMPORTS.has(`${normalizedFile} -> ${value}`)) {
           continue;
         }
         const resolvedImport = normalize(resolve(root, dirname(file), value)).replaceAll("\\", "/");

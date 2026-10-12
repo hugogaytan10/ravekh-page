@@ -10,14 +10,14 @@ export async function run(): Promise<void> {
     request: async ({ method, path, query, body }: { method: string; path: string; query?: Record<string, unknown>; body?: unknown }) => {
       calls.push(`${method} ${path}${query ? `?page=${query.page}&limit=${query.limit}` : ""}`);
 
-      if (method === "GET" && path === "products/business/9" && !query) {
+      if (method === "GET" && path === "products/business/9/branch" && query?.limit === "MAX") {
         return [
           { Id: 1, Business_Id: 9, Name: "Leche", Stock: 2, Price: 30 },
           { Id: 2, Business_Id: 9, Name: "Pan", Stock: 40, Price: 15 },
         ];
       }
 
-      if (method === "GET" && path === "products/business/9" && query) {
+      if (method === "GET" && path === "products/business/9/branch" && query?.limit === 20) {
         return {
           products: [{ Id: 3, Business_Id: 9, Name: "Café", Stock: 1, Price: 45 }],
           pagination: {
@@ -31,7 +31,7 @@ export async function run(): Promise<void> {
         };
       }
 
-      if (method === "PUT" && path === "products/3") {
+      if (method === "PATCH" && path === "branch-products/3/inventory") {
         assert.deepEqual(body, { Stock: 20 });
         return undefined;
       }
@@ -66,8 +66,8 @@ export async function run(): Promise<void> {
   await page.updateItemStock(3, 20, "token");
 
   assert.deepEqual(calls, [
-    "GET products/business/9",
-    "GET products/business/9?page=2&limit=20",
-    "PUT products/3",
+    "GET products/business/9/branch?page=1&limit=MAX",
+    "GET products/business/9/branch?page=2&limit=20",
+    "PATCH branch-products/3/inventory",
   ]);
 }

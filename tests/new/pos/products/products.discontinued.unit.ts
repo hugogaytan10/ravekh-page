@@ -3,6 +3,13 @@ import { PosProductsApi } from "../../../../src/new/systems/pos/features/product
 import { ProductsService } from "../../../../src/new/systems/pos/features/products/services/ProductsService";
 
 export async function run(): Promise<void> {
+  const previousWindow = globalThis.window;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { localStorage: { getItem: (key: string) => key === "pos-v2-business-id" ? "7" : null } },
+  });
+
+  try {
   const originalWindow = globalThis.window;
   Object.assign(globalThis, {
     window: { localStorage: { getItem: () => "7" } },
@@ -36,5 +43,9 @@ export async function run(): Promise<void> {
     path: "products/business/7/branch/9",
     body: { Available: 1 },
   });
+  } finally {
+    if (previousWindow === undefined) delete (globalThis as { window?: Window }).window;
+    else Object.defineProperty(globalThis, "window", { configurable: true, value: previousWindow });
+  }
   globalThis.window = originalWindow;
 }

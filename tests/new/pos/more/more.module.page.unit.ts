@@ -39,9 +39,11 @@ export async function run(): Promise<void> {
   assert.equal(securityQuestions.path, POS_V2_PATHS.securityQuestions);
   assert.equal(securityQuestions.actionType, "route");
   const roles = MORE_MODULE_SECTIONS.flatMap((section) => section.items).find((item) => item.id === "roles");
-  const branches = MORE_MODULE_SECTIONS.flatMap((section) => section.items).find((item) => item.id === "branches");
+  const branches = findModule("branches");
   assert.equal(roles, undefined);
-  assert.equal(branches, undefined);
+  assert.equal(branches.path, POS_V2_PATHS.branches);
+  assert.equal(branches.actionType, "route");
+  assert.equal(branches.status, "available");
 
   let failed = false;
   try {

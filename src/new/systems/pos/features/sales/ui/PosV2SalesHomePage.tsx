@@ -36,6 +36,7 @@ import {
   readPosBusinessFeatures,
 } from "../../../shared/config/posFeatureFlags";
 import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
+import { clampSaleQuantityToStock } from "../model/saleStock";
 import { createIdempotencyKey } from "../../../../../core/api/FetchHttpClient";
 
 const ALL_PRODUCTS_SEARCH_DEBOUNCE_MS = 450;
@@ -70,6 +71,7 @@ type CartItemVm = {
   name: string;
   price: number;
   quantity: number;
+  stock: number | null;
   variantId: number | null;
   variantLabel: string | null;
   colorId: number | null;
@@ -325,6 +327,7 @@ export const PosV2SalesHomePage = () => {
   const [categoryKey, setCategoryKey] = useState("all");
   const [isGrid, setIsGrid] = useState(true);
   const [products, setProducts] = useState<SaleItemVm[]>([]);
+  const [catalogRevision, setCatalogRevision] = useState(0);
   const [categories, setCategories] = useState<CategoryVm[]>([]);
   const [availableCategoryIds, setAvailableCategoryIds] = useState<number[]>(
     [],
@@ -598,7 +601,6 @@ export const PosV2SalesHomePage = () => {
       })
       .catch((error) => {
         setProducts([]);
-        setGlobalSearchProducts([]);
         setProductsError(
           error instanceof Error
             ? error.message
@@ -606,7 +608,7 @@ export const PosV2SalesHomePage = () => {
         );
       })
       .finally(() => setLoadingProducts(false));
-  }, [categoryKey, currentPage, isPlanLimitReady, planLimit]);
+  }, [catalogRevision, categoryKey, currentPage, isPlanLimitReady, planLimit]);
 
 
   useEffect(() => {
@@ -1115,6 +1117,7 @@ export const PosV2SalesHomePage = () => {
       name: productCatalog?.name ?? (fallbackName || `Producto #${productId}`),
       price: variantFromCatalog?.price ?? safePrice,
       quantity,
+      stock: variantFromCatalog?.stock ?? productCatalog?.stock ?? null,
       variantId,
       variantLabel,
       colorId: row.Color_Id ? Number(row.Color_Id) : null,
@@ -1455,9 +1458,25 @@ export const PosV2SalesHomePage = () => {
       colorOption?.description ?? variant?.color ?? product.color ?? null;
     const normalizedQuantity = Math.max(1, Math.floor(quantity));
     const itemName = product.name;
+    const stock = variant ? variant.stock : product.stock;
+    const currentQuantity = cart[cartKey]?.quantity ?? 0;
+    const requestedQuantity = currentQuantity + normalizedQuantity;
+
+    if (clampSaleQuantityToStock(requestedQuantity, stock) < requestedQuantity) {
+      setValidationError(
+        `${itemName} sólo tiene ${stock ?? 0} unidades disponibles.`,
+      );
+      return;
+    }
 
     setCart((current) => {
       const existing = current[cartKey];
+      const nextQuantity = clampSaleQuantityToStock(
+        (existing?.quantity ?? 0) + normalizedQuantity,
+        stock,
+      );
+      if (nextQuantity <= (existing?.quantity ?? 0)) return current;
+
       return {
         ...current,
         [cartKey]: {
@@ -1465,7 +1484,8 @@ export const PosV2SalesHomePage = () => {
           productId: product.id,
           name: itemName,
           price: basePrice,
-          quantity: (existing?.quantity ?? 0) + normalizedQuantity,
+          quantity: nextQuantity,
+          stock,
           variantId: variant?.id ?? null,
           variantLabel,
           colorId: colorOption?.id ?? null,
@@ -1488,6 +1508,10 @@ export const PosV2SalesHomePage = () => {
     const hasVariants = variants.length > 0;
 
     if (!hasVariants && !hasExtraSize) {
+      if (!hasBaseStock) {
+        setValidationError("Este producto no tiene stock disponible.");
+        return;
+      }
       addToCartEntry(product, null);
       return;
     }
@@ -1549,10 +1573,21 @@ export const PosV2SalesHomePage = () => {
       ? 0
       : Math.max(0, Math.floor(quantity));
 
+    const target = cart[cartKey];
+    if (!target) return;
+    const allowedQuantity = clampSaleQuantityToStock(safeQuantity, target.stock);
+    if (allowedQuantity < safeQuantity) {
+      setValidationError(
+        `${target.name} sólo tiene ${target.stock ?? 0} unidades disponibles.`,
+      );
+    } else {
+      setValidationError(null);
+    }
+
     setCart((current) => {
-      const target = current[cartKey];
-      if (!target) return current;
-      if (safeQuantity <= 0) {
+      const currentTarget = current[cartKey];
+      if (!currentTarget) return current;
+      if (allowedQuantity <= 0) {
         const { [cartKey]: _, ...rest } = current;
         return rest;
       }
@@ -1560,32 +1595,17 @@ export const PosV2SalesHomePage = () => {
       return {
         ...current,
         [cartKey]: {
-          ...target,
-          quantity: safeQuantity,
+          ...currentTarget,
+          quantity: allowedQuantity,
         },
       };
     });
   };
 
   const updateQuantity = (cartKey: string, delta: number) => {
-    setCart((current) => {
-      const target = current[cartKey];
-      if (!target) return current;
-
-      const nextQuantity = target.quantity + delta;
-      if (nextQuantity <= 0) {
-        const { [cartKey]: _, ...rest } = current;
-        return rest;
-      }
-
-      return {
-        ...current,
-        [cartKey]: {
-          ...target,
-          quantity: nextQuantity,
-        },
-      };
-    });
+    const target = cart[cartKey];
+    if (!target) return;
+    setQuantity(cartKey, target.quantity + delta);
   };
 
   const confirmVariantSelection = () => {
@@ -1674,6 +1694,16 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
+    const itemWithoutEnoughStock = cartItems.find(
+      (item) => item.stock !== null && item.quantity > item.stock,
+    );
+    if (itemWithoutEnoughStock) {
+      setValidationError(
+        `${itemWithoutEnoughStock.name} sólo tiene ${itemWithoutEnoughStock.stock} unidades disponibles.`,
+      );
+      return;
+    }
+
     if (
       discountSourceRef.current === "fixed" &&
       Number(fixedDiscount) > totals.subtotal
@@ -1729,7 +1759,7 @@ export const PosV2SalesHomePage = () => {
     setValidationError(null);
     setPlanUpgradePrompt(null);
     debugLog("Intentando finalizar venta.", {
-      endpoint: selectedTableId ? "commands" : "orders",
+      endpoint: selectedTableId ? "commands/branch" : "orders/branch",
       selectedTable: selectedTableName,
       employeeId,
       items: lineItems,
@@ -1824,6 +1854,8 @@ export const PosV2SalesHomePage = () => {
         items: printableItems,
       });
       setCart({});
+      setVariantsCache({});
+      setCatalogRevision((current) => current + 1);
       setDiscountPercent("0");
       setFixedDiscount("0");
       discountSourceRef.current = "percent";
@@ -2256,10 +2288,7 @@ export const PosV2SalesHomePage = () => {
                 (variant) => variant.stock === null || variant.stock > 0,
               );
               const hasBaseStock = product.stock === null || product.stock > 0;
-              const hasBlockedVariants =
-                !hasBaseStock &&
-                product.variants.length > 0 &&
-                sellableVariants.length === 0;
+              const isOutOfStock = !hasBaseStock && sellableVariants.length === 0;
               const shouldShowImage =
                 Boolean(product.image) && !imageLoadErrors[product.id];
 
@@ -2301,13 +2330,18 @@ export const PosV2SalesHomePage = () => {
                         variantes disponibles
                       </small>
                     ) : null}
+                    {product.variants.length === 0 && product.stock !== null ? (
+                      <small className="pos-v2-sales-home__variant-badge">
+                        Quedan {product.stock} unidades
+                      </small>
+                    ) : null}
                   </div>
                   <div className="pos-v2-sales-home__product-side">
                     <strong>${product.price.toFixed(2)}</strong>
                     <button
                       type="button"
                       onClick={() => void addToCart(product)}
-                      disabled={hasBlockedVariants}
+                      disabled={isOutOfStock}
                     >
                       {product.variants.length > 0
                         ? "Elegir variante"
@@ -2446,6 +2480,7 @@ export const PosV2SalesHomePage = () => {
                       <input
                         type="number"
                         min="0"
+                        max={item.stock ?? undefined}
                         className="flex items-center justify-center"
                         value={item.quantity}
                         onChange={(event) =>
@@ -2937,6 +2972,7 @@ export const PosV2SalesHomePage = () => {
                         <input
                           type="number"
                           min="1"
+                          max={variant.stock ?? undefined}
                           value={quantity}
                           onChange={(event) => {
                             const value = Number(event.target.value);
@@ -2947,10 +2983,15 @@ export const PosV2SalesHomePage = () => {
                                 selectedVariantKey: optionKey,
                                 quantities: {
                                   ...current.quantities,
-                                  [optionKey]:
-                                    Number.isFinite(value) && value > 0
-                                      ? Math.floor(value)
-                                      : 1,
+                                  [optionKey]: Math.max(
+                                    1,
+                                    clampSaleQuantityToStock(
+                                      Number.isFinite(value) && value > 0
+                                        ? value
+                                        : 1,
+                                      variant.stock,
+                                    ),
+                                  ),
                                 },
                               };
                             });
@@ -2971,7 +3012,13 @@ export const PosV2SalesHomePage = () => {
                                 selectedVariantKey: optionKey,
                                 quantities: {
                                   ...current.quantities,
-                                  [optionKey]: currentQty + 1,
+                                  [optionKey]: Math.max(
+                                    1,
+                                    clampSaleQuantityToStock(
+                                      currentQty + 1,
+                                      variant.stock,
+                                    ),
+                                  ),
                                 },
                               };
                             });
