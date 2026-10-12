@@ -84,10 +84,8 @@ const RegisterPage: React.FC = () => {
       const registerUserId = parseNumericId(registerResponse?.Id ?? registerResponse?.id);
 
       if (registerUserId) {
-        persistCuponesAuthSession({
-          Id: registerUserId,
-          Name: normalizedName,
-        });
+        const loginResponse = await loginCupones({ Email: normalizedEmail, Password: normalizedPassword });
+        persistCuponesAuthSession(loginResponse);
 
         if (effectivePendingCouponId) {
           clearPendingCouponClaimId();
