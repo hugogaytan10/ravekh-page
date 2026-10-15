@@ -157,6 +157,14 @@ const LoginPage: React.FC = () => {
           >
             Recuperar contraseña
           </button>
+          <button
+            type="button"
+            className="text-sm font-semibold ml-3"
+            style={{ color: theme.textMuted }}
+            onClick={() => navigate(`/coupons/reset-password?mode=complete&email=${encodeURIComponent(email.trim())}`)}
+          >
+            Terminar mi cuenta
+          </button>
         </div>
 
         <button

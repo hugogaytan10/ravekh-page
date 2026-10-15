@@ -81,6 +81,11 @@ const RegisterPage: React.FC = () => {
         Password: normalizedPassword,
       });
 
+      if (registerResponse.RequiresAccountCompletion) {
+        navigate(`/coupons/reset-password?mode=complete&email=${encodeURIComponent(normalizedEmail)}`, {replace: true});
+        return;
+      }
+
       const registerUserId = parseNumericId(registerResponse?.Id ?? registerResponse?.id);
 
       if (registerUserId) {
@@ -118,7 +123,7 @@ const RegisterPage: React.FC = () => {
 
       navigate("/coupons/home");
     } catch (error) {
-      setErrorMessage("No se pudo registrar la cuenta. Intenta nuevamente.");
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo registrar la cuenta. Intenta nuevamente.");
     } finally {
       setIsSubmitting(false);
     }

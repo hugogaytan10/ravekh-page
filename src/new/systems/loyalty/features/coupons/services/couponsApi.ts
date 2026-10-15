@@ -17,6 +17,7 @@ type RegisterPayload = {
 };
 
 type RegisterResponse = {
+  RequiresAccountCompletion?: boolean;
   Id?: number | string;
   id?: number | string;
   message?: string;
@@ -33,8 +34,8 @@ const parseJsonOrNull = async <T>(response: Response): Promise<T | null> => {
 };
 
 const buildHttpError = async (response: Response, fallback: string): Promise<Error> => {
-  const payload = await parseJsonOrNull<{ message?: string }>(response);
-  return new Error(payload?.message?.trim() || fallback);
+  const payload = await parseJsonOrNull<{ message?: string; error?: string }>(response);
+  return new Error(payload?.error?.trim() || payload?.message?.trim() || fallback);
 };
 
 const createCoupon = async (payload: CreateCouponPayload): Promise<Response> => {
@@ -254,8 +255,8 @@ const registerCupones = async (payload: RegisterPayload): Promise<RegisterRespon
   return (await parseJsonOrNull<RegisterResponse>(response)) ?? {};
 };
 
-const resetPassword = async (body: { Email: string; Password: string }) => {
-  const url = `${COUPONS_API_URL}resetpassword`;
+const resetPassword = async (body: { Email: string; Code: string; Password: string }) => {
+  const url = `${COUPONS_API_URL}customer-access/password`;
 
   const response = await fetch(url, {
     method: "PUT",
@@ -264,15 +265,13 @@ const resetPassword = async (body: { Email: string; Password: string }) => {
     },
     body: JSON.stringify(body),
   });
-  console.log("Reset Password Request Body:", body);
-  console.log("Reset Password Response:", response);
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
     throw new Error(
-      data?.Message ||
+      data?.error ||
+        data?.Message ||
         data?.message ||
-        data?.error ||
         "No se pudo actualizar la contraseña."
     );
   }
