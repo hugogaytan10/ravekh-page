@@ -340,6 +340,8 @@ export const PosV2SalesHomePage = () => {
   const [fixedDiscount, setFixedDiscount] = useState("0");
   const discountSourceRef = useRef<"percent" | "fixed">("percent");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("EFECTIVO");
+  const [payLater, setPayLater] = useState(false);
+  const [initialPayment, setInitialPayment] = useState("0");
   const [ticket, setTicket] = useState<string | null>(null);
   const [mobileStep, setMobileStep] = useState<MobileStep>("catalog");
   const [validationError, setValidationError] = useState<string | null>(null);
@@ -1721,6 +1723,15 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
+    if (payLater && (!selectedCustomerId || selectedTableId)) {
+      setValidationError("Para cobrar después, selecciona un cliente y retira la mesa activa.");
+      return;
+    }
+    const advance = Number(initialPayment.replace(",", "."));
+    if (payLater && (!Number.isFinite(advance) || advance < 0 || advance >= totals.total)) {
+      setValidationError("El abono inicial debe ser de $0 o mayor y menor al total de la venta.");
+      return;
+    }
     const { token } = getCurrentSession();
     const employeeId = token ? resolveEmployeeId(token) : 0;
 
@@ -1744,7 +1755,7 @@ export const PosV2SalesHomePage = () => {
 
     const checkoutPayload = {
       Customer_Id: selectedCustomerId ? Number(selectedCustomerId) : undefined,
-      PaymentMethod: paymentMethod,
+      ...(payLater ? { Status: "PENDIENTE", AmountReceived: advance } : { PaymentMethod: paymentMethod }),
       Total: totals.total,
       Discount: totals.discount,
       Tax: Boolean(salesTax && applyTax),
@@ -1791,7 +1802,7 @@ export const PosV2SalesHomePage = () => {
         : "orders/branch";
       const payload = tableId
         ? checkoutPayload
-        : { ...checkoutPayload, Status: "ENTREGADO", Details: lineItems };
+        : { ...checkoutPayload, Status: payLater ? "PENDIENTE" : "ENTREGADO", Details: lineItems };
       const fingerprint = JSON.stringify({ endpoint, payload });
       if (saleIdempotencyRef.current?.fingerprint !== fingerprint) {
         saleIdempotencyRef.current = { fingerprint, key: createIdempotencyKey() };
@@ -1824,7 +1835,7 @@ export const PosV2SalesHomePage = () => {
       saleIdempotencyRef.current = null;
 
       const folio = `RVK-${Date.now().toString().slice(-6)}`;
-      const paymentMethodLabel =
+      const paymentMethodLabel = payLater ? "Cobrar después" :
         PAYMENT_METHOD_OPTIONS.find((option) => option.value === paymentMethod)
           ?.label ?? paymentMethod;
       const printableItems: CompletedSaleLine[] = cartItems.map((item) => ({
@@ -1854,6 +1865,8 @@ export const PosV2SalesHomePage = () => {
         items: printableItems,
       });
       setCart({});
+      setPayLater(false);
+      setInitialPayment("0");
       setVariantsCache({});
       setCatalogRevision((current) => current + 1);
       setDiscountPercent("0");
@@ -2576,7 +2589,7 @@ export const PosV2SalesHomePage = () => {
               </label>
             </div>
 
-            <div
+            {!payLater && <div
               className="pos-v2-sales-home__payment-methods"
               role="radiogroup"
               aria-label="Selecciona método de pago"
@@ -2597,7 +2610,7 @@ export const PosV2SalesHomePage = () => {
                   </button>
                 );
               })}
-            </div>
+            </div>}
 
             <label>
               Zona de mesas
@@ -2628,7 +2641,7 @@ export const PosV2SalesHomePage = () => {
               Mesa
               <select
                 value={selectedTableId}
-                onChange={(event) => handleSelectTable(event.target.value)}
+                onChange={(event) => { handleSelectTable(event.target.value); if (event.target.value) setPayLater(false); }}
                 disabled={areSalesRelationSelectorsLocked || loadingTables || (!isFreeSalesPlan && !selectedTableZoneId)}
               >
                 <option value="">Sin mesa (orden directa)</option>
@@ -2652,6 +2665,7 @@ export const PosV2SalesHomePage = () => {
                       return;
                     }
                     setSelectedCustomerId(event.target.value);
+                    if (!event.target.value) setPayLater(false);
                   }}
                   disabled={areSalesRelationSelectorsLocked}
                 >
@@ -2664,6 +2678,45 @@ export const PosV2SalesHomePage = () => {
                 </select>
               </label>
             ) : null}
+            {Boolean(selectedCustomerId) && !selectedTableId && (
+              <div className="pos-v2-sales-home__credit-control">
+                <label className="pos-v2-sales-home__credit-row">
+                  <span className="pos-v2-sales-home__credit-label">Cobrar después</span>
+                  <input
+                    className="pos-v2-sales-home__credit-checkbox"
+                    type="checkbox"
+                    role="switch"
+                    aria-label="Cobrar después"
+                    checked={payLater}
+                    onChange={(event) => {
+                      setPayLater(event.target.checked);
+                      if (!event.target.checked) setInitialPayment("0");
+                      setValidationError(null);
+                    }}
+                  />
+                  <span className="pos-v2-sales-home__credit-switch" aria-hidden="true" />
+                </label>
+                {payLater && (
+                  <div className="pos-v2-sales-home__credit-advance">
+                    <label htmlFor="credit-initial-payment">Abono inicial</label>
+                    <input
+                      id="credit-initial-payment"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      max={Math.max(0, totals.total - 0.01)}
+                      value={initialPayment}
+                      onChange={(event) => {
+                        setInitialPayment(event.target.value);
+                        setValidationError(null);
+                      }}
+                    />
+                    <small>Saldo pendiente: ${(totals.total - (Number(initialPayment) || 0)).toFixed(2)}</small>
+                  </div>
+                )}
+              </div>
+            )}
             {isFreeSalesPlan ? (
               <small className="pos-v2-sales-home__customer-hint">
                 Mesas, zonas y clientes están disponibles desde un plan superior.

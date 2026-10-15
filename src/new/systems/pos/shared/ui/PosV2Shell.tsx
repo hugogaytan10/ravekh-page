@@ -18,6 +18,15 @@ type UiTheme = "light" | "dark";
 
 const THEME_STORAGE_KEY = "pos-v2-ui-theme";
 
+
+const ROOT_PATHS = new Set<string>([
+  POS_V2_PATHS.sales,
+  POS_V2_PATHS.products,
+  POS_V2_PATHS.finances,
+  POS_V2_PATHS.reports,
+  POS_V2_PATHS.more,
+]);
+
 const NAV_ITEMS = [
   { to: POS_V2_PATHS.sales, label: "Ventas", Icon: FiShoppingCart },
   { to: POS_V2_PATHS.products, label: "Productos", Icon: FiBox },
@@ -26,7 +35,7 @@ const NAV_ITEMS = [
   { to: POS_V2_PATHS.more, label: "Más", Icon: FiMoreHorizontal },
 ];
 
-export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
+export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [features, setFeatures] = useState<PosBusinessFeatures>(POS_FEATURES_UNKNOWN);
@@ -73,6 +82,8 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
     return NAV_ITEMS.filter((item) => item.to === POS_V2_PATHS.sales || item.to === POS_V2_PATHS.more);
   }, []);
 
+  const canGoBack = !ROOT_PATHS.has(location.pathname);
+
   const shouldShowBottomNav = useMemo(() => {
     return navItems.some((item) => item.to === location.pathname);
   }, [location.pathname, navItems]);
@@ -87,8 +98,13 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
     <div className="pos-v2-shell">
       <header className="pos-v2-shell__header">
         <div className="pos-v2-shell__title-row">
-          <button type="button" className="pos-v2-shell__back" onClick={() => navigate(-1)}>← Regresar</button>
-          <h1 className="pos-v2-shell__title">{title}</h1>
+          {canGoBack ? (
+            <button type="button" className="pos-v2-shell__back" onClick={() => navigate(-1)} aria-label="Regresar a la pantalla anterior">←</button>
+          ) : null}
+          <div className="pos-v2-shell__heading">
+            <h1 className="pos-v2-shell__title">{title}</h1>
+            {subtitle ? <p className="pos-v2-shell__subtitle">{subtitle}</p> : null}
+          </div>
         </div>
         <div className="pos-v2-shell__header-actions">
           <button

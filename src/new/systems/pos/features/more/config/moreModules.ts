@@ -31,6 +31,8 @@ export const MORE_MODULE_SECTIONS: MoreModuleSection[] = [
      // { id: "factura-electronica", title: "Facturación electrónica", description: "Configura y prueba el flujo CFDI con el backend independiente de facturación.", path: POS_V2_PATHS.facturaElectronica, status: "available", actionType: "route" },
       { id: "inventory", title: "Inventario", description: "Módulo de stock desacoplado.", path: POS_V2_PATHS.inventory, status: "available", actionType: "route" },
       { id: "customers", title: "Clientes", description: "Catálogo de clientes y seguimiento.", path: POS_V2_PATHS.customers, status: "available", actionType: "route" },
+      { id: "crm", title: "CRM", description: "Conversaciones, contactos y seguimiento comercial.", path: POS_V2_PATHS.crm, status: "available", actionType: "route" },
+      { id: "pending-payments", title: "Cuentas por cobrar", description: "Saldos pendientes, historial y registro de abonos.", path: POS_V2_PATHS.pendingPayments, status: "available", actionType: "route" },
       { id: "employees", title: "Empleados", description: "Administración de personal y permisos.", path: POS_V2_PATHS.employees, status: "available", actionType: "route" },
       { id: "cash-closing", title: "Corte de caja", description: "Cierres de caja al final de turno.", path: POS_V2_PATHS.cashClosing, status: "available", actionType: "route" },
       { id: "printers", title: "Impresoras", description: "Configura impresión por Wi‑Fi y pruebas de ticket/PDF.", path: POS_V2_PATHS.printers, status: "available", actionType: "route" },

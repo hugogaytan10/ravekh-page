@@ -2054,3 +2054,24 @@ button.is-active{
     width: 100%;
   }
 }
+
+.pos-v2-sales-home__pay-later{border:1px solid var(--pos-v2-border, #e6dced);border-radius:14px;padding:14px;margin:12px 0;display:grid;gap:12px;background:var(--pos-v2-surface,#fff)}
+.pos-v2-sales-home__pay-later-toggle{display:flex;align-items:center;gap:12px;cursor:pointer}
+.pos-v2-sales-home__pay-later-toggle input{width:19px;height:19px;accent-color:#6D01D1}
+.pos-v2-sales-home__pay-later-toggle span{display:grid;gap:3px}
+.pos-v2-sales-home__pay-later small{display:block;opacity:.7;font-size:12px}
+
+/* Crédito: switch compacto, visible únicamente tras seleccionar cliente. */
+.pos-v2-sales-home__credit-control { border-top: 1px solid var(--pos-v2-border, #e6dced); padding: 0.7rem 0 0.2rem; margin: 0.25rem 0; }
+.pos-v2-sales-home__credit-row { display: flex !important; flex-direction: row !important; align-items: center; gap: 0.75rem; cursor: pointer; min-height: 42px; }
+.pos-v2-sales-home__credit-label { flex: 1; font-size: 0.93rem; font-weight: 600; color: var(--pos-v2-text, #231b2b); }
+.pos-v2-sales-home__credit-checkbox { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.pos-v2-sales-home__credit-switch { position: relative; display: inline-block; flex: none; width: 43px; height: 25px; border-radius: 99px; background: #c9c5d0; transition: background .18s ease; }
+.pos-v2-sales-home__credit-switch::before { content: ''; position: absolute; top: 3px; left: 3px; width: 19px; height: 19px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px #0002; transition: transform .18s ease; }
+.pos-v2-sales-home__credit-checkbox:checked + .pos-v2-sales-home__credit-switch { background: #6D01D1; }
+.pos-v2-sales-home__credit-checkbox:checked + .pos-v2-sales-home__credit-switch::before { transform: translateX(18px); }
+.pos-v2-sales-home__credit-checkbox:focus-visible + .pos-v2-sales-home__credit-switch { outline: 3px solid #ac78e7; outline-offset: 3px; }
+.pos-v2-sales-home__credit-advance { display: grid; gap: 0.3rem; max-width: 260px; padding: 0.4rem 0 0.6rem; }
+.pos-v2-sales-home__credit-advance label { font-size: 0.83rem; color: var(--pos-v2-text-muted, #646074); }
+.pos-v2-sales-home__credit-advance input { min-height: 40px; }
+.pos-v2-sales-home__credit-advance small { color: var(--pos-v2-text-muted, #646074); font-size: 0.8rem; }

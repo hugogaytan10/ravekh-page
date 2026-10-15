@@ -618,16 +618,16 @@ export const PosV2MorePage = () => {
   return (
     <PosV2Shell
       title="Más"
-      subtitle="Centro operativo POS v2 desacoplado del código anterior y preparado para pruebas end-to-end"
+      subtitle="Administra tu negocio"
     >
       <section className="pos-v2-more">
         <header className="pos-v2-more__header">
-          <h2>Centro de operaciones</h2>
+          <h2>Configuración y herramientas</h2>
         </header>
         <section className="pos-v2-more__branch-switcher" aria-label="Sucursal operativa">
           <div>
             <strong>Sucursal operativa</strong>
-            <span>Las siguientes operaciones usarán esta sucursal.</span>
+            <span>Sucursal seleccionada para trabajar.</span>
           </div>
           <select
             value={activeBranchId || ""}
@@ -651,9 +651,7 @@ export const PosV2MorePage = () => {
             <span className="pos-v2-more__plan-eyebrow">Plan actual</span>
             <h3>Cambiar plan de pago</h3>
             <p>
-              Tu negocio está en el plan <strong>{currentPlanName}</strong>.
-              Sube de plan para desbloquear más capacidad, catálogo online y
-              herramientas premium.
+              Plan actual: <strong>{currentPlanName}</strong>.
             </p>
           </div>
 
@@ -667,58 +665,18 @@ export const PosV2MorePage = () => {
         </section>
 
         {favoriteItems.length > 0 ? (
-          <section
-            className="pos-v2-more__favorites"
-            aria-label="Accesos rápidos"
-          >
-            <div className="pos-v2-more__section-head">
-              <h3>Accesos rápidos</h3>
-              <p>
-                Módulos marcados para entrar más rápido durante la operación
-                diaria.
-              </p>
-            </div>
-            <div className="pos-v2-more__favorites-head">
-              <small>{favoriteItems.length} favorito(s)</small>
-              <button
-                type="button"
-                className="pos-v2-more__clear-favorites"
-                onClick={() => setFavorites([])}
-              >
-                Limpiar favoritos
-              </button>
-            </div>
+          <section className="pos-v2-more__favorites" aria-label="Favoritos">
+            <div className="pos-v2-more__section-head"><h3>Favoritos</h3></div>
             <div className="pos-v2-more__grid">
               {favoriteItems.map((item) => (
-                <article
-                  key={`favorite-${item.id}`}
-                  className="pos-v2-more__item"
-                >
-                  <div className="pos-v2-more__meta">
-                    <h4>{item.title}</h4>
-                    <span className="is-available">Favorito</span>
-                  </div>
-                  <p>{item.description}</p>
-                  <button
-                    type="button"
-                    onClick={() => openModule(item)}
-                    className="pos-v2-more__open"
-                  >
-                    Abrir módulo
-                  </button>
-                </article>
+                <button key={`favorite-${item.id}`} type="button"
+                  className="pos-v2-more__module-link" onClick={() => void openModule(item)}>
+                  <span>{item.title}</span><span aria-hidden="true">›</span>
+                </button>
               ))}
             </div>
           </section>
-        ) : (
-          <section
-            className="pos-v2-more__favorites pos-v2-more__favorites--empty"
-            aria-label="Accesos rápidos"
-          >
-            <h3>Accesos rápidos</h3>
-            <p>Marca con ☆ los módulos que más usas para verlos aquí.</p>
-          </section>
-        )}
+        ) : null}
 
         <section
           className="pos-v2-more__quick-tools"
@@ -1016,39 +974,20 @@ export const PosV2MorePage = () => {
             </div>
             <div className="pos-v2-more__grid">
               {section.items.map((item) => (
-                <article
-                  key={`${section.title}-${item.title}`}
-                  className="pos-v2-more__item"
-                >
-                  <div className="pos-v2-more__meta">
-                    <h4>{item.title}</h4>
-                  </div>
-                  <p>{item.description}</p>
-                  <div className="pos-v2-more__item-actions">
-                    <button
-                      type="button"
-                      onClick={() => openModule(item)}
-                      className="pos-v2-more__open"
-                      disabled={betaLoadingId === item.id}
-                    >
-                      {betaLoadingId === item.id
-                        ? "Ejecutando..."
-                        : "Abrir módulo"}
-                    </button>
-                    <button
-                      type="button"
-                      className={`pos-v2-more__favorite ${favorites.includes(item.id) ? "is-active" : ""}`}
-                      onClick={() => toggleFavorite(item.id)}
-                      aria-label={
-                        favorites.includes(item.id)
-                          ? `Quitar ${item.title} de favoritos`
-                          : `Agregar ${item.title} a favoritos`
-                      }
-                    >
-                      {favorites.includes(item.id) ? "★" : "☆"}
-                    </button>
-                  </div>
-                </article>
+                <div key={`${section.title}-${item.id}`} className="pos-v2-more__module-row">
+                  <button type="button" className="pos-v2-more__module-link"
+                    onClick={() => void openModule(item)} disabled={betaLoadingId === item.id}>
+                    <span>{betaLoadingId === item.id ? "Cargando…" : item.title}</span>
+                    <span aria-hidden="true">›</span>
+                  </button>
+                  <button type="button"
+                    className={`pos-v2-more__favorite ${favorites.includes(item.id) ? "is-active" : ""}`}
+                    onClick={() => toggleFavorite(item.id)}
+                    aria-label={favorites.includes(item.id) ? `Quitar ${item.title} de favoritos` : `Agregar ${item.title} a favoritos`}
+                    aria-pressed={favorites.includes(item.id)}>
+                    {favorites.includes(item.id) ? "★" : "☆"}
+                  </button>
+                </div>
               ))}
             </div>
           </section>
@@ -1072,8 +1011,7 @@ export const PosV2MorePage = () => {
           <article>
             <h3>Sesión actual</h3>
             <p>
-              Usa esta acción para cambiar negocio o vendedor sin arrastrar
-              token/businessId inválidos.
+              Cambia de usuario o cierra tu sesión de forma segura.
             </p>
             <button type="button" onClick={() => setShowSignOutConfirm(true)}>
               Cambiar usuario / cerrar sesión

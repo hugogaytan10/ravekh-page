@@ -1466,3 +1466,20 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Ajustes conservadores sobre la interfaz original: sin badges ni tarjetas decorativas. */
+.pos-v2-more__section-head > p { display: none; }
+.pos-v2-more__grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: .5rem; }
+.pos-v2-more__module-row { display: flex; align-items: center; min-width: 0; background: var(--surface, #fff); border: 1px solid #e9e5ee; border-radius: 12px; }
+.pos-v2-more .pos-v2-more__module-link { width: 100%; min-width: 0; min-height: 54px; flex: 1; display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .8rem 1rem; border: 0; border-radius: 12px; background: transparent; color: inherit; text-align: left; font-weight: 600; }
+.pos-v2-more__module-link span:first-child { overflow: hidden; text-overflow: ellipsis; }
+.pos-v2-more__module-link span:last-child { font-size: 1.4rem; line-height: 1; font-weight: 400; color: #93899e; }
+.pos-v2-more .pos-v2-more__favorite { flex: 0 0 auto; min-width: 38px; border: 0 !important; background: transparent !important; color: #a8a0b0 !important; }
+.pos-v2-more .pos-v2-more__favorite.is-active { color: #6d01d1 !important; }
+.pos-v2-more__module-row:hover { border-color: #cdb4eb; }
+.pos-v2-more__module-link:focus-visible, .pos-v2-more__favorite:focus-visible { outline: 2px solid #6d01d1; outline-offset: 2px; }
+.pos-v2-more__qa-item, .pos-v2-more__grid article { background: #fff; }
+.pos-v2-more__plan-banner { background: #621095 !important; }
+:root[data-theme="dark"] .pos-v2-more__module-row { background: #16111e; border-color: #373041; }
+:root[data-theme="dark"] .pos-v2-more__module-link { color: #f5f2f8 !important; }
+:root[data-theme="dark"] .pos-v2-more__qa-item, :root[data-theme="dark"] .pos-v2-more__grid article { background: #16111e; }

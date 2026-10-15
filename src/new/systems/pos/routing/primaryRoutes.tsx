@@ -13,6 +13,8 @@ import { PosV2ReportingPage } from "../features/reporting/ui/PosV2ReportingPage"
 import { PosV2MorePage } from "../features/more/ui/PosV2MorePage";
 import { PosV2ModulePreviewPage } from "../features/more/ui/PosV2ModulePreviewPage";
 import { PosV2CustomersPage } from "../features/customers/ui/PosV2CustomersPage";
+import { PosV2CrmPage } from "../features/crm/ui/PosV2CrmPage";
+import { PosV2PendingPaymentsPage } from "../features/pending-payments/ui/PosV2PendingPaymentsPage";
 import { PosV2EmployeesPage } from "../features/employees/ui/PosV2EmployeesPage";
 import { PosV2TableZonesPage } from "../features/settings/table-zones/ui/PosV2TableZonesPage";
 import { PosV2BranchesPage } from "../features/settings/branches/PosV2BranchesPage";
@@ -42,6 +44,8 @@ export const POS_V2_PRIMARY_ROUTES = [
   { path: POS_V2_PATHS.morePreview(), element: withAuth(<PosV2ModulePreviewPage />) },
   { path: POS_V2_PATHS.facturaElectronica, element: withAuth(<FacturaElectronicaPage />) },
   { path: POS_V2_PATHS.customers, element: withAuth(<PosV2CustomersPage />) },
+  { path: POS_V2_PATHS.crm, element: withAuth(<PosV2CrmPage />) },
+  { path: POS_V2_PATHS.pendingPayments, element: withAuth(<PosV2PendingPaymentsPage />) },
   { path: POS_V2_PATHS.employees, element: withAuth(<PosV2EmployeesPage />) },
   { path: POS_V2_PATHS.tableZones, element: withAuth(<PosV2TableZonesPage />) },
   { path: POS_V2_PATHS.branches, element: withAuth(<PosV2BranchesPage />) },
@@ -62,6 +66,7 @@ export const POS_V2_PRIMARY_ROUTES = [
   { path: POS_V2_LEGACY_PATHS.reports, element: <Navigate to={POS_V2_PATHS.reports} replace /> },
   { path: POS_V2_LEGACY_PATHS.more, element: <Navigate to={POS_V2_PATHS.more} replace /> },
   { path: POS_V2_LEGACY_PATHS.customers, element: <Navigate to={POS_V2_PATHS.customers} replace /> },
+  { path: POS_V2_LEGACY_PATHS.pendingPayments, element: <Navigate to={POS_V2_PATHS.pendingPayments} replace /> },
   { path: POS_V2_LEGACY_PATHS.employees, element: <Navigate to={POS_V2_PATHS.employees} replace /> },
   { path: POS_V2_LEGACY_PATHS.cashClosing, element: <Navigate to={POS_V2_PATHS.cashClosing} replace /> },
   { path: POS_V2_LEGACY_PATHS.inventory, element: <Navigate to={POS_V2_PATHS.inventory} replace /> },

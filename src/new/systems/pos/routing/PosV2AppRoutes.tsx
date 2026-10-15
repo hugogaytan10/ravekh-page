@@ -14,6 +14,8 @@ import { PosV2BranchesPage } from "../features/settings/branches/PosV2BranchesPa
 import { PosV2PrintersPage } from "../features/settings/printers/ui/PosV2PrintersPage";
 import { PosV2SecurityQuestionsPage } from "../features/settings/security-questions/ui/PosV2SecurityQuestionsPage";
 import { PosV2CustomersPage } from "../features/customers/ui/PosV2CustomersPage";
+import { PosV2CrmPage } from "../features/crm/ui/PosV2CrmPage";
+import { PosV2PendingPaymentsPage } from "../features/pending-payments/ui/PosV2PendingPaymentsPage";
 import { PosV2EmployeesPage } from "../features/employees/ui/PosV2EmployeesPage";
 import { PosV2OnlineOrdersPage } from "../features/online-orders/ui/PosV2OnlineOrdersPage";
 import { PosV2CashClosingPage } from "../features/cash-closing/ui/PosV2CashClosingPage";
@@ -48,6 +50,8 @@ export const POS_V2_APP_ROUTES = (
     <Route path={POS_V2_PATHS.inventory} element={withAuth(<PosV2InventoryPage />)} />
     <Route path={POS_V2_PATHS.loyalty} element={withAuth(<PosV2LoyaltyPage />)} />
     <Route path={POS_V2_PATHS.customers} element={withAuth(<PosV2CustomersPage />)} />
+    <Route path={POS_V2_PATHS.crm} element={withAuth(<PosV2CrmPage />)} />
+    <Route path={POS_V2_PATHS.pendingPayments} element={withAuth(<PosV2PendingPaymentsPage />)} />
     <Route path={POS_V2_PATHS.employees} element={withAuth(<PosV2EmployeesPage />)} />
     <Route path={POS_V2_PATHS.onlineStore} element={withAuth(<PosV2FeatureRouteGuard feature="catalog"><PosV2OnlineOrdersPage /></PosV2FeatureRouteGuard>)} />
     <Route path={POS_V2_PATHS.coupons} element={withAuth(<PosV2LoyaltyPage />)} />
