@@ -30,7 +30,6 @@ const RecoverPasswordPage: React.FC = () => {
 
   const [email, setEmail] = useState(new URLSearchParams(location.search).get("email") || "");
   const [code, setCode] = useState("");
-  const isCompleting = new URLSearchParams(location.search).get("mode") === "complete";
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -185,7 +184,7 @@ const RecoverPasswordPage: React.FC = () => {
         style={{ color: theme.textPrimary }}
       >
         <div className="mt-8 mb-6">
-          <h1 className="text-3xl font-extrabold tracking-tight">{isCompleting ? "Vamos a terminar tu cuenta" : "Recuperar contraseña"}</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">Recuperar mi cuenta</h1>
           <p className="mt-2 text-sm font-medium" style={{ color: theme.textMuted }}>
             Pide al negocio un código de acceso. Ingresa el correo con el que te registraron, el código y tu nueva contraseña. No necesitas recibir correos ni iniciar sesión.
           </p>
@@ -272,7 +271,7 @@ const RecoverPasswordPage: React.FC = () => {
           }}
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Guardando..." : isCompleting ? "Terminar mi cuenta" : "Guardar contraseña"}
+          {isSubmitting ? "Guardando..." : "Guardar contraseña"}
         </button>
 
         <p className="mt-6 text-sm font-semibold" style={{ color: theme.textMuted }}>

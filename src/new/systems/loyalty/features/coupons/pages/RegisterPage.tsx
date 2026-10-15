@@ -82,7 +82,7 @@ const RegisterPage: React.FC = () => {
       });
 
       if (registerResponse.RequiresAccountCompletion) {
-        navigate(`/coupons/reset-password?mode=complete&email=${encodeURIComponent(normalizedEmail)}`, {replace: true});
+        navigate(`/coupons/reset-password?email=${encodeURIComponent(normalizedEmail)}`, {replace: true});
         return;
       }
 

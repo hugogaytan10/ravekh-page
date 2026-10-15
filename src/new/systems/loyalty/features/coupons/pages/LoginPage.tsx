@@ -149,21 +149,14 @@ const LoginPage: React.FC = () => {
             style={{ color: theme.textMuted }}
             onClick={() => {
               const params = new URLSearchParams();
+              if (email.trim()) params.set("email", email.trim().toLowerCase());
               if (effectiveToken) params.set("token", effectiveToken);
               if (effectivePendingCouponId) params.set("couponId", String(effectivePendingCouponId));
               const suffix = params.toString();
               navigate(`/coupons/reset-password${suffix ? `?${suffix}` : ""}`);
             }}
           >
-            Recuperar contraseña
-          </button>
-          <button
-            type="button"
-            className="text-sm font-semibold ml-3"
-            style={{ color: theme.textMuted }}
-            onClick={() => navigate(`/coupons/reset-password?mode=complete&email=${encodeURIComponent(email.trim())}`)}
-          >
-            Terminar mi cuenta
+            Recuperar mi cuenta
           </button>
         </div>
 
