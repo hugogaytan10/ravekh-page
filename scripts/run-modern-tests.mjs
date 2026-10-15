@@ -7,6 +7,7 @@ const projectRoot = process.cwd();
 const outDir = resolve(projectRoot, ".tmp-modern-tests");
 
 const suites = [
+  { name: "integration-crm-landing", entry: "tests/new/crm/crm-landing.integration.ts" },
   { name: "unit-login-session-limit", entry: "tests/new/pos/auth/login-session-limit.unit.ts" },
   { name: "unit-products-service", entry: "tests/new/pos/products/products.service.unit.ts" },
   { name: "unit-products-discontinued", entry: "tests/new/pos/products/products.discontinued.unit.ts" },
