@@ -5,7 +5,7 @@ const sections = [
   ["2. Uso del servicio", "El servicio está dirigido a negocios que administran sus propias relaciones con clientes. Cada negocio es responsable de contar con las autorizaciones necesarias para usar sus cuentas, números y datos."],
   ["3. WhatsApp Business", "La conexión requiere una cuenta elegible, autorización del negocio propietario y el cumplimiento de los requisitos aplicables de Meta. RAVEKH no garantiza la aprobación, continuidad o disponibilidad de servicios de terceros."],
   ["4. Datos y comunicaciones", "El negocio debe utilizar las funciones de comunicación de forma lícita y respetar las preferencias de sus contactos. El tratamiento de información se describe en la política de privacidad de RAVEKH CRM."],
-  ["5. Contacto", "Para preguntas sobre el servicio o estos términos, escribe a contacto@ravekh.com. Este documento es un borrador informativo pendiente de revisión legal antes del lanzamiento comercial."],
+  ["5. Contacto", "Para preguntas sobre el servicio o estos términos, escribe a ravekh@ravekh.com. Este documento es un borrador informativo pendiente de revisión legal antes del lanzamiento comercial."],
 ] as const;
 
 export const TermsPage = () => (

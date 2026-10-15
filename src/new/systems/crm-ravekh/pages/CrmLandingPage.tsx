@@ -171,7 +171,7 @@ export const CrmLandingPage = (): JSX.Element => {
         <section className="crm-section crm-privacy" id="privacidad">
           <div className="crm-container crm-privacy__grid">
             <div><span className="crm-eyebrow">Privacidad y control</span><h2>Transparencia desde el primer contacto</h2></div>
-            <div className="crm-privacy__content"><p>Para operar el servicio, RAVEKH CRM puede tratar mensajes, identificadores de WhatsApp e información de contactos que el negocio autorice. Estos datos se usan para habilitar la atención, organización y seguimiento solicitados.</p><p>Cuando una función de inteligencia artificial esté habilitada, cierta información podrá ser procesada por proveedores externos para generar asistencia. Su uso deberá configurarse y comunicarse conforme a la implementación disponible.</p><p>El acceso depende de los permisos concedidos. Para solicitar soporte, ejercer derechos sobre datos o gestionar una desconexión, utiliza nuestros canales oficiales.</p><div className="crm-text-links"><Link to="/politicas/ravekh-crm">Política de privacidad del CRM</Link><Link to="/terminos/ravekh-crm">Términos del servicio</Link><a href="mailto:contacto@ravekh.com">contacto@ravekh.com</a></div><small>Los documentos legales publicados son borradores informativos pendientes de validación legal.</small></div>
+            <div className="crm-privacy__content"><p>Para operar el servicio, RAVEKH CRM puede tratar mensajes, identificadores de WhatsApp e información de contactos que el negocio autorice. Estos datos se usan para habilitar la atención, organización y seguimiento solicitados.</p><p>Cuando una función de inteligencia artificial esté habilitada, cierta información podrá ser procesada por proveedores externos para generar asistencia. Su uso deberá configurarse y comunicarse conforme a la implementación disponible.</p><p>El acceso depende de los permisos concedidos. Para solicitar soporte, ejercer derechos sobre datos o gestionar una desconexión, utiliza nuestros canales oficiales.</p><div className="crm-text-links"><Link to="/politicas/ravekh-crm">Política de privacidad del CRM</Link><Link to="/terminos/ravekh-crm">Términos del servicio</Link><a href="mailto:ravekh@ravekh.com">ravekh@ravekh.com</a></div><small>Los documentos legales publicados son borradores informativos pendientes de validación legal.</small></div>
           </div>
         </section>
 
@@ -184,7 +184,7 @@ export const CrmLandingPage = (): JSX.Element => {
         </section>
       </main>
 
-      <footer className="crm-footer"><div className="crm-container crm-footer__inner"><div><strong>RAVEKH <b>CRM</b></strong><p>Soluciones tecnológicas para negocios.</p></div><nav aria-label="Enlaces del pie"><Link to="/">RAVEKH</Link><Link to="/maincatalogo">RAVEKH POS</Link><Link to="/politicas/ravekh-crm">Privacidad</Link><Link to="/terminos/ravekh-crm">Términos</Link><a href="mailto:contacto@ravekh.com">Contacto</a></nav><small>© {new Date().getFullYear()} RAVEKH</small></div></footer>
+      <footer className="crm-footer"><div className="crm-container crm-footer__inner"><div><strong>RAVEKH <b>CRM</b></strong><p>Soluciones tecnológicas para negocios.</p></div><nav aria-label="Enlaces del pie"><Link to="/">RAVEKH</Link><Link to="/maincatalogo">RAVEKH POS</Link><Link to="/politicas/ravekh-crm">Privacidad</Link><Link to="/terminos/ravekh-crm">Términos</Link><a href="mailto:ravekh@ravekh.com">Contacto</a></nav><small>© {new Date().getFullYear()} RAVEKH</small></div></footer>
     </div>
   );
 };

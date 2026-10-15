@@ -39,7 +39,7 @@ export const PRIVACY_POLICIES: PolicyDocument[] = [
       {
         title: "5. Contacto",
         content:
-          "Para consultas de privacidad, soporte o solicitudes relacionadas con datos, escribe a contacto@ravekh.com. Este documento debe revisarse legalmente antes del lanzamiento comercial del producto.",
+          "Para consultas de privacidad, soporte o solicitudes relacionadas con datos, escribe a ravekh@ravekh.com. Este documento debe revisarse legalmente antes del lanzamiento comercial del producto.",
       },
     ],
   },

@@ -590,7 +590,7 @@ const buildInvoiceRequestPayload = (
     contactEmail:
       normalizeText(businessPayload.contactEmail) ||
       getIssuerEmail(selectedIssuer) ||
-      "contacto@ravekh.com",
+      "ravekh@ravekh.com",
     contactPhone:
       normalizeText(businessPayload.contactPhone) ||
       getIssuerPhone(selectedIssuer) ||
