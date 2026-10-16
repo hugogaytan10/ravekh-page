@@ -1,3 +1,4 @@
+import { posMoneyFormatter as moneyFormatter } from "../../../shared/config/posCurrency";
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
@@ -37,7 +38,6 @@ type FinanceTransactionViewModel = {
 };
 
 const dateFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
-const moneyFormatter = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 });
 
 const INCOME_CATEGORIES = ["Venta", "Servicio", "Delivery", "Transferencia", "Otro ingreso"];
 const EXPENSE_CATEGORIES = ["Nómina", "Renta", "Comida", "Marketing", "Papelería", "Transporte", "General"];
@@ -515,7 +515,7 @@ export const PosV2FinancePage = () => {
   }
 
   return (
-    <PosV2Shell title="Finanzas" subtitle="Control financiero v2 optimizado para cualquier dispositivo">
+    <PosV2Shell title="Finanzas" >
       <section className="pos-v2-finance">
         <header className="pos-v2-finance__header">
           <div>
@@ -675,8 +675,8 @@ export const PosV2FinancePage = () => {
             <article>
               <header>
                 <h3>Nuevo movimiento</h3>
-                <button 
-                type="button" 
+                <button
+                type="button"
                 onClick={() => setOpenFormModal(false)} aria-label="Cerrar">Cerrar</button>
               </header>
               {renderMovementForm()}

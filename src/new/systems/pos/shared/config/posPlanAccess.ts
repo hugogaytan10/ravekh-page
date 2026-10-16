@@ -16,7 +16,8 @@ export type PlanProtectedAction =
   | "catalog.advancedCustomization"
   | "cashClosing.export"
   | "cashClosing.create"
-  | "salesTax.save";
+  | "salesTax.save"
+  | "settings.currency";
 
 export type PlanActionRule = {
   requiredPlan: PosPlan;
@@ -118,6 +119,11 @@ export const POS_PLAN_ACTION_RULES: Record<PlanProtectedAction, PlanActionRule> 
     requiredPlan: "START",
     title: "Corte de caja bloqueado",
     message: "Actualiza tu plan para registrar cortes de caja. Esta función está disponible desde el plan START.",
+  },
+  "settings.currency": {
+    requiredPlan: "START",
+    title: "Tipo de moneda bloqueado",
+    message: "Tipo de moneda está disponible desde el plan START.",
   },
   "salesTax.save": {
     requiredPlan: "START",

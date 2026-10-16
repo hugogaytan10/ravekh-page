@@ -1,3 +1,4 @@
+import { posMoneyFormatter } from "../../../shared/config/posCurrency";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
@@ -232,11 +233,11 @@ export const PosV2CustomersPage = () => {
   return (
     <PosV2Shell
       title="Clientes"
-      subtitle="Gestión moderna de clientes desacoplada del código anterior"
+
     >
       <section className="pos-v2-customers">
         <header>
-          <h2>Clientes</h2>
+          <div><h2>Tu cartera de clientes</h2><p>Consulta sus datos y el historial de sus compras.</p></div>
           <button type="button" className="is-primary" onClick={startCreate}>
             + Nuevo cliente
           </button>
@@ -420,7 +421,7 @@ export const PosV2CustomersPage = () => {
                 </select>
               </div>
               <p>
-                Total: ${salesTotal.toFixed(2)} • {salesRows.length} venta(s)
+                Total: {posMoneyFormatter.format(salesTotal)} • {salesRows.length} venta(s)
               </p>
               {salesLoading ? (
                 <p>Cargando ventas...</p>
@@ -431,7 +432,7 @@ export const PosV2CustomersPage = () => {
                       <strong>Pedido #{row.orderId || "N/A"}</strong>
                       <span>{row.date || "Sin fecha"}</span>
                       <small>{row.status}</small>
-                      <small>${row.total.toFixed(2)}</small>
+                      <small>{posMoneyFormatter.format(row.total)}</small>
                     </li>
                   ))}
                   {salesRows.length === 0 ? (

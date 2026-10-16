@@ -61,7 +61,7 @@ const PREVIEW_MODULES: Record<string, PreviewData> = {
   },
   "payment-methods": {
     title: "Métodos de pago",
-    description: "Configura qué métodos estarán disponibles para cobrar en POS v2.",
+    description: "Elige los métodos de pago disponibles para tus ventas.",
     eta: "Disponible en POS moderno",
   },
   "stripe-connect": {
@@ -702,9 +702,9 @@ export const PosV2ModulePreviewPage = () => {
   };
 
   return (
-    <PosV2Shell title={data.title} subtitle="Vista previa de módulo POS v2">
+    <PosV2Shell title={data.title} subtitle="Administra las preferencias de tu negocio">
       <section className="pos-v2-module-preview">
-        <h2>{data.title}</h2>
+
         {moduleId !== "business" ? <p>{data.description}</p> : null}
         {moduleId !== "business" && data.warning ? <p className="pos-v2-module-preview__warning">⚠️ {data.warning}</p> : null}
 
@@ -945,7 +945,7 @@ export const PosV2ModulePreviewPage = () => {
         {moduleId === "payment-methods" ? (
           <section className="pos-v2-module-preview__beta">
             <h3>Métodos de pago</h3>
-          
+
             {paymentError ? <p className="pos-v2-module-preview__error">{paymentError}</p> : null}
             {businessStatus ? (
               <div className="pos-v2-module-preview__form">
@@ -971,7 +971,7 @@ export const PosV2ModulePreviewPage = () => {
                       </button>
                     </div>
                   </article>
-                 
+
                 </div>
                 <button type="button" onClick={() => navigate(POS_V2_PATHS.morePreview("stripe-connect"))} disabled={!businessStatus?.chargesEnabled}>
                   {businessStatus?.chargesEnabled ? "Ir a Stripe Connect" : "Activa tarjeta para continuar con Stripe"}

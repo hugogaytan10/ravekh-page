@@ -1,5 +1,5 @@
 import { CashClosingService } from "../services/CashClosingService";
-import { CreateCashClosingDto } from "../model/CashClosing";
+import { CashClosingPreview, CreateCashClosingDto } from "../model/CashClosing";
 
 export interface CashClosingViewModel {
   id: number;
@@ -29,6 +29,10 @@ export class CashClosingPage {
 
   async loadCurrentTotal(employeeId: number, token: string): Promise<number> {
     return this.service.getCurrentTotal(employeeId, token);
+  }
+
+  async loadCurrentPreview(employeeId: number, token: string): Promise<CashClosingPreview> {
+    return this.service.getCurrentPreview(employeeId, token);
   }
 
   // Backward-compatible adapter for preview module while UI v2 consumes loadCurrentTotal.

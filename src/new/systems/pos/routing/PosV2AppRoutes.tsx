@@ -1,3 +1,9 @@
+import { PosV2SettingsPage } from "../features/settings/ui/PosV2SettingsPage";
+import { PosV2AccountPage } from "../features/settings/ui/PosV2AccountPage";
+import { PosV2DeleteAccountPage } from "../features/settings/ui/PosV2DeleteAccountPage";
+import { PosV2TicketSettingsPage } from "../features/settings/ui/PosV2TicketSettingsPage";
+import { PosV2CurrencyPage } from "../features/settings/ui/PosV2CurrencyPage";
+import { PosV2IntelligencePage } from "../features/intelligence/ui/PosV2IntelligencePage";
 import { Route } from "react-router-dom";
 import { ProductsV2PosPage } from "../features/products/ui/ProductsV2PosPage";
 import { DiscontinuedProductsV2PosPage } from "../features/products/ui/DiscontinuedProductsV2PosPage";
@@ -39,6 +45,12 @@ export const POS_V2_APP_ROUTES = (
     <Route path={POS_V2_PATHS.discontinuedProducts} element={withAuth(<DiscontinuedProductsV2PosPage />)} />
     <Route path={POS_V2_PATHS.finances} element={withAuth(<PosV2FinancePage />)} />
     <Route path={POS_V2_PATHS.reports} element={withAuth(<PosV2ReportingPage />)} />
+    <Route path={POS_V2_PATHS.settings} element={withAuth(<PosV2SettingsPage />)} />
+    <Route path={POS_V2_PATHS.account} element={withAuth(<PosV2AccountPage />)} />
+    <Route path={POS_V2_PATHS.deleteAccount} element={withAuth(<PosV2DeleteAccountPage />)} />
+    <Route path={POS_V2_PATHS.ticketSettings} element={withAuth(<PosV2TicketSettingsPage />)} />
+    <Route path={POS_V2_PATHS.currency} element={withAuth(<PosV2CurrencyPage />)} />
+    <Route path={POS_V2_PATHS.intelligence} element={withAuth(<PosV2IntelligencePage />)} />
     <Route path={POS_V2_PATHS.more} element={withAuth(<PosV2MorePage />)} />
     <Route path={POS_V2_PATHS.morePreview()} element={withAuth(<PosV2ModulePreviewPage />)} />
     <Route path={POS_V2_PATHS.facturaElectronica} element={withAuth(<FacturaElectronicaPage />)} />

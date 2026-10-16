@@ -26,7 +26,7 @@ export async function run(): Promise<void> {
   const securityQuestions = findModule("security-questions");
   assert.equal(printers.actionType, "route");
   assert.equal(printers.status, "available");
-  assert.equal(printers.description.includes("Wi"), true);
+  assert.equal(printers.path, POS_V2_PATHS.printers);
   assert.equal(coupons.actionType, "route");
   assert.equal(coupons.status, "available");
   assert.equal(visits.actionType, "route");

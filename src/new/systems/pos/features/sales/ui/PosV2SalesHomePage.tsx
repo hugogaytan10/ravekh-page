@@ -1,3 +1,5 @@
+import { DEFAULT_TICKET_CUSTOMIZATION, readTicketCustomization, escapeTicketHtml, ticketContactHtml, ticketFooterHtml } from "../../../shared/config/posTicket";
+import { persistPosCurrency, readPosCurrency, posMoneyFormatter } from "../../../shared/config/posCurrency";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import {
@@ -105,6 +107,7 @@ type CompletedSale = {
   taxDescription?: string;
   total: number;
   customerName?: string;
+  cashierName?: string;
   createdAt: string;
   items: CompletedSaleLine[];
 };
@@ -367,6 +370,8 @@ export const PosV2SalesHomePage = () => {
   const [quoteBusinessName, setQuoteBusinessName] = useState("Mi negocio");
   const [quoteClientName, setQuoteClientName] = useState("");
   const [quoteLogoUrl, setQuoteLogoUrl] = useState("");
+  const [cashierName, setCashierName] = useState("");
+  const [ticketBusiness, setTicketBusiness] = useState({ phone: "", address: "" });
   const [quoteIssueDate, setQuoteIssueDate] = useState(() => getIsoDate(0));
   const [quoteValidUntil, setQuoteValidUntil] = useState(() => getIsoDate(7));
   const [isMobileTablesOpen, setIsMobileTablesOpen] = useState(false);
@@ -626,6 +631,11 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
+    const employeeId = readPosSessionSnapshot().employeeId;
+    if (employeeId) {
+      fetch(new URL(`employee/${employeeId}`, API_BASE_URL).toString(), { headers: buildPosAuthHeaders(token) })
+        .then(response => response.ok ? response.json() : null).then(user => { if (user?.Name) setCashierName(String(user.Name)); }).catch(() => undefined);
+    }
     const factory = new ModernSystemsFactory(API_BASE_URL);
     const businessService = factory.createPosBusinessSettingsService();
 
@@ -669,6 +679,9 @@ export const PosV2SalesHomePage = () => {
                 name?: string;
                 Logo?: string;
                 logo?: string;
+                PhoneNumber?: string;
+                Address?: string;
+                MoneyTipe?: string;
               } & PosBusinessFeatureResponse)
             | null,
         ) => {
@@ -677,6 +690,8 @@ export const PosV2SalesHomePage = () => {
             payload.Name ?? payload.name ?? "",
           ).trim();
           const logoUrl = String(payload.Logo ?? payload.logo ?? "").trim();
+          setTicketBusiness({ phone: payload.PhoneNumber || "", address: payload.Address || "" });
+          persistPosCurrency(businessId, payload.MoneyTipe);
           if (businessName) setQuoteBusinessName(businessName);
           if (logoUrl) setQuoteLogoUrl(logoUrl);
           setCouponsPlan(
@@ -1763,7 +1778,7 @@ export const PosV2SalesHomePage = () => {
       IsPercent: salesTax && applyTax ? salesTax.isPercent : false,
       TotalTaxes: totals.taxAmount,
       TotalDiscount: totals.discount,
-      MoneyTipe: "MXN",
+      MoneyTipe: readPosCurrency().code,
     };
 
     setIsCompletingSale(true);
@@ -1863,6 +1878,7 @@ export const PosV2SalesHomePage = () => {
         )?.name,
         createdAt: new Date().toISOString(),
         items: printableItems,
+        cashierName,
       });
       setCart({});
       setPayLater(false);
@@ -1973,12 +1989,14 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
+    const { businessId: ticketBusinessId } = getCurrentSession();
+    const settings = isFreeSalesPlan ? { ...DEFAULT_TICKET_CUSTOMIZATION, showVisitQr: false } : readTicketCustomization(ticketBusinessId);
     const configuredPrinters = readPosPrinters();
     const defaultPrinter = getDefaultPosPrinter(configuredPrinters);
     const resolvedPaper = defaultPrinter?.paperMm ?? "80";
     if (!defaultPrinter) {
       setUiMessage(
-        "No hay impresora predeterminada registrada. Se usa formato estándar de 80 mm para imprimir.",
+        "Se usa el formato de ticket de 80 mm. Elige la impresora en el diálogo de impresión.",
       );
     }
 
@@ -1986,12 +2004,12 @@ export const PosV2SalesHomePage = () => {
     const printableLines = sale.items
       .map(
         (item) =>
-          `<li><span>${item.name} x${item.quantity}</span><strong>$${item.lineTotal.toFixed(2)}</strong></li>`,
+          `<li><span>${escapeTicketHtml(item.name)} x${item.quantity}</span><strong>${posMoneyFormatter.format(item.lineTotal)}</strong></li>`,
       )
       .join("");
-    const storeName = quoteBusinessName.trim() || "Mi negocio";
-    const ticketLogoMarkup = quoteLogoUrl.trim()
-      ? `<img class="ticket-logo" src="${quoteLogoUrl.trim()}" alt="Logo de ${storeName}" />`
+    const storeName = escapeTicketHtml(quoteBusinessName.trim() || "Mi negocio");
+    const ticketLogoMarkup = settings.showLogo && /^https?:\/\//i.test(quoteLogoUrl.trim())
+      ? `<img class="ticket-logo" src="${escapeTicketHtml(quoteLogoUrl.trim())}" alt="Logo de ${storeName}" />`
       : "";
     const saleDate = new Date(sale.createdAt);
     const safeSaleDate = Number.isNaN(saleDate.getTime())
@@ -2002,7 +2020,7 @@ export const PosV2SalesHomePage = () => {
     const printDate = new Date();
     let visitQrUrl: string | null = null;
 
-    if (hasPosLoyaltyModule(couponsPlan)) {
+    if (settings.showVisitQr && !isFreeSalesPlan && hasPosLoyaltyModule(couponsPlan)) {
       try {
         visitQrUrl = await resolveVisitQrUrlForTicket();
       } catch (error) {
@@ -2018,7 +2036,7 @@ export const PosV2SalesHomePage = () => {
       ? `<section style="margin-top: 3mm; padding-top: 2mm; border-top: 1px dashed #d1d5db; text-align: center;">
           <p style="font-weight: 700; margin-bottom: 1.5mm;">Escanea para registrar tu visita</p>
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(visitQrUrl)}" alt="QR de visita" width="180" height="180" style="display:block;margin:0 auto 1.4mm;" />
-          <p class="meta" style="word-break: break-all;">${visitQrUrl}</p>
+          <p class="meta" style="word-break: break-all;">${escapeTicketHtml(visitQrUrl)}</p>
         </section>`
       : "";
 
@@ -2026,7 +2044,7 @@ export const PosV2SalesHomePage = () => {
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Ticket ${sale.folio}</title>
+    <title>Ticket ${escapeTicketHtml(sale.folio)}</title>
     <style>
       @page { size: ${resolvedPaper}mm auto; margin: 3mm; }
       * { box-sizing: border-box; }
@@ -2036,7 +2054,7 @@ export const PosV2SalesHomePage = () => {
       .ticket { width: ${pageWidth}; padding: 2mm; margin: 8px auto; background: #fff; }
       .ticket-logo { display: block; max-width: 70%; max-height: 22mm; margin: 0 auto 2mm; object-fit: contain; }
       h1 { margin: 0 0 2mm; font-size: 14px; text-align: center; }
-      p { margin: 0 0 1.4mm; font-size: 11px; }
+      p { margin: 0 0 1.4mm; font-size: 11px; white-space: pre-wrap; overflow-wrap: anywhere; }
       ul { list-style: none; margin: 2mm 0; padding: 0; display: grid; gap: 1mm; }
       li { display: flex; justify-content: space-between; gap: 3mm; border-bottom: 1px dashed #d1d5db; padding-bottom: 1mm; font-size: 11px; }
       .total { font-size: 12px; font-weight: 700; margin-top: 1.6mm; }
@@ -2054,20 +2072,23 @@ export const PosV2SalesHomePage = () => {
       ${ticketLogoMarkup}
       <h1>Ticket de venta</h1>
       <p><strong>Tienda:</strong> ${storeName}</p>
+      ${isFreeSalesPlan ? "" : ticketContactHtml(settings, ticketBusiness.phone, ticketBusiness.address)}
       <p class="meta">Formato: ${resolvedPaper} mm</p>
-      <p><strong>Folio:</strong> ${sale.folio}</p>
+      <p><strong>Folio:</strong> ${escapeTicketHtml(sale.folio)}</p>
       <p><strong>Fecha:</strong> ${saleDateLabel}</p>
       <p><strong>Hora:</strong> ${saleTimeLabel}</p>
       <p><strong>Impresión:</strong> ${printDate.toLocaleString("es-MX")}</p>
-      <p><strong>Mesa:</strong> ${sale.table}</p>
-      <p><strong>Método:</strong> ${sale.paymentMethodLabel}</p>
-      <p><strong>Cliente:</strong> ${sale.customerName ?? "General"}</p>
+      <p><strong>Mesa:</strong> ${escapeTicketHtml(sale.table)}</p>
+      ${settings.showPaymentMethod ? `<p><strong>Método:</strong> ${escapeTicketHtml(sale.paymentMethodLabel)}</p>` : ""}
+      ${settings.showCashier ? `<p><strong>Vendedor:</strong> ${escapeTicketHtml(sale.cashierName || cashierName || "Vendedor")}</p>` : ""}
+      <p><strong>Cliente:</strong> ${escapeTicketHtml(sale.customerName ?? "General")}</p>
       <ul>${printableLines}</ul>
-      <p><strong>Subtotal:</strong> $${sale.subtotal.toFixed(2)}</p>
-      ${sale.discount > 0 ? `<p><strong>Descuento:</strong> -$${sale.discount.toFixed(2)}</p>` : ""}
-      ${sale.taxAmount > 0 ? `<p><strong>Base gravable:</strong> $${sale.taxableBase.toFixed(2)}</p>` : ""}
-      ${sale.taxAmount > 0 ? `<p><strong>${sale.taxDescription || "Impuesto"}:</strong> $${sale.taxAmount.toFixed(2)}</p>` : ""}
-      <p class="total">Total: $${sale.total.toFixed(2)}</p>
+      <p><strong>Subtotal:</strong> ${posMoneyFormatter.format(sale.subtotal)}</p>
+      ${sale.discount > 0 ? `<p><strong>Descuento:</strong> -${posMoneyFormatter.format(sale.discount)}</p>` : ""}
+      ${sale.taxAmount > 0 ? `<p><strong>Base gravable:</strong> ${posMoneyFormatter.format(sale.taxableBase)}</p>` : ""}
+      ${sale.taxAmount > 0 ? `<p><strong>${escapeTicketHtml(sale.taxDescription || "Impuesto")}:</strong> ${posMoneyFormatter.format(sale.taxAmount)}</p>` : ""}
+      <p class="total">Total: ${posMoneyFormatter.format(sale.total)}</p>
+      ${ticketFooterHtml(settings)}
       ${visitQrMarkup}
     </section>
   </body>
@@ -2106,8 +2127,8 @@ export const PosV2SalesHomePage = () => {
           <td>${index + 1}</td>
           <td>${item.name}</td>
           <td>${item.quantity}</td>
-          <td>$${item.price.toFixed(2)}</td>
-          <td>$${(item.price * item.quantity).toFixed(2)}</td>
+          <td>${posMoneyFormatter.format(item.price)}</td>
+          <td>${posMoneyFormatter.format(item.price * item.quantity)}</td>
         </tr>
       `,
       )
@@ -2165,9 +2186,9 @@ export const PosV2SalesHomePage = () => {
       </table>
 
       <div class="summary">
-        <p><span>Subtotal</span><strong>$${subtotal.toFixed(2)}</strong></p>
-        <p><span>Impuesto</span><strong>$${tax.toFixed(2)}</strong></p>
-        <p class="total"><span>Total</span><strong>$${total.toFixed(2)}</strong></p>
+        <p><span>Subtotal</span><strong>${posMoneyFormatter.format(subtotal)}</strong></p>
+        <p><span>Impuesto</span><strong>${posMoneyFormatter.format(tax)}</strong></p>
+        <p class="total"><span>Total</span><strong>${posMoneyFormatter.format(total)}</strong></p>
       </div>
 
       <p class="foot">Esta cotización respeta precios hasta la fecha de vigencia indicada.</p>
@@ -2350,7 +2371,7 @@ export const PosV2SalesHomePage = () => {
                     ) : null}
                   </div>
                   <div className="pos-v2-sales-home__product-side">
-                    <strong>${product.price.toFixed(2)}</strong>
+                    <strong>{posMoneyFormatter.format(product.price)}</strong>
                     <button
                       type="button"
                       onClick={() => void addToCart(product)}
@@ -2434,7 +2455,7 @@ export const PosV2SalesHomePage = () => {
         </section>
 
         <aside
-          className={`pos-v2-sales-home__cart-panel ${mobileStep === "cart" || mobileStep === "checkout" ? "is-mobile-active" : ""}`}
+          className={`pos-v2-sales-home__cart-panel ${mobileStep === "cart" || mobileStep === "checkout" ? "is-mobile-active" : ""} ${mobileStep === "checkout" ? "is-checkout" : ""}`}
         >
           <div
             className={`pos-v2-sales-home__cart-content ${mobileStep === "cart" ? "is-mobile-active" : ""}`}
@@ -2449,12 +2470,10 @@ export const PosV2SalesHomePage = () => {
               </button>
             </div>
 
-            <h2>Mesa · {selectedTableName}</h2>
+            <header className="pos-v2-sales-home__cart-heading"><h2>Carrito</h2>{selectedTableId ? <span>{selectedTableName}</span> : null}</header>
 
             {cartItems.length === 0 ? (
-              <p className="pos-v2-sales-home__empty">
-                No hay productos agregados.
-              </p>
+              <div className="pos-v2-sales-home__cart-empty"><FiShoppingBag size={32} aria-hidden="true" /><strong>Tu carrito está vacío</strong><p>Agrega productos para comenzar una venta.</p></div>
             ) : null}
 
             {cartItems.length > 0 ? (
@@ -2487,7 +2506,7 @@ export const PosV2SalesHomePage = () => {
                         {item.quantity > 1 ? (
                           "-1"
                         ) : (
-                          <FiTrash2 size={14} color="#b91c1c" />
+                          <FiTrash2 size={14} color="var(--pos-v2-danger-text)" />
                         )}
                       </button>
                       <input
@@ -2513,24 +2532,26 @@ export const PosV2SalesHomePage = () => {
               </ul>
             ) : null}
 
-            <div className="pos-v2-sales-home__totals">
+            <div className="pos-v2-sales-home__totals" aria-label="Resumen del carrito">
+              {cartItems.length > 0 ? <>
               <p>
                 <span>Subtotal</span>
-                <strong>${totals.subtotal.toFixed(2)}</strong>
+                <strong>{posMoneyFormatter.format(totals.subtotal)}</strong>
               </p>
               <p>
                 <span>Descuento</span>
-                <strong>-${totals.discount.toFixed(2)}</strong>
+                <strong>-{posMoneyFormatter.format(totals.discount)}</strong>
               </p>
               {salesTax && applyTax ? (
                 <p>
                   <span>{salesTax.description}</span>
-                  <strong>${totals.taxAmount.toFixed(2)}</strong>
+                  <strong>{posMoneyFormatter.format(totals.taxAmount)}</strong>
                 </p>
               ) : null}
+              </> : null}
               <p className="is-total">
                 <span>Total</span>
-                <strong>${totals.total.toFixed(2)}</strong>
+                <strong>{posMoneyFormatter.format(totals.total)}</strong>
               </p>
             </div>
 
@@ -2565,7 +2586,7 @@ export const PosV2SalesHomePage = () => {
                 />
               </label>
               <label>
-                Fijo ($)
+                Fijo ({readPosCurrency().code})
                 <input
                   type="number"
                   min="0"
@@ -2712,7 +2733,7 @@ export const PosV2SalesHomePage = () => {
                         setValidationError(null);
                       }}
                     />
-                    <small>Saldo pendiente: ${(totals.total - (Number(initialPayment) || 0)).toFixed(2)}</small>
+                    <small>Saldo pendiente: {posMoneyFormatter.format(totals.total - (Number(initialPayment) || 0))}</small>
                   </div>
                 )}
               </div>
@@ -2736,7 +2757,7 @@ export const PosV2SalesHomePage = () => {
                   <small>
                     {salesTax.isPercent
                       ? `${salesTax.value}%`
-                      : `$${salesTax.value.toFixed(2)}`}
+                      : posMoneyFormatter.format(salesTax.value)}
                   </small>
                 </div>
                 {salesTax.canBeRemovedAtSale ? (
@@ -2768,21 +2789,21 @@ export const PosV2SalesHomePage = () => {
             <div className="pos-v2-sales-home__totals">
               <p>
                 <span>Subtotal</span>
-                <strong>${totals.subtotal.toFixed(2)}</strong>
+                <strong>{posMoneyFormatter.format(totals.subtotal)}</strong>
               </p>
               <p>
                 <span>Descuento</span>
-                <strong>-${totals.discount.toFixed(2)}</strong>
+                <strong>-{posMoneyFormatter.format(totals.discount)}</strong>
               </p>
               {salesTax && applyTax ? (
                 <p>
                   <span>{salesTax.description}</span>
-                  <strong>${totals.taxAmount.toFixed(2)}</strong>
+                  <strong>{posMoneyFormatter.format(totals.taxAmount)}</strong>
                 </p>
               ) : null}
               <p className="is-total">
                 <span>Total</span>
-                <strong>${totals.total.toFixed(2)}</strong>
+                <strong>{posMoneyFormatter.format(totals.total)}</strong>
               </p>
             </div>
 
@@ -2993,7 +3014,7 @@ export const PosV2SalesHomePage = () => {
                         <strong>{variant.description || "Variante"}</strong>
                         <small>{chips || "Sin atributos adicionales"}</small>
                         <small>{stockLabel}</small>
-                        <span>${variant.price.toFixed(2)}</span>
+                        <span>{posMoneyFormatter.format(variant.price)}</span>
                       </button>
                       <div
                         className="pos-v2-sales-home__variant-row-qty"
@@ -3134,7 +3155,7 @@ export const PosV2SalesHomePage = () => {
           onClick={() => setMobileStep("cart")}
         >
           <span>{totals.items} prod.</span>
-          <strong>${totals.total.toFixed(2)}</strong>
+          <strong>{posMoneyFormatter.format(totals.total)}</strong>
           <em>Ver mesa</em>
         </button>
       ) : null}
@@ -3195,7 +3216,7 @@ export const PosV2SalesHomePage = () => {
           className="is-summary"
           onClick={() => setMobileStep("cart")}
         >
-          {totals.items.toFixed(2)}x Items = ${totals.total.toFixed(2)}
+          {totals.items.toFixed(2)}x Items = {posMoneyFormatter.format(totals.total)}
         </button>
       </div>
 
@@ -3361,7 +3382,7 @@ export const PosV2SalesHomePage = () => {
               <strong>{completedSale.customerName ?? "General"}</strong>
             </p>
             <p>
-              Total: <strong>${completedSale.total.toFixed(2)}</strong>
+              Total: <strong>{posMoneyFormatter.format(completedSale.total)}</strong>
             </p>
 
             <div className="pos-v2-sales-home__sale-modal-actions">
@@ -3385,4 +3406,3 @@ export const PosV2SalesHomePage = () => {
     </PosV2Shell>
   );
 };
-

@@ -7,6 +7,10 @@ const projectRoot = process.cwd();
 const outDir = resolve(projectRoot, ".tmp-modern-tests");
 
 const suites = [
+  { name: "unit-printer-format", entry: "tests/new/pos/parity/printer-format.unit.ts" },
+  { name: "unit-pos-theme", entry: "tests/new/pos/parity/pos-theme.unit.ts" },
+  { name: "unit-cash-closing-parity", entry: "tests/new/pos/parity/cash-closing-parity.unit.ts" },
+  { name: "unit-mobile-parity", entry: "tests/new/pos/parity/mobile-parity.unit.ts" },
   { name: "unit-http-idempotency", entry: "tests/new/core/http-idempotency.unit.ts" },
   { name: "unit-login-session-limit", entry: "tests/new/pos/auth/login-session-limit.unit.ts" },
   { name: "unit-products-service", entry: "tests/new/pos/products/products.service.unit.ts" },

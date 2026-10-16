@@ -1,40 +1,48 @@
-import { HttpClient } from "../../../../core/api/HttpClient";
+import { HttpClient } from "../../../../../core/api/HttpClient";
 import { EmployeeSummary, ICashClosingRepository } from "../interface/ICashClosingRepository";
-import { CashClosing, CreateCashClosingDto } from "../model/CashClosing";
+import { CashClosing, CashClosingPreview, CreateCashClosingDto } from "../model/CashClosing";
+import { readPosCurrency } from "../../../shared/config/posCurrency";
 
 type EmployeeResponse={Id:number;Name:string;LastName?:string};
 type CashClosingResponse={Id:number;Employee_Id?:number;Employees_Id?:number;Branch_Id?:number;Total?:number;Date?:string;Employee_Name?:string};
-type PreviewResponse={data?:{employeeId?:number;byCurrency?:Array<{MoneyTipe?:string;total?:number}>}}|{employeeId?:number;byCurrency?:Array<{MoneyTipe?:string;total?:number}>};
+type PreviewData={employeeId?:number;byCurrency?:Array<{currency?:string;total?:number}>};
+type PreviewResponse={data?:PreviewData}|PreviewData;
 type ListResponse={data?:CashClosingResponse[]}|CashClosingResponse[];
-const currentEmployeeId=()=>Number(window.localStorage.getItem("pos-v2-employee-id")??0);
 
 export class PosCashClosingApi implements ICashClosingRepository{
   constructor(private readonly httpClient:HttpClient){}
 
   async listEmployeesByBusiness(businessId:number,token:string):Promise<EmployeeSummary[]>{
     const response=await this.httpClient.request<EmployeeResponse[]>({method:"GET",path:`employee/business/${businessId}`,token});
-    const mine=currentEmployeeId();
-    return response.filter(employee=>!mine||employee.Id===mine).map(employee=>({id:employee.Id,fullName:`${employee.Name} ${employee.LastName??""}`.trim()}));
+    return response.map(employee=>({id:employee.Id,fullName:`${employee.Name} ${employee.LastName??""}`.trim()}));
   }
 
   async listByEmployee(employeeId:number,token:string):Promise<CashClosing[]>{
-    const response=await this.httpClient.request<ListResponse>({method:"GET",path:"finances/branch/cash-closing",token,query:{limit:50}});
+    this.validateEmployee(employeeId);
+    const response=await this.httpClient.request<ListResponse>({method:"GET",path:"finances/branch/cash-closing",token,query:{employeeId,limit:50}});
     const rows=Array.isArray(response)?response:response.data??[];
     return rows.filter(row=>Number(row.Employee_Id??row.Employees_Id??0)===employeeId).map(row=>this.toDomain(row));
   }
 
-  async getCurrentTotalByEmployee(employeeId:number,token:string):Promise<number>{
-    if(currentEmployeeId()&&employeeId!==currentEmployeeId())return 0;
-    const response=await this.httpClient.request<PreviewResponse>({method:"GET",path:"finances/branch/cash-closing/preview",token});
-    const data="data" in response?(response.data??{}):response;
+  async getCurrentPreviewByEmployee(employeeId:number,token:string):Promise<CashClosingPreview>{
+    this.validateEmployee(employeeId);
+    const response=await this.httpClient.request<PreviewResponse>({method:"GET",path:"finances/branch/cash-closing/preview",token,query:{employeeId}});
+    const data="data" in response?(response.data??{}):response as PreviewData;
     const rows=data.byCurrency??[];
-    const mxn=rows.find(row=>String(row.MoneyTipe??"").toUpperCase()==="MXN")??rows[0];
-    return Number(mxn?.total??0);
+    const active=rows.filter(row=>Number(row.total)!==0);
+    if(active.length>1)throw new Error("El corte contiene ventas en más de una moneda y no puede consolidarse en un solo total.");
+    const total=Number(active[0]?.total??0);
+    if(!Number.isFinite(total))throw new Error("El total del corte no es válido.");
+    return {total,currency:active[0]?.currency||readPosCurrency().code};
   }
 
   async create(payload:CreateCashClosingDto,token:string):Promise<void>{
-    if(currentEmployeeId()&&payload.employeeId!==currentEmployeeId())throw new Error("El corte sólo puede registrarse para el empleado autenticado.");
-    await this.httpClient.request<unknown>({method:"POST",path:"finances/branch/cash-closing",token});
+    this.validateEmployee(payload.employeeId);
+    await this.httpClient.request<unknown>({method:"POST",path:"finances/branch/cash-closing",token,body:{Employee_Id:payload.employeeId}});
+  }
+
+  private validateEmployee(id:number){
+    if(!Number.isSafeInteger(id)||id<1)throw new Error("Selecciona un empleado válido.");
   }
 
   private toDomain(response:CashClosingResponse):CashClosing{

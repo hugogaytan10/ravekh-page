@@ -1,3 +1,5 @@
+import { Link } from "react-router-dom";
+import { posMoneyFormatter as moneyFormatter } from "../../../shared/config/posCurrency";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -34,7 +36,6 @@ const API_BASE_URL = getPosApiBaseUrl();
 const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
 const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 
-const moneyFormatter = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 });
 const dateFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
 const BRAND_PURPLE = "#6d01d1";
 const BRAND_VIOLET = "#7c3aed";
@@ -54,12 +55,6 @@ const PAYMENT_OPTIONS: Array<{ value: "TODOS" | "EFECTIVO" | "TARJETA"; label: s
   { value: "EFECTIVO", label: "Efectivo" },
   { value: "TARJETA", label: "Tarjeta" },
 ];
-const PENDING_MODULES = [
-  { id: "sales-tax", title: "Impuestos", detail: "Configuración fiscal por negocio" },
-  { id: "exports", title: "Exportar reportes", detail: "Descargas para contabilidad y auditoría" },
-  { id: "cash-closing", title: "Cortes de caja", detail: "Cierre de turnos con resumen de efectivo" },
-];
-
 const DEFAULT_SUMMARY: ReportSummaryViewModel = {
   balance: 0,
   income: 0,
@@ -72,6 +67,7 @@ const DEFAULT_SUMMARY: ReportSummaryViewModel = {
   bestCategory: "Sin datos",
 };
 
+ChartJS.defaults.color = "#8F8998";
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, BarElement, Tooltip, Legend, Filler);
 
 type ToastState = { type: "success" | "error"; message: string } | null;
@@ -674,7 +670,7 @@ export const PosV2ReportingPage = () => {
       legend: { display: false },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: "#475569" } },
+      x: { grid: { display: false }, ticks: { color: "#8F8998" } },
       y: {
         beginAtZero: true,
         ticks: {
@@ -879,7 +875,7 @@ export const PosV2ReportingPage = () => {
 
   if (!session.hasSession) {
     return (
-      <PosV2Shell title="Reportes" subtitle="Analítica operacional v2 moderna y desacoplada">
+      <PosV2Shell title="Reportes" >
         <section className="pos-v2-reporting">
           <section className="pos-v2-reporting__session-empty">
             <h2>Sesión requerida</h2>
@@ -892,11 +888,12 @@ export const PosV2ReportingPage = () => {
   }
 
   return (
-    <PosV2Shell title="Reportes" subtitle="Analítica operacional v2 enfocada en decisiones rápidas">
+    <PosV2Shell title="Reportes">
       <section className="pos-v2-reporting">
         <header className="pos-v2-reporting__header">
           <div>
-            <h2>Insights de ventas</h2>
+            <h2>Reportes</h2>
+            {isAdmin ? <Link to="/pos/intelligence">Análisis del negocio →</Link> : null}
           </div>
           <div className="pos-v2-reporting__filters">
             {isAdmin ? (
@@ -951,6 +948,9 @@ export const PosV2ReportingPage = () => {
         {error ? <p className="pos-v2-reporting__error">{error}</p> : null}
         {toast ? <p className={`pos-v2-reporting__toast is-${toast.type}`}>{toast.message}</p> : null}
 
+        <section className="pos-v2-reporting__metrics" aria-label="Resumen del periodo" aria-busy={loading}>
+          {[{label:"Ingresos",value:moneyFormatter.format(summary.income)},{label:"Ganancia",value:moneyFormatter.format(summary.earnings)},{label:"Ticket promedio",value:moneyFormatter.format(summary.averageSale)},{label:"Ventas",value:String(summary.totalSales)},{label:"Balance",value:moneyFormatter.format(summary.balance)}].map(metric=><article key={metric.label}><span>{metric.label}</span><strong>{loading?"…":metric.value}</strong></article>)}
+        </section>
         <section className="pos-v2-reporting__content">
           {loading ? (
             Array.from({ length: 4 }).map((_, index) => (
@@ -1189,26 +1189,7 @@ export const PosV2ReportingPage = () => {
             ) : null}
           </article>
 
-          <article className="pos-v2-reporting__card is-full">
-            <header>
-              <h3>Módulos en ruta (v2)</h3>
-              <span>UX lista para integrar endpoints existentes del sistema anterior</span>
-            </header>
-            <div className="pos-v2-reporting__module-grid">
-              {PENDING_MODULES.map((module) => (
-                <button
-                  key={module.id}
-                  type="button"
-                  className="pos-v2-reporting__module-card"
-                  onClick={() => navigate(module.id === "cash-closing" ? POS_V2_PATHS.cashClosing : POS_V2_PATHS.morePreview(module.id))}
-                >
-                  <strong>{module.title}</strong>
-                  <small>{module.detail}</small>
-                  <span>{module.id === "cash-closing" ? "Abrir módulo" : "Abrir vista previa"}</span>
-                </button>
-              ))}
-            </div>
-          </article>
+
         </section>
 
         {selectedPoint ? (

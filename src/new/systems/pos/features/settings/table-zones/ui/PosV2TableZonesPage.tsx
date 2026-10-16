@@ -565,12 +565,12 @@ export const PosV2TableZonesPage = () => {
   };
 
   return (
-    <PosV2Shell title="Mesas" subtitle="Configuración v2 de mesas desacoplada del código anterior">
+    <PosV2Shell title="Mesas" >
       <section className="pos-v2-table-zones">
         <header className="pos-v2-table-zones__header">
           <div>
             <h2>Mesas y zonas</h2>
-            <p>Flujo moderno: primero administras zonas y luego administras las mesas dentro de cada zona.</p>
+            <p>Organiza las mesas de tu negocio por zonas.</p>
           </div>
         </header>
 
@@ -579,7 +579,7 @@ export const PosV2TableZonesPage = () => {
 
         <section className="pos-v2-table-zones__toolbar">
           <article className="pos-v2-table-zones__status">
-          
+
           </article>
           <article className="pos-v2-table-zones__quick-actions">
             <button type="button" className="is-secondary-chip" aria-label="Crear nueva zona" onClick={() => { setZoneEditId(null); setZoneName(""); setIsZoneModalOpen(true); }}>

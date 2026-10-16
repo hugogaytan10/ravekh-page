@@ -1,3 +1,4 @@
+import { posMoneyFormatter } from "../../../shared/config/posCurrency";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
@@ -213,7 +214,7 @@ export const DiscontinuedProductsV2PosPage = () => {
                     </div>
                     <p className="pos-v2-products__simple-meta">{product.categoryName || "Sin categoría"}</p>
                     <div className="pos-v2-products__card-meta">
-                      <strong>{product.price === null ? "Sin precio" : new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(product.price)}</strong>
+                      <strong>{product.price === null ? "Sin precio" : posMoneyFormatter.format(product.price)}</strong>
                       <small>Stock: {product.stock ?? 0}</small>
                     </div>
                     {!isSelecting ? (

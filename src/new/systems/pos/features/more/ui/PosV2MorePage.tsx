@@ -1,3 +1,4 @@
+import { FiShoppingBag, FiMapPin, FiUsers, FiCreditCard, FiUserCheck, FiGift, FiCamera, FiPrinter, FiDollarSign, FiSettings, FiTrendingUp, FiChevronRight } from "react-icons/fi";
 import { ModernSystemsFactory } from "../../../../../index";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -16,6 +17,7 @@ import {
   isSalesOnlyOperator,
   POS_SESSION_STORAGE_KEYS,
   readPosSessionSnapshot,
+  resolvePosOperatorRole,
   readPosStringList,
   writePosStringList,
 } from "../../../shared/config/posSession";
@@ -45,6 +47,7 @@ import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
 import { downloadProductsCatalogPdf } from "./productCatalogPdf";
 import "./PosV2MorePage.css";
 
+const MODULE_ICONS: Record<string, typeof FiSettings> = { "online-store": FiShoppingBag, branches: FiMapPin, customers: FiUsers, "pending-payments": FiCreditCard, employees: FiUserCheck, coupons: FiGift, visits: FiCamera, printers: FiPrinter, "cash-closing": FiDollarSign, settings: FiSettings, intelligence: FiTrendingUp };
 const API_BASE_URL = getPosApiBaseUrl();
 const FAVORITES_KEY = POS_SESSION_STORAGE_KEYS.moreFavorites;
 const BANNER_COLORS = ["#4338CA", "#0EA5E9", "#059669", "#D946EF", "#F97316"];
@@ -128,7 +131,7 @@ export const PosV2MorePage = () => {
     () => isSalesOnlyOperator(sessionSnapshot.token),
     [sessionSnapshot.token],
   );
-  const allowedModuleIdsForSalesOnly = useMemo(() => new Set(["printers"]), []);
+  const allowedModuleIdsForSalesOnly = useMemo(() => new Set(["printers", "settings"]), []);
 
   const selectedCatalogBranch = useMemo(
     () =>
@@ -190,6 +193,7 @@ export const PosV2MorePage = () => {
   const filteredSections = useMemo(() => {
     return MORE_MODULE_SECTIONS.map((section) => {
       const items = section.items.filter((item) => {
+        if (item.id === "intelligence" && resolvePosOperatorRole(sessionSnapshot.token) !== "admin") return false;
         const matchesRole =
           !isSalesOnlyUser || allowedModuleIdsForSalesOnly.has(item.id);
         const matchesStatus = isReadyModule(item);
@@ -621,9 +625,7 @@ export const PosV2MorePage = () => {
       subtitle="Administra tu negocio"
     >
       <section className="pos-v2-more">
-        <header className="pos-v2-more__header">
-          <h2>Configuración y herramientas</h2>
-        </header>
+
         <section className="pos-v2-more__branch-switcher" aria-label="Sucursal operativa">
           <div>
             <strong>Sucursal operativa</strong>
@@ -678,39 +680,46 @@ export const PosV2MorePage = () => {
           </section>
         ) : null}
 
+        {filteredSections.map((section) => (
+          <section
+            key={section.title}
+            className={`pos-v2-more__section${section.title === "Mi negocio" ? " pos-v2-more__section--primary" : ""}`}
+            aria-label={section.title}
+          >
+            <div className="pos-v2-more__section-head">
+              <h3>{section.title}</h3>
+              <p>{section.subtitle}</p>
+            </div>
+            <div className="pos-v2-more__grid">
+              {section.items.map((item) => (
+                <div key={`${section.title}-${item.id}`} className="pos-v2-more__module-row">
+                  <button type="button" className="pos-v2-more__module-link"
+                    onClick={() => void openModule(item)} disabled={betaLoadingId === item.id}>
+                    <span className="pos-v2-more__module-icon" aria-hidden="true">{(() => { const Icon = MODULE_ICONS[item.id] || FiSettings; return <Icon size={24} />; })()}</span><span>{betaLoadingId === item.id ? "Cargando…" : item.title}</span>
+                    <FiChevronRight className="pos-v2-more__module-chevron" aria-hidden="true" />
+                  </button>
+                  <button type="button"
+                    className={`pos-v2-more__favorite ${favorites.includes(item.id) ? "is-active" : ""}`}
+                    onClick={() => toggleFavorite(item.id)}
+                    aria-label={favorites.includes(item.id) ? `Quitar ${item.title} de favoritos` : `Agregar ${item.title} a favoritos`}
+                    aria-pressed={favorites.includes(item.id)}>
+                    {favorites.includes(item.id) ? "★" : "☆"}
+                  </button>
+                </div>
+              ))}
+            </div>
+          </section>
+        ))}
+
         <section
           className="pos-v2-more__quick-tools"
           aria-label="Herramientas rápidas"
         >
           <div className="pos-v2-more__section-head">
-            <h3>Herramientas rápidas</h3>
-            <p>Acciones operativas que sí usamos en el día a día.</p>
+            <h3>Comparte tu catálogo</h3>
+            <p>Enlaces, QR y material para tus clientes.</p>
           </div>
-          <div className="pos-v2-more__quick-tools-grid">
-            {allItems
-              .filter((item) =>
-                [
-                  "coupons",
-                  "visits",
-                  "customers",
-                  "employees",
-                  "catalog-settings",
-                  "exports",
-                  "cash-closing",
-                  "online-store",
-                ].includes(item.id),
-              )
-              .map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => openModule(item)}
-                >
-                  {item.title}
-                </button>
-              ))}
-          </div>
-          <div className="pos-v2-more__catalog-copy">
+          <div id="catalog-tools" className="pos-v2-more__catalog-copy">
             <div className="pos-v2-more__catalog-heading">
               <div>
                 <strong>Catálogos por sucursal</strong>
@@ -962,36 +971,7 @@ export const PosV2MorePage = () => {
           </div>
         </section>
 
-        {filteredSections.map((section) => (
-          <section
-            key={section.title}
-            className="pos-v2-more__section"
-            aria-label={section.title}
-          >
-            <div className="pos-v2-more__section-head">
-              <h3>{section.title}</h3>
-              <p>{section.subtitle}</p>
-            </div>
-            <div className="pos-v2-more__grid">
-              {section.items.map((item) => (
-                <div key={`${section.title}-${item.id}`} className="pos-v2-more__module-row">
-                  <button type="button" className="pos-v2-more__module-link"
-                    onClick={() => void openModule(item)} disabled={betaLoadingId === item.id}>
-                    <span>{betaLoadingId === item.id ? "Cargando…" : item.title}</span>
-                    <span aria-hidden="true">›</span>
-                  </button>
-                  <button type="button"
-                    className={`pos-v2-more__favorite ${favorites.includes(item.id) ? "is-active" : ""}`}
-                    onClick={() => toggleFavorite(item.id)}
-                    aria-label={favorites.includes(item.id) ? `Quitar ${item.title} de favoritos` : `Agregar ${item.title} a favoritos`}
-                    aria-pressed={favorites.includes(item.id)}>
-                    {favorites.includes(item.id) ? "★" : "☆"}
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
+
 
         {filteredSections.length === 0 ? (
           <section className="pos-v2-more__empty">

@@ -1,3 +1,4 @@
+import { posMoneyFormatter } from "../../../shared/config/posCurrency";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
@@ -2274,15 +2275,14 @@ export const ProductsV2PosPage = () => {
   return (
     <PosV2Shell
       title="Productos"
-      subtitle="Catálogo moderno para operar tu POS de forma rápida."
+
     >
       <section className="pos-v2-products">
         <header className="pos-v2-products__header">
           <div>
             <h2>Gestión de productos</h2>
             <p>
-              Alta y edición en modal, manteniendo la vista del catálogo limpia
-              y rápida para POS.
+              Consulta y administra tus productos.
             </p>
           </div>
 
@@ -2308,6 +2308,7 @@ export const ProductsV2PosPage = () => {
             >
               Categorías
             </button>
+            <details className="pos-v2-products__tools"><summary>Herramientas</summary><div>
             <button
               type="button"
               className="pos-v2-products__primary"
@@ -2351,6 +2352,7 @@ export const ProductsV2PosPage = () => {
             >
               Exportar productos {isVipPlan ? "" : "(VIP)"}
             </button>
+            </div></details>
             <button
               type="button"
               className="pos-v2-products__refresh"
@@ -2646,7 +2648,7 @@ export const ProductsV2PosPage = () => {
                         <strong>
                           {product.price == null
                             ? "--"
-                            : `$${product.price.toFixed(2)}`}
+                            : posMoneyFormatter.format(product.price)}
                         </strong>
                         <small>Stock: {product.stock ?? "--"}</small>
                       </div>

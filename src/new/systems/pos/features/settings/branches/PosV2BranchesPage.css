@@ -11,17 +11,17 @@
   width: 100%;
   max-width: 1120px;
   margin: 0 auto;
-  color: #111827;
+  color: var(--pos-v2-text);
 }
 
 .pos-branches__sidebar,
 .pos-branches__card,
 .pos-branches__notice {
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
-  background: #ffffff;
-  color: #111827;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  border: 1px solid var(--pos-v2-border);
+  border-radius: 8px;
+  background: var(--pos-v2-surface);
+  color: var(--pos-v2-text);
+  box-shadow: none;
 }
 
 .pos-branches__sidebar {
@@ -48,22 +48,22 @@
 }
 
 .pos-branches__sidebar-title strong {
-  color: #111827;
+  color: var(--pos-v2-text);
   font-size: 15px;
 }
 
 .pos-branches__sidebar-title span {
-  color: #64748b;
+  color: var(--pos-v2-text-muted);
   font-size: 12px;
 }
 
 .pos-branches__sidebar-title button {
   min-height: 38px;
   border: 1px solid rgba(109, 1, 209, 0.28);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 8px 11px;
   background: rgba(109, 1, 209, 0.08);
-  color: #6d01d1;
+  color: var(--pos-v2-accent-text);
   font: inherit;
   font-weight: 800;
   cursor: pointer;
@@ -87,17 +87,17 @@
   width: 100%;
   min-width: 0;
   border: 1px solid transparent;
-  border-radius: 12px;
+  border-radius: 8px;
   padding: 11px;
   background: transparent;
-  color: #111827;
+  color: var(--pos-v2-text);
   text-align: left;
   cursor: pointer;
 }
 
 .pos-branches__item:hover {
-  border-color: #e2e8f0;
-  background: #f8fafc;
+  border-color: var(--pos-v2-border);
+  background: var(--pos-v2-surface);
 }
 
 .pos-branches__item > span {
@@ -108,7 +108,7 @@
 }
 
 .pos-branches__item small {
-  color: #64748b;
+  color: var(--pos-v2-text-muted);
   font-size: 11px;
   font-weight: 700;
 }
@@ -116,7 +116,7 @@
 .pos-branches__item.is-active {
   border-color: rgba(109, 1, 209, 0.3);
   background: rgba(109, 1, 209, 0.09);
-  color: #5b21b6;
+  color: var(--pos-v2-accent-text);
 }
 
 .pos-branches__content {
@@ -143,14 +143,14 @@
 
 .pos-branches__card-heading h2 {
   margin: 0 0 5px;
-  color: #111827;
+  color: var(--pos-v2-text);
   font-size: 20px;
   line-height: 1.2;
 }
 
 .pos-branches__card-heading p {
   margin: 0;
-  color: #64748b;
+  color: var(--pos-v2-text-muted);
   line-height: 1.45;
 }
 
@@ -160,7 +160,7 @@
   border-radius: 999px;
   padding: 6px 10px;
   background: rgba(109, 1, 209, 0.10);
-  color: #6d01d1;
+  color: var(--pos-v2-accent-text);
   font-size: 12px;
   font-weight: 800;
 }
@@ -175,7 +175,7 @@
 .pos-branches__copy {
   display: grid;
   gap: 6px;
-  color: #374151;
+  color: var(--pos-v2-text);
   font-size: 13px;
   font-weight: 750;
 }
@@ -185,11 +185,11 @@
 .pos-branches__copy select {
   width: 100%;
   box-sizing: border-box;
-  border: 1px solid #cbd5e1;
+  border: 1px solid var(--pos-v2-border);
   border-radius: 11px;
   outline: none;
-  background: #ffffff;
-  color: #111827;
+  background: var(--pos-v2-surface);
+  color: var(--pos-v2-text);
   font: inherit;
   font-weight: 500;
 }
@@ -209,13 +209,13 @@
 
 .pos-branches__grid input::placeholder,
 .pos-branches__grid textarea::placeholder {
-  color: #94a3b8;
+  color: var(--pos-v2-text-muted);
 }
 
 .pos-branches__grid input:focus,
 .pos-branches__grid textarea:focus,
 .pos-branches__copy select:focus {
-  border-color: #7c3aed;
+  border-color: var(--pos-v2-accent);
   box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.14);
 }
 
@@ -229,7 +229,7 @@
   gap: 9px;
   width: fit-content;
   margin-top: 16px;
-  color: #374151;
+  color: var(--pos-v2-text);
   font-weight: 700;
 }
 
@@ -238,7 +238,7 @@
   width: 17px;
   height: 17px;
   margin: 0;
-  accent-color: #6d01d1;
+  accent-color: var(--pos-v2-accent);
 }
 
 .pos-branches__copy {
@@ -246,7 +246,7 @@
 }
 
 .pos-branches__copy small {
-  color: #64748b;
+  color: var(--pos-v2-text-muted);
   font-weight: 400;
 }
 
@@ -268,20 +268,20 @@
 }
 
 .pos-branches__actions .is-primary {
-  border-color: #6d01d1;
-  background: #6d01d1;
-  color: #ffffff;
+  border-color: var(--pos-v2-accent);
+  background: var(--pos-v2-accent);
+  color: var(--pos-v2-text-inverse);
 }
 
 .pos-branches__actions .is-primary:hover:not(:disabled) {
-  border-color: #5b21b6;
-  background: #5b21b6;
+  border-color: var(--pos-v2-accent);
+  background: var(--pos-v2-accent);
 }
 
 .pos-branches__actions .is-danger {
-  border-color: #fecdd3;
-  background: #fff1f2;
-  color: #be123c;
+  border-color: var(--pos-v2-danger-border);
+  background: var(--pos-v2-danger-bg);
+  color: var(--pos-v2-danger-text);
 }
 
 .pos-branches__actions button:disabled,
@@ -300,15 +300,15 @@
 }
 
 .pos-branches__error {
-  border-color: #fecdd3;
-  background: #fff1f2;
-  color: #be123c;
+  border-color: var(--pos-v2-danger-border);
+  background: var(--pos-v2-danger-bg);
+  color: var(--pos-v2-danger-text);
 }
 
 .pos-branches__success {
-  border-color: #a7f3d0;
-  background: #ecfdf5;
-  color: #047857;
+  border-color: var(--pos-v2-success-border);
+  background: var(--pos-v2-success-bg);
+  color: var(--pos-v2-success-text);
 }
 
 .pos-branches__employees {
@@ -322,11 +322,11 @@
   justify-content: space-between;
   gap: 15px;
   min-height: 54px;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
+  border: 1px solid var(--pos-v2-border);
+  border-radius: 8px;
   padding: 11px 12px;
-  background: #f8fafc;
-  color: #111827;
+  background: var(--pos-v2-surface);
+  color: var(--pos-v2-text);
 }
 
 .pos-branches__employee > span {
@@ -337,14 +337,14 @@
 
 .pos-branches__employee strong {
   overflow: hidden;
-  color: #111827;
+  color: var(--pos-v2-text);
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .pos-branches__employee small {
   overflow: hidden;
-  color: #64748b;
+  color: var(--pos-v2-text-muted);
   font-size: 12px;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -358,12 +358,12 @@
 
 .pos-branches__notice h2 {
   margin: 0 0 8px;
-  color: #111827;
+  color: var(--pos-v2-text);
 }
 
 .pos-branches__notice p {
   margin: 0;
-  color: #64748b;
+  color: var(--pos-v2-text-muted);
   line-height: 1.5;
 }
 
@@ -375,17 +375,17 @@
    ========================================================= */
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches {
-  color: #f8fafc !important;
+  color: var(--pos-v2-text) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__sidebar,
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__card,
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__notice {
-  background: #111827 !important;
-  background-color: #111827 !important;
-  border-color: #334155 !important;
-  color: #f8fafc !important;
-  box-shadow: 0 14px 32px rgba(2, 6, 23, 0.32) !important;
+  background: var(--pos-v2-background) !important;
+  background-color: var(--pos-v2-background) !important;
+  border-color: var(--pos-v2-border) !important;
+  color: var(--pos-v2-text) !important;
+  box-shadow: none !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__sidebar-title strong,
@@ -395,7 +395,7 @@
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__copy,
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__employee strong,
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__notice h2 {
-  color: #f8fafc !important;
+  color: var(--pos-v2-text) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__sidebar-title span,
@@ -403,14 +403,14 @@
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__copy small,
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__employee small,
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__notice p {
-  color: #94a3b8 !important;
+  color: var(--pos-v2-text-muted) !important;
   opacity: 1 !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__sidebar-title button {
   border-color: rgba(167, 139, 250, 0.38) !important;
   background: rgba(124, 58, 237, 0.18) !important;
-  color: #ddd6fe !important;
+  color: var(--pos-v2-text-muted) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__sidebar-title button:hover {
@@ -419,103 +419,103 @@
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__item {
   background: transparent !important;
-  color: #e2e8f0 !important;
+  color: var(--pos-v2-text-muted) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__item small {
-  color: #94a3b8 !important;
+  color: var(--pos-v2-text-muted) !important;
   opacity: 1 !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__item:hover {
-  border-color: #475569 !important;
-  background: #172033 !important;
+  border-color: var(--pos-v2-border) !important;
+  background: var(--pos-v2-background) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__item.is-active {
-  border-color: rgba(167, 139, 250, 0.48) !important;
+  border-color: var(--pos-v2-border) !important;
   background: rgba(124, 58, 237, 0.20) !important;
-  color: #f5f3ff !important;
+  color: var(--pos-v2-text) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__item.is-active small {
-  color: #c4b5fd !important;
+  color: var(--pos-v2-text-muted) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__badge {
   border-color: rgba(167, 139, 250, 0.35) !important;
   background: rgba(124, 58, 237, 0.20) !important;
-  color: #ede9fe !important;
+  color: var(--pos-v2-text) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__grid input,
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__grid textarea,
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__copy select {
-  border-color: #475569 !important;
-  background: #0f172a !important;
-  background-color: #0f172a !important;
-  color: #f8fafc !important;
-  caret-color: #f8fafc !important;
+  border-color: var(--pos-v2-border) !important;
+  background: var(--pos-v2-background) !important;
+  background-color: var(--pos-v2-background) !important;
+  color: var(--pos-v2-text) !important;
+  caret-color: var(--pos-v2-text) !important;
   color-scheme: dark !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__grid input::placeholder,
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__grid textarea::placeholder {
-  color: #64748b !important;
+  color: var(--pos-v2-text-muted) !important;
   opacity: 1 !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__grid input:focus,
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__grid textarea:focus,
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__copy select:focus {
-  border-color: #a78bfa !important;
+  border-color: var(--pos-v2-accent) !important;
   box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.20) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__copy select option {
-  background: #0f172a !important;
-  color: #f8fafc !important;
+  background: var(--pos-v2-background) !important;
+  color: var(--pos-v2-text) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__employee {
-  border-color: #334155 !important;
-  background: #0f172a !important;
-  background-color: #0f172a !important;
-  color: #f8fafc !important;
+  border-color: var(--pos-v2-border) !important;
+  background: var(--pos-v2-background) !important;
+  background-color: var(--pos-v2-background) !important;
+  color: var(--pos-v2-text) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__employee:hover {
-  border-color: #475569 !important;
-  background: #172033 !important;
+  border-color: var(--pos-v2-border) !important;
+  background: var(--pos-v2-background) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__actions .is-primary {
-  border-color: #7c3aed !important;
-  background: linear-gradient(135deg, #6d28d9 0%, #7c3aed 100%) !important;
-  color: #ffffff !important;
+  border-color: var(--pos-v2-accent) !important;
+  background: var(--pos-v2-accent) !important;
+  color: var(--pos-v2-text-inverse) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__actions .is-primary:hover:not(:disabled) {
-  border-color: #a78bfa !important;
-  background: linear-gradient(135deg, #7c3aed 0%, #8b5cf6 100%) !important;
+  border-color: var(--pos-v2-accent) !important;
+  background: var(--pos-v2-accent) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__actions .is-danger {
   border-color: rgba(248, 113, 113, 0.32) !important;
   background: rgba(127, 29, 29, 0.30) !important;
-  color: #fecaca !important;
+  color: var(--pos-v2-danger-text) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__error {
   border-color: rgba(248, 113, 113, 0.32) !important;
   background: rgba(127, 29, 29, 0.30) !important;
-  color: #fecaca !important;
+  color: var(--pos-v2-danger-text) !important;
 }
 
 :root[data-theme="dark"] .pos-v2-shell .pos-branches__success {
   border-color: rgba(74, 222, 128, 0.28) !important;
   background: rgba(20, 83, 45, 0.32) !important;
-  color: #bbf7d0 !important;
+  color: var(--pos-v2-success-text) !important;
 }
 
 
@@ -566,3 +566,17 @@
     width: 100%;
   }
 }
+
+.pos-branches--list { display:block; max-width:1100px; margin:auto; }
+.pos-branches--list .pos-branches__sidebar { width:100%; }
+.pos-branches__item { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:16px; background:var(--pos-v2-surface); }
+.pos-branches__item>div:first-child { display:grid; gap:4px; min-width:0; }
+.pos-branches__item small { overflow-wrap:anywhere; }
+.pos-branches__row-actions { display:flex; gap:8px; align-items:center; flex-shrink:0; }
+.pos-branches__row-actions button { min-height:40px; padding:8px 12px; }
+.pos-branches__sidebar-title span { font-size:14px; }
+@media(max-width:600px){ .pos-branches__item { flex-wrap:wrap; } .pos-branches__row-actions { margin-left:auto; } }
+
+.pos-branches__list{display:grid;grid-template-columns:minmax(0,1fr)}
+.pos-branches__item{min-width:0;cursor:default}
+.pos-branches__sidebar{min-width:0;box-sizing:border-box}

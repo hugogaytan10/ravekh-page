@@ -10,10 +10,6 @@ export async function run(): Promise<void> {
   });
 
   try {
-  const originalWindow = globalThis.window;
-  Object.assign(globalThis, {
-    window: { localStorage: { getItem: () => "7" } },
-  });
   const calls: Array<{ method: string; path: string; body?: unknown }> = [];
   const httpClient = {
     async request({ method, path, query, body }: { method: string; path: string; query?: Record<string, unknown>; body?: unknown }) {
@@ -47,5 +43,4 @@ export async function run(): Promise<void> {
     if (previousWindow === undefined) delete (globalThis as { window?: Window }).window;
     else Object.defineProperty(globalThis, "window", { configurable: true, value: previousWindow });
   }
-  globalThis.window = originalWindow;
 }

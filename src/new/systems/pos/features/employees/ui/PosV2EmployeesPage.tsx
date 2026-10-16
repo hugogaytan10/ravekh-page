@@ -184,10 +184,10 @@ export const PosV2EmployeesPage = () => {
   };
 
   return (
-    <PosV2Shell title="Empleados" subtitle="Administración de personal y permisos desacoplada del código anterior">
+    <PosV2Shell title="Empleados" >
       <section className="pos-v2-employees">
         <header>
-          <h2>Empleados</h2>
+          <div><h2>Tu equipo</h2><p>Administra a las personas que trabajan contigo.</p></div>
           <button type="button" className="is-primary" onClick={startCreate}>+ Nuevo empleado</button>
         </header>
 

@@ -1,3 +1,4 @@
+import { usePosTheme } from "../../../shared/ui/usePosTheme";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
@@ -69,6 +70,7 @@ const FormField = ({
 );
 
 export const PosV2LoginPage = () => {
+  usePosTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [mode, setMode] = useState<PanelMode>("signin");

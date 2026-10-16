@@ -1,4 +1,10 @@
 export const POS_V2_PATHS = {
+  settings: "/settings",
+  account: "/settings/account",
+  deleteAccount: "/settings/delete-account",
+  ticketSettings: "/settings/ticket",
+  currency: "/settings/currency",
+  intelligence: "/pos/intelligence",
   login: "/login-punto-venta",
   passwordRecovery: "/recuperar-contrasena",
   sales: "/MainSales",
