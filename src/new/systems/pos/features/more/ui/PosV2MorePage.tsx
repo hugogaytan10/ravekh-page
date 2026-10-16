@@ -548,8 +548,7 @@ export const PosV2MorePage = () => {
       (item.id === "coupons" ||
         item.id === "visits" ||
         item.id === "loyalty") &&
-      features.fidelity !== 1 &&
-      features.fidelity !== 2
+      isPosFeatureBlocked(features.fidelity)
     ) {
       return {
         title: "Desbloquea fidelidad",

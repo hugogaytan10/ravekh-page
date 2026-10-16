@@ -397,7 +397,7 @@ export const PosV2SalesHomePage = () => {
     product: SaleItemVm;
     variants: SaleVariantVm[];
     extras: ProductExtrasVm;
-    selectedVariantKey: string | null;
+    selectedVariantKeys: string[];
     selectedSizeId: number | null;
     quantities: Record<string, number>;
   } | null>(null);
@@ -1570,9 +1570,7 @@ export const PosV2SalesHomePage = () => {
       product,
       variants: modalVariants,
       extras,
-      selectedVariantKey: modalVariants[0]
-        ? toCartKey(product.id, modalVariants[0].id)
-        : null,
+      selectedVariantKeys: [],
       selectedSizeId: null,
       quantities: modalVariants.reduce<Record<string, number>>(
         (accumulator, variant) => {
@@ -1625,15 +1623,25 @@ export const PosV2SalesHomePage = () => {
     setQuantity(cartKey, target.quantity + delta);
   };
 
+  const toggleVariantSelection = (key: string) => {
+    setVariantSelection(current => current ? {
+      ...current,
+      selectedVariantKeys: current.selectedVariantKeys.includes(key)
+        ? current.selectedVariantKeys.filter(selected => selected !== key)
+        : [...current.selectedVariantKeys, key],
+    } : null);
+    setVariantModalError(null);
+  };
+
   const confirmVariantSelection = () => {
     if (!variantSelection) return;
-    const variant = variantSelection.selectedVariantKey
-      ? (variantSelection.variants.find(
-          (item) =>
-            toCartKey(variantSelection.product.id, item.id) ===
-            variantSelection.selectedVariantKey,
-        ) ?? null)
-      : null;
+    const selectedVariants = variantSelection.variants.filter(item =>
+      variantSelection.selectedVariantKeys.includes(toCartKey(variantSelection.product.id, item.id)),
+    );
+    if (variantSelection.variants.length > 0 && selectedVariants.length === 0) {
+      setVariantModalError("Selecciona al menos un producto o variante.");
+      return;
+    }
 
     const selectedSize =
       variantSelection.extras?.TALLA.find(
@@ -1648,18 +1656,24 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
-    const selectedKey = variantSelection.selectedVariantKey ?? "";
-    const quantity = Math.max(
-      1,
-      Math.floor(variantSelection.quantities[selectedKey] ?? 1),
-    );
-    addToCartEntry(
-      variantSelection.product,
-      variant,
-      quantity,
-      null,
-      selectedSize,
-    );
+    const entries = selectedVariants.length > 0 ? selectedVariants : [null];
+    for (const variant of entries) {
+      const selectionKey = toCartKey(variantSelection.product.id, variant?.id ?? null);
+      const quantity = Math.max(1, Math.floor(variantSelection.quantities[selectionKey] ?? 1));
+      const cartKey = toCartKey(variantSelection.product.id, variant?.id ?? null, null, selectedSize?.id ?? null);
+      const requested = (cart[cartKey]?.quantity ?? 0) + quantity;
+      const stock = variant ? variant.stock : variantSelection.product.stock;
+      if (clampSaleQuantityToStock(requested, stock) < requested) {
+        setVariantModalError(
+          (variant?.description || variantSelection.product.name) + " sólo tiene " + (stock ?? 0) + " unidades disponibles.",
+        );
+        return;
+      }
+    }
+    entries.forEach(variant => {
+      const quantity = Math.max(1, Math.floor(variantSelection.quantities[toCartKey(variantSelection.product.id, variant?.id ?? null)] ?? 1));
+      addToCartEntry(variantSelection.product, variant?.id === null ? null : variant, quantity, null, selectedSize);
+    });
     setVariantSelection(null);
     setValidationError(null);
     setVariantModalError(null);
@@ -2612,7 +2626,7 @@ export const PosV2SalesHomePage = () => {
 
             {!payLater && <div
               className="pos-v2-sales-home__payment-methods"
-              role="radiogroup"
+              role="group"
               aria-label="Selecciona método de pago"
             >
               {PAYMENT_METHOD_OPTIONS.map(({ value, label, Icon }) => {
@@ -2965,7 +2979,7 @@ export const PosV2SalesHomePage = () => {
                     variant.id,
                   );
                   const isActive =
-                    optionKey === variantSelection.selectedVariantKey;
+                    variantSelection.selectedVariantKeys.includes(optionKey);
                   const quantity = Math.max(
                     1,
                     Math.floor(variantSelection.quantities[optionKey] ?? 1),
@@ -2979,36 +2993,24 @@ export const PosV2SalesHomePage = () => {
                       : `Stock ${variant.stock}`;
 
                   return (
-                    <label
+                    <div
                       key={optionKey}
                       className={`pos-v2-sales-home__variant-option ${isActive ? "is-active" : ""}`}
                     >
                       <input
-                        type="radio"
-                        name="variant-selection"
+                        type="checkbox"
                         checked={isActive}
                         onChange={() => {
-                          if (isActive) return;
-                          setVariantSelection((current) =>
-                            current
-                              ? { ...current, selectedVariantKey: optionKey }
-                              : null,
-                          );
-                          setVariantModalError(null);
+                          toggleVariantSelection(optionKey);
                         }}
                         aria-label={`Seleccionar variante ${variant.description || "Variante"}`}
                       />
                       <button
                         type="button"
                         className={isActive ? "is-active" : ""}
+                        aria-pressed={isActive}
                         onClick={() => {
-                          if (isActive) return;
-                          setVariantSelection((current) =>
-                            current
-                              ? { ...current, selectedVariantKey: optionKey }
-                              : null,
-                          );
-                          setVariantModalError(null);
+                          toggleVariantSelection(optionKey);
                         }}
                       >
                         <strong>{variant.description || "Variante"}</strong>
@@ -3032,7 +3034,7 @@ export const PosV2SalesHomePage = () => {
                               );
                               return {
                                 ...current,
-                                selectedVariantKey: optionKey,
+                                selectedVariantKeys: current.selectedVariantKeys.includes(optionKey) ? current.selectedVariantKeys : [...current.selectedVariantKeys, optionKey],
                                 quantities: {
                                   ...current.quantities,
                                   [optionKey]: Math.max(1, currentQty - 1),
@@ -3054,7 +3056,7 @@ export const PosV2SalesHomePage = () => {
                               if (!current) return null;
                               return {
                                 ...current,
-                                selectedVariantKey: optionKey,
+                                selectedVariantKeys: current.selectedVariantKeys.includes(optionKey) ? current.selectedVariantKeys : [...current.selectedVariantKeys, optionKey],
                                 quantities: {
                                   ...current.quantities,
                                   [optionKey]: Math.max(
@@ -3083,7 +3085,7 @@ export const PosV2SalesHomePage = () => {
                               );
                               return {
                                 ...current,
-                                selectedVariantKey: optionKey,
+                                selectedVariantKeys: current.selectedVariantKeys.includes(optionKey) ? current.selectedVariantKeys : [...current.selectedVariantKeys, optionKey],
                                 quantities: {
                                   ...current.quantities,
                                   [optionKey]: Math.max(
@@ -3101,7 +3103,7 @@ export const PosV2SalesHomePage = () => {
                           +1
                         </button>
                       </div>
-                    </label>
+                    </div>
                   );
                 })
               ) : (
@@ -3112,13 +3114,11 @@ export const PosV2SalesHomePage = () => {
             </div>
 
             <p className="pos-v2-sales-home__variant-selected">
-              Variante elegida:{" "}
+              Selección:{" "}
               <strong>
-                {variantSelection.variants.find(
-                  (item) =>
-                    toCartKey(variantSelection.product.id, item.id) ===
-                    variantSelection.selectedVariantKey,
-                )?.description ?? "Sin seleccionar"}
+                {variantSelection.variants.filter(item =>
+                  variantSelection.selectedVariantKeys.includes(toCartKey(variantSelection.product.id, item.id)),
+                ).map(item => item.description || variantSelection.product.name).join(", ") || "Sin seleccionar"}
               </strong>
             </p>
 
@@ -3135,7 +3135,7 @@ export const PosV2SalesHomePage = () => {
                 onClick={confirmVariantSelection}
                 disabled={
                   variantSelection.variants.length > 0 &&
-                  !variantSelection.selectedVariantKey
+                  variantSelection.selectedVariantKeys.length === 0
                 }
               >
                 Confirmar y agregar

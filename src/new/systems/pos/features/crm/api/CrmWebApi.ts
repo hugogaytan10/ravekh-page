@@ -1,3 +1,4 @@
+import type { HttpClient } from "../../../../../core/api/HttpClient";
 import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 
@@ -13,8 +14,8 @@ type Envelope<T> = { success: boolean; data: T; message?: string };
 
 /** The CRM controller returns {success,data}; unlike legacy POS resources. */
 export class CrmWebApi {
-  private readonly client = new FetchHttpClient(getPosApiBaseUrl());
-  constructor(private readonly token: string) {}
+
+  constructor(private readonly token: string, private readonly client: HttpClient = new FetchHttpClient(getPosApiBaseUrl())) {}
   private async get<T>(path: string): Promise<T> {
     const result = await this.client.request<Envelope<T>>({ method: "GET", path, token: this.token });
     if (!result?.success) throw new Error(result?.message || "Respuesta inválida del CRM.");
@@ -36,6 +37,7 @@ export class CrmWebApi {
   updateAgent(id:number,body:{Name?:string;Instructions?:string;Enabled?:boolean}) { return this.send<unknown>("PATCH",`crm/ai/agents/${id}`,body); }
   previewAi(id:number,agentId:number) {return this.send<{Body:string;Status:string}>("POST",`crm/ai/conversations/${id}/preview`,{Agent_Id:agentId});}
   conversations() { return this.get<Conversation[]>("crm/inbox/conversations"); }
+  conversation(id: number) { return this.get<Conversation>(`crm/inbox/conversations/${id}`); }
   messages(id: number) { return this.get<CrmMessage[]>(`crm/inbox/conversations/${id}/messages`); }
   contacts() { return this.get<CrmContact[]>("crm/contacts"); }
   opportunities() { return this.get<CrmOpportunity[]>("crm/opportunities"); }
@@ -46,5 +48,8 @@ export class CrmWebApi {
   takeover(conv: Conversation) { return this.send<unknown>("POST", `crm/inbox/conversations/${conv.Id}/takeover`, { Expected_Version: conv.Version }); }
   releaseToAi(conv: Conversation) { return this.send<unknown>("POST", `crm/inbox/conversations/${conv.Id}/release-to-ai`, { Expected_Version: conv.Version }); }
   markRead(id: number, messageId: number) { return this.send<unknown>("PUT", `crm/inbox/conversations/${id}/read`, { Last_Read_Message_Id: messageId }); }
-  changeStatus(conv: Conversation, status: string) { return this.send<unknown>("PATCH", `crm/inbox/conversations/${conv.Id}`, { Expected_Version: conv.Version, Status: status }); }
+  async changeStatus(conv: Conversation, status: string) {
+    const latest = await this.conversation(conv.Id);
+    return this.send<Conversation>("PATCH", `crm/inbox/conversations/${conv.Id}`, { Expected_Version: latest.Version, Status: status });
+  }
 }

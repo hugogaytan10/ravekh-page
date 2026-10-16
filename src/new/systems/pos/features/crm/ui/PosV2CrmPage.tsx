@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
 import { CrmWebApi, Conversation, CrmMessage, CrmContact, CrmOpportunity, CrmActivity, CrmChannel, CrmAgent, MetaDiagnostic } from "../api/CrmWebApi";
@@ -12,6 +12,8 @@ export function PosV2CrmPage() {
   const [view, setView] = useState<View>("inbox");
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selected, setSelected] = useState<Conversation | null>(null);
+  const conversationRequest = useRef(0);
+  const [conversationLoading, setConversationLoading] = useState(false);
   const [messages, setMessages] = useState<CrmMessage[]>([]);
   const [contacts, setContacts] = useState<CrmContact[]>([]);
   const [opportunities, setOpportunities] = useState<CrmOpportunity[]>([]);
@@ -49,15 +51,20 @@ export function PosV2CrmPage() {
   }, [api, token]);
   useEffect(() => { void refresh(view); }, [refresh, view]);
   const open = async (conversation: Conversation) => {
-    setError(""); setSelected(conversation); setAiPreview(""); setSendMode("internal");
+    const request = ++conversationRequest.current;
+    setError(""); setSelected(conversation); setMessages([]); setConversationLoading(true); setAiPreview(""); setSendMode("internal");
     try {
-      const entries = await api.messages(conversation.Id);
+      const [current, entries] = await Promise.all([api.conversation(conversation.Id), api.messages(conversation.Id)]);
+      if (request !== conversationRequest.current) return;
+      setSelected({ ...conversation, ...current });
       setMessages(entries.slice().reverse());
-    } catch (cause) { setError(errorText(cause)); }
+    } catch (cause) { if (request === conversationRequest.current) setError(errorText(cause)); }
+    finally { if (request === conversationRequest.current) setConversationLoading(false); }
   };
+  useEffect(() => () => { conversationRequest.current += 1; }, []);
   const send = async (event: FormEvent) => {
     event.preventDefault();
-    if (!selected || !draft.trim() || busy) return;
+    if (!selected || !draft.trim() || busy || conversationLoading) return;
     setBusy(true); setError("");
     try {
       if(sendMode === "whatsapp") { await api.sendWhatsApp(selected.Id,draft.trim());setSuccess("Mensaje aceptado para envío. Comprueba su estado en el historial."); }
@@ -89,10 +96,13 @@ export function PosV2CrmPage() {
     } catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
   };
   const updateStatus = async (status: string) => {
-    if (!selected) return;
+    if (!selected || busy || conversationLoading || status === selected.Status) return;
     setBusy(true); setError("");
-    try { await api.changeStatus(selected, status); const list = await api.conversations(); setConversations(list); const updated = list.find(item => item.Id === selected.Id); if (updated) setSelected(updated); }
-    catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
+    try {
+      const updated = await api.changeStatus(selected, status);
+      setSelected(current => current?.Id === selected.Id ? { ...current, ...updated } : current);
+      setConversations(list => list.map(item => item.Id === selected.Id ? { ...item, ...updated } : item));
+    } catch (cause) { setError(errorText(cause)); } finally { setBusy(false); }
   };
   const perform = async (action:()=>Promise<unknown>,onSuccess:string,tab?:View) => {
     if(busy)return;setBusy(true);setError("");setSuccess("");
@@ -113,25 +123,25 @@ export function PosV2CrmPage() {
   return <PosV2Shell title="CRM" subtitle="Conversaciones y seguimiento comercial">
     <div className="rvk-crm">
       <nav className="rvk-crm__tabs" aria-label="Secciones CRM">
-        {([ ["inbox", "Conversaciones"], ["contacts", "Contactos"], ["opportunities", "Oportunidades"], ["activities", "Actividades"], ["channels", "Conectar Meta"], ["agent", "Agente IA"] ] as const).map(([key,label]) => <button type="button" key={key} className={view===key ? "active" : ""} onClick={() => { setView(key); setSelected(null); }}>{label}</button>)}
+        {([ ["inbox", "Conversaciones"], ["contacts", "Contactos"], ["opportunities", "Oportunidades"], ["activities", "Actividades"], ["channels", "Conectar Meta"], ["agent", "Agente IA"] ] as const).map(([key,label]) => <button type="button" key={key} className={view===key ? "active" : ""} onClick={() => { conversationRequest.current += 1; setConversationLoading(false); setView(key); setSelected(null); }}>{label}</button>)}
       </nav>
       {success && <p className="rvk-crm__success" role="status">{success}</p>}
       {error && <p className="rvk-crm__error" role="alert">{error}</p>}
       {loading && <p role="status">Cargando {view === "inbox" ? "conversaciones" : "información"}…</p>}
       {view === "inbox" && <div className="rvk-crm__chat">
         <aside className="rvk-crm__list"><input aria-label="Buscar conversación" placeholder="Buscar conversación" value={filter} onChange={e => setFilter(e.target.value)} />
-          {filtered.map(c => <button type="button" key={c.Id} onClick={() => void open(c)} className={selected?.Id === c.Id ? "active" : ""}><strong>{c.Contact_Name || c.Subject || `Conversación #${c.Id}`}</strong><span>{c.Last_Message_Body || "Sin mensajes"}</span><small>{c.Channel || "Interno"} · {c.Status}{Number(c.Unread_Count)>0 ? ` · ${c.Unread_Count} nuevos` : ""}</small></button>)}
+          {filtered.map(c => <button type="button" key={c.Id} disabled={busy} onClick={() => void open(c)} className={selected?.Id === c.Id ? "active" : ""}><strong>{c.Contact_Name || c.Subject || `Conversación #${c.Id}`}</strong><span>{c.Last_Message_Body || "Sin mensajes"}</span><small>{c.Channel || "Interno"} · {c.Status}{Number(c.Unread_Count)>0 ? ` · ${c.Unread_Count} nuevos` : ""}</small></button>)}
           {!loading && !filtered.length && <p>Aún no hay conversaciones.</p>}
         </aside>
         <section className="rvk-crm__thread">{selected ? <>
-          <header><strong>{selected.Contact_Name || selected.Subject || `Conversación #${selected.Id}`}</strong><button type="button" disabled={busy} onClick={() => void changeControl()}>{selected.Control_Mode === "AI" ? "Tomar control" : "Devolver a IA"}</button><select aria-label="Estado de conversación" value={selected.Status} onChange={e => void updateStatus(e.target.value)} disabled={busy}>{["OPEN","PENDING","RESOLVED","ARCHIVED"].map(v=><option key={v} value={v}>{v}</option>)}</select></header>
-          <div className="rvk-crm__messages" aria-live="polite">{messages.map(m => <article key={m.Id} className={m.Direction === "INBOUND" ? "incoming" : "outgoing"}><p>{m.Body}</p><small>{m.Direction === "INTERNAL" ? "Nota interna" : m.Direction === "OUTBOUND" ? "Enviado" : "Recibido"} · {new Date(m.Created_At).toLocaleString("es-MX")}</small></article>)}{messages.length===0 && <p>No hay mensajes todavía.</p>}</div>
+          <header><strong>{selected.Contact_Name || selected.Subject || `Conversación #${selected.Id}`}</strong><button type="button" disabled={busy} onClick={() => void changeControl()}>{selected.Control_Mode === "AI" ? "Tomar control" : "Devolver a IA"}</button><select aria-label="Estado de conversación" value={selected.Status} onChange={e => void updateStatus(e.target.value)} disabled={busy || conversationLoading}>{["OPEN","PENDING","RESOLVED","ARCHIVED"].map(v=><option key={v} value={v}>{v}</option>)}</select></header>
+          <div className="rvk-crm__messages" aria-label="Historial de mensajes" tabIndex={0} aria-live="polite">{conversationLoading && <p role="status">Cargando conversación…</p>}{messages.map(m => <article key={m.Id} className={m.Direction === "INBOUND" ? "incoming" : "outgoing"}><p>{m.Body}</p><small>{m.Direction === "INTERNAL" ? "Nota interna" : m.Direction === "OUTBOUND" ? "Enviado" : "Recibido"} · {new Date(m.Created_At).toLocaleString("es-MX")}</small></article>)}{!conversationLoading && messages.length===0 && <p>No hay mensajes todavía.</p>}</div>
           <section className="rvk-crm__chat-tools">
             <label>Tipo de mensaje <select value={sendMode} onChange={e=>setSendMode(e.target.value as "internal"|"whatsapp")}><option value="internal">Nota interna</option><option value="whatsapp" disabled={selected.Channel !== "WHATSAPP"}>WhatsApp al cliente</option></select></label>
             <button type="button" disabled={busy} onClick={()=>void perform(async()=>{const enabled=(await api.agents()).find(a=>Boolean(Number(a.Enabled)));if(!enabled)throw Error("Primero activa un agente de IA.");const result=await api.previewAi(selected.Id,enabled.Id);setAiPreview(result.Body);},"Borrador generado: no se envió al cliente.")}>Generar borrador IA</button>
           </section>
           {aiPreview && <section className="rvk-crm__preview"><strong>Propuesta IA (sin enviar)</strong><p>{aiPreview}</p><button type="button" onClick={()=>{setDraft(aiPreview);setSendMode("internal");}}>Copiar al editor</button></section>}
-          {selected.Control_Mode === "AI" ? <p className="rvk-crm__hint">Esta conversación está controlada por IA. Toma el control desde el flujo de transferencia autorizado antes de escribir.</p> : <form onSubmit={send}><textarea aria-label="Mensaje" placeholder={sendMode === "whatsapp" ? "Escribe al cliente por WhatsApp…" : "Escribe una nota interna…"} value={draft} onChange={e=>setDraft(e.target.value)} rows={2} maxLength={10000}/><button disabled={busy || !draft.trim()} type="submit">{sendMode === "whatsapp" ? "Enviar por WhatsApp" : "Guardar nota interna"}</button></form>}
+          {selected.Control_Mode === "AI" ? <p className="rvk-crm__hint">Esta conversación está controlada por IA. Toma el control desde el flujo de transferencia autorizado antes de escribir.</p> : <form onSubmit={send}><textarea aria-label="Mensaje" placeholder={sendMode === "whatsapp" ? "Escribe al cliente por WhatsApp…" : "Escribe una nota interna…"} value={draft} onChange={e=>setDraft(e.target.value)} rows={2} maxLength={10000}/><button disabled={busy || conversationLoading || !draft.trim()} type="submit">{sendMode === "whatsapp" ? "Enviar por WhatsApp" : "Guardar nota interna"}</button></form>}
           <small className="rvk-crm__hint">Los envíos por WhatsApp requieren un canal activo y la ventana o plantilla permitida por Meta.</small>
         </> : <div className="rvk-crm__empty">Selecciona una conversación para ver su historial.</div>}</section>
       </div>}

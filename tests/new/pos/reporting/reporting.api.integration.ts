@@ -43,6 +43,7 @@ export async function run(): Promise<void> {
   const ticketPage = await api.getSalesTicketsByDateRange(22, "2026-08-01", "2026-08-11", "America/Mexico_City", 1, 50, "token", 5);
   assert.equal(ticketPage.items[0]?.id, 3415);
   assert.equal(ticketPage.pagination.totalItems, 1);
+  assert.equal(ticketPage.items[0]?.branchId, 5);
 
   const topProducts = await api.getProductsLeaderboard(22, "MONTH", "token", 5);
   const topEmployees = await api.getEmployeesLeaderboard(22, "MONTH", "token", 5);

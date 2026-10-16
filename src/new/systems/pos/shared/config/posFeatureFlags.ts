@@ -58,7 +58,7 @@ const unwrapPosBusinessFeatureResponse = (payload: unknown): PosBusinessFeatureR
   if (typeof payload !== "object") return null;
 
   const record = payload as PosBusinessFeatureResponse;
-  if (record.Name != null || record.name != null || record.Plan != null || record.plan != null || record.Features != null || record.features != null) return record;
+  if (record.Name != null || record.name != null || record.Plan != null || record.plan != null || record.Features != null || record.features != null || record.CouponsPlan != null || record.couponsPlan != null) return record;
 
   return unwrapPosBusinessFeatureResponse(record.business ?? record.Business ?? record.data ?? record.Data);
 };
@@ -68,10 +68,10 @@ export const readPosBusinessFeatures = (payload?: PosBusinessFeatureResponse | n
   if (!business) return POS_FEATURES_UNKNOWN;
 
   return {
-    pos: normalizePosFeatureLevel(business.Features?.Pos ?? business.features?.pos),
-    catalog: normalizePosFeatureLevel(business.Features?.Catalog ?? business.features?.catalog),
+    pos: normalizePosFeatureLevel(business.Features?.Pos ?? business.Features?.pos ?? business.features?.Pos ?? business.features?.pos),
+    catalog: normalizePosFeatureLevel(business.Features?.Catalog ?? business.Features?.catalog ?? business.features?.Catalog ?? business.features?.catalog),
     fidelity: normalizePosFeatureLevel(
-      business.Features?.Fidelity ?? business.features?.fidelity ?? business.CouponsPlan ?? business.couponsPlan,
+      business.Features?.Fidelity ?? business.Features?.fidelity ?? business.features?.Fidelity ?? business.features?.fidelity ?? business.CouponsPlan ?? business.couponsPlan,
     ),
     plan: String(business.Plan ?? business.plan ?? "").trim() || null,
     businessName: String(business.Name ?? business.name ?? "").trim() || undefined,

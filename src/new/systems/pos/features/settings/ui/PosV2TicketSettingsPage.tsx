@@ -28,7 +28,7 @@ export const PosV2TicketSettingsPage = () => {
   const admin = resolvePosOperatorRole(session.token) === "admin";
   useEffect(() => {
     let active = true;
-    new FetchHttpClient(getPosApiBaseUrl()).request<typeof business & { Plan?: string }>({ method: "GET", path: `business/${session.businessId}`, token: session.token }).then(value => { if (active) { setBusiness(value); setPlan(readPosBusinessFeatures(value).plan || "GRATUITO"); } })
+    new FetchHttpClient(getPosApiBaseUrl()).request<typeof business & { Plan?: string }>({ method: "GET", path: `business/${session.businessId}`, token: session.token }).then(value => { if (active) { const nextPlan = readPosBusinessFeatures(value).plan; if (!nextPlan) throw new Error("No se recibió el plan del negocio."); setBusiness(value); setPlan(nextPlan); } })
       .catch(() => { if (active) setError("No fue posible verificar tu plan. Vuelve a abrir esta pantalla."); });
     return () => { active = false; };
   }, [session.businessId, session.token]);

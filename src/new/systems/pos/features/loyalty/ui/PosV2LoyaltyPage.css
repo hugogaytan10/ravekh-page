@@ -33,9 +33,11 @@
 .pos-v2-loyalty__status-dot { display: inline-block; width: 9px; height: 9px; border-radius: 999px; margin-right: 0.3rem; vertical-align: middle; }
 .pos-v2-loyalty__status-dot--active { background: var(--pos-v2-success-bg); }
 .pos-v2-loyalty__status-dot--inactive { background: #94a3b8; }
-.pos-v2-loyalty__row-card { border: 1px solid var(--pos-v2-border); border-radius: 8px; background: var(--pos-v2-surface); padding: 0.65rem 0.7rem; display: grid; gap: 0.4rem; }
-.pos-v2-loyalty__row-head { display: flex; align-items: center; justify-content: space-between; gap: 0.6rem; }
+.pos-v2-loyalty__row-card { min-width: 0; overflow-wrap: anywhere; grid-template-columns: minmax(0, 1fr); border: 1px solid var(--pos-v2-border); border-radius: 8px; background: var(--pos-v2-surface); padding: 0.65rem 0.7rem; display: grid; gap: 0.4rem; }
+.pos-v2-loyalty__row-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.6rem; }
 .pos-v2-loyalty__row-head p, .pos-v2-loyalty__row-head strong { margin: 0; }
+.pos-v2-loyalty__row-head p { flex: 1; min-width: 0; }
+.pos-v2-loyalty__row-head strong { flex-shrink: 0; }
 .pos-v2-loyalty__row-card small { color: var(--pos-v2-text-muted); font-weight: 600; }
 .pos-v2-loyalty__progress { border-radius: 999px; height: 8px; background: var(--pos-v2-surface-alt); overflow: hidden; }
 .pos-v2-loyalty__progress span { display: block; height: 100%; border-radius: 999px; background: linear-gradient(135deg, var(--pos-v2-accent) 0%, var(--pos-v2-accent) 100%); }
@@ -48,7 +50,7 @@
 .pos-v2-loyalty__modal { position: fixed; inset: 0; z-index: 80; background: rgba(2, 6, 23, 0.55); display: flex; align-items: flex-end; justify-content: center; padding: 1rem; }
 .pos-v2-loyalty__modal-card { width: 100%; max-width: 460px; border-radius: 8px; background: var(--pos-v2-surface); padding: 0.9rem; display: grid; gap: 0.55rem; border: 1px solid var(--pos-v2-border); }
 .pos-v2-loyalty__modal-card--wide { max-width: 960px; max-height: 90vh; overflow: auto; min-width: 0; }
-.pos-v2-loyalty__modal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.6rem; }
+.pos-v2-loyalty__modal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(220px, 100%), 1fr)); gap: 0.6rem; }
 .pos-v2-loyalty__modal-head { display: flex; align-items: center; justify-content: space-between; }
 .pos-v2-loyalty__modal-head h3 { margin: 0; font-size: 1rem; color: var(--pos-v2-text); }
 .pos-v2-loyalty__modal-head button { border: 0; background: transparent; font-size: 1.5rem; line-height: 1; color: var(--pos-v2-text-muted); }
@@ -113,3 +115,9 @@
 .pos-v2-loyalty__modal { background:var(--pos-v2-overlay); }
 .pos-v2-loyalty__modal-card { background:var(--pos-v2-surface); color:var(--pos-v2-text); }
 @media(min-width:900px) { .pos-v2-loyalty__home-actions { grid-template-columns:repeat(2,minmax(0,1fr)); } }
+
+.pos-v2-loyalty__coupon-qr img{display:block;max-width:100%;height:auto}
+
+.pos-v2-loyalty__card--dynamic{width:min(100%,560px);justify-self:center}
+.pos-v2-loyalty__card--dynamic .pos-v2-loyalty__coupon-qr{border:0}
+.pos-v2-loyalty__card--dynamic .pos-v2-loyalty__coupon-qr img{width:min(260px,100%)}

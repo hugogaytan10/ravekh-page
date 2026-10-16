@@ -41,7 +41,7 @@ export class PosReportingApi implements IReportingRepository{
   async getSalesTicketsByDateRange(_businessId:number,from:string,to:string,_timezone:string,page:number,pageSize:number,token:string,branchId?:number):Promise<SalesTicketsPage>{
     const rows=(await this.incomeRows(from,to,token,branchId)).filter(row=>row.Order_Id||row.Command_Id).sort((a,b)=>new Date(String(b.Date??"")).getTime()-new Date(String(a.Date??"")).getTime());
     const safePage=Math.max(1,page);const safeSize=Math.max(1,pageSize);const start=(safePage-1)*safeSize;const selected=rows.slice(start,start+safeSize);
-    return{items:selected.map(row=>({id:Number(row.Order_Id??row.Command_Id??row.Id??0),type:row.Command_Id?"COMMAND":"ORDER",date:String(row.Date??""),paymentMethod:"OTROS",currency:String(row.MoneyTipe??"MXN"),customerName:null,employeeName:null,total:Number(row.Amount??0),discountApplied:0,taxesApplied:0,products:[]})),pagination:{page:safePage,pageSize:safeSize,totalItems:rows.length,totalPages:rows.length?Math.ceil(rows.length/safeSize):0}};
+    return{items:selected.map(row=>({branchId,id:Number(row.Order_Id??row.Command_Id??row.Id??0),type:row.Command_Id?"COMMAND":"ORDER",date:String(row.Date??""),paymentMethod:"OTROS",currency:String(row.MoneyTipe??"MXN"),customerName:null,employeeName:null,total:Number(row.Amount??0),discountApplied:0,taxesApplied:0,products:[]})),pagination:{page:safePage,pageSize:safeSize,totalItems:rows.length,totalPages:rows.length?Math.ceil(rows.length/safeSize):0}};
   }
 
   async getProductsLeaderboard(_businessId:number,range:ReportRange,token:string,branchId?:number):Promise<ReportProductItem[]>{
