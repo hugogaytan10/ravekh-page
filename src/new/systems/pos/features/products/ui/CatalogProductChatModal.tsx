@@ -114,7 +114,7 @@ export const CatalogProductChatModal = ({
   const chatEndRef = useRef<HTMLDivElement | null>(null);
 
   useLayoutEffect(() => {
-    if (open && busyAction === null && messageDraft) {
+    if (open && busyAction === null) {
       messageInputRef.current?.focus({ preventScroll: true });
     }
   }, [busyAction, messageDraft, open]);

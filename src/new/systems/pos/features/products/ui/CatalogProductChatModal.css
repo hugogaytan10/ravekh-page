@@ -308,7 +308,7 @@
 
 .catalog-product-chat__composer textarea:focus {
   border-color: var(--pos-v2-accent, #9018ff);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--pos-v2-accent, #9018ff) 18%, transparent);
+  box-shadow: none;
 }
 
 .catalog-product-chat__composer > button {
@@ -460,6 +460,10 @@
 .catalog-product-chat__modal :focus-visible {
   outline: 2px solid var(--pos-v2-accent, #9018ff);
   outline-offset: 2px;
+}
+
+.catalog-product-chat__modal .catalog-product-chat__composer textarea:focus-visible {
+  outline: none;
 }
 
 .catalog-product-chat__modal .catalog-ai-auth__backdrop {
