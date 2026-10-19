@@ -1,6 +1,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -109,7 +110,14 @@ export const CatalogProductChatModal = ({
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const initializingRef = useRef(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement | null>(null);
   const chatEndRef = useRef<HTMLDivElement | null>(null);
+
+  useLayoutEffect(() => {
+    if (open && busyAction === null && messageDraft) {
+      messageInputRef.current?.focus({ preventScroll: true });
+    }
+  }, [busyAction, messageDraft, open]);
 
   useEffect(() => {
     setRequestToken(token);
@@ -586,6 +594,7 @@ export const CatalogProductChatModal = ({
                 onChange={(event) => void handleFilesSelected(event)}
               />
               <textarea
+                ref={messageInputRef}
                 value={messageDraft}
                 onChange={(event) => setMessageDraft(event.target.value)}
                 placeholder="Ej. Blusa halter, tela licra, cuesta $103, tengo 25 piezas y mayoreo $92 desde 12 piezas…"
