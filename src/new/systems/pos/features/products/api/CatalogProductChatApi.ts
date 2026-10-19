@@ -1,3 +1,5 @@
+import { readActivePosBranchId } from "../../../shared/config/posBranch";
+
 export type CatalogProductChatStatus =
   | "ACTIVE"
   | "COMPLETED"
@@ -466,6 +468,10 @@ export class CatalogProductChatApi {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
     headers.set("Authorization", `Bearer ${this.token}`);
+    const branchId = readActivePosBranchId();
+    if (Number.isInteger(branchId) && branchId > 0) {
+      headers.set("X-Branch-Id", String(branchId));
+    }
     headers.set("Cache-Control", "no-cache, no-store, max-age=0");
     headers.set("Pragma", "no-cache");
     if (init.body && !(init.body instanceof FormData)) {
