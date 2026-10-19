@@ -73,22 +73,14 @@ export class PosProductApi implements IProductRepository {
   ): Promise<SalesProductsPaginatedResult> {
     const sessionBusinessId = Number(window.localStorage.getItem("pos-v2-business-id") ?? 0);
     if (!sessionBusinessId) return { products: [], pagination: toPaginationMeta(undefined, page, 20, 0) };
-    const all = await this.listAvailableByBusinessAll(sessionBusinessId, token, limit);
-    const filtered = all.filter((product) => product.categoryId === categoryId);
-    const pageSize = 20;
-    const offset = (Math.max(page, 1) - 1) * pageSize;
-    const rows = filtered.slice(offset, offset + pageSize);
-    return {
-      products: rows,
-      pagination: {
-        ...toPaginationMeta(undefined, page, pageSize, rows.length),
-        total: filtered.length,
-        totalPages: filtered.length ? Math.ceil(filtered.length / pageSize) : 0,
-        hasNext: offset + pageSize < filtered.length,
-        hasPrev: page > 1,
-        categoryIds: [categoryId],
-      },
-    };
+    const payload = await this.httpClient.request<SalesProductsPayload>({
+      method: "GET",
+      path: POS_ENDPOINTS.productsSearchByBranch(sessionBusinessId),
+      token,
+      query: {page, pageSize: 20, categoryId, limit},
+    });
+    const result = this.toPaginatedResult(payload, page, 20);
+    return {...result, pagination: {...result.pagination, categoryIds: [categoryId]}};
   }
 
   async listAvailableByBusinessAll(

@@ -25,11 +25,11 @@ export async function run(): Promise<void> {
     request: async ({ method, path, body, query }: { method: string; path: string; body?: unknown; query?: Record<string, unknown> }) => {
       calls.push(`${method} ${path}`);
 
-      if (method === "GET" && path === "products/business/noavailable/7") {
-        assert.deepEqual(query, { page: 2, limit: 20 });
+      if (method === "GET" && path === "products/business/7/branch/search") {
+        assert.deepEqual(query, { page: 2, pageSize: 20, available: 0 });
         return {
           products: [{ Id: 2, Business_Id: 7, Name: "Descatalogado", Available: 0 }],
-          pagination: { page: 2, totalPages: 3, total: 42, limit: 20 },
+          pagination: { page: 2, totalPages: 3, totalItems: 42, pageSize: 20 },
         };
       }
 
@@ -53,6 +53,9 @@ export async function run(): Promise<void> {
         return null;
       }
       if (method === "GET" && path === "products/10") return { Id: 10, Business_Id: 7, Name: "Té", Description: "Bebida" };
+      if (method === "GET" && path === "products/business/7/branch/10") {
+        return {data: {Id: 10, Business_Id: 7, Name: "Té", Description: "Bebida", Price: 30, Stock: 8}};
+      }
       if (method === "PUT" && path === "products/9") {
         updateMasterBody = body;
         updated = true;
@@ -63,6 +66,9 @@ export async function run(): Promise<void> {
         return null;
       }
       if (method === "GET" && path === "products/9") return { Id: 9, Business_Id: 7, Name: "Té chai", Description: "Bebida caliente" };
+      if (method === "GET" && path === "products/business/7/branch/9") {
+        return {data: {Id: 9, Business_Id: 7, Name: "Té chai", Description: "Bebida caliente", Price: 42, Stock: 6}};
+      }
       if (method === "GET" && /^variants\/product\/(9|10)\/branch$/.test(path)) return [];
       if (method === "GET" && /^extras\/product\/(9|10)$/.test(path)) return null;
       if (method === "PATCH" && path === "products/business/7/branch/8") {
@@ -122,6 +128,9 @@ export async function run(): Promise<void> {
     assert.equal(saved.id, 10);
     assert.equal(changed.id, 9);
     assert.equal(changed.stock, 6);
+    assert.equal(calls.filter(call => call === "GET products/business/7/branch").length, 1);
+    assert.ok(calls.includes("GET products/business/7/branch/9"));
+    assert.ok(calls.includes("GET products/business/7/branch/10"));
     assert.deepEqual(createBranchBody, {
       Barcode: null, Category_Id: 3, Name: "Té", Color: null, Description: "Bebida", CostPerItem: null,
       ForSale: 1, Volume: 0, ExpDate: null, Price: 30, PromotionPrice: null, ShowInStore: 1,

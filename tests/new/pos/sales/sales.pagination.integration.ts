@@ -21,10 +21,11 @@ export async function run(): Promise<void> {
         };
       }
 
-      if (method === "GET" && path === "products/business/5/branch" && query?.page === 1) {
+      if (method === "GET" && path === "products/business/5/branch/search") {
+        assert.deepEqual(query, {page: 1, pageSize: 20, categoryId: 10, limit: "EMPRENDEDOR"});
         return {
           products: [{ Id: 2, Business_Id: 5, Category_Id: 10, Name: "Latte", Price: 45, Stock: 10, Available: true, ForSale: true, Category_Name: "Bebidas" }],
-          pagination: { page: 1, pageSize: 20, total: 1, totalPages: 1, hasNext: false, hasPrev: false, categoryIds: [10] },
+          pagination: { page: 1, pageSize: 20, totalItems: 41, totalPages: 3, hasNext: true, hasPrev: false },
         };
       }
 
@@ -46,13 +47,16 @@ export async function run(): Promise<void> {
 
   const byCategory = await service.getSellableProductsPaginated(5, "token", "EMPRENDEDOR", 1, 10);
   assert.equal(byCategory.products[0]?.name, "Latte");
+  assert.equal(byCategory.pagination.total, 41);
+  assert.equal(byCategory.pagination.hasNext, true);
+  assert.deepEqual(byCategory.pagination.categoryIds, [10]);
 
   const categories = await service.getBusinessCategories(5, "token");
   assert.deepEqual(categories, [{ id: 10, name: "Bebidas" }, { id: 11, name: "Postres" }]);
 
     assert.deepEqual(calls, [
       "GET products/business/5/branch?page=2&limit=EMPRENDEDOR",
-      "GET products/business/5/branch?page=1&limit=EMPRENDEDOR",
+      "GET products/business/5/branch/search?page=1&pageSize=20&categoryId=10&limit=EMPRENDEDOR",
       "GET categories/business/5",
     ]);
   } finally {

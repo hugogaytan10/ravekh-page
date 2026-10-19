@@ -16,11 +16,11 @@ export async function run(): Promise<void> {
       calls.push({ method, path, body });
       if (method === "PATCH") return undefined;
       assert.equal(method, "GET");
-      assert.equal(path, "products/business/noavailable/7");
-      assert.deepEqual(query, { page: 2, limit: 20 });
+      assert.equal(path, "products/business/7/branch/search");
+      assert.deepEqual(query, { page: 2, pageSize: 20, available: 0 });
       return {
         products: [{ Id: 9, Business_Id: 7, Name: "Producto anterior", Available: 0 }],
-        pagination: { page: 2, pageSize: 20, total: 21, totalPages: 2 },
+        pagination: { page: 2, pageSize: 20, totalItems: 21, totalPages: 2 },
       };
     },
   };

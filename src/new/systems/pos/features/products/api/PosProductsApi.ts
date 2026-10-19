@@ -4,6 +4,7 @@ import { toPaginationMeta } from "../../../shared/model/Pagination";
 import { IProductsRepository, ProductImportResult, ProductsPaginatedResult } from "../interface/IProductsRepository";
 import { ManagedProduct, ProductCategory, ProductExtra, ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 import { createIdempotencyKey } from "../../../../../core/api/FetchHttpClient";
+import { readActivePosBranchId } from "../../../shared/config/posBranch";
 
 type ProductResponse = {
   Id?: number;
@@ -227,9 +228,9 @@ export class PosProductsApi implements IProductsRepository {
       { products?: ProductResponse[]; data?: ProductResponse[]; pagination?: Record<string, unknown> }
     >({
       method: "GET",
-      path: POS_ENDPOINTS.productsNoAvailableByBusiness(businessId),
+      path: POS_ENDPOINTS.productsSearchByBranch(businessId),
       token,
-      query: { page, limit: resolvedLimit },
+      query: { page, pageSize: resolvedLimit, available: 0 },
     });
 
     const rows = Array.isArray(payload) ? payload : payload?.products ?? payload?.data ?? [];
@@ -254,17 +255,22 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   async getById(productId: number, token: string): Promise<ManagedProduct | null> {
-    const product = await this.httpClient.request<ProductResponse | { data?: ProductResponse; Data?: ProductResponse } | null>({ method: "GET", path: POS_ENDPOINTS.productById(productId), token });
+    const branchId = readActivePosBranchId();
+    const product = await this.httpClient.request<ProductResponse | { data?: ProductResponse; Data?: ProductResponse } | null>({ method: "GET", path: POS_ENDPOINTS.productById(productId), token, branchId });
     if (!product) return null;
     const master = "data" in product || "Data" in product ? product.data ?? product.Data ?? null : product;
     if (!master) return null;
     const businessId = Number(master.Business_Id ?? master.business_Id ?? master.businessId ?? 0);
-    const [branchRows, extrasResponse, variantsResponse] = await Promise.all([
-      businessId ? this.listAllBranchProducts(businessId, token).catch(() => [] as ProductResponse[]) : Promise.resolve([] as ProductResponse[]),
-      this.httpClient.request<unknown>({ method: "GET", path: POS_ENDPOINTS.productExtras(productId), token }).catch(() => null),
-      this.httpClient.request<LegacyVariantResponse[] | { data?: LegacyVariantResponse[]; Data?: LegacyVariantResponse[]; variants?: LegacyVariantResponse[]; Variants?: LegacyVariantResponse[] } | null>({ method: "GET", path: POS_ENDPOINTS.variantsByProductBranch(productId), token }).catch(() => null),
+    if (!businessId) return null;
+    const [branchResponse, extrasResponse, variantsResponse] = await Promise.all([
+      this.httpClient.request<{data?: ProductResponse}>({method: "GET", path: POS_ENDPOINTS.branchProductById(businessId, productId), token, branchId}).catch((error: unknown) => {
+        if ((error as {status?: number})?.status === 404) return null;
+        throw error;
+      }),
+      this.httpClient.request<unknown>({ method: "GET", path: POS_ENDPOINTS.productExtras(productId), token, branchId }).catch(() => null),
+      this.httpClient.request<LegacyVariantResponse[] | { data?: LegacyVariantResponse[]; Data?: LegacyVariantResponse[]; variants?: LegacyVariantResponse[]; Variants?: LegacyVariantResponse[] } | null>({ method: "GET", path: POS_ENDPOINTS.variantsByProductBranch(productId), token, branchId }).catch(() => null),
     ]);
-    const effective = branchRows.find((row) => Number(row.Id ?? row.id) === productId);
+    const effective = branchResponse?.data;
     if (!effective) return null;
     const merged: ProductResponse = { ...master, ...effective, Images: effective.Images ?? effective.images ?? master.Images ?? master.images };
     return this.toDomain(merged, this.toDomainExtras(extrasResponse), this.toDomainVariants(this.normalizeVariantsPayload(variantsResponse)));

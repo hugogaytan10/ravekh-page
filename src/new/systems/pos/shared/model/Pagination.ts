@@ -19,7 +19,7 @@ export const toPaginationMeta = (
   return {
     page: safePage,
     pageSize: Math.max(1, Number(pagination?.pageSize ?? fallbackPageSize) || fallbackPageSize),
-    total: Math.max(0, Number(pagination?.total ?? fallbackTotal) || fallbackTotal),
+    total: Math.max(0, Number(pagination?.total ?? pagination?.totalItems ?? fallbackTotal) || 0),
     totalPages: safeTotalPages,
     hasNext: Boolean(pagination?.hasNext) || safePage < safeTotalPages,
     hasPrev: Boolean(pagination?.hasPrev) || safePage > 1,

@@ -2,6 +2,7 @@ export const POS_ENDPOINTS = {
   products: () => "products",
   productsByBusiness: (businessId: number) => `products/business/${businessId}`,
   productsByBusinessBranch: (businessId: number) => `products/business/${businessId}/branch`,
+  productsSearchByBranch: (businessId: number) => `products/business/${businessId}/branch/search`,
   branchProductById: (businessId: number, productId: number) => `products/business/${businessId}/branch/${productId}`,
   branchProductInventory: (productId: number) => `branch-products/${productId}/inventory`,
   productsNoAvailableByBusiness: (businessId: number) => `products/business/noavailable/${businessId}`,
