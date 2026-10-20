@@ -1,3 +1,5 @@
+import {readActivePosBranchId} from "../../../shared/config/posBranch";
+
 export type CatalogAiItemStatus =
   | "SIGNED"
   | "UPLOADED"
@@ -220,6 +222,10 @@ export const isCatalogAiSessionExpiredError = (
 const errorMessageFromPayload = (payload: unknown, fallback: string): string => {
   if (!payload || typeof payload !== "object") return fallback;
   const record = payload as Record<string, unknown>;
+  if (record.error === "INTERNAL_ERROR") {
+    const reference = typeof record.requestId === "string" ? ` Referencia: ${record.requestId}` : "";
+    return `No pudimos completar la operación. Intenta nuevamente.${reference}`;
+  }
   const message = record.message;
   if (typeof message === "string" && message.trim()) return message;
   const error = record.error;
@@ -245,7 +251,7 @@ export class CatalogAiApi {
   private readonly baseUrl: string;
   private readonly token: string;
 
-  constructor(baseUrl: string, token: string) {
+  constructor(baseUrl: string, token: string, private readonly branchId = readActivePosBranchId()) {
     this.baseUrl = trimTrailingSlash(baseUrl);
     this.token = normalizeAccessToken(token);
   }
@@ -264,6 +270,7 @@ export class CatalogAiApi {
         const headers = new Headers(init.headers);
         headers.set("Accept", "application/json");
         headers.set("Authorization", `Bearer ${this.token}`);
+        if (this.branchId) headers.set("X-Branch-Id", String(this.branchId));
         headers.set("Cache-Control", "no-cache, no-store, max-age=0");
         headers.set("Pragma", "no-cache");
 
@@ -332,6 +339,7 @@ export class CatalogAiApi {
       method: "POST",
       body: JSON.stringify({
         expectedItems,
+        branchId: this.branchId || null,
         autoPublish: false,
         clientRequestId: `web-${Date.now()}-${Math.random().toString(16).slice(2)}`,
       }),
