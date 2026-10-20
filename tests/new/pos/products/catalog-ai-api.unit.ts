@@ -1,3 +1,4 @@
+import {CatalogProductChatApi} from "../../../../src/new/systems/pos/features/products/api/CatalogProductChatApi";
 import assert from "node:assert/strict";
 import {CatalogAiApi} from "../../../../src/new/systems/pos/features/products/api/CatalogAiApi";
 
@@ -24,5 +25,8 @@ export const run = async () => {
     await assert.rejects(() => api.createBatch(1), (error: Error) => error.message.includes("Referencia: request-123") && !error.message.includes("INTERNAL_ERROR"));
     status = 403; payload = {error: "BRANCH_ACCESS_DENIED", message: "No tienes acceso a esta sucursal."};
     await assert.rejects(() => api.createBatch(1), (error: Error) => error.message === "No tienes acceso a esta sucursal.");
+    status = 409; payload = {error: "SESSION_BRANCH_MISMATCH"};
+    const chat = new CatalogProductChatApi("https://example.com", "token");
+    await assert.rejects(() => chat.confirm("session"), (error: Error) => error.message.includes("otra sucursal"));
   } finally {globalThis.fetch = originalFetch; globalThis.window = originalWindow;}
 };
