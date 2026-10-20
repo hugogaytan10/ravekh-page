@@ -1,3 +1,4 @@
+import {isVariantAvailableForSale} from "../model/variantAvailability";
 import { DEFAULT_TICKET_CUSTOMIZATION, readTicketCustomization, escapeTicketHtml, ticketContactHtml, ticketFooterHtml } from "../../../shared/config/posTicket";
 import { persistPosCurrency, readPosCurrency, posMoneyFormatter } from "../../../shared/config/posCurrency";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -190,6 +191,7 @@ type ProductExtrasVm = {
 } | null;
 
 type VariantApiResponse = {
+  Available?: boolean | number | null;
   Id?: number | null;
   Description?: string | null;
   Color?: string | null;
@@ -403,9 +405,6 @@ export const PosV2SalesHomePage = () => {
   } | null>(null);
   const [extrasCache, setExtrasCache] = useState<
     Record<number, ProductExtrasVm>
-  >({});
-  const [variantsCache, setVariantsCache] = useState<
-    Record<number, SaleVariantVm[]>
   >({});
   const [imageLoadErrors, setImageLoadErrors] = useState<Record<number, true>>(
     {},
@@ -1400,10 +1399,6 @@ export const PosV2SalesHomePage = () => {
   const loadProductVariants = async (
     product: SaleItemVm,
   ): Promise<SaleVariantVm[]> => {
-    if (Object.prototype.hasOwnProperty.call(variantsCache, product.id)) {
-      return variantsCache[product.id];
-    }
-
     const { token } = getCurrentSession();
     if (!token) {
       return product.variants;
@@ -1427,6 +1422,7 @@ export const PosV2SalesHomePage = () => {
         | null;
       const variantRows = Array.isArray(payload) ? payload : payload?.data ?? [];
       const normalized = variantRows
+        .filter(isVariantAvailableForSale)
         .map((variant) => ({
             id:
               typeof variant.Id === "number" && Number.isFinite(variant.Id)
@@ -1450,15 +1446,9 @@ export const PosV2SalesHomePage = () => {
                 : null,
           }));
 
-      const resolved = normalized.length > 0 ? normalized : product.variants;
-      setVariantsCache((current) => ({ ...current, [product.id]: resolved }));
-      return resolved;
+      return normalized;
     } catch {
-      setVariantsCache((current) => ({
-        ...current,
-        [product.id]: product.variants,
-      }));
-      return product.variants;
+      return [];
     }
   };
 
@@ -1903,7 +1893,6 @@ export const PosV2SalesHomePage = () => {
       setCart({});
       setPayLater(false);
       setInitialPayment("0");
-      setVariantsCache({});
       setCatalogRevision((current) => current + 1);
       setDiscountPercent("0");
       setFixedDiscount("0");

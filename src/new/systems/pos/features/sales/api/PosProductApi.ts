@@ -1,3 +1,4 @@
+import {isVariantAvailableForSale} from "../model/variantAvailability";
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { POS_ENDPOINTS } from "../../../shared/api/posEndpoints";
 import { toPaginationMeta } from "../../../shared/model/Pagination";
@@ -5,6 +6,7 @@ import { IProductRepository, ProductCategory, SalesProductsPaginatedResult } fro
 import { CreateProductDto, Product, SalesProductVariant } from "../model/Product";
 
 type LegacyVariantResponse = {
+  Available?: boolean | number | null;
   Id?: number | null;
   Description?: string | null;
   Color?: string | null;
@@ -183,7 +185,7 @@ export class PosProductApi implements IProductRepository {
       Array.isArray(item.Images) ? item.Images.filter(Boolean) : [],
       item.ForSale ?? true,
       item.Available ?? true,
-      Array.isArray(item.Variants) ? item.Variants.map((variant) => this.toDomainVariant(variant)) : [],
+      Array.isArray(item.Variants) ? item.Variants.filter(isVariantAvailableForSale).map((variant) => this.toDomainVariant(variant)) : [],
     );
   }
 
