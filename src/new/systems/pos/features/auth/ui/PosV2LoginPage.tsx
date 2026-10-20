@@ -166,6 +166,7 @@ export const PosV2LoginPage = () => {
     try {
       const status = await authPage.getSecurityQuestionStatus(
         session.employeeId,
+        session.token,
       );
 
       if (status.shouldPrompt || !status.configured) {

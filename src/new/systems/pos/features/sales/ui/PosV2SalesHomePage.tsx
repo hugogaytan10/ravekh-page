@@ -327,6 +327,7 @@ export const PosV2SalesHomePage = () => {
   const saleIdempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const productQuery = search.trim().length >= 2 ? search.trim() : "";
   const [categoryKey, setCategoryKey] = useState("all");
   const [isGrid, setIsGrid] = useState(true);
   const [products, setProducts] = useState<SaleItemVm[]>([]);
@@ -336,7 +337,6 @@ export const PosV2SalesHomePage = () => {
     [],
   );
   const [loadingProducts, setLoadingProducts] = useState(true);
-  const [searchingGlobalCatalog, setSearchingGlobalCatalog] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [cart, setCart] = useState<Record<string, CartItemVm>>({});
   const [discountPercent, setDiscountPercent] = useState("0");
@@ -576,17 +576,22 @@ export const PosV2SalesHomePage = () => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
     const productService = factory.createPosProductService();
 
+    let active = true;
     setLoadingProducts(true);
+    setProducts([]);
     setProductsError(null);
-    productService
+    const timeout = window.setTimeout(() => {
+      productService
       .getSellableProductsPaginated(
         businessId,
         token,
         planLimit,
         currentPage,
         Number.isFinite(categoryId) ? categoryId : null,
+        productQuery || undefined,
       )
       .then((response) => {
+        if (!active) return;
         const mapped: SaleItemVm[] = response.products.map((item) =>
           toSaleItemVm(item),
         );
@@ -602,11 +607,12 @@ export const PosV2SalesHomePage = () => {
           response.pagination.hasPrev || response.pagination.page > 1,
         );
 
-        if (categoryId === null) {
+        if (categoryId === null && !productQuery) {
           setAvailableCategoryIds(response.pagination.categoryIds);
         }
       })
       .catch((error) => {
+        if (!active) return;
         setProducts([]);
         setProductsError(
           error instanceof Error
@@ -614,8 +620,13 @@ export const PosV2SalesHomePage = () => {
             : "No pudimos cargar tus productos.",
         );
       })
-      .finally(() => setLoadingProducts(false));
-  }, [catalogRevision, categoryKey, currentPage, isPlanLimitReady, planLimit]);
+      .finally(() => { if (active) setLoadingProducts(false); });
+    }, productQuery ? ALL_PRODUCTS_SEARCH_DEBOUNCE_MS : 0);
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [catalogRevision, categoryKey, currentPage, isPlanLimitReady, planLimit, productQuery]);
 
 
   useEffect(() => {
@@ -1027,18 +1038,13 @@ export const PosV2SalesHomePage = () => {
     }
   }, [categoryOptions, categoryKey]);
 
-  const debouncedSearch = useMemo(() => search.trim().toLowerCase(), [search]);
-
-  useEffect(() => {
-    setSearchingGlobalCatalog(false);
-  }, [debouncedSearch]);
-
   const filteredProducts = useMemo(() => {
+    if (productQuery) return products;
     const normalized = search.trim().toLowerCase();
     return products.filter((product) =>
       product.name.toLowerCase().includes(normalized),
     );
-  }, [products, search]);
+  }, [products, search, productQuery]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -2273,7 +2279,7 @@ export const PosV2SalesHomePage = () => {
             <div className="pos-v2-sales-home__search">
               <input
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }}
                 placeholder="Buscar producto"
               />
             </div>
@@ -2320,11 +2326,7 @@ export const PosV2SalesHomePage = () => {
           {loadingProducts ? (
             <p className="pos-v2-sales-home__empty">Cargando productos…</p>
           ) : null}
-          {!loadingProducts && searchingGlobalCatalog ? (
-            <p className="pos-v2-sales-home__empty">
-              Buscando en todo el catálogo…
-            </p>
-          ) : null}
+
           {productsError ? (
             <p className="pos-v2-sales-home__error">{productsError}</p>
           ) : null}
@@ -2415,7 +2417,7 @@ export const PosV2SalesHomePage = () => {
               aria-label="Paginación de productos"
             >
               {search.trim().length >= 2 ? (
-                <span>Búsqueda global activa</span>
+                <span>Búsqueda en la sucursal</span>
               ) : null}
               <button
                 type="button"
@@ -2423,7 +2425,7 @@ export const PosV2SalesHomePage = () => {
                   setCurrentPage((page) => Math.max(1, page - 1));
                   scrollToProductsTop();
                 }}
-                disabled={search.trim().length >= 2 || !hasPrevPage}
+                disabled={!hasPrevPage}
               >
                 Anterior
               </button>
@@ -2444,12 +2446,10 @@ export const PosV2SalesHomePage = () => {
                       goToPage();
                     }
                   }}
-                  disabled={search.trim().length >= 2}
                 />
                 <button
                   type="button"
                   onClick={goToPage}
-                  disabled={search.trim().length >= 2}
                 >
                   Ir
                 </button>
@@ -2460,7 +2460,7 @@ export const PosV2SalesHomePage = () => {
                   setCurrentPage((page) => page + 1);
                   scrollToProductsTop();
                 }}
-                disabled={search.trim().length >= 2 || !hasNextPage}
+                disabled={!hasNextPage}
               >
                 Siguiente
               </button>

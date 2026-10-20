@@ -13,12 +13,12 @@ import { LoginSessionLimitPayload } from "../model/LoginSessionLimit";
 
 export class AuthOnboardingService {
   constructor(private readonly repository: IAuthOnboardingRepository) {}
-async getSecurityQuestionStatus(employeeId: number): Promise<SecurityQuestionStatus> {
+async getSecurityQuestionStatus(employeeId: number, token: string): Promise<SecurityQuestionStatus> {
   if (!Number.isFinite(employeeId) || employeeId <= 0) {
     throw new Error("Employee ID inválido para validar preguntas de seguridad.");
   }
 
-  return this.repository.getSecurityQuestionStatus(employeeId);
+  return this.repository.getSecurityQuestionStatus(employeeId, token);
 }
   async signIn(credentials: LoginCredentials): Promise<AuthSession> {
     this.ensureCredentials(credentials);

@@ -54,12 +54,14 @@ export class PosProductApi implements IProductRepository {
     token: string,
     limit: string,
     page: number,
+    query?: string,
+    categoryId?: number,
   ): Promise<SalesProductsPaginatedResult> {
     const payload = await this.httpClient.request<SalesProductsPayload>({
       method: "GET",
-      path: POS_ENDPOINTS.productsByBusinessBranch(businessId),
+      path: query ? POS_ENDPOINTS.productsSearchByBranch(businessId) : POS_ENDPOINTS.productsByBusinessBranch(businessId),
       token,
-      query: { page, limit },
+      query: query ? { page, pageSize: 20, query, categoryId, limit } : { page, limit },
     });
 
     return this.toPaginatedResult(payload, page, 20);

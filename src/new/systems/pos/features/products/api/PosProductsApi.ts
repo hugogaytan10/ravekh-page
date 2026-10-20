@@ -1,7 +1,7 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { POS_ENDPOINTS } from "../../../shared/api/posEndpoints";
 import { toPaginationMeta } from "../../../shared/model/Pagination";
-import { IProductsRepository, ProductImportResult, ProductsPaginatedResult } from "../interface/IProductsRepository";
+import { IProductsRepository, ProductListFilters, ProductImportResult, ProductsPaginatedResult } from "../interface/IProductsRepository";
 import { ManagedProduct, ProductCategory, ProductExtra, ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
 import { createIdempotencyKey } from "../../../../../core/api/FetchHttpClient";
 import { readActivePosBranchId } from "../../../shared/config/posBranch";
@@ -206,9 +206,16 @@ export class PosProductsApi implements IProductsRepository {
     return rows.map((product) => this.toDomain(product));
   }
 
-  async listByBusinessPaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult> {
+  async listByBusinessPaginated(businessId: number, token: string, page: number, limit: string | number, filters?: ProductListFilters): Promise<ProductsPaginatedResult> {
     const resolvedLimit = Math.max(1, Number(limit) || 20);
-    const payload = await this.requestBranchProducts(businessId, token, page, limit);
+    const payload = filters
+      ? await this.httpClient.request<{ data: ProductResponse[]; pagination?: Record<string, unknown> }>({
+          method: "GET",
+          path: POS_ENDPOINTS.productsSearchByBranch(businessId),
+          token,
+          query: { ...filters, page, pageSize: 20, searchDescription: true },
+        }).then(response => ({ rows: response.data ?? [], pagination: response.pagination }))
+      : await this.requestBranchProducts(businessId, token, page, limit);
     const categoryIds = Array.isArray(payload.pagination?.categoryIds)
       ? payload.pagination.categoryIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
       : [];
@@ -254,14 +261,18 @@ export class PosProductsApi implements IProductsRepository {
     return rows.map((product) => this.toDomain(product));
   }
 
-  async getById(productId: number, token: string): Promise<ManagedProduct | null> {
+  async getById(productId: number, token: string, businessId?: number): Promise<ManagedProduct | null> {
     const branchId = readActivePosBranchId();
-    const product = await this.httpClient.request<ProductResponse | { data?: ProductResponse; Data?: ProductResponse } | null>({ method: "GET", path: POS_ENDPOINTS.productById(productId), token, branchId });
-    if (!product) return null;
-    const master = "data" in product || "Data" in product ? product.data ?? product.Data ?? null : product;
-    if (!master) return null;
-    const businessId = Number(master.Business_Id ?? master.business_Id ?? master.businessId ?? 0);
-    if (!businessId) return null;
+    let master: ProductResponse = {};
+    if (!businessId) {
+      const product = await this.httpClient.request<ProductResponse | { data?: ProductResponse; Data?: ProductResponse } | null>({ method: "GET", path: POS_ENDPOINTS.productById(productId), token, branchId });
+      if (!product) return null;
+      const row = "data" in product || "Data" in product ? product.data ?? product.Data ?? null : product;
+      if (!row) return null;
+      master = row;
+      businessId = Number(master.Business_Id ?? master.business_Id ?? master.businessId ?? 0);
+      if (!businessId) return null;
+    }
     const [branchResponse, extrasResponse, variantsResponse] = await Promise.all([
       this.httpClient.request<{data?: ProductResponse}>({method: "GET", path: POS_ENDPOINTS.branchProductById(businessId, productId), token, branchId}).catch((error: unknown) => {
         if ((error as {status?: number})?.status === 404) return null;
@@ -290,7 +301,7 @@ export class PosProductsApi implements IProductsRepository {
     await this.httpClient.request<unknown>({ method: "PUT", path: POS_ENDPOINTS.productById(productId), token, body: this.toLegacyMasterPayload({ ...payload, id: productId }) });
     await Promise.all([this.syncExtras(productId, payload.extras ?? [], token), this.syncVariants(productId, payload.variants ?? [], token)]);
     this.pendingCreate = null;
-    return (await this.getById(productId, token)) ?? this.toDomain({ ...this.toLegacy(payload), Id: productId }, payload.extras ?? [], payload.variants ?? []);
+    return (await this.getById(productId, token, payload.businessId)) ?? this.toDomain({ ...this.toLegacy(payload), Id: productId }, payload.extras ?? [], payload.variants ?? []);
   }
 
   async addProductExtras(productId: number, extras: ProductExtra[], token: string): Promise<void> {
@@ -333,7 +344,7 @@ export class PosProductsApi implements IProductsRepository {
     await this.httpClient.request<unknown>({ method: "PUT", path: POS_ENDPOINTS.productById(payload.id), token, body: this.toLegacyMasterPayload(payload) });
     await this.httpClient.request<unknown>({ method: "PATCH", path: POS_ENDPOINTS.branchProductById(payload.businessId, payload.id), token, body: this.toBranchProductPayload(payload) });
     await Promise.all([this.syncVariants(payload.id, payload.variants ?? [], token), this.syncExtras(payload.id, payload.extras ?? [], token)]);
-    return (await this.getById(payload.id, token)) ?? this.toDomain(this.toLegacy(payload), payload.extras ?? [], payload.variants ?? []);
+    return (await this.getById(payload.id, token, payload.businessId)) ?? this.toDomain(this.toLegacy(payload), payload.extras ?? [], payload.variants ?? []);
   }
 
   private toAvailabilityFlag(value: ProductResponse["Available"]): boolean {

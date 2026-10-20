@@ -1054,7 +1054,7 @@ export const PosV2ReportingPage = () => {
               </div>
             </header>
             <p className="pos-v2-reporting__table-summary">
-              {salesTicketsTotalItems} tickets · Página {salesTicketsPage} de {salesTicketsTotalPages}
+              {salesTicketsTotalItems} tickets · Página {salesTicketsPage} de {Math.max(1, salesTicketsTotalPages)}
             </p>
             {salesTicketsLoading ? (
               <div className="pos-v2-reporting__table-skeleton" aria-hidden="true">
@@ -1086,7 +1086,7 @@ export const PosV2ReportingPage = () => {
                 </div>
                 <nav className="pos-v2-reporting__pagination" aria-label="Paginación del reporte de ventas">
                   <button type="button" onClick={() => setSalesTicketsPage((page) => Math.max(1, page - 1))} disabled={salesTicketsPage <= 1}>Anterior</button>
-                  <span>Página {salesTicketsPage} de {salesTicketsTotalPages}</span>
+                  <span>Página {salesTicketsPage} de {Math.max(1, salesTicketsTotalPages)}</span>
                   <button type="button" onClick={() => setSalesTicketsPage((page) => Math.min(salesTicketsTotalPages, page + 1))} disabled={salesTicketsPage >= salesTicketsTotalPages}>Siguiente</button>
                 </nav>
               </>

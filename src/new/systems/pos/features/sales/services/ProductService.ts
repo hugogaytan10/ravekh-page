@@ -41,8 +41,11 @@ export class ProductService {
     limit: string,
     page: number,
     categoryId?: number | null,
+    query?: string,
   ): Promise<SalesProductsPaginatedResult> {
-    const response = categoryId
+    const response = query
+      ? await this.repository.listAvailableByBusinessPaginated(businessId, token, limit, page, query, categoryId ?? undefined)
+      : categoryId
       ? await this.repository.listByCategoryPaginated(categoryId, token, limit, page)
       : await this.repository.listAvailableByBusinessPaginated(businessId, token, limit, page);
 

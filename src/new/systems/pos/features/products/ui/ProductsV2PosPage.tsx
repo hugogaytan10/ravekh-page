@@ -28,6 +28,7 @@ import {
   POS_FEATURES_UNKNOWN,
   PosBusinessFeatures,
 } from "../../../shared/config/posFeatureFlags";
+import { onPosBranchUpdated, readActivePosBranchId } from "../../../shared/config/posBranch";
 import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
 import {
   FeatureUnlockModal,
@@ -379,9 +380,6 @@ export const ProductsV2PosPage = () => {
     () => window.localStorage.getItem(TOKEN_KEY) ?? "",
   );
   const [products, setProducts] = useState<ProductItemVm[]>([]);
-  const [searchCatalogProducts, setSearchCatalogProducts] = useState<
-    ProductItemVm[]
-  >([]);
   const [categories, setCategories] = useState<ProductCategoryVm[]>([]);
   const [categoryNameInput, setCategoryNameInput] = useState("");
   const [categoryColorInput, setCategoryColorInput] = useState("#4F46E5");
@@ -393,7 +391,6 @@ export const ProductsV2PosPage = () => {
     useState<CategoryFormErrors>({});
   const [showCategoryManager, setShowCategoryManager] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [searchingCatalog, setSearchingCatalog] = useState(false);
   const [saving, setSaving] = useState(false);
   const [archivingId, setArchivingId] = useState<number | null>(null);
   const [actionLoadingId, setActionLoadingId] = useState<number | null>(null);
@@ -429,6 +426,9 @@ export const ProductsV2PosPage = () => {
   const [pageInput, setPageInput] = useState("1");
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
+  const [catalogTotalItems, setCatalogTotalItems] = useState(0);
+  const productsRequestId = useRef(0);
+  const [activeBranchId, setActiveBranchId] = useState(() => readActivePosBranchId(businessId));
   const [productsLimit, setProductsLimit] = useState(
     () =>
       (window.localStorage.getItem("plan") ?? "").trim() ||
@@ -625,7 +625,7 @@ export const ProductsV2PosPage = () => {
     );
   }, [features.plan, productsLimit]);
 
-  const productLimitCount = Math.max(totalItems, products.length);
+  const productLimitCount = Math.max(catalogTotalItems, products.length);
   const freeProductLimitReached =
     isFreePlan && productLimitCount >= FREE_PRODUCT_LIMIT;
   const catalogAiImportQuota =
@@ -833,22 +833,40 @@ export const ProductsV2PosPage = () => {
       .catch(() => undefined);
   }, [businessId, token]);
 
+  useEffect(() => onPosBranchUpdated((branch) => {
+    productsRequestId.current++;
+    setProducts([]);
+    setCatalogTotalItems(0);
+    setActiveBranchId(branch.id);
+  }), []);
+
   const loadProducts = async (targetPage: number = currentPage) => {
     if (!businessId || !token) {
       setError("Inicia sesión para administrar productos.");
       return;
     }
 
+    const requestId = ++productsRequestId.current;
+    const filtered = search.trim().length >= 2 || categoryFilter !== "all";
     setLoading(true);
     setError(null);
 
     try {
-      const response = await service.listProductsPaginated(
-        businessId,
-        token,
-        targetPage,
-        productsLimit,
-      );
+      const [response, categoryRows] = await Promise.all([
+        service.listProductsPaginated(
+          businessId,
+          token,
+          targetPage,
+          productsLimit,
+          filtered ? {
+            query: search.trim() || undefined,
+            categoryId: categoryFilter === "all" ? undefined : categoryFilter === "uncategorized" ? "uncategorized" : Number(categoryFilter),
+            order: sortBy.replace("-", "_") as "name_asc" | "name_desc" | "price_asc" | "price_desc",
+          } : undefined,
+        ),
+        service.listCategories(businessId, token),
+      ]);
+      if (requestId !== productsRequestId.current) return;
       const list = Array.isArray(response.products) ? response.products : [];
       setProducts(
         list.map((product) => ({
@@ -881,12 +899,11 @@ export const ProductsV2PosPage = () => {
           extras: product.extras,
         })),
       );
-      setSearchCatalogProducts([]);
       setCurrentPage(response.pagination.page);
       setTotalPages(response.pagination.totalPages);
       setTotalItems(response.pagination.total);
+      if (!filtered) setCatalogTotalItems(response.pagination.total);
 
-      const categoryRows = await service.listCategories(businessId, token);
       const safeCategories = Array.isArray(categoryRows) ? categoryRows : [];
       setCategories(
         safeCategories
@@ -900,10 +917,11 @@ export const ProductsV2PosPage = () => {
             parentId: category.parentId ?? null,
           })),
       );
-      if (list.length === 0) {
+      if (list.length === 0 && !filtered) {
         setToast({ type: "info", message: "Aún no tienes productos." });
       }
     } catch (cause) {
+      if (requestId !== productsRequestId.current) return;
       const rawMessage = cause instanceof Error ? cause.message : "";
       const isEmptyPayloadCrash =
         /cannot read properties of null/i.test(rawMessage) ||
@@ -914,10 +932,13 @@ export const ProductsV2PosPage = () => {
         setCategories([]);
         setToast({ type: "info", message: "Aún no tienes productos." });
       } else {
+        setProducts([]);
+        setTotalItems(0);
+        setTotalPages(1);
         setError(rawMessage || "No se pudo cargar productos v2.");
       }
     } finally {
-      setLoading(false);
+      if (requestId === productsRequestId.current) setLoading(false);
     }
   };
 
@@ -928,8 +949,12 @@ export const ProductsV2PosPage = () => {
   }, [toast]);
 
   useEffect(() => {
-    loadProducts(1);
-  }, [businessId, token, productsLimit]);
+    const timeout = window.setTimeout(() => { void loadProducts(1); }, search.trim().length >= 2 ? 320 : 0);
+    return () => {
+      window.clearTimeout(timeout);
+      productsRequestId.current++;
+    };
+  }, [businessId, token, activeBranchId, productsLimit, search, categoryFilter, sortBy]);
 
   useEffect(() => {
     setPageInput(String(currentPage));
@@ -947,12 +972,7 @@ export const ProductsV2PosPage = () => {
       "price-desc": compareByPriceDesc,
     };
 
-    const source =
-      normalizedSearch.length >= 2 || categoryFilter !== "all"
-        ? searchCatalogProducts
-        : products;
-
-    return source
+    return products
       .filter((product) => (showArchived ? true : product.available))
       .filter((product) => {
         if (categoryFilter === "all") return true;
@@ -968,71 +988,8 @@ export const ProductsV2PosPage = () => {
         );
       })
       .sort(comparators[sortBy]);
-  }, [products, searchCatalogProducts, search, categoryFilter, showArchived, sortBy]);
+  }, [products, search, categoryFilter, showArchived, sortBy]);
 
-  useEffect(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-    if (normalizedSearch.length < 2 && categoryFilter === "all") {
-      setSearchCatalogProducts([]);
-      setSearchingCatalog(false);
-      return;
-    }
-
-    if (!businessId || !token) {
-      setSearchCatalogProducts([]);
-      setSearchingCatalog(false);
-      return;
-    }
-
-    const timeout = window.setTimeout(() => {
-      setSearchingCatalog(true);
-      (async () => {
-        try {
-          const allRows = await service.listProductsAllForSearch(
-            businessId,
-            token,
-            productsLimit,
-          );
-          const mapped = allRows.map((product) => ({
-            id: product.id,
-            name: product.name,
-            description: product.description,
-            categoryId: product.categoryId,
-            categoryName: product.categoryName,
-            color: product.color,
-            available: product.available,
-            forSale: product.forSale,
-            showInStore: product.showInStore,
-            showPrice: product.showPrice,
-            volume: product.volume,
-            price: product.price,
-            costPerItem: product.costPerItem,
-            promotionPrice: product.promotionPrice,
-            wholesalePrice: product.wholesalePrice,
-            wholesaleMinQuantity: product.wholesaleMinQuantity,
-            wholesalePrices: product.wholesalePrices,
-            stock: product.stock,
-            expDate: product.expDate,
-            minStock: product.minStock,
-            optStock: product.optStock,
-            quantity: product.quantity,
-            image: product.image,
-            images: product.images,
-            variants: product.variants,
-            variantsCount: product.variantsCount,
-            extras: product.extras,
-          }));
-          setSearchCatalogProducts(mapped);
-        } catch {
-          setSearchCatalogProducts([]);
-        } finally {
-          setSearchingCatalog(false);
-        }
-      })();
-    }, 320);
-
-    return () => window.clearTimeout(timeout);
-  }, [search, categoryFilter, businessId, token, service, productsLimit]);
 
   const stats = useMemo(() => {
     const active = products.filter((product) => product.available).length;
@@ -1494,7 +1451,7 @@ export const ProductsV2PosPage = () => {
 
     setActionLoadingId(productId);
     try {
-      const detail = await service.getProduct(productId, token);
+      const detail = await service.getProduct(productId, token, businessId);
       if (!detail)
         throw new Error("No encontramos el producto para restaurar.");
       await service.saveProduct(
@@ -1527,7 +1484,7 @@ export const ProductsV2PosPage = () => {
     }
 
     try {
-      const detail = await service.getProduct(productId, token);
+      const detail = await service.getProduct(productId, token, businessId);
       if (!detail) {
         throw new Error("No encontramos el producto seleccionado.");
       }
@@ -2553,11 +2510,7 @@ export const ProductsV2PosPage = () => {
             </div>
           ) : null}
 
-          {!loading && searchingCatalog ? (
-            <p className="pos-v2-products__empty">
-              Buscando en todo el catálogo…
-            </p>
-          ) : null}
+
           {!loading && visibleProducts.length === 0 ? (
             <p className="pos-v2-products__empty">
               No hay productos para mostrar con los filtros actuales.
@@ -2728,9 +2681,7 @@ export const ProductsV2PosPage = () => {
           ) : null}
 
           {!loading &&
-          visibleProducts.length > 0 &&
-          search.trim().length < 2 &&
-          categoryFilter === "all" ? (
+          visibleProducts.length > 0 ? (
             <nav
               className="pos-v2-products__pagination"
               aria-label="Paginación de productos"

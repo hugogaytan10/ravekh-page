@@ -12,14 +12,20 @@ export type ProductsPaginatedResult = {
   pagination: ProductsPagination;
 };
 
+export type ProductListFilters = {
+  query?: string;
+  categoryId?: number | "uncategorized";
+  order: "name_asc" | "name_desc" | "price_asc" | "price_desc";
+};
+
 export interface IProductsRepository {
   listByBusiness(businessId: number, token: string): Promise<ManagedProduct[]>;
   listAllByBusiness(businessId: number, token: string, limit: string): Promise<ManagedProduct[]>;
   listReallyAllByBusiness(businessId: number, token: string): Promise<ManagedProduct[]>;
-  listByBusinessPaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult>;
+  listByBusinessPaginated(businessId: number, token: string, page: number, limit: string | number, filters?: ProductListFilters): Promise<ProductsPaginatedResult>;
   listByBusinessNoAvailablePaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult>;
   listByBusinessAllForSearch(businessId: number, token: string, limit: string | number): Promise<ManagedProduct[]>;
-  getById(productId: number, token: string): Promise<ManagedProduct | null>;
+  getById(productId: number, token: string, businessId?: number): Promise<ManagedProduct | null>;
   create(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct>;
   update(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct>;
   archive(productId: number, token: string): Promise<void>;

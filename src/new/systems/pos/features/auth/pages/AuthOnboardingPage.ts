@@ -34,8 +34,8 @@ export class AuthOnboardingPage {
     return this.authOnboardingService.closeOtherSessions(payload);
   }
   
-  async getSecurityQuestionStatus(employeeId: number): Promise<SecurityQuestionStatus> {
-  return this.authOnboardingService.getSecurityQuestionStatus(employeeId);
+  async getSecurityQuestionStatus(employeeId: number, token: string): Promise<SecurityQuestionStatus> {
+  return this.authOnboardingService.getSecurityQuestionStatus(employeeId, token);
 }
 
   async signUp(payload: SignUpPayload): Promise<AuthSessionViewModel> {
