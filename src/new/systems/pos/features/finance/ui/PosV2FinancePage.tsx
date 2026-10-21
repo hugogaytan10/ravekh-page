@@ -1,5 +1,5 @@
 import { posMoneyFormatter as moneyFormatter } from "../../../shared/config/posCurrency";
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
@@ -101,7 +101,7 @@ export const PosV2FinancePage = () => {
   const [openFormModal, setOpenFormModal] = useState(false);
 
   const [financeBranches, setFinanceBranches] = useState<PosBranch[]>([]);
-  const [financeBranchId, setFinanceBranchId] = useState(() => readActivePosBranchId());
+  const [financeBranchId, setFinanceBranchId] = useState(() => readActivePosBranchId(session.businessId) || -1);
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [branchError, setBranchError] = useState<string | null>(null);
 
@@ -266,7 +266,16 @@ export const PosV2FinancePage = () => {
     return { label: "Crítico", tone: "is-danger", description: "Tus egresos están consumiendo gran parte de ingresos." };
   }, [derivedOverview.monthBurnRate]);
 
+  const financeRequestRef = useRef(0);
+  useEffect(() => {
+    ++financeRequestRef.current;
+    setOverview({ monthIncome: 0, monthExpenses: 0, monthBalance: 0, todayIncome: 0, todayExpenses: 0 });
+    setMovement({ income: [], expenses: [] });
+    setTodayMovement({ income: [], expenses: [] });
+  }, [financeBranchId]);
+
   const refreshData = useCallback(async () => {
+    const requestId = ++financeRequestRef.current;
     if (!hasSession) {
       setError("No hay sesión activa para cargar finanzas.");
       return;
@@ -321,6 +330,8 @@ export const PosV2FinancePage = () => {
       todayMovementPromise,
     ]);
 
+    if (requestId !== financeRequestRef.current) return;
+
     if (overviewResult.status === "fulfilled") {
       setOverview(overviewResult.value);
     }
@@ -350,11 +361,9 @@ export const PosV2FinancePage = () => {
 
   useEffect(() => {
     return onPosBranchUpdated((branch) => {
-      if (!isAdmin) {
-        setFinanceBranchId(branch.id);
-      }
+      if (branch.businessId === session.businessId) setFinanceBranchId(branch.id);
     });
-  }, [isAdmin]);
+  }, [session.businessId]);
 
   useEffect(() => {
     if (!hasSession || !isAdmin) {

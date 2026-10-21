@@ -28,7 +28,7 @@ import {
   POS_SESSION_STORAGE_KEYS,
   resolvePosOperatorRole,
 } from "../../../shared/config/posSession";
-import { readActivePosBranchId, type PosBranch } from "../../../shared/config/posBranch";
+import { onPosBranchUpdated, readActivePosBranchId, type PosBranch } from "../../../shared/config/posBranch";
 import { PosBranchApi } from "../../../shared/api/PosBranchApi";
 import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
@@ -185,7 +185,7 @@ const combineIncomeSeries = (sets: IncomePoint[][]): IncomePoint[] => {
 export const PosV2ReportingPage = () => {
   const [session] = useState(() => getSafeSession());
   const [reportBranches, setReportBranches] = useState<PosBranch[]>([]);
-  const [reportBranchId, setReportBranchId] = useState(() => readActivePosBranchId());
+  const [reportBranchId, setReportBranchId] = useState(() => readActivePosBranchId(session.businessId) || -1);
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [branchError, setBranchError] = useState<string | null>(null);
 
@@ -265,6 +265,28 @@ export const PosV2ReportingPage = () => {
     const timeout = window.setTimeout(() => setToast(null), 3400);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => onPosBranchUpdated((branch) => {
+    if (branch.businessId === businessId) setReportBranchId(branch.id);
+  }), [businessId]);
+
+  useEffect(() => {
+    ++reportRequestRef.current;
+    ++salesRequestRef.current;
+    ++topChartsRequestRef.current;
+    ++salesTicketsRequestRef.current;
+    setSummary(DEFAULT_SUMMARY);
+    setSeries([]);
+    setSales([]);
+    setTopProducts([]);
+    setTopEmployees([]);
+    setTopCustomers([]);
+    setSalesTickets([]);
+    setSalesTicketsPage(1);
+    setSalesTicketsTotalPages(0);
+    setSalesTicketsTotalItems(0);
+    setSelectedPoint(null);
+  }, [reportBranchId]);
 
   const loadReporting = useCallback(async () => {
     if (!hasBusinessId) {
