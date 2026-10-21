@@ -86,7 +86,7 @@ const RouteSeo = () => {
       };
     }
 
-    if (pathname === "/maincatalogo") {
+    if (pathname === "/maincatalogo" || pathname === "/catalogo-digital") {
       return {
         title: "Catálogo digital para vender por WhatsApp | Ravekh",
         description: "Crea un catálogo digital profesional para organizar productos, compartir un link y vender por WhatsApp con menos fricción.",
@@ -175,6 +175,7 @@ export const NewAppRoutes = () => {
       <Routes>
         <Route path="/" element={<LandingPageRavekhPage />} />
         <Route path="/maincatalogo" element={<MainCatalogPage />} />
+        <Route path="/catalogo-digital" element={<MainCatalogPage />} />
         <Route path="/RavekhBoutique" element={<RavekhBoutiquePage />} />
         <Route path="/ravekhBoutique" element={<RavekhBoutiquePage />} />
         <Route path="/RavekhPerfumeria" element={<RavekhPerfumeriaPage />} />
