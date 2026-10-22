@@ -393,6 +393,7 @@ export const PosV2SalesHomePage = () => {
   const [variantModalError, setVariantModalError] = useState<string | null>(
     null,
   );
+  const activeTableDraftRef = useRef("");
   const loadingTableDraftRef = useRef(false);
   const skippingDraftSyncRef = useRef(false);
   const keepCartForNextTableSelectionRef = useRef(false);
@@ -1131,7 +1132,20 @@ export const PosV2SalesHomePage = () => {
 
   useEffect(() => {
     const { token } = getCurrentSession();
-    if (!token || !selectedTableId) return;
+    const previousTableId = activeTableDraftRef.current;
+    activeTableDraftRef.current = selectedTableId;
+    if (previousTableId && previousTableId !== selectedTableId) {
+      setCart({});
+      setSelectedCustomerId("");
+      setDiscountPercent("0");
+      setFixedDiscount("0");
+      discountSourceRef.current = "percent";
+    }
+    if (!token || !selectedTableId) {
+      loadingTableDraftRef.current = false;
+      skippingDraftSyncRef.current = false;
+      return;
+    }
 
     const tableId = Number(selectedTableId);
     if (!Number.isFinite(tableId) || tableId <= 0) return;
@@ -1141,6 +1155,8 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
+    let cancelled = false;
+    let releaseTimer: number | undefined;
     const headers = buildPosAuthHeaders(token);
 
     loadingTableDraftRef.current = true;
@@ -1161,6 +1177,7 @@ export const PosV2SalesHomePage = () => {
           | TableProductDetailApiResponse[]
           | { data?: TableProductDetailApiResponse[] }
           | null;
+        if (cancelled) return;
         const rows = Array.isArray(payload) ? payload : payload?.data ?? [];
 
         const nextCart = rows.reduce<Record<string, CartItemVm>>(
@@ -1182,6 +1199,7 @@ export const PosV2SalesHomePage = () => {
         setCart(nextCart);
       })
       .catch((error) => {
+        if (cancelled) return;
         console.error("[POS-V2-SALES] Error al cargar borrador de mesa", error);
         setValidationError(
           error instanceof Error
@@ -1190,11 +1208,17 @@ export const PosV2SalesHomePage = () => {
         );
       })
       .finally(() => {
+        if (cancelled) return;
         loadingTableDraftRef.current = false;
-        window.setTimeout(() => {
+        releaseTimer = window.setTimeout(() => {
           skippingDraftSyncRef.current = false;
         }, 0);
       });
+
+    return () => {
+      cancelled = true;
+      if (releaseTimer !== undefined) window.clearTimeout(releaseTimer);
+    };
   }, [products, selectedTableId]);
 
   useEffect(() => {
