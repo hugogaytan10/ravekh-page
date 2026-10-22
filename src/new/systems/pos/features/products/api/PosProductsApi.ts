@@ -70,6 +70,8 @@ type ProductResponse = {
 };
 
 type LegacyVariantResponse = {
+  Visible?: boolean | number | string | null;
+  Available?: boolean | number | string | null;
   Id?: number;
   id?: number;
   Product_Id?: number;
@@ -658,7 +660,9 @@ export class PosProductsApi implements IProductsRepository {
     if (!Array.isArray(payload)) {
       return [];
     }
-    return payload.map((variant) => this.toDomainVariant(variant));
+    return payload
+      .filter((variant) => Number(variant.Visible ?? 1) !== 0 || Number(variant.Available ?? 1) !== 0)
+      .map((variant) => this.toDomainVariant(variant));
   }
 
   private normalizeVariantsPayload(payload: LegacyVariantResponse[] | { data?: LegacyVariantResponse[]; Data?: LegacyVariantResponse[]; variants?: LegacyVariantResponse[]; Variants?: LegacyVariantResponse[] } | null): LegacyVariantResponse[] | null {
