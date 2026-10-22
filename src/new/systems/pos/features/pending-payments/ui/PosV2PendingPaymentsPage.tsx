@@ -1,4 +1,4 @@
-import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
@@ -8,6 +8,7 @@ import { PendingAccount, PendingAccountDetail, PendingPaymentRecord } from "../m
 import { PendingPaymentsPage } from "../pages/PendingPaymentsPage";
 import { PendingPaymentsService } from "../services/PendingPaymentsService";
 import "./PosV2PendingPaymentsPage.css";
+import {onPosBranchUpdated, readActivePosBranchId} from "../../../shared/config/posBranch";
 
 const money = (value: number, currency: string) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: currency || "MXN" }).format(value || 0);
@@ -18,6 +19,8 @@ const shortDate = (value: string) => {
 };
 
 export const PosV2PendingPaymentsPage = () => {
+  const [branchId, setBranchId] = useState(() => readActivePosBranchId());
+  const branchRef = useRef(branchId);
   const session = useMemo(() => readPosSessionSnapshot(), []);
   const page = useMemo(() => {
     const client = new FetchHttpClient(getPosApiBaseUrl());
@@ -42,25 +45,37 @@ export const PosV2PendingPaymentsPage = () => {
     setLoading(true);
     setError("");
     try {
-      setAccounts(await page.list(session.businessId, session.token));
+      const rows = await page.list(session.businessId, session.token);
+      if (branchRef.current === branchId) setAccounts(rows);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No fue posible cargar las cuentas por cobrar.");
     } finally {
       setLoading(false);
     }
-  }, [page, session.businessId, session.token]);
+  }, [branchId, page, session.businessId, session.token]);
 
   const openDetail = useCallback(async (account: PendingAccount) => {
     setError("");
     try {
-      setSelected(await page.detail(account.orderId, session.token));
+      const detail = await page.detail(account.orderId, session.token);
+      if (branchRef.current !== branchId) return;
+      setSelected(detail);
       setEditing(null);
       setAmount("");
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No fue posible cargar el detalle de la cuenta.");
     }
-  }, [page, session.token]);
+  }, [branchId, page, session.token]);
 
+  useEffect(() => onPosBranchUpdated(() => {
+    const next = readActivePosBranchId();
+    branchRef.current = next;
+    setBranchId(next);
+    setAccounts([]);
+    setSelected(null);
+    setEditing(null);
+    setAmount("");
+  }), []);
   useEffect(() => { void loadAccounts(); }, [loadAccounts]);
   useEffect(() => {
     if (!notice) return;
@@ -88,6 +103,7 @@ export const PosV2PendingPaymentsPage = () => {
         await page.createPayment(selected.orderId, parsed, available, session.token);
       }
       const refreshed = await page.detail(selected.orderId, session.token);
+      if (branchRef.current !== branchId) return;
       setSelected(refreshed);
       setEditing(null);
       setAmount("");
@@ -107,6 +123,7 @@ export const PosV2PendingPaymentsPage = () => {
     try {
       await page.deletePayment(payment.id, session.token);
       const refreshed = await page.detail(selected.orderId, session.token);
+      if (branchRef.current !== branchId) return;
       setSelected(refreshed);
       setNotice("Abono eliminado.");
       await loadAccounts();
