@@ -935,9 +935,9 @@ export const PosV2MorePage = () => {
                     <text x="182" y="356" fill="#E5E7EB" fontSize="17">Escanéalo para ver productos y promociones.</text>
                   </g>
                     </svg>
-                    <textarea className={`pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--title${bannerTitleLines.length > 1 ? " is-multiline" : ""}`} value={bannerTitle} onChange={(event) => setBannerTitle(event.target.value.replace(/\n/g, " "))} maxLength={48} rows={2} placeholder="Escribe un título" aria-label="Título del banner" />
-                    <textarea className="pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--subtitle" style={{ top: bannerTitleLines.length > 1 ? "49%" : "38%" }} value={bannerSubtitle} onChange={(event) => setBannerSubtitle(event.target.value.replace(/\n/g, " "))} maxLength={110} rows={2} placeholder="Escribe un subtítulo" aria-label="Subtítulo del banner" />
-                    <input className="pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--cta" value={bannerCta} onChange={(event) => setBannerCta(event.target.value)} maxLength={24} placeholder="Llamada a la acción" aria-label="Llamada a la acción del banner" />
+                    <textarea autoCorrect="on" spellCheck={true} className={`pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--title${bannerTitleLines.length > 1 ? " is-multiline" : ""}`} value={bannerTitle} onChange={(event) => setBannerTitle(event.target.value.replace(/\n/g, " "))} maxLength={48} rows={2} placeholder="Escribe un título" aria-label="Título del banner" />
+                    <textarea autoCorrect="on" spellCheck={true} className="pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--subtitle" style={{ top: bannerTitleLines.length > 1 ? "49%" : "38%" }} value={bannerSubtitle} onChange={(event) => setBannerSubtitle(event.target.value.replace(/\n/g, " "))} maxLength={110} rows={2} placeholder="Escribe un subtítulo" aria-label="Subtítulo del banner" />
+                    <input autoCorrect="on" spellCheck={true} className="pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--cta" value={bannerCta} onChange={(event) => setBannerCta(event.target.value)} maxLength={24} placeholder="Llamada a la acción" aria-label="Llamada a la acción del banner" />
                   </div>
                   <footer className="pos-v2-more__banner-modal-footer">
                     <span>Los campos marcados sobre la imagen son editables.</span>

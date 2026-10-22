@@ -125,7 +125,7 @@ export const PosV2PendingPaymentsPage = () => {
             <h2>Cuentas pendientes</h2>
             <p>Consulta saldos y registra abonos sin superar la deuda disponible.</p>
           </div>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar cliente u orden" aria-label="Buscar cuentas por cobrar" />
+          <input autoCorrect="on" spellCheck={true} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Buscar cliente u orden" aria-label="Buscar cuentas por cobrar" />
         </div>
         {error ? <p className="pos-pending__message is-error">{error}</p> : null}
         {notice ? <p className="pos-pending__message is-success">{notice}</p> : null}

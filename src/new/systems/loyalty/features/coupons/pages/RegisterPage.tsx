@@ -172,7 +172,7 @@ const RegisterPage: React.FC = () => {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-          <input
+          <input autoCorrect="on" spellCheck={true}
             type="text"
             placeholder="Nombre completo"
             className="w-full rounded-2xl px-5 py-3.5 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.08)]"

@@ -183,7 +183,7 @@ export const PosV2InventoryPage = () => {
         <section className="pos-v2-inventory__filters">
           <label>
             Buscar producto
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ej. Café, Hamburguesa..." />
+            <input autoCorrect="on" spellCheck={true} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ej. Café, Hamburguesa..." />
           </label>
           <label>
             Umbral stock bajo

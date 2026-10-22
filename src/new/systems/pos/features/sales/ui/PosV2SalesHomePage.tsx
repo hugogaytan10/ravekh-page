@@ -2266,7 +2266,7 @@ export const PosV2SalesHomePage = () => {
             </div>
 
             <div className="pos-v2-sales-home__search">
-              <input
+              <input autoCorrect="on" spellCheck={true}
                 value={search}
                 onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }}
                 placeholder="Buscar producto"
@@ -2836,7 +2836,7 @@ export const PosV2SalesHomePage = () => {
               <h4>Cotización (PDF)</h4>
               <label>
                 Nombre del cliente
-                <input
+                <input autoCorrect="on" spellCheck={true}
                   value={quoteClientName}
                   onChange={(event) => setQuoteClientName(event.target.value)}
                   placeholder="Ej. María López"

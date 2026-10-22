@@ -493,7 +493,7 @@ export const PosV2FinancePage = () => {
 
       <label>
         Concepto
-        <input value={name} onChange={(event) => setName(sanitizeConceptInput(event.target.value))} placeholder="Ej. Venta en mostrador" maxLength={80} />
+        <input autoCorrect="on" spellCheck={true} value={name} onChange={(event) => setName(sanitizeConceptInput(event.target.value))} placeholder="Ej. Venta en mostrador" maxLength={80} />
       </label>
 
       <div className="pos-v2-finance__chips" aria-label="Categorías sugeridas">
@@ -658,7 +658,7 @@ export const PosV2FinancePage = () => {
               </div>
             </header>
 
-            <input className="pos-v2-finance__search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por concepto" aria-label="Buscar movimientos" />
+            <input autoCorrect="on" spellCheck={true} className="pos-v2-finance__search" value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por concepto" aria-label="Buscar movimientos" />
 
             <ul>
               {loading ? (

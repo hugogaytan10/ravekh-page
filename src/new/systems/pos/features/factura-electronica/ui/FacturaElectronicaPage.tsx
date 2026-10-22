@@ -1480,8 +1480,8 @@ export const FacturaElectronicaPage = () => {
               <StepHeader number="A" title="Negocio" description="Sincroniza el negocio del POS o captura sus datos manualmente. Este paso no envía RFC." />
               <div className="factura-electronica__form-grid">
                 <label className="factura-electronica__field">ID externo del negocio<input type="text" value={businessDraft.externalBusinessId} onChange={(event) => updateBusinessDraft("externalBusinessId", event.target.value)} /></label>
-                <label className="factura-electronica__field">Nombre del negocio<input type="text" value={businessDraft.businessName} onChange={(event) => updateBusinessDraft("businessName", event.target.value)} /></label>
-                <label className="factura-electronica__field">Nombre comercial<input type="text" value={businessDraft.tradeName} onChange={(event) => updateBusinessDraft("tradeName", event.target.value)} /></label>
+                <label className="factura-electronica__field">Nombre del negocio<input autoCorrect="on" spellCheck={true} type="text" value={businessDraft.businessName} onChange={(event) => updateBusinessDraft("businessName", event.target.value)} /></label>
+                <label className="factura-electronica__field">Nombre comercial<input autoCorrect="on" spellCheck={true} type="text" value={businessDraft.tradeName} onChange={(event) => updateBusinessDraft("tradeName", event.target.value)} /></label>
                 <label className="factura-electronica__field">Email<input type="email" value={businessDraft.contactEmail} onChange={(event) => updateBusinessDraft("contactEmail", event.target.value)} /></label>
                 <label className="factura-electronica__field">Teléfono<input type="tel" value={businessDraft.contactPhone} onChange={(event) => updateBusinessDraft("contactPhone", event.target.value)} /></label>
                 <label className="factura-electronica__field">Moneda<input type="text" value={businessDraft.defaultCurrency} onChange={(event) => updateBusinessDraft("defaultCurrency", event.target.value.toUpperCase())} /></label>
@@ -1493,8 +1493,8 @@ export const FacturaElectronicaPage = () => {
               <StepHeader number="B" title="Emisor fiscal" description="Crea o reutiliza un emisor fiscal ligado al businessAccount sincronizado." />
               <div className="factura-electronica__form-grid">
                 <label className="factura-electronica__field">RFC<input type="text" value={issuerDraft.rfc} onChange={(event) => updateIssuerDraft("rfc", event.target.value)} /></label>
-                <label className="factura-electronica__field">Razón social<input type="text" value={issuerDraft.legalName} onChange={(event) => updateIssuerDraft("legalName", event.target.value)} /></label>
-                <label className="factura-electronica__field">Nombre comercial<input type="text" value={issuerDraft.tradeName} onChange={(event) => updateIssuerDraft("tradeName", event.target.value)} /></label>
+                <label className="factura-electronica__field">Razón social<input autoCorrect="on" spellCheck={true} type="text" value={issuerDraft.legalName} onChange={(event) => updateIssuerDraft("legalName", event.target.value)} /></label>
+                <label className="factura-electronica__field">Nombre comercial<input autoCorrect="on" spellCheck={true} type="text" value={issuerDraft.tradeName} onChange={(event) => updateIssuerDraft("tradeName", event.target.value)} /></label>
                 <label className="factura-electronica__field">Régimen fiscal<input type="text" value={issuerDraft.fiscalRegime} onChange={(event) => updateIssuerDraft("fiscalRegime", event.target.value)} /></label>
                 <label className="factura-electronica__field">Código postal fiscal<input type="text" value={issuerDraft.taxZipCode} onChange={(event) => updateIssuerDraft("taxZipCode", event.target.value)} /></label>
                 <label className="factura-electronica__field">Email<input type="email" value={issuerDraft.email} onChange={(event) => updateIssuerDraft("email", event.target.value)} /></label>
@@ -1517,7 +1517,7 @@ export const FacturaElectronicaPage = () => {
               <StepHeader number="D" title="Lugar de expedición" description="Crea o reutiliza el código postal desde donde se emitirán los CFDI." />
               <div className="factura-electronica__form-grid">
                 <label className="factura-electronica__field">Código postal<input type="text" value={expeditionDraft.zipCode} onChange={(event) => setExpeditionDraft((current) => ({ ...current, zipCode: event.target.value }))} /></label>
-                <label className="factura-electronica__field">Descripción<input type="text" value={expeditionDraft.description} onChange={(event) => setExpeditionDraft((current) => ({ ...current, description: event.target.value }))} /></label>
+                <label className="factura-electronica__field">Descripción<input autoCorrect="on" spellCheck={true} type="text" value={expeditionDraft.description} onChange={(event) => setExpeditionDraft((current) => ({ ...current, description: event.target.value }))} /></label>
               </div>
               <ActionFooter action="expeditionPlace" label="Crear o usar lugar de expedición" loadingAction={loadingAction} onAction={createExpeditionPlace} messages={messages} errors={errors} />
             </article>
@@ -1565,7 +1565,7 @@ export const FacturaElectronicaPage = () => {
               <StepHeader number="C" title="Receptor" description="Captura los datos fiscales del receptor para esta factura." />
               <div className="factura-electronica__form-grid factura-electronica__form-grid--receiver">
                 <label className="factura-electronica__field">RFC<input type="text" value={receiverDraft.rfc} onChange={(event) => updateReceiverDraft("rfc", event.target.value)} /></label>
-                <label className="factura-electronica__field">Nombre<input type="text" value={receiverDraft.name} onChange={(event) => updateReceiverDraft("name", event.target.value)} /></label>
+                <label className="factura-electronica__field">Nombre<input autoCorrect="on" spellCheck={true} type="text" value={receiverDraft.name} onChange={(event) => updateReceiverDraft("name", event.target.value)} /></label>
                 <label className="factura-electronica__field">
                   Régimen fiscal
                   <select value={receiverDraft.fiscalRegime} onChange={(event) => updateReceiverFiscalRegime(event.target.value)}>
@@ -1625,7 +1625,7 @@ export const FacturaElectronicaPage = () => {
               <StepHeader number="E" title="Conceptos editables" description="Captura conceptos manualmente o agrega productos/servicios de MainSales; los datos del POS se adaptan al contexto CFDI y siguen siendo editables." />
               <div className="factura-electronica__catalog-picker">
                 <div className="factura-electronica__catalog-toolbar">
-                  <label className="factura-electronica__field">Buscar producto o servicio de MainSales<input type="search" value={productSearch} onChange={(event) => setProductSearch(event.target.value)} placeholder="Nombre, categoría, variante o ID" /></label>
+                  <label className="factura-electronica__field">Buscar producto o servicio de MainSales<input autoCorrect="on" spellCheck={true} type="search" value={productSearch} onChange={(event) => setProductSearch(event.target.value)} placeholder="Nombre, categoría, variante o ID" /></label>
                   <button type="button" className="factura-electronica__secondary" onClick={addManualConceptLine}>Agregar concepto manual</button>
                 </div>
 
@@ -1681,10 +1681,10 @@ export const FacturaElectronicaPage = () => {
                         <button type="button" className="factura-electronica__secondary" onClick={() => removeConceptLine(concept.id)} disabled={conceptLines.length === 1}>Quitar</button>
                       </div>
                       <div className="factura-electronica__form-grid">
-                        <label className="factura-electronica__field">Descripción<input type="text" value={concept.description} onChange={(event) => updateConceptLine(concept.id, "description", event.target.value)} /></label>
+                        <label className="factura-electronica__field">Descripción<input autoCorrect="on" spellCheck={true} type="text" value={concept.description} onChange={(event) => updateConceptLine(concept.id, "description", event.target.value)} /></label>
                         <label className="factura-electronica__field">Clave producto/servicio<input type="text" value={concept.productServiceCode} onChange={(event) => updateConceptLine(concept.id, "productServiceCode", event.target.value)} /></label>
                         <label className="factura-electronica__field">Clave unidad<input type="text" value={concept.unitCode} onChange={(event) => updateConceptLine(concept.id, "unitCode", event.target.value)} /></label>
-                        <label className="factura-electronica__field">Unidad<input type="text" value={concept.unitName} onChange={(event) => updateConceptLine(concept.id, "unitName", event.target.value)} /></label>
+                        <label className="factura-electronica__field">Unidad<input autoCorrect="on" spellCheck={true} type="text" value={concept.unitName} onChange={(event) => updateConceptLine(concept.id, "unitName", event.target.value)} /></label>
                         <label className="factura-electronica__field">Cantidad<input type="number" min="0" step="0.01" value={concept.quantity} onChange={(event) => updateConceptLine(concept.id, "quantity", Number(event.target.value))} /></label>
                         <label className="factura-electronica__field">Precio unitario<input type="number" min="0" step="0.01" value={concept.unitPrice} onChange={(event) => updateConceptLine(concept.id, "unitPrice", Number(event.target.value))} /></label>
                         <label className="factura-electronica__field">

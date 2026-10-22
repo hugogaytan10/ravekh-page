@@ -42,7 +42,7 @@ export const PosV2AccountPage = () => {
     <form className="pos-settings__card" onSubmit={save}>
       {loading ? <p role="status">Cargando cuenta…</p> : null}
       <fieldset disabled={loading || saving || !loaded}>
-        <label className="pos-settings__field">Nombre de usuario<input autoComplete="name" value={name} onChange={e => setName(e.target.value)} required maxLength={100} /></label>
+        <label className="pos-settings__field">Nombre de usuario<input autoCorrect="on" spellCheck={true} autoComplete="name" value={name} onChange={e => setName(e.target.value)} required maxLength={100} /></label>
         <label className="pos-settings__field">Nueva contraseña<input autoComplete="new-password" type={visible ? "text" : "password"} value={password} onChange={e => setPassword(e.target.value)} /></label>
         <label className="pos-settings__row">Mostrar contraseña<input type="checkbox" checked={visible} onChange={e => setVisible(e.target.checked)} /></label>
         <p>Déjala vacía para conservar la actual. Usa al menos 6 caracteres, un número y un carácter especial.</p>

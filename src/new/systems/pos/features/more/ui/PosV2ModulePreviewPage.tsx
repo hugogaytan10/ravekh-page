@@ -715,7 +715,7 @@ export const PosV2ModulePreviewPage = () => {
               {brandingLoading ? <div className="pos-v2-module-preview__skeleton" aria-hidden="true"><span /><span /></div> : null}
               <div className="pos-v2-module-preview__inputs">
                 <label className="pos-v2-module-preview__floating-field">
-                  <input
+                  <input autoCorrect="on" spellCheck={true}
                     value={brandingForm.name}
                     onChange={(event) => setBrandingForm((current) => ({ ...current, name: event.target.value }))}
                     placeholder=" "
@@ -736,7 +736,7 @@ export const PosV2ModulePreviewPage = () => {
               </div>
               <div className="pos-v2-module-preview__inputs">
                 <label className="pos-v2-module-preview__floating-field">
-                  <input
+                  <input autoCorrect="on" spellCheck={true}
                     value={brandingForm.address}
                     onChange={(event) => setBrandingForm((current) => ({ ...current, address: event.target.value }))}
                     placeholder=" "
@@ -824,7 +824,7 @@ export const PosV2ModulePreviewPage = () => {
                 </label>
                 <div className="pos-v2-module-preview__inputs">
                   <label className="pos-v2-module-preview__floating-field">
-                    <input value={taxForm.description} onChange={(event) => setTaxForm((current) => ({ ...current, description: event.target.value }))} placeholder=" " disabled={!taxForm.enabled} />
+                    <input autoCorrect="on" spellCheck={true} value={taxForm.description} onChange={(event) => setTaxForm((current) => ({ ...current, description: event.target.value }))} placeholder=" " disabled={!taxForm.enabled} />
                     <span>Descripción</span>
                   </label>
                   <label className="pos-v2-module-preview__floating-field">

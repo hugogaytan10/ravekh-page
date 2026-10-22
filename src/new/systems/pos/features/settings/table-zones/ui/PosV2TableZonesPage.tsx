@@ -617,7 +617,7 @@ export const PosV2TableZonesPage = () => {
               <p className="pos-v2-table-zones__list-helper">Selecciona una zona para administrar sus mesas.</p>
             </div>
             <div className="pos-v2-table-zones__search">
-              <input value={searchZone} onChange={(event) => setSearchZone(event.target.value)} placeholder="Buscar zona" aria-label="Buscar zona" />
+              <input autoCorrect="on" spellCheck={true} value={searchZone} onChange={(event) => setSearchZone(event.target.value)} placeholder="Buscar zona" aria-label="Buscar zona" />
               {searchZone ? <button type="button" className="is-secondary-chip" onClick={() => setSearchZone("")}>Limpiar</button> : null}
             </div>
           </header>
@@ -662,7 +662,7 @@ export const PosV2TableZonesPage = () => {
                 <option value="">Selecciona zona</option>
                 {zones.map((zone) => <option key={zone.id} value={zone.id}>{zone.name}</option>)}
               </select>
-              <input value={searchTable} onChange={(event) => setSearchTable(event.target.value)} placeholder="Buscar mesa" aria-label="Buscar mesa" />
+              <input autoCorrect="on" spellCheck={true} value={searchTable} onChange={(event) => setSearchTable(event.target.value)} placeholder="Buscar mesa" aria-label="Buscar mesa" />
               {searchTable ? <button type="button" className="is-secondary-chip" onClick={() => setSearchTable("")}>Limpiar</button> : null}
             </div>
           </header>
@@ -704,7 +704,7 @@ export const PosV2TableZonesPage = () => {
               <p className="pos-v2-table-zones__modal-helper">Las zonas te ayudan a organizar las mesas por área del local.</p>
               <label>
                 Nombre de zona
-                <input value={zoneName} onChange={(event) => setZoneName(sanitizeName(event.target.value))} placeholder="Ej. Terraza" maxLength={50} />
+                <input autoCorrect="on" spellCheck={true} value={zoneName} onChange={(event) => setZoneName(sanitizeName(event.target.value))} placeholder="Ej. Terraza" maxLength={50} />
               </label>
               <div className="pos-v2-table-zones__modal-actions">
                 <button type="button" className="is-secondary-chip" onClick={() => setIsZoneModalOpen(false)}>Cancelar</button>
@@ -721,7 +721,7 @@ export const PosV2TableZonesPage = () => {
               <p className="pos-v2-table-zones__modal-helper">Crea una zona y varias mesas disponibles en un solo paso.</p>
               <label>
                 Nombre de zona
-                <input value={quickZoneName} onChange={(event) => setQuickZoneName(sanitizeName(event.target.value))} placeholder="Ej. Salón principal" maxLength={50} />
+                <input autoCorrect="on" spellCheck={true} value={quickZoneName} onChange={(event) => setQuickZoneName(sanitizeName(event.target.value))} placeholder="Ej. Salón principal" maxLength={50} />
               </label>
               <label>
                 Número de mesas
@@ -749,7 +749,7 @@ export const PosV2TableZonesPage = () => {
               </label>
               <label>
                 Nombre de mesa
-                <input value={tableName} onChange={(event) => setTableName(sanitizeName(event.target.value))} placeholder="Ej. Mesa 1" maxLength={50} />
+                <input autoCorrect="on" spellCheck={true} value={tableName} onChange={(event) => setTableName(sanitizeName(event.target.value))} placeholder="Ej. Mesa 1" maxLength={50} />
               </label>
               <label>
                 Sillas

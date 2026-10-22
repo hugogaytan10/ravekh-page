@@ -191,7 +191,7 @@ export const PosV2EmployeesPage = () => {
           <button type="button" className="is-primary" onClick={startCreate}>+ Nuevo empleado</button>
         </header>
 
-        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nombre, correo o rol" aria-label="Buscar empleados" />
+        <input autoCorrect="on" spellCheck={true} value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar por nombre, correo o rol" aria-label="Buscar empleados" />
 
         {error ? <p className="pos-v2-employees__error">{error}</p> : null}
         {toast ? <p className="pos-v2-employees__toast" role="status">{toast}</p> : null}
@@ -222,7 +222,7 @@ export const PosV2EmployeesPage = () => {
             <form onSubmit={saveEmployee}>
               <h3>{editingId ? "Editar empleado" : "Nuevo empleado"}</h3>
               <div className="pos-v2-employees__grid">
-                <input value={name} onChange={(event) => setName(event.target.value)} placeholder="Nombre" required />
+                <input autoCorrect="on" spellCheck={true} value={name} onChange={(event) => setName(event.target.value)} placeholder="Nombre" required />
                 <input value={email} onChange={(event) => setEmail(event.target.value)} placeholder="Correo" type="email" required />
                 <select value={role} onChange={(event) => setRole(event.target.value as EmployeeRole)} aria-label="Rol del empleado">
                   {ROLE_OPTIONS.map((option) => (

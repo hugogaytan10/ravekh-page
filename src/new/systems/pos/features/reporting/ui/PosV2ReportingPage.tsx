@@ -1140,7 +1140,7 @@ export const PosV2ReportingPage = () => {
                 </div>
                 <label>
                   Buscar
-                  <input
+                  <input autoCorrect="on" spellCheck={true}
                     value={salesQuery}
                     onChange={(event) => setSalesQuery(event.target.value)}
                     placeholder="Producto, dirección o estado"

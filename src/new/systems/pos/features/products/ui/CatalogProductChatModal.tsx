@@ -593,7 +593,7 @@ export const CatalogProductChatModal = ({
                 hidden
                 onChange={(event) => void handleFilesSelected(event)}
               />
-              <textarea
+              <textarea autoCorrect="on" spellCheck={true}
                 ref={messageInputRef}
                 value={messageDraft}
                 onChange={(event) => setMessageDraft(event.target.value)}

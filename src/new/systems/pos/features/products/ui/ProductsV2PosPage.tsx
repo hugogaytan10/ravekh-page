@@ -2431,7 +2431,7 @@ export const ProductsV2PosPage = () => {
             <h3>Listado</h3>
 
             <div className="pos-v2-products__controls">
-              <input
+              <input autoCorrect="on" spellCheck={true}
                 value={search}
                 onChange={(event) => setSearch(event.target.value)}
                 placeholder="Buscar por nombre o descripción"
@@ -2771,7 +2771,7 @@ export const ProductsV2PosPage = () => {
               >
                 <label>
                   Nombre
-                  <input
+                  <input autoCorrect="on" spellCheck={true}
                     value={name}
                     onChange={(event) => setName(event.target.value)}
                     placeholder="Ej. Hamburguesa clásica"
@@ -2781,7 +2781,7 @@ export const ProductsV2PosPage = () => {
 
                 <label>
                   Descripción
-                  <textarea
+                  <textarea autoCorrect="on" spellCheck={true}
                     value={description}
                     onChange={(event) => setDescription(event.target.value)}
                     placeholder="Describe el producto (opcional)"
@@ -3122,7 +3122,7 @@ export const ProductsV2PosPage = () => {
                       <div className="pos-v2-products__variant-grid">
                         <label className="pos-v2-products__variant-field">
                           <span>Descripción</span>
-                          <input
+                          <input autoCorrect="on" spellCheck={true}
                             value={variant.description}
                             onChange={(event) =>
                               updateVariant(
@@ -3402,7 +3402,7 @@ export const ProductsV2PosPage = () => {
                     <label>
                       Colores
                       <div className="pos-v2-products__tag-input-row">
-                        <input
+                        <input autoCorrect="on" spellCheck={true}
                           value={colorDraft}
                           onChange={(event) =>
                             setColorDraft(event.target.value)
@@ -3639,7 +3639,7 @@ export const ProductsV2PosPage = () => {
               <div className="pos-v2-products__field-grid pos-v2-products__category-form-grid">
                 <label>
                   Nombre categoría <span aria-hidden="true">*</span>
-                  <input
+                  <input autoCorrect="on" spellCheck={true}
                     ref={categoryNameInputRef}
                     className="pos-v2-products__category-name-input"
                     value={categoryNameInput}
@@ -3732,7 +3732,7 @@ export const ProductsV2PosPage = () => {
 
               <label className="pos-v2-products__category-search">
                 Buscar categoría
-                <input
+                <input autoCorrect="on" spellCheck={true}
                   value={categorySearch}
                   onChange={(event) => setCategorySearch(event.target.value)}
                   placeholder="Nombre o color"

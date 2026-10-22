@@ -2335,7 +2335,7 @@ export const CatalogAiImportWizard = ({
                         </div>
                         <label>
                           Nombre
-                          <input
+                          <input autoCorrect="on" spellCheck={true}
                             value={item.draftName}
                             disabled={!selectable}
                             onChange={(event) => updateDraft(item.Id, "draftName", event.target.value)}
@@ -2343,7 +2343,7 @@ export const CatalogAiImportWizard = ({
                         </label>
                         <label>
                           Descripción
-                          <textarea
+                          <textarea autoCorrect="on" spellCheck={true}
                             value={item.draftDescription}
                             disabled={!selectable}
                             rows={2}
@@ -2470,7 +2470,7 @@ export const CatalogAiImportWizard = ({
                               <div className="catalog-ai-wizard__new-category">
                                 <label>
                                   Nueva categoría
-                                  <input
+                                  <input autoCorrect="on" spellCheck={true}
                                     value={item.draftCategory}
                                     disabled={!selectable || item.creatingCategory}
                                     placeholder="Ej. Ropa"
@@ -2556,7 +2556,7 @@ export const CatalogAiImportWizard = ({
 
                           <label>
                             Colores
-                            <input
+                            <input autoCorrect="on" spellCheck={true}
                               value={item.draftColor}
                               placeholder="Ej. Rojo, Azul, Negro"
                               disabled={!selectable}

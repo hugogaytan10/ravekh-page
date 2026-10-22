@@ -241,7 +241,7 @@ export const PosV2OnlineOrdersPage = () => {
             <button type="button" className={filter === "pending" ? "is-active" : ""} onClick={() => setFilter("pending")}>Pendientes</button>
             <button type="button" className={filter === "all" ? "is-active" : ""} onClick={() => setFilter("all")}>Todos</button>
           </div>
-          <input
+          <input autoCorrect="on" spellCheck={true}
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}

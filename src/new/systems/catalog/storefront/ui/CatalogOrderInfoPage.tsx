@@ -463,7 +463,7 @@ export const CatalogOrderInfoPage = () => {
             <div className={`section-content ${openSection === "contact" ? "open" : ""}`}>
               <div className="grid">
                 <label ref={fieldRefs.name}>Nombre completo
-                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Introduce tu nombre" />
+                  <input autoCorrect="on" spellCheck={true} value={name} onChange={(e) => setName(e.target.value)} placeholder="Introduce tu nombre" />
                   {errors.name ? <small>{errors.name}</small> : null}
                 </label>
                 {!usesSimplifiedCheckout ? (
@@ -511,7 +511,7 @@ export const CatalogOrderInfoPage = () => {
               <div className="grid">
                 {checkoutOptions.Street ? (
                   <label ref={fieldRefs.street}>Calle
-                    <input value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Introduce tu calle" />
+                    <input autoCorrect="on" spellCheck={true} value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Introduce tu calle" />
                     {errors.street ? <small>{errors.street}</small> : null}
                   </label>
                 ) : null}
@@ -523,19 +523,19 @@ export const CatalogOrderInfoPage = () => {
                 ) : null}
                 {checkoutOptions.City ? (
                   <label ref={fieldRefs.city}>Municipio
-                    <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Municipio" />
+                    <input autoCorrect="on" spellCheck={true} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Municipio" />
                     {errors.city ? <small>{errors.city}</small> : null}
                   </label>
                 ) : null}
                 {checkoutOptions.State ? (
                   <label ref={fieldRefs.state}>Estado
-                    <input value={state} onChange={(e) => setState(e.target.value)} placeholder="Estado" />
+                    <input autoCorrect="on" spellCheck={true} value={state} onChange={(e) => setState(e.target.value)} placeholder="Estado" />
                     {errors.state ? <small>{errors.state}</small> : null}
                   </label>
                 ) : null}
                 {checkoutOptions.References ? (
                   <label className="full">Referencia (opcional)
-                    <input value={references} onChange={(e) => setReferences(e.target.value)} placeholder="Introduce una referencia" />
+                    <input autoCorrect="on" spellCheck={true} value={references} onChange={(e) => setReferences(e.target.value)} placeholder="Introduce una referencia" />
                   </label>
                 ) : null}
               </div>

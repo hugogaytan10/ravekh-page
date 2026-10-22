@@ -243,7 +243,7 @@ export const PosV2CustomersPage = () => {
           </button>
         </header>
 
-        <input
+        <input autoCorrect="on" spellCheck={true}
           value={search}
           onChange={(event) => setSearch(event.target.value)}
           placeholder="Buscar por nombre, contacto o referencia"
@@ -306,7 +306,7 @@ export const PosV2CustomersPage = () => {
             <form onSubmit={saveCustomer}>
               <h3>{editingId ? "Editar cliente" : "Nuevo cliente"}</h3>
               <div className="pos-v2-customers__grid">
-                <input
+                <input autoCorrect="on" spellCheck={true}
                   value={name}
                   onChange={(event) => setName(event.target.value)}
                   placeholder="Nombre"
@@ -323,12 +323,12 @@ export const PosV2CustomersPage = () => {
                   placeholder="Correo"
                   type="email"
                 />
-                <input
+                <input autoCorrect="on" spellCheck={true}
                   value={address}
                   onChange={(event) => setAddress(event.target.value)}
                   placeholder="Dirección"
                 />
-                <input
+                <input autoCorrect="on" spellCheck={true}
                   value={reference}
                   onChange={(event) => setReference(event.target.value)}
                   placeholder="Referencia"
@@ -344,7 +344,7 @@ export const PosV2CustomersPage = () => {
                   <option value="O">{SEX_LABELS.O}</option>
                 </select>
               </div>
-              <textarea
+              <textarea autoCorrect="on" spellCheck={true}
                 value={notes}
                 onChange={(event) => setNotes(event.target.value)}
                 placeholder="Notas"

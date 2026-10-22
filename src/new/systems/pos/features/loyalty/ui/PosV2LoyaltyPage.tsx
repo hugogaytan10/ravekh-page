@@ -618,7 +618,7 @@ export const PosV2LoyaltyPage = () => {
             <p className="pos-v2-loyalty__hint">Descripción y límite son obligatorios. QR automático.</p>
             <label>
               Descripción del beneficio <span>*</span>
-              <input value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Ej. 2x1 en bebidas" required />
+              <input autoCorrect="on" spellCheck={true} value={description} onChange={(event) => setDescription(event.target.value)} placeholder="Ej. 2x1 en bebidas" required />
             </label>
             <label>
               Límite de canjes <span>*</span>

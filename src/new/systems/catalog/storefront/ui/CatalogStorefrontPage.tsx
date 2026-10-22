@@ -653,7 +653,7 @@ export const CatalogStorefrontPage = () => {
         <>
       <section className="flex gap-2" aria-label="Búsqueda de productos">
         <div className="relative flex-1">
-          <input
+          <input autoCorrect="on" spellCheck={true}
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -792,7 +792,7 @@ export const CatalogStorefrontPage = () => {
               </summary>
               <div className="mt-3 grid gap-2 border-t border-[var(--border-default)] pt-3">
                 {categories.length > 6 ? (
-                  <input
+                  <input autoCorrect="on" spellCheck={true}
                     type="search"
                     value={categorySearch}
                     onChange={(event) => setCategorySearch(event.target.value)}
