@@ -1,3 +1,4 @@
+import { shareSaleTicket, type CompletedSale, type CompletedSaleLine } from "./saleTicket";
 import {isVariantAvailableForSale} from "../model/variantAvailability";
 import { DEFAULT_TICKET_CUSTOMIZATION, readTicketCustomization, escapeTicketHtml, ticketContactHtml, ticketFooterHtml } from "../../../shared/config/posTicket";
 import { persistPosCurrency, readPosCurrency, posMoneyFormatter } from "../../../shared/config/posCurrency";
@@ -91,28 +92,6 @@ type PaymentMethod =
   | "LINK DE PAGO"
   | "OTROS";
 type MobileStep = "catalog" | "cart" | "checkout";
-type CompletedSaleLine = {
-  name: string;
-  quantity: number;
-  unitPrice: number;
-  lineTotal: number;
-};
-type CompletedSale = {
-  folio: string;
-  paymentMethodLabel: string;
-  table: string;
-  subtotal: number;
-  discount: number;
-  taxAmount: number;
-  taxableBase: number;
-  taxDescription?: string;
-  total: number;
-  customerName?: string;
-  cashierName?: string;
-  createdAt: string;
-  items: CompletedSaleLine[];
-};
-
 type SaleLimitDetails = {
   limit?: number;
   totalOrdersThisMonth?: number;
@@ -348,6 +327,7 @@ export const PosV2SalesHomePage = () => {
   const [payLater, setPayLater] = useState(false);
   const [initialPayment, setInitialPayment] = useState("0");
   const [ticket, setTicket] = useState<string | null>(null);
+  const [ticketShareMessage, setTicketShareMessage] = useState("");
   const [mobileStep, setMobileStep] = useState<MobileStep>("catalog");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [planUpgradePrompt, setPlanUpgradePrompt] =
@@ -1873,6 +1853,7 @@ export const PosV2SalesHomePage = () => {
       setTicket(
         `Venta ${folio} · ${paymentMethodLabel} · ${selectedTableName} · Total $${totals.total.toFixed(2)}`,
       );
+      setTicketShareMessage("");
       setCompletedSale({
         folio,
         paymentMethodLabel,
@@ -1988,6 +1969,16 @@ export const PosV2SalesHomePage = () => {
     if (tokenValue)
       return `${couponsDomain}/coupons/visits/redeem?token=${encodeURIComponent(tokenValue)}`;
     return null;
+  };
+
+  const handleShareSaleTicket = async (sale: CompletedSale) => {
+    setTicketShareMessage("");
+    try {
+      const result = await shareSaleTicket(sale, quoteBusinessName);
+      if (result === "downloaded") setTicketShareMessage("Ticket descargado. Puedes adjuntarlo desde tus archivos.");
+    } catch (error) {
+      setTicketShareMessage(error instanceof Error ? error.message : "No se pudo compartir el ticket.");
+    }
   };
 
   const handlePrintSaleTicket = async (sale: CompletedSale) => {
@@ -3374,12 +3365,16 @@ export const PosV2SalesHomePage = () => {
               Total: <strong>{posMoneyFormatter.format(completedSale.total)}</strong>
             </p>
 
+            {ticketShareMessage ? <p role="status">{ticketShareMessage}</p> : null}
             <div className="pos-v2-sales-home__sale-modal-actions">
               <button
                 type="button"
                 onClick={() => handlePrintSaleTicket(completedSale)}
               >
                 Imprimir ticket
+              </button>
+              <button type="button" onClick={() => void handleShareSaleTicket(completedSale)}>
+                Compartir ticket
               </button>
               <button
                 type="button"
