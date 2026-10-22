@@ -1,3 +1,4 @@
+import { FiChevronDown, FiChevronRight } from "react-icons/fi";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
@@ -458,7 +459,7 @@ export const CatalogOrderInfoPage = () => {
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "contact" ? null : "contact"))}>
               <h3>Información de contacto</h3>
-              <span>{openSection === "contact" ? "▾" : "▸"}</span>
+              {openSection === "contact" ? <FiChevronDown aria-hidden="true" /> : <FiChevronRight aria-hidden="true" />}
             </button>
             <div className={`section-content ${openSection === "contact" ? "open" : ""}`}>
               <div className="grid">
@@ -485,7 +486,7 @@ export const CatalogOrderInfoPage = () => {
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "delivery" ? null : "delivery"))}>
               <h3>Método de entrega</h3>
-              <span>{openSection === "delivery" ? "▾" : "▸"}</span>
+              {openSection === "delivery" ? <FiChevronDown aria-hidden="true" /> : <FiChevronRight aria-hidden="true" />}
             </button>
             <div className={`section-content ${openSection === "delivery" ? "open" : ""}`}>
               <div className="grid">
@@ -505,7 +506,7 @@ export const CatalogOrderInfoPage = () => {
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "address" ? null : "address"))}>
               <h3>Dirección de entrega</h3>
-              <span>{openSection === "address" ? "▾" : "▸"}</span>
+              {openSection === "address" ? <FiChevronDown aria-hidden="true" /> : <FiChevronRight aria-hidden="true" />}
             </button>
             <div className={`section-content ${openSection === "address" ? "open" : ""}`}>
               <div className="grid">
@@ -547,7 +548,7 @@ export const CatalogOrderInfoPage = () => {
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "payment" ? null : "payment"))}>
               <h3>Método de pago</h3>
-              <span>{openSection === "payment" ? "▾" : "▸"}</span>
+              {openSection === "payment" ? <FiChevronDown aria-hidden="true" /> : <FiChevronRight aria-hidden="true" />}
             </button>
             <div className={`section-content ${openSection === "payment" ? "open" : ""}`}>
               <div className="grid">
