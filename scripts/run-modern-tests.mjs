@@ -7,6 +7,7 @@ const projectRoot = process.cwd();
 const outDir = resolve(projectRoot, ".tmp-modern-tests");
 
 const suites = [
+  { name: "unit-catalog-variant-price", entry: "tests/new/catalog/catalog.variant-price.unit.ts" },
   { name: "unit-products-variant-removal", entry: "tests/new/pos/products/products.variant-removal.unit.ts" },
   { name: "unit-sales-table-cart", entry: "tests/new/pos/sales/sales.table-cart.unit.ts" },
   { name: "unit-sale-ticket", entry: "tests/new/pos/sales/sale-ticket.unit.ts" },

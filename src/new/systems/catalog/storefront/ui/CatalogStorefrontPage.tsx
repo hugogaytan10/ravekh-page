@@ -481,7 +481,7 @@ export const CatalogStorefrontPage = () => {
           variant.wholesalePrice,
           variant.wholesaleMinQuantity,
         );
-    const selectedWholesalePrices = variantWholesalePrices.length > 0
+    const selectedWholesalePrices = !isBaseProduct
       ? variantWholesalePrices
       : productWholesalePrices;
     const firstSelectedWholesalePrice = selectedWholesalePrices[0] ?? null;
