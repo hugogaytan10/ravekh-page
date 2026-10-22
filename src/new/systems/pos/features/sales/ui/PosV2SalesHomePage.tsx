@@ -396,6 +396,7 @@ export const PosV2SalesHomePage = () => {
   const activeTableDraftRef = useRef("");
   const loadingTableDraftRef = useRef(false);
   const skippingDraftSyncRef = useRef(false);
+  const tableDraftSyncRef = useRef<Promise<void>>(Promise.resolve());
   const keepCartForNextTableSelectionRef = useRef(false);
 
   const debugLog = (...args: unknown[]) => {
@@ -1162,10 +1163,10 @@ export const PosV2SalesHomePage = () => {
     loadingTableDraftRef.current = true;
     skippingDraftSyncRef.current = true;
 
-    fetch(
+    tableDraftSyncRef.current.then(() => fetch(
       new URL(`restaurant/branch/tables/${tableId}/items`, API_BASE_URL).toString(),
       { headers },
-    )
+    ))
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(
@@ -1259,7 +1260,10 @@ export const PosV2SalesHomePage = () => {
       }
     };
 
-    syncDraft().catch((error) => {
+    // Conserva el orden: un PUT atrasado no debe recrear productos tras Vaciar.
+    tableDraftSyncRef.current = tableDraftSyncRef.current.catch(() => undefined).then(syncDraft);
+    void tableDraftSyncRef.current.catch((error) => {
+      setValidationError("No se pudieron guardar los cambios de la mesa. Revisa tu conexión e inténtalo de nuevo.");
       console.error(
         "[POS-V2-SALES] Error al sincronizar borrador de mesa",
         error,
@@ -1811,6 +1815,7 @@ export const PosV2SalesHomePage = () => {
       const tableId = selectedTableId ? Number(selectedTableId) : 0;
 
       if (tableId) {
+        await tableDraftSyncRef.current;
         // Fuerza la última versión del borrador antes de cobrar para evitar carreras entre effects.
         const draftResponse = await fetch(
           new URL(`restaurant/branch/tables/${tableId}/items`, API_BASE_URL).toString(),
