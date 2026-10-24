@@ -30,6 +30,13 @@ const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
 
 type PanelMode = "signin" | "signup";
 type SignUpStep = "account" | "business";
+type AuthenticatedDestination = "sales" | "security-questions";
+
+type ChangesNoticeState = {
+  businessId: number;
+  token: string;
+  destination: AuthenticatedDestination;
+};
 
 type FieldProps = {
   id: string;
@@ -101,6 +108,8 @@ export const PosV2LoginPage = () => {
   const [pendingSecurityPrompt, setPendingSecurityPrompt] = useState<{
     source: "login" | "signup";
   } | null>(null);
+  const [changesNotice, setChangesNotice] = useState<ChangesNoticeState | null>(null);
+  const [acknowledgingChangesNotice, setAcknowledgingChangesNotice] = useState(false);
   const authPage = useMemo(() => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
     return factory.createPosAuthOnboardingPage();
@@ -138,6 +147,15 @@ export const PosV2LoginPage = () => {
     navigate(POS_V2_PATHS.securityQuestions, { replace: true });
   };
 
+  const continueAuthenticatedFlow = (destination: AuthenticatedDestination, source: "login" | "signup") => {
+    if (destination === "security-questions") {
+      setPendingSecurityPrompt({ source });
+      return;
+    }
+
+    navigate(POS_V2_PATHS.sales, { replace: true });
+  };
+
   const finishAuthenticatedFlow = async (
     session: {
       token: string;
@@ -148,6 +166,8 @@ export const PosV2LoginPage = () => {
     source: "login" | "signup",
   ) => {
     persistPosSession(session);
+
+    let destination: AuthenticatedDestination = "sales";
 
     try {
       const branches = await new PosBranchApi(new FetchHttpClient(API_BASE_URL)).list(session.token);
@@ -170,8 +190,7 @@ export const PosV2LoginPage = () => {
       );
 
       if (status.shouldPrompt || !status.configured) {
-        setPendingSecurityPrompt({ source });
-        return;
+        destination = "security-questions";
       }
     } catch (cause) {
       console.warn(
@@ -180,7 +199,42 @@ export const PosV2LoginPage = () => {
       );
     }
 
-    navigate(POS_V2_PATHS.sales, { replace: true });
+    if (source === "login") {
+      try {
+        const factory = new ModernSystemsFactory(API_BASE_URL);
+        const noticeStatus = await factory.createPosBusinessSettingsService().getChangesNoticeStatus(session.businessId, session.token);
+        if (!noticeStatus.viewed) {
+          setChangesNotice({
+            businessId: session.businessId,
+            token: session.token,
+            destination,
+          });
+          return;
+        }
+      } catch (cause) {
+        console.warn("No se pudo consultar el aviso de próximas actualizaciones:", cause);
+      }
+    }
+
+    continueAuthenticatedFlow(destination, source);
+  };
+
+  const acknowledgeChangesNotice = async () => {
+    if (!changesNotice || acknowledgingChangesNotice) return;
+
+    setAcknowledgingChangesNotice(true);
+    const { businessId, token, destination } = changesNotice;
+
+    try {
+      const factory = new ModernSystemsFactory(API_BASE_URL);
+      await factory.createPosBusinessSettingsService().acknowledgeChangesNotice(businessId, token);
+    } catch (cause) {
+      console.warn("No se pudo registrar la lectura del aviso de próximas actualizaciones:", cause);
+    } finally {
+      setChangesNotice(null);
+      setAcknowledgingChangesNotice(false);
+      continueAuthenticatedFlow(destination, "login");
+    }
   };
 
   const handleSignIn = async (event: FormEvent<HTMLFormElement>) => {
@@ -550,6 +604,43 @@ await finishAuthenticatedFlow(session, "signup");
           </div>
         </div>
       </div>
+      {changesNotice ? (
+        <div className="pos-v2-changes-notice-backdrop" role="presentation">
+          <section
+            className="pos-v2-changes-notice"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pos-v2-changes-notice-title"
+            aria-describedby="pos-v2-changes-notice-description"
+          >
+
+            <span className="pos-v2-changes-notice__eyebrow">Novedades RAVEKH</span>
+            <h2 id="pos-v2-changes-notice-title">Próximas actualizaciones en RAVEKH</h2>
+            <div id="pos-v2-changes-notice-description" className="pos-v2-changes-notice__content">
+              <p>
+                Estamos realizando mejoras graduales en RAVEKH para seguir ofreciéndote una mejor experiencia y nuevos beneficios dentro de la plataforma, como la posibilidad de gestionar productos ilimitados.
+              </p>
+              <p>
+                También estableceremos y comunicaremos nuestras condiciones de uso para que tengas mayor claridad sobre el funcionamiento del servicio y las responsabilidades de cada parte.
+              </p>
+              <p>
+                Estas actualizaciones se implementarán poco a poco. Conforme se incorporen nuevas mejoras o entren en vigor las condiciones de uso, te informaremos dentro de la plataforma para que puedas conocerlas oportunamente.
+              </p>
+              <p>
+                Por el momento, este mensaje es únicamente informativo y no requiere ninguna acción de tu parte.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="pos-v2-changes-notice__button"
+              disabled={acknowledgingChangesNotice}
+              onClick={() => void acknowledgeChangesNotice()}
+            >
+              {acknowledgingChangesNotice ? "Continuando..." : "Entendido, continuar"}
+            </button>
+          </section>
+        </div>
+      ) : null}
       {pendingSecurityPrompt ? (
   <div className="pos-v2-security-prompt-backdrop" role="dialog" aria-modal="true">
     <section className="pos-v2-security-prompt">

@@ -1,6 +1,7 @@
 import { posMoneyFormatter } from "../../../shared/config/posCurrency";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { FiRefreshCw, FiChevronRight } from "react-icons/fi";
 import { ModernSystemsFactory } from "../../../../../index";
 import { ManagedProduct } from "../model/ManagedProduct";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
@@ -136,8 +137,8 @@ export const DiscontinuedProductsV2PosPage = () => {
             <button type="button" className="pos-v2-products__secondary" onClick={() => navigate(POS_V2_PATHS.products)}>
               ← Volver a productos
             </button>
-            <button type="button" className="pos-v2-products__refresh" onClick={() => loadProducts(currentPage)} disabled={loading}>
-              {loading ? "Actualizando..." : "Actualizar"}
+            <button type="button" className="pos-v2-products__refresh" onClick={() => loadProducts(currentPage)} disabled={loading} aria-label={loading ? "Actualizando productos" : "Actualizar productos"} title="Actualizar productos">
+              <span aria-hidden="true"><FiRefreshCw size={20} /></span>
             </button>
             {isSelecting ? (
               <button

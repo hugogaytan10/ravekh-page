@@ -7,6 +7,9 @@ import { POS_V2_PATHS } from "../../routing/PosV2Paths";
 import { fetchPosBusinessFeatures, isPosModuleBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../config/posFeatureFlags";
 import { onPosBusinessUpdated } from "../config/posBusinessEvents";
 import { FeatureUnlockModal } from "./FeatureUnlockModal";
+import { ModernSystemsFactory } from "../../../../index";
+import { getPosApiBaseUrl } from "../config/posEnv";
+import "../../features/auth/ui/PosV2LoginPage.css";
 import "./PosV2Shell.css";
 
 type PosV2ShellProps = {
@@ -37,6 +40,12 @@ export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
   const [features, setFeatures] = useState<PosBusinessFeatures>(POS_FEATURES_UNKNOWN);
   const [showSalesUnlock, setShowSalesUnlock] = useState(false);
   const [theme, setTheme] = usePosTheme();
+  const [showChangesNotice, setShowChangesNotice] = useState(false);
+  const [acknowledgingChangesNotice, setAcknowledgingChangesNotice] = useState(false);
+  const businessSettingsService = useMemo(
+    () => new ModernSystemsFactory(getPosApiBaseUrl()).createPosBusinessSettingsService(),
+    [],
+  );
 
   useEffect(() => {
     const session = readPosSessionSnapshot();
@@ -56,7 +65,39 @@ export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
     });
   }, [navigate]);
 
-const navItems = useMemo(() => {
+  useEffect(() => {
+    const session = readPosSessionSnapshot();
+    if (!session.token || !session.businessId) return;
+
+    let active = true;
+    businessSettingsService.getChangesNoticeStatus(session.businessId, session.token)
+      .then((status) => {
+        if (active && !status.viewed) setShowChangesNotice(true);
+      })
+      .catch((cause) => console.warn("No se pudo consultar el aviso de próximas actualizaciones:", cause));
+
+    return () => {
+      active = false;
+    };
+  }, [businessSettingsService]);
+
+  const acknowledgeChangesNotice = async () => {
+    if (acknowledgingChangesNotice) return;
+    const session = readPosSessionSnapshot();
+    if (!session.token || !session.businessId) return;
+
+    setAcknowledgingChangesNotice(true);
+    try {
+      await businessSettingsService.acknowledgeChangesNotice(session.businessId, session.token);
+      setShowChangesNotice(false);
+    } catch (cause) {
+      console.warn("No se pudo registrar la lectura del aviso de próximas actualizaciones:", cause);
+    } finally {
+      setAcknowledgingChangesNotice(false);
+    }
+  };
+
+  const navItems = useMemo(() => {
     const { token } = readPosSessionSnapshot();
     if (!token || !isSalesOnlyOperator(token)) return NAV_ITEMS;
     return NAV_ITEMS.filter((item) => item.to === POS_V2_PATHS.sales || item.to === POS_V2_PATHS.more);
@@ -133,6 +174,35 @@ const navItems = useMemo(() => {
         buttonText="Desbloquear POS"
         unlockFeature="Pos"
       />
+      {showChangesNotice ? (
+        <div className="pos-v2-changes-notice-backdrop" role="presentation">
+          <section
+            className="pos-v2-changes-notice"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="pos-v2-shell-changes-notice-title"
+            aria-describedby="pos-v2-shell-changes-notice-description"
+          >
+
+            <span className="pos-v2-changes-notice__eyebrow">Novedades RAVEKH</span>
+            <h2 id="pos-v2-shell-changes-notice-title">Próximas actualizaciones en RAVEKH</h2>
+            <div id="pos-v2-shell-changes-notice-description" className="pos-v2-changes-notice__content">
+              <p>Estamos realizando mejoras graduales en RAVEKH para seguir ofreciéndote una mejor experiencia y nuevos beneficios dentro de la plataforma, como la posibilidad de gestionar productos ilimitados.</p>
+              <p>También estableceremos y comunicaremos nuestras condiciones de uso para que tengas mayor claridad sobre el funcionamiento del servicio y las responsabilidades de cada parte.</p>
+              <p>Estas actualizaciones se implementarán poco a poco. Conforme se incorporen nuevas mejoras o entren en vigor las condiciones de uso, te informaremos dentro de la plataforma para que puedas conocerlas oportunamente.</p>
+              <p>Por el momento, este mensaje es únicamente informativo y no requiere ninguna acción de tu parte.</p>
+            </div>
+            <button
+              type="button"
+              className="pos-v2-changes-notice__button"
+              disabled={acknowledgingChangesNotice}
+              onClick={() => void acknowledgeChangesNotice()}
+            >
+              {acknowledgingChangesNotice ? "Confirmando..." : "Entendido, continuar"}
+            </button>
+          </section>
+        </div>
+      ) : null}
     </div>
   );
 };

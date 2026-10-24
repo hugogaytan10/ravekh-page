@@ -1,6 +1,7 @@
 import { posMoneyFormatter } from "../../../shared/config/posCurrency";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { FiRefreshCw, FiChevronRight } from "react-icons/fi";
 import { ModernSystemsFactory } from "../../../../../index";
 import { ProductImportResult } from "../interface/IProductsRepository";
 import { ProductVariant, SaveManagedProductDto, WholesalePriceTier } from "../model/ManagedProduct";
@@ -35,7 +36,10 @@ import {
   type UnlockFeature,
 } from "../../../shared/ui/FeatureUnlockModal";
 import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
-import type { PosPlan } from "../../../shared/config/posPlanAccess";
+import {
+  getProductImageLimit,
+  type PosPlan,
+} from "../../../shared/config/posPlanAccess";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import "./ProductsV2PosPage.css";
 import { parseTagInput } from "../model/parseTagInput";
@@ -406,6 +410,7 @@ export const ProductsV2PosPage = () => {
   const [importError, setImportError] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [catalogRevision, setCatalogRevision] = useState(0);
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [showArchived, setShowArchived] = useState(false);
   const [isSelecting, setIsSelecting] = useState(false);
@@ -624,6 +629,9 @@ export const ProductsV2PosPage = () => {
       START_PRODUCT_PLAN_VALUES.has(rawFeaturePlan)
     );
   }, [features.plan, productsLimit]);
+
+  const productImageLimit = getProductImageLimit(features.plan ?? productsLimit);
+  const productImageCount = storedImages.length + selectedImageFiles.length;
 
   const productLimitCount = Math.max(catalogTotalItems, products.length);
   const freeProductLimitReached =
@@ -1644,7 +1652,14 @@ export const ProductsV2PosPage = () => {
       return !validationError;
     });
     if (validFiles.length === 0) return;
-    setSelectedImageFiles((current) => [...current, ...validFiles]);
+    const remaining = Math.max(0, productImageLimit - productImageCount);
+    const acceptedFiles = validFiles.slice(0, remaining);
+    if (acceptedFiles.length < validFiles.length) {
+      setError(
+        `Tu plan permite hasta ${productImageLimit} ${productImageLimit === 1 ? "imagen" : "imágenes"} por producto.`,
+      );
+    }
+    setSelectedImageFiles((current) => [...current, ...acceptedFiles]);
     event.target.value = "";
   };
 
@@ -2253,22 +2268,32 @@ export const ProductsV2PosPage = () => {
             </button>
             <button
               type="button"
-              className="pos-v2-products__secondary"
+              className="pos-v2-products__primary"
               onClick={openCreateModal}
             >
-              + Nuevo
+              + Nuevo producto
             </button>
+            <details
+              className="pos-v2-products__create-menu"
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false;
+              }}
+              onKeyDown={(event) => {
+                if (event.key === "Escape") {
+                  event.currentTarget.open = false;
+                  event.currentTarget.querySelector("summary")?.focus();
+                }
+              }}
+            >
+              <summary className="pos-v2-products__secondary">✦ Crear con IA <span className="pos-v2-products__create-chevron" aria-hidden="true"><FiChevronRight size={18} /></span></summary>
+              <div className="pos-v2-products__create-options" onClick={(event) => {
+                if ((event.target as HTMLElement).closest("button")) {
+                  event.currentTarget.closest("details")?.removeAttribute("open");
+                }
+              }}>
             <button
               type="button"
               className="pos-v2-products__secondary"
-              onClick={() => setShowCategoryManager(true)}
-            >
-              Categorías
-            </button>
-            <details className="pos-v2-products__tools"><summary>Herramientas</summary><div>
-            <button
-              type="button"
-              className="pos-v2-products__primary"
               onClick={() => {
                 if (blockBlockedProductModuleMutation()) return;
                 if (blockFreeProductCreation()) return;
@@ -2276,7 +2301,7 @@ export const ProductsV2PosPage = () => {
               }}
               disabled={!token || !businessId}
             >
-              ✦ Crear con chat
+              Crear con chat
             </button>
             <button
               type="button"
@@ -2301,23 +2326,34 @@ export const ProductsV2PosPage = () => {
             >
               {importing ? "Importando..." : "Importar CSV"}
             </button>
+              </div>
+            </details>
+            <button
+              type="button"
+              className="pos-v2-products__secondary"
+              onClick={() => setShowCategoryManager(true)}
+            >
+              Categorías
+            </button>
             <button
               type="button"
               className="pos-v2-products__secondary"
               onClick={handleExportProducts}
               disabled={!isVipPlan || !token || !businessId}
             >
-              Exportar productos {isVipPlan ? "" : "(VIP)"}
+              Exportar {isVipPlan ? "" : "(VIP)"}
             </button>
-            </div></details>
             <button
               type="button"
               className="pos-v2-products__refresh"
+              aria-label={loading ? "Actualizando productos" : "Actualizar productos"}
+              title="Actualizar productos"
               onClick={() => loadProducts(currentPage)}
               disabled={loading || !token || !businessId}
             >
-              {loading ? "Actualizando..." : "Actualizar"}
+              <span aria-hidden="true"><FiRefreshCw size={20} /></span>
             </button>
+            <div className="pos-v2-products__view-actions">
             <button
               type="button"
               className={
@@ -2352,6 +2388,7 @@ export const ProductsV2PosPage = () => {
             >
               {isSelecting ? "Cancelar" : "Seleccionar"}
             </button>
+            </div>
           </div>
         </header>
 
@@ -2959,8 +2996,14 @@ export const ProductsV2PosPage = () => {
                     type="file"
                     accept="image/jpeg,image/jpg,image/png,image/webp"
                     multiple
+                    disabled={productImageCount >= productImageLimit}
                     onChange={handleImageInput}
                   />
+                  <small className="pos-v2-products__hint">
+                    {Number.isFinite(productImageLimit)
+                      ? `${productImageCount} de ${productImageLimit} imágenes permitidas por tu plan`
+                      : `${productImageCount} imágenes · sin límite en MAX`}
+                  </small>
                 </label>
 
                 {formImagePreviews.length > 0 ? (

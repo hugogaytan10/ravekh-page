@@ -17,6 +17,8 @@ import { RavekhRefaccionesPage } from "../systems/ravekh-segment/pages/RavekhRef
 import { RavekhAbarrotesPage } from "../systems/ravekh-segment/pages/ravekhAbarrotesPage";
 import { RavekhAccesoriosPage } from "../systems/ravekh-segment/pages/RavekhAccesoriosPage";
 import { RavekhComidaPage } from "../systems/ravekh-segment/pages/RavekhComidaPage";
+import { CrmLandingPage } from "../systems/crm-ravekh";
+import { TermsPage } from "../systems/legal/pages/TermsPage";
 const LegacyCatalogRedirect = () => {
   const { idBusiness } = useParams<{ idBusiness: string }>();
   return <Navigate to={`/v2/catalogo/${idBusiness ?? ""}`} replace />;
@@ -90,6 +92,14 @@ const RouteSeo = () => {
       return {
         title: "Catálogo digital para vender por WhatsApp | Ravekh",
         description: "Crea un catálogo digital profesional para organizar productos, compartir un link y vender por WhatsApp con menos fricción.",
+        robots: "index,follow,max-image-preview:large",
+      };
+    }
+
+    if (pathname === "/crm") {
+      return {
+        title: "RAVEKH CRM | Gestión de clientes y conversaciones de WhatsApp",
+        description: "Conoce RAVEKH CRM, una plataforma para organizar conversaciones de WhatsApp Business, gestionar clientes y facilitar el seguimiento comercial de tu negocio.",
         robots: "index,follow,max-image-preview:large",
       };
     }
@@ -174,6 +184,7 @@ export const NewAppRoutes = () => {
       <RouteSeo />
       <Routes>
         <Route path="/" element={<LandingPageRavekhPage />} />
+        <Route path="/crm" element={<CrmLandingPage />} />
         <Route path="/maincatalogo" element={<MainCatalogPage />} />
         <Route path="/catalogo-digital" element={<MainCatalogPage />} />
         <Route path="/RavekhBoutique" element={<RavekhBoutiquePage />} />
@@ -187,12 +198,16 @@ export const NewAppRoutes = () => {
         <Route path="/v2/catalogo/:Id/:branchSlug" element={<CatalogStorefrontPage />} />
         <Route path="/v2/catalogo/:Id" element={<CatalogStorefrontPage />} />
         <Route path="/catalogo/:Id/:branchSlug" element={<CatalogStorefrontPage />} />
+        <Route path="/v2/catalogo/:Id/:branchSlug/categoria/:categoryId" element={<CatalogStorefrontPage />} />
+        <Route path="/catalogo/:Id/:branchSlug/categoria/:categoryId" element={<CatalogStorefrontPage />} />
+        <Route path="/v2/catalogo/:Id/categoria/:categoryId" element={<CatalogStorefrontPage />} />
         <Route path="/catalogo/producto/:productId/:phone" element={<CatalogProductDetailPage />} />
         <Route path="/catalogo/pedido" element={<CatalogCartPage />} />
         <Route path="/catalogo/pedido-info" element={<CatalogOrderInfoPage />} />
         <Route path="/coupons/*" element={<LoyaltyCustomerRoutes />} />
         <Route path="/politicas" element={<PrivacyPoliciesIndexPage />} />
         <Route path="/politicas/:policySlug" element={<PrivacyPolicyPage />} />
+        <Route path="/terminos/ravekh-crm" element={<TermsPage />} />
 
       {/* Compatibilidad de URLs antiguas sin dependencias a módulos legacy */}
         <Route path="/catalogo/:idBusiness" element={<LegacyCatalogRedirect />} />

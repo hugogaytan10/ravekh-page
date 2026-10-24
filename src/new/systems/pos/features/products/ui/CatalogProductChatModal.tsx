@@ -102,6 +102,7 @@ export const CatalogProductChatModal = ({
   const [messages, setMessages] = useState<CatalogProductChatMessage[]>([]);
   const [uploadedPreviews, setUploadedPreviews] = useState<UploadedPreview[]>([]);
   const [messageDraft, setMessageDraft] = useState("");
+  const [mobilePanel, setMobilePanel] = useState<"chat" | "draft">("chat");
   const [busyAction, setBusyAction] = useState<BusyAction>(null);
   const [uploadProgress, setUploadProgress] = useState({ current: 0, total: 0 });
   const [maxImages, setMaxImages] = useState(MAX_IMAGES_FALLBACK);
@@ -118,6 +119,10 @@ export const CatalogProductChatModal = ({
       messageInputRef.current?.focus({ preventScroll: true });
     }
   }, [busyAction, messageDraft, open]);
+
+  useEffect(() => {
+    if (open) setMobilePanel("chat");
+  }, [open]);
 
   useEffect(() => {
     setRequestToken(token);
@@ -485,8 +490,17 @@ export const CatalogProductChatModal = ({
           </button>
         </header>
 
-        <div className="catalog-product-chat__content">
-          <main className="catalog-product-chat__conversation">
+        <div className="catalog-product-chat__panel-selector" role="group" aria-label="Vista del asistente">
+          <button type="button" aria-pressed={mobilePanel === "chat"} aria-controls="catalog-product-chat-conversation" onClick={() => setMobilePanel("chat")}>
+            Chat
+          </button>
+          <button type="button" aria-pressed={mobilePanel === "draft"} aria-controls="catalog-product-chat-summary" onClick={() => setMobilePanel("draft")}>
+            Borrador {missingFields.length > 0 ? <span>{missingFields.length} faltan</span> : null}
+          </button>
+        </div>
+
+        <div className="catalog-product-chat__content" data-mobile-panel={mobilePanel}>
+          <main id="catalog-product-chat-conversation" className="catalog-product-chat__conversation">
             <div className="catalog-product-chat__messages" aria-live="polite">
               {busyAction === "starting" ? (
                 <div className="catalog-product-chat__empty">
@@ -513,7 +527,7 @@ export const CatalogProductChatModal = ({
                   className={`catalog-product-chat__message is-${message.role.toLowerCase()}`}
                 >
                   <div className="catalog-product-chat__avatar" aria-hidden="true">
-                    {message.role === "USER" ? "Tú" : "✦"}
+                    {message.role === "USER" ? "Tú" : ""}
                   </div>
                   <div>
                     <p>{message.text ?? "Imagen agregada."}</p>
@@ -618,7 +632,7 @@ export const CatalogProductChatModal = ({
             </form>
           </main>
 
-          <aside className="catalog-product-chat__summary">
+          <aside id="catalog-product-chat-summary" className="catalog-product-chat__summary">
             <div className="catalog-product-chat__summary-head">
               <div>
                 <span>Borrador actual</span>
@@ -680,12 +694,8 @@ export const CatalogProductChatModal = ({
 
             {missingFields.length > 0 ? (
               <div className="catalog-product-chat__missing">
-                <strong>Falta por completar</strong>
-                <ul>
-                  {missingFields.map((field) => (
-                    <li key={field}>{fieldLabels[field] ?? field}</li>
-                  ))}
-                </ul>
+                <strong>Falta por completar: </strong>
+                {missingFields.map((field) => fieldLabels[field] ?? field).join(", ")}.
               </div>
             ) : (
               <p className="catalog-product-chat__ready-copy">

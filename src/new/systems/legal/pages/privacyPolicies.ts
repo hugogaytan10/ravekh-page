@@ -12,6 +12,38 @@ export interface PolicyDocument {
 
 export const PRIVACY_POLICIES: PolicyDocument[] = [
   {
+    slug: "ravekh-crm",
+    title: "Política de Privacidad — RAVEKH CRM",
+    subtitle: "Borrador informativo pendiente de revisión legal para la plataforma de atención por WhatsApp Business.",
+    sections: [
+      {
+        title: "1. Información tratada",
+        content:
+          "RAVEKH CRM puede tratar mensajes, identificadores de WhatsApp, datos de contactos y prospectos, información de la cuenta del negocio y configuraciones que el negocio autorice para utilizar el servicio.",
+      },
+      {
+        title: "2. Finalidad",
+        content:
+          "La información se utiliza para recibir y enviar comunicaciones autorizadas, organizar conversaciones y contactos, facilitar el seguimiento comercial, prestar soporte y mantener la operación del servicio contratado.",
+      },
+      {
+        title: "3. Autorización y proveedores",
+        content:
+          "Cada negocio conecta su propia cuenta de WhatsApp Business y determina los permisos concedidos. Cuando se habiliten funciones de inteligencia artificial, la información necesaria podrá ser procesada por proveedores externos para generar la asistencia solicitada.",
+      },
+      {
+        title: "4. Desconexión y solicitudes",
+        content:
+          "El negocio puede solicitar soporte para desconectar su integración y para ejercer derechos de acceso, corrección o eliminación sobre los datos que correspondan. La desconexión impide nuevas operaciones mediante la integración; el tratamiento posterior de información existente dependerá de las obligaciones aplicables y de la implementación validada del servicio.",
+      },
+      {
+        title: "5. Contacto",
+        content:
+          "Para consultas de privacidad, soporte o solicitudes relacionadas con datos, escribe a ravekh@ravekh.com. Este documento debe revisarse legalmente antes del lanzamiento comercial del producto.",
+      },
+    ],
+  },
+  {
     slug: "ravekh-pos",
     title: "Política de Privacidad — Ravekh POS",
     subtitle: "Gestión de ventas, operación, finanzas y configuración del negocio.",

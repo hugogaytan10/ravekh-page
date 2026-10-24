@@ -19,7 +19,7 @@ import { formatCatalogTotal, getEffectiveCatalogPrice, normalizeWholesalePriceTi
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import "./CatalogStorefrontPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
-import { getCatalogCartKey, persistCatalogBranchContext } from "./catalogBranchContext";
+import { buildCatalogPath, getCatalogCartKey, persistCatalogBranchContext } from "./catalogBranchContext";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
@@ -79,9 +79,13 @@ export const CatalogStorefrontPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
   const location = useLocation();
-  const params = useParams<{ businessId?: string; Id?: string; branchSlug?: string }>();
+  const params = useParams<{ businessId?: string; Id?: string; branchSlug?: string; categoryId?: string }>();
   const businessId = params.businessId ?? params.Id ?? "";
   const branchSlug = params.branchSlug?.trim() || null;
+  const routedCategoryId = useMemo(() => {
+    const categoryId = Number(params.categoryId);
+    return Number.isInteger(categoryId) && categoryId > 0 ? categoryId : null;
+  }, [params.categoryId]);
   const [store, setStore] = useState<StorefrontBusiness | null>(null);
   const [planLimit, setPlanLimit] = useState<string | undefined>(undefined);
   const [businessContextLoaded, setBusinessContextLoaded] = useState(false);
@@ -120,6 +124,12 @@ export const CatalogStorefrontPage = () => {
     : "Explora productos, revisa detalles y realiza pedidos desde el catálogo digital de Ravekh.";
   const catalogUrl = typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}` : `/v2/catalogo/${businessId}`;
   const catalogImage = buildAbsoluteCatalogUrl(store?.logo);
+  const activeCategoryIds = useMemo(
+    () => selectedCategoryIds.length > 0
+      ? selectedCategoryIds
+      : routedCategoryId != null ? [routedCategoryId] : [],
+    [routedCategoryId, selectedCategoryIds],
+  );
 
   const pageLogic = useMemo(() => {
     const repository = new CatalogStorefrontApi(getPosApiBaseUrl(), branchSlug, businessId);
@@ -143,6 +153,10 @@ export const CatalogStorefrontPage = () => {
     setPriceCeiling(DEFAULT_PRICE_MAX_BOUND);
     setVisitLimitReached(false);
   }, [businessId, branchSlug]);
+
+  useEffect(() => {
+    setPage(Math.max(1, Number(new URLSearchParams(location.search).get("page")) || 1));
+  }, [location.search, routedCategoryId]);
 
   useEffect(() => {
     const productId = Number((location.state as { restoreProductId?: number } | null)?.restoreProductId);
@@ -250,21 +264,21 @@ export const CatalogStorefrontPage = () => {
       setLoading(true);
       setError(null);
       try {
-        logCatalogDebug("products:load:start", { businessId, page, selectedCategoryIds, planLimit: planLimit ?? null });
-        const productsPage = selectedCategoryIds.length > 1
+        logCatalogDebug("products:load:start", { businessId, page, categoryIds: activeCategoryIds, planLimit: planLimit ?? null });
+        const productsPage = activeCategoryIds.length > 1
           ? {
               products: (await pageLogic.loadAllProducts(businessId, null, planLimit))
-                .filter((product) => product.categoryId != null && selectedCategoryIds.includes(product.categoryId)),
+                .filter((product) => product.categoryId != null && activeCategoryIds.includes(product.categoryId)),
               pagination: { currentPage: 1, totalPages: 1, hasNext: false, hasPrev: false },
             }
-          : await pageLogic.loadProducts(businessId, page, selectedCategoryIds[0] ?? null, planLimit);
+          : await pageLogic.loadProducts(businessId, page, activeCategoryIds[0] ?? null, planLimit);
         if (cancelled) return;
         setProducts(productsPage.products);
         setTotalPages(productsPage.pagination.totalPages);
         logCatalogDebug("products:load:success", {
           businessId,
           page,
-          selectedCategoryIds,
+          categoryIds: activeCategoryIds,
           planLimit: planLimit ?? null,
           productCount: productsPage.products.length,
           totalPages: productsPage.pagination.totalPages,
@@ -272,7 +286,7 @@ export const CatalogStorefrontPage = () => {
       } catch {
         if (cancelled) return;
         setError("No fue posible cargar el catálogo digital.");
-        logCatalogDebug("products:load:error", { businessId, page, selectedCategoryIds, planLimit: planLimit ?? null });
+        logCatalogDebug("products:load:error", { businessId, page, categoryIds: activeCategoryIds, planLimit: planLimit ?? null });
       } finally {
         if (cancelled) return;
         setLoading(false);
@@ -284,7 +298,7 @@ export const CatalogStorefrontPage = () => {
     return () => {
       cancelled = true;
     };
-  }, [businessContextLoaded, businessId, page, pageLogic, selectedCategoryIds, planLimit, catalogUnavailable]);
+  }, [activeCategoryIds, businessContextLoaded, businessId, page, pageLogic, planLimit, catalogUnavailable]);
 
   useEffect(() => {
     if (!businessId) return;
@@ -431,7 +445,7 @@ export const CatalogStorefrontPage = () => {
       (product.available ?? true) &&
       (product.forSale ?? true) &&
       (product.showInStore ?? true) &&
-      (selectedCategoryIds.length === 0 || (product.categoryId != null && selectedCategoryIds.includes(product.categoryId))),
+      (activeCategoryIds.length === 0 || (product.categoryId != null && activeCategoryIds.includes(product.categoryId))),
     );
     const base = normalizedSearch.length === 0
       ? publishable
@@ -449,7 +463,7 @@ export const CatalogStorefrontPage = () => {
       const bPrice = getEffectiveCatalogPrice(b.price, b.promotionPrice) ?? Number.POSITIVE_INFINITY;
       return sortMode === "asc" ? aPrice - bPrice : bPrice - aPrice;
     });
-  }, [globalSearchProducts, normalizedSearch, priceMax, priceMin, products, selectedCategoryIds, sortMode, useGlobalSearch]);
+  }, [activeCategoryIds, globalSearchProducts, normalizedSearch, priceMax, priceMin, products, sortMode, useGlobalSearch]);
 
   const handleQuickView = async (product: StorefrontProduct) => {
     const [variants, extras] = await Promise.all([pageLogic.loadVariants(product.id), pageLogic.loadExtras(product.id)]);
@@ -544,7 +558,7 @@ export const CatalogStorefrontPage = () => {
     () => filteredProducts,
     [filteredProducts],
   );
-  const handleSelectCategory = (categoryId: number | null) => {
+  const handleFilterCategory = (categoryId: number | null) => {
     setSelectedCategoryIds((current) => categoryId == null
       ? []
       : current.includes(categoryId)
@@ -552,6 +566,10 @@ export const CatalogStorefrontPage = () => {
         : [...current, categoryId]);
     setPage(1);
     navigate({ search: "" }, { replace: true });
+  };
+  const handleCategoryRouteChange = () => {
+    setSelectedCategoryIds([]);
+    setPage(1);
   };
 
   const changePage = (nextPage: number) => {
@@ -574,7 +592,6 @@ export const CatalogStorefrontPage = () => {
         <meta property="og:url" content={catalogUrl} />
         <meta property="og:image" content={catalogImage} />
         <meta property="og:image:secure_url" content={catalogImage} />
-        <meta property="og:image:type" content="image/jpeg" />
         <meta property="og:image:alt" content={store?.name ? `Logo de ${store.name}` : "Ravekh"} />
         <meta property="og:locale" content="es_MX" />
         <meta name="twitter:card" content="summary" />
@@ -654,28 +671,30 @@ export const CatalogStorefrontPage = () => {
       </section>
 
       <section className="flex gap-3 overflow-x-auto py-1" aria-label="Categorías de catálogo">
-        <button
-          type="button"
-          className={`whitespace-nowrap border-b-2 bg-transparent pb-1 text-sm ${selectedCategoryIds.length === 0
+        <Link
+          to={buildCatalogPath(businessId, branchSlug)}
+          onClick={handleCategoryRouteChange}
+          className={`whitespace-nowrap border-b-2 bg-transparent pb-1 text-sm ${routedCategoryId === null
             ? "border-[var(--text-primary)] text-[var(--text-primary)] font-semibold"
             : "border-transparent text-[var(--text-muted)]"
             }`}
-          onClick={() => handleSelectCategory(null)}
+          aria-current={routedCategoryId === null ? "page" : undefined}
         >
           Todo
-        </button>
+        </Link>
         {categories.map((category) => (
-          <button
+          <Link
             key={category.id}
-            type="button"
-            className={`whitespace-nowrap border-b-2 bg-transparent pb-1 text-sm ${selectedCategoryIds.includes(category.id)
+            to={`${buildCatalogPath(businessId, branchSlug)}/categoria/${category.id}`}
+            onClick={handleCategoryRouteChange}
+            className={`whitespace-nowrap border-b-2 bg-transparent pb-1 text-sm ${routedCategoryId === category.id
               ? "border-[var(--text-primary)] text-[var(--text-primary)] font-semibold"
               : "border-transparent text-[var(--text-muted)]"
               }`}
-            onClick={() => handleSelectCategory(category.id)}
+            aria-current={routedCategoryId === category.id ? "page" : undefined}
           >
             {category.name}
-          </button>
+          </Link>
         ))}
       </section>
 
@@ -781,7 +800,7 @@ export const CatalogStorefrontPage = () => {
                   />
                 ) : null}
                 <label className="flex cursor-pointer items-center gap-2 text-sm font-medium">
-                  <input type="checkbox" checked={selectedCategoryIds.length === 0} onChange={() => handleSelectCategory(null)} className="h-4 w-4 accent-[var(--text-primary)]" />
+                  <input type="checkbox" checked={selectedCategoryIds.length === 0} onChange={() => handleFilterCategory(null)} className="h-4 w-4 accent-[var(--text-primary)]" />
                   Todas las categorías
                 </label>
                 <div className="grid max-h-44 gap-1 overflow-y-auto pr-1 sm:grid-cols-2">
@@ -789,7 +808,7 @@ export const CatalogStorefrontPage = () => {
                     .filter((category) => category.name.toLowerCase().includes(categorySearch.trim().toLowerCase()))
                     .map((category) => (
                       <label key={category.id} className="flex min-w-0 cursor-pointer items-center gap-2 rounded-lg px-1 py-1.5 text-sm hover:bg-[var(--bg-surface)]">
-                        <input type="checkbox" checked={selectedCategoryIds.includes(category.id)} onChange={() => handleSelectCategory(category.id)} className="h-4 w-4 shrink-0 accent-[var(--text-primary)]" />
+                        <input type="checkbox" checked={selectedCategoryIds.includes(category.id)} onChange={() => handleFilterCategory(category.id)} className="h-4 w-4 shrink-0 accent-[var(--text-primary)]" />
                         <span className="truncate">{category.name}</span>
                       </label>
                     ))}
@@ -822,7 +841,7 @@ export const CatalogStorefrontPage = () => {
               <input className="w-full accent-[var(--text-primary)]" type="range" min={minBound} max={priceCeiling} value={priceMax} onChange={(e) => setPriceMax(Math.max(Number(e.target.value), priceMin))} aria-label="Precio máximo" />
             </div>
             <div className="mt-2 grid grid-cols-2 gap-2 max-sm:grid-cols-1">
-              <button className="min-h-11 rounded-full border border-[var(--border-default)] bg-[var(--bg-subtle)] text-sm font-semibold text-[var(--text-primary)]" type="button" onClick={() => { setSortMode("none"); setPriceMin(minBound); setPriceMax(priceCeiling); handleSelectCategory(null); }}>Limpiar</button>
+              <button className="min-h-11 rounded-full border border-[var(--border-default)] bg-[var(--bg-subtle)] text-sm font-semibold text-[var(--text-primary)]" type="button" onClick={() => { setSortMode("none"); setPriceMin(minBound); setPriceMax(priceCeiling); handleFilterCategory(null); }}>Limpiar</button>
               <button className="min-h-11 rounded-full bg-[var(--text-primary)] text-sm font-semibold text-[var(--text-inverse)]" type="button" onClick={() => setShowFilters(false)}>Aplicar</button>
             </div>
           </aside>

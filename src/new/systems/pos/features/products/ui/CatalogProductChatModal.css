@@ -5,20 +5,22 @@
   display: grid;
   place-items: center;
   padding: 24px;
-  background: var(--pos-v2-overlay, rgba(0, 0, 0, 0.5));
-  backdrop-filter: blur(8px);
+  background: var(--product-overlay, rgba(17, 24, 39, 0.55));
+  backdrop-filter: blur(4px);
 }
 
 .catalog-product-chat__modal {
-  width: min(1180px, 100%);
-  height: min(780px, calc(100dvh - 48px));
-  min-height: 620px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: min(1140px, 100%);
+  height: min(840px, calc(100dvh - 48px));
+  min-height: 0;
   overflow: hidden;
-  border: 1px solid var(--pos-v2-border, #c5c5c5);
-  border-radius: 16px;
-  background: var(--pos-v2-surface, #fefcff);
-  color: var(--pos-v2-text, #4e4e4e);
-  box-shadow: 0 28px 80px rgba(33, 20, 47, 0.28);
+  border: 1px solid var(--product-border, #e5e7eb);
+  border-radius: 18px;
+  background: var(--product-soft-bg, #fafafa);
+  color: var(--product-text, #111827);
+  box-shadow: 0 18px 60px rgba(17, 24, 39, 0.22);
 }
 
 .catalog-product-chat__header {
@@ -27,9 +29,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 18px;
-  padding: 16px 22px;
-  border-bottom: 1px solid var(--pos-v2-border, #c5c5c5);
-  background: var(--pos-v2-surface, #fefcff);
+  padding: 16px 20px;
+  color: var(--product-text, #111827);
+  background: var(--product-soft-bg, #fafafa);
+  border-bottom: 1px solid var(--product-border, #e5e7eb);
 }
 
 .catalog-product-chat__header > div { min-width: 0; }
@@ -45,15 +48,16 @@
 }
 
 .catalog-product-chat__header p {
-  margin-top: 5px;
-  color: var(--pos-v2-text-muted, #565656);
-  font-size: 0.86rem;
+  margin-top: 4px;
+  color: var(--product-muted, #6b7280);
+  font-size: 0.9rem;
 }
 
 .catalog-product-chat__eyebrow {
-  display: block;
-  color: var(--pos-v2-accent-text, #6d01d1);
-  font-size: 0.69rem;
+  display: inline-block;
+  margin-bottom: 2px;
+  color: #6d01d1;
+  font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -63,25 +67,29 @@
   width: 40px;
   height: 40px;
   flex: 0 0 auto;
-  border: 1px solid var(--pos-v2-border, #c5c5c5);
-  border-radius: 10px;
-  color: var(--pos-v2-text-muted, #565656);
-  background: var(--pos-v2-surface-alt, #f4eeff);
-  font-size: 1.45rem;
+  border: 1px solid var(--product-border, #e5e7eb);
+  border-radius: 999px;
+  color: var(--product-muted, #6b7280);
+  background: #ffffff;
+  font-size: 1.55rem;
   line-height: 1;
   cursor: pointer;
 }
 
 .catalog-product-chat__icon-button:hover:not(:disabled) {
-  border-color: var(--pos-v2-accent, #9018ff);
-  color: var(--pos-v2-accent-text, #6d01d1);
-  background: var(--pos-v2-accent-soft, #ecdcfb);
+  border-color: #9ca3af;
+  background: var(--product-soft-bg, #fafafa);
+  color: var(--product-text, #111827);
+}
+
+.catalog-product-chat__panel-selector {
+  display: none;
 }
 
 .catalog-product-chat__content {
-  height: calc(100% - 88px);
+  min-height: 0;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-columns: minmax(0, 1fr) 380px;
 }
 
 .catalog-product-chat__conversation {
@@ -89,8 +97,8 @@
   min-height: 0;
   display: grid;
   grid-template-rows: minmax(0, 1fr) auto auto auto;
-  border-right: 1px solid var(--pos-v2-border, #c5c5c5);
-  background: var(--pos-v2-background, #faf6ff);
+  border-right: 1px solid var(--product-border, #e5e7eb);
+  background: var(--product-soft-bg, #fafafa);
 }
 
 .catalog-product-chat__messages {
@@ -98,7 +106,9 @@
   overflow-y: auto;
   padding: 24px 24px 14px;
   scroll-behavior: smooth;
-  scrollbar-color: var(--pos-v2-border, #c5c5c5) transparent;
+  background:
+    radial-gradient(circle at 25px 25px, rgba(255,255,255,0.18) 2px, transparent 0) 0 0 / 28px 28px,
+    var(--product-soft-bg, #fafafa);
 }
 
 .catalog-product-chat__empty {
@@ -107,7 +117,7 @@
   place-items: center;
   align-content: center;
   gap: 10px;
-  color: var(--pos-v2-text-muted, #565656);
+  color: var(--product-muted, #6b7280);
   text-align: center;
 }
 
@@ -121,21 +131,18 @@
 }
 
 .catalog-product-chat__message > div:last-child {
-  max-width: min(76%, 620px);
-  padding: 11px 13px 8px;
-  border: 1px solid var(--pos-v2-border, #c5c5c5);
-  border-radius: 14px 14px 14px 4px;
-  color: var(--pos-v2-text, #4e4e4e);
-  background: var(--pos-v2-surface, #fefcff);
-  box-shadow: 0 4px 14px rgba(71, 39, 99, 0.06);
+  max-width: min(78%, 620px);
+  padding: 9px 12px 7px;
+  border-radius: 10px;
+  color: var(--product-text, #111827);
+  background: #ffffff;
+  box-shadow: 0 1px 1px rgba(17, 24, 39, 0.10);
 }
 
 .catalog-product-chat__message.is-user { flex-direction: row-reverse; }
 
 .catalog-product-chat__message.is-user > div:last-child {
-  border-color: transparent;
-  border-radius: 14px 14px 4px 14px;
-  background: var(--pos-v2-accent-soft, #ecdcfb);
+  background: #f3e8ff;
 }
 
 .catalog-product-chat__message p {
@@ -148,9 +155,9 @@
 
 .catalog-product-chat__message time {
   display: block;
-  margin-top: 5px;
-  color: var(--pos-v2-text-muted, #565656);
-  font-size: 0.67rem;
+  margin-top: 4px;
+  color: var(--product-muted, #6b7280);
+  font-size: 0.68rem;
   text-align: right;
   opacity: 0.76;
 }
@@ -161,16 +168,15 @@
   flex: 0 0 auto;
   display: grid;
   place-items: center;
-  border-radius: 10px;
-  color: var(--pos-v2-text-inverse, #f2ecf6);
-  background: var(--pos-v2-accent, #9018ff);
+  border-radius: 999px;
+  color: #ffffff;
+  background: #6d01d1;
   font-size: 0.72rem;
   font-weight: 800;
 }
 
 .catalog-product-chat__message.is-user .catalog-product-chat__avatar {
-  color: var(--pos-v2-accent-text, #6d01d1);
-  background: var(--pos-v2-accent-soft, #ecdcfb);
+  background: #7c3aed;
 }
 
 .catalog-product-chat__image-strip {
@@ -179,7 +185,7 @@
   margin-bottom: 18px;
   padding: 11px;
   overflow-x: auto;
-  border: 1px solid var(--pos-v2-border, #c5c5c5);
+  border: 1px solid var(--product-border, #e5e7eb);
   border-radius: 12px;
   background: var(--pos-v2-surface, #fefcff);
 }
@@ -191,7 +197,7 @@
   border: 2px solid var(--pos-v2-surface, #fefcff);
   border-radius: 10px;
   object-fit: cover;
-  box-shadow: 0 2px 10px rgba(33, 20, 47, 0.16);
+  box-shadow: 0 1px 4px rgba(17, 24, 39, 0.16);
 }
 
 .catalog-product-chat__typing,
@@ -204,16 +210,17 @@
   padding: 9px 12px;
   border: 1px solid var(--pos-v2-border, #c5c5c5);
   border-radius: 10px;
-  color: var(--pos-v2-text-muted, #565656);
-  background: var(--pos-v2-surface, #fefcff);
-  font-size: 0.75rem;
+  color: var(--product-muted, #6b7280);
+  background: #ffffff;
+  box-shadow: 0 1px 1px rgba(17, 24, 39, 0.10);
+  font-size: 0.76rem;
 }
 
 .catalog-product-chat__typing > span {
   width: 5px;
   height: 5px;
   border-radius: 999px;
-  background: var(--pos-v2-accent, #9018ff);
+  background: #6d01d1;
   animation: catalog-chat-pulse 1s infinite ease-in-out;
 }
 
@@ -226,8 +233,8 @@
   width: 17px;
   height: 17px;
   display: inline-block;
-  border: 2px solid var(--pos-v2-border, #c5c5c5);
-  border-top-color: var(--pos-v2-accent, #9018ff);
+  border: 2px solid #c8d0d4;
+  border-top-color: #6d01d1;
   border-radius: 999px;
   animation: catalog-chat-spin 0.8s linear infinite;
 }
@@ -261,19 +268,19 @@
 }
 
 .catalog-product-chat__quick-actions button {
-  border: 1px solid var(--pos-v2-border, #c5c5c5);
-  border-radius: 9px;
-  padding: 7px 11px;
-  color: var(--pos-v2-accent-text, #6d01d1);
-  background: var(--pos-v2-surface, #fefcff);
-  font-size: 0.75rem;
+  border: 1px solid var(--product-border, #e5e7eb);
+  border-radius: 999px;
+  padding: 7px 12px;
+  color: var(--product-text, #111827);
+  background: #ffffff;
+  font-size: 0.76rem;
   font-weight: 700;
   cursor: pointer;
 }
 
 .catalog-product-chat__quick-actions button:hover:not(:disabled) {
-  border-color: var(--pos-v2-accent, #9018ff);
-  background: var(--pos-v2-accent-soft, #ecdcfb);
+  border-color: #9ca3af;
+  background: var(--product-soft-bg, #fafafa);
 }
 
 .catalog-product-chat__composer {
@@ -282,8 +289,8 @@
   align-items: end;
   gap: 10px;
   padding: 12px 18px 16px;
-  border-top: 1px solid var(--pos-v2-border, #c5c5c5);
-  background: var(--pos-v2-surface, #fefcff);
+  border-top: 1px solid var(--product-border, #e5e7eb);
+  background: var(--product-soft-bg, #fafafa);
 }
 
 .catalog-product-chat__composer textarea {
@@ -292,11 +299,11 @@
   max-height: 120px;
   resize: vertical;
   box-sizing: border-box;
-  border: 1px solid var(--pos-v2-border, #c5c5c5);
-  border-radius: 10px;
+  border: 1px solid var(--product-border, #e5e7eb);
+  border-radius: 14px;
   padding: 12px 14px;
-  color: var(--pos-v2-text, #4e4e4e);
-  background: var(--pos-v2-input-bg, #fefcff);
+  color: var(--product-text, #111827);
+  background: #ffffff;
   font: inherit;
   font-size: 0.88rem;
   outline: none;
@@ -307,32 +314,33 @@
 }
 
 .catalog-product-chat__composer textarea:focus {
-  border-color: var(--pos-v2-accent, #9018ff);
-  box-shadow: none;
+  border-color: #6d01d1;
+  box-shadow: 0 0 0 3px rgba(109, 1, 209, 0.15);
 }
 
 .catalog-product-chat__composer > button {
   min-height: 50px;
   border: 0;
-  border-radius: 10px;
-  padding: 0 20px;
-  color: var(--pos-v2-text-inverse, #f2ecf6);
-  background: var(--pos-v2-accent, #9018ff);
+  border-radius: 14px;
+  padding: 0 18px;
+  color: #ffffff;
+  background: #6d01d1;
   font-weight: 800;
   cursor: pointer;
 }
 
-.catalog-product-chat__composer > button:hover:not(:disabled),
-.catalog-product-chat__summary-actions .is-primary:hover:not(:disabled) {
-  background: var(--pos-v2-accent-strong, #6d01d1);
+.catalog-product-chat__composer > button:hover:not(:disabled) {
+  background: #5200a8;
 }
 
 .catalog-product-chat__summary {
+  min-width: 0;
   min-height: 0;
-  overflow-y: auto;
-  padding: 20px;
-  background: var(--pos-v2-surface, #fefcff);
-  scrollbar-color: var(--pos-v2-border, #c5c5c5) transparent;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  overflow: hidden;
+  padding: 12px;
+  background: var(--product-soft-bg, #fafafa);
 }
 
 .catalog-product-chat__summary-head {
@@ -340,20 +348,23 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--pos-v2-border, #c5c5c5);
+  padding: 10px;
+  border: 1px solid var(--product-border, #e5e7eb);
+  border-radius: 14px;
+  background: #ffffff;
 }
 
 .catalog-product-chat__summary-head > div { display: grid; gap: 3px; }
 
 .catalog-product-chat__summary-head span {
-  color: var(--pos-v2-text-muted, #565656);
-  font-size: 0.72rem;
+  color: var(--product-muted, #6b7280);
+  font-size: 0.73rem;
 }
 
 .catalog-product-chat__summary-head strong {
   color: var(--pos-v2-text, #4e4e4e);
   font-size: 1rem;
+  color: var(--product-text, #111827);
 }
 
 .catalog-product-chat__status {
@@ -372,21 +383,31 @@
 }
 
 .catalog-product-chat__draft {
+  min-height: 0;
+  overflow-y: auto;
+  align-content: start;
   display: grid;
-  gap: 0;
-  margin: 8px 0 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 10px 0;
 }
 
 .catalog-product-chat__draft > div {
-  display: grid;
-  gap: 4px;
-  padding: 12px 2px;
-  border-bottom: 1px solid var(--pos-v2-border, #c5c5c5);
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--product-border, #e5e7eb);
+  border-radius: 12px;
+  background: #ffffff;
+}
+
+.catalog-product-chat__draft > div:nth-child(-n + 2) {
+  grid-column: 1 / -1;
 }
 
 .catalog-product-chat__draft dt {
-  color: var(--pos-v2-text-muted, #565656);
-  font-size: 0.67rem;
+  margin-bottom: 4px;
+  color: var(--product-muted, #6b7280);
+  font-size: 0.69rem;
   font-weight: 800;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -394,13 +415,23 @@
 
 .catalog-product-chat__draft dd {
   margin: 0;
-  color: var(--pos-v2-text, #4e4e4e);
-  font-size: 0.84rem;
-  line-height: 1.45;
+  color: var(--product-text, #111827);
+  font-size: 0.85rem;
+  line-height: 1.42;
   overflow-wrap: anywhere;
 }
 
-.catalog-product-chat__missing,
+.catalog-product-chat__missing {
+  padding: 8px 10px;
+  border: 1px solid #ffe69c;
+  border-radius: 12px;
+  color: #6b4f00;
+  background: #fff8db;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
 .catalog-product-chat__ready-copy {
   margin: 0;
   padding: 12px 13px;
@@ -427,22 +458,28 @@
 
 .catalog-product-chat__summary-actions {
   display: grid;
-  gap: 9px;
-  margin-top: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .catalog-product-chat__summary-actions button {
   min-height: 44px;
   border-radius: 10px;
   padding: 10px 12px;
+  font-size: 0.8rem;
   font-weight: 800;
   cursor: pointer;
 }
 
 .catalog-product-chat__summary-actions .is-primary {
   border: 0;
-  color: var(--pos-v2-text-inverse, #f2ecf6);
-  background: var(--pos-v2-accent, #9018ff);
+  color: #ffffff;
+  background: #6d01d1;
+}
+
+.catalog-product-chat__summary-actions .is-primary:hover:not(:disabled) {
+  background: #5200a8;
 }
 
 .catalog-product-chat__summary-actions .is-danger {
@@ -473,8 +510,8 @@
   display: grid;
   place-items: center;
   padding: 20px;
-  background: var(--pos-v2-overlay, rgba(0, 0, 0, 0.5));
-  backdrop-filter: blur(6px);
+  background: rgba(17, 24, 39, 0.62);
+  backdrop-filter: blur(4px);
 }
 
 .catalog-product-chat__modal .catalog-ai-auth__modal {
@@ -482,13 +519,13 @@
   border: 1px solid var(--pos-v2-border, #c5c5c5);
   border-radius: 14px;
   padding: 24px;
-  color: var(--pos-v2-text, #4e4e4e);
-  background: var(--pos-v2-surface, #fefcff);
-  box-shadow: 0 24px 70px rgba(33, 20, 47, 0.3);
+  color: var(--product-text, #111827);
+  background: #ffffff;
+  box-shadow: 0 24px 70px rgba(17, 24, 39, 0.25);
 }
 
 .catalog-product-chat__modal .catalog-ai-auth__eyebrow {
-  color: var(--pos-v2-accent-text, #6d01d1);
+  color: #6d01d1;
   font-size: 0.7rem;
   font-weight: 800;
   letter-spacing: 0.09em;
@@ -499,7 +536,7 @@
 
 .catalog-product-chat__modal .catalog-ai-auth__modal > p {
   margin: 0 0 16px;
-  color: var(--pos-v2-text-muted, #565656);
+  color: var(--product-muted, #6b7280);
   font-size: 0.84rem;
   line-height: 1.5;
 }
@@ -521,8 +558,8 @@
 .catalog-product-chat__modal .catalog-ai-auth__form input {
   min-height: 42px;
   box-sizing: border-box;
-  border: 1px solid var(--pos-v2-border, #c5c5c5);
-  border-radius: 9px;
+  border: 1px solid var(--product-border, #e5e7eb);
+  border-radius: 10px;
   padding: 8px 11px;
   color: var(--pos-v2-text, #4e4e4e);
   background: var(--pos-v2-input-bg, #fefcff);
@@ -546,14 +583,14 @@
 
 .catalog-product-chat__modal .catalog-ai-auth__actions .is-primary {
   border: 0;
-  color: var(--pos-v2-text-inverse, #f2ecf6);
-  background: var(--pos-v2-accent, #9018ff);
+  color: #ffffff;
+  background: #6d01d1;
 }
 
 .catalog-product-chat__modal .catalog-ai-auth__actions .is-secondary {
-  border: 1px solid var(--pos-v2-border, #c5c5c5);
-  color: var(--pos-v2-text, #4e4e4e);
-  background: var(--pos-v2-surface, #fefcff);
+  border: 1px solid var(--product-border, #e5e7eb);
+  color: #334155;
+  background: #ffffff;
 }
 
 .catalog-product-chat__modal .catalog-ai-auth__session-button {
@@ -597,6 +634,7 @@
 @media (max-width: 820px) {
   .catalog-product-chat__backdrop { padding: 0; }
   .catalog-product-chat__modal {
+    grid-template-rows: auto auto minmax(0, 1fr);
     width: 100%;
     height: 100dvh;
     min-height: 0;
@@ -606,14 +644,77 @@
   .catalog-product-chat__header { min-height: 76px; padding: 13px 15px; }
   .catalog-product-chat__header p { display: none; }
   .catalog-product-chat__content {
-    height: calc(100% - 76px);
-    display: block;
-    overflow-y: auto;
+    grid-template-columns: minmax(0, 1fr);
+    overflow: hidden;
   }
-  .catalog-product-chat__conversation { min-height: 66vh; border-right: 0; }
+
+  .catalog-product-chat__panel-selector {
+    display: flex;
+    margin: 10px 14px;
+    overflow: hidden;
+    border: 1px solid var(--product-border, #e5e7eb);
+    border-radius: 10px;
+    background: var(--product-bg, #ffffff);
+    color: var(--product-text, #111827);
+  }
+
+  .catalog-product-chat__panel-selector button {
+    flex: 1;
+    min-width: 0;
+    min-height: 40px;
+    border: 0;
+    border-radius: 0;
+    padding: 8px;
+    background: transparent;
+    color: inherit;
+    font: inherit;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .catalog-product-chat__panel-selector button:hover[aria-pressed="false"] {
+    background: var(--product-soft-bg, #fafafa);
+  }
+
+  .catalog-product-chat__panel-selector button:focus-visible {
+    outline: 2px solid #7c3aed;
+    outline-offset: -3px;
+  }
+
+  .catalog-product-chat__panel-selector button[aria-pressed="true"] {
+    background: #6d01d1;
+    color: #ffffff;
+  }
+
+  .catalog-product-chat__panel-selector span {
+    margin-left: 4px;
+    border-radius: 6px;
+    padding: 2px 4px;
+    background: #fff3cd;
+    color: #6b4f00;
+    font-size: 0.65rem;
+  }
+
+  .catalog-product-chat__content[data-mobile-panel="chat"] .catalog-product-chat__summary,
+  .catalog-product-chat__content[data-mobile-panel="draft"] .catalog-product-chat__conversation {
+    display: none;
+  }
+
+  .catalog-product-chat__conversation {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-right: 0;
+  }
+
+  .catalog-product-chat__conversation > :not(.catalog-product-chat__messages) {
+    flex-shrink: 0;
+  }
+
   .catalog-product-chat__messages {
-    min-height: 310px;
-    max-height: 48vh;
+    flex: 1;
+    min-height: 0;
     padding: 16px 14px 8px;
   }
   .catalog-product-chat__message > div:last-child { max-width: 86%; }
@@ -623,21 +724,141 @@
   .catalog-product-chat__composer { padding: 10px 14px 14px; }
   .catalog-product-chat__composer > button { padding-inline: 14px; }
   .catalog-product-chat__summary {
-    overflow: visible;
-    padding: 20px 16px 28px;
-    border-top: 1px solid var(--pos-v2-border, #c5c5c5);
+    display: grid;
+    grid-template-rows: auto minmax(0, 1fr) auto auto;
+    overflow: hidden;
+    padding: 10px 14px max(10px, env(safe-area-inset-bottom));
+    border-top: 1px solid var(--product-border, #e5e7eb);
+  }
+
+  .catalog-product-chat__draft {
+    min-height: 0;
+    overflow-y: auto;
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+  }
+
+  .catalog-product-chat__summary-head {
+    padding: 8px 10px;
+  }
+
+  .catalog-product-chat__summary-actions {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 6px;
+    margin-top: 8px;
   }
 }
 
-@media (max-width: 480px) {
-  .catalog-product-chat__header h2 { font-size: 1.08rem; }
-  .catalog-product-chat__composer { grid-template-columns: minmax(0, 1fr) 74px; }
-  .catalog-product-chat__composer > button { padding-inline: 10px; }
-  .catalog-product-chat__avatar { width: 28px; height: 28px; }
+:root[data-theme="dark"] .catalog-product-chat__backdrop {
+  background: rgba(6, 14, 18, 0.72);
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .catalog-product-chat__messages { scroll-behavior: auto; }
-  .catalog-product-chat__spinner,
-  .catalog-product-chat__typing > span { animation: none; }
+:root[data-theme="dark"] .catalog-product-chat__modal {
+  border-color: #374151;
+  background: var(--product-bg, #111827);
+  color: #f9fafb;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__panel-selector button[aria-pressed="true"] {
+  background: #6f5cc6;
+  color: #f5f3ff;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__panel-selector span {
+  background: #2d2611;
+  color: #f5d97b;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__header,
+:root[data-theme="dark"] .catalog-product-chat__composer,
+:root[data-theme="dark"] .catalog-product-chat__summary {
+  background: #111827;
+  color: #f9fafb;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__header {
+  border-bottom-color: #374151;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__header p,
+:root[data-theme="dark"] .catalog-product-chat__summary-head span,
+:root[data-theme="dark"] .catalog-product-chat__draft dt,
+:root[data-theme="dark"] .catalog-product-chat__message time,
+:root[data-theme="dark"] .catalog-product-chat__ready-copy,
+:root[data-theme="dark"] .catalog-product-chat__modal .catalog-ai-auth__modal > p {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__content,
+:root[data-theme="dark"] .catalog-product-chat__conversation {
+  border-color: #374151;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__conversation {
+  background: #0f172a;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__messages {
+  background:
+    radial-gradient(circle at 25px 25px, rgba(255,255,255,0.04) 2px, transparent 0) 0 0 / 28px 28px,
+    #0f172a;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__message > div:last-child,
+:root[data-theme="dark"] .catalog-product-chat__typing,
+:root[data-theme="dark"] .catalog-product-chat__uploading,
+:root[data-theme="dark"] .catalog-product-chat__summary-head,
+:root[data-theme="dark"] .catalog-product-chat__draft > div,
+:root[data-theme="dark"] .catalog-product-chat__image-strip,
+:root[data-theme="dark"] .catalog-product-chat__quick-actions button,
+:root[data-theme="dark"] .catalog-product-chat__composer textarea,
+:root[data-theme="dark"] .catalog-product-chat__icon-button,
+:root[data-theme="dark"] .catalog-product-chat__summary-actions .is-danger,
+:root[data-theme="dark"] .catalog-product-chat__modal .catalog-ai-auth__modal,
+:root[data-theme="dark"] .catalog-product-chat__modal .catalog-ai-auth__actions .is-secondary,
+:root[data-theme="dark"] .catalog-product-chat__modal .catalog-ai-auth__form input {
+  border-color: #374151;
+  color: #f9fafb;
+  background: #111827;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__message.is-user > div:last-child {
+  color: #f9fafb;
+  background: #4c1d95;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__composer textarea:focus {
+  border-color: #6d01d1;
+  box-shadow: 0 0 0 3px rgba(109, 1, 209, 0.18);
+}
+
+:root[data-theme="dark"] .catalog-product-chat__draft dd,
+:root[data-theme="dark"] .catalog-product-chat__summary-head strong,
+:root[data-theme="dark"] .catalog-product-chat__quick-actions button,
+:root[data-theme="dark"] .catalog-product-chat__icon-button {
+  color: #f9fafb;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__missing {
+  border-color: #5c4b12;
+  color: #f5d97b;
+  background: #2d2611;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__ready-copy,
+:root[data-theme="dark"] .catalog-product-chat__modal .catalog-ai-auth__notice {
+  border-color: #164d3b;
+  color: #97d7b8;
+  background: #123126;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__notice {
+  color: #97d7b8;
+  background: #123126;
+}
+
+:root[data-theme="dark"] .catalog-product-chat__error,
+:root[data-theme="dark"] .catalog-product-chat__modal .catalog-ai-auth__error {
+  color: #f1aeb5;
+  background: #3a1d22;
 }

@@ -1,11 +1,19 @@
 import { IBusinessSettingsRepository } from "../interface/IBusinessSettingsRepository";
-import { BusinessSettings, UpdateBusinessSettingsDto } from "../model/BusinessSettings";
+import { BusinessChangesNoticeStatus, BusinessSettings, UpdateBusinessSettingsDto } from "../model/BusinessSettings";
 
 export class BusinessSettingsService {
   constructor(private readonly repository: IBusinessSettingsRepository) {}
 
   async getSettings(businessId: number, token: string): Promise<BusinessSettings> {
     return this.repository.getByBusinessId(businessId, token);
+  }
+
+  async getChangesNoticeStatus(businessId: number, token: string): Promise<BusinessChangesNoticeStatus> {
+    return this.repository.getChangesNoticeStatus(businessId, token);
+  }
+
+  async acknowledgeChangesNotice(businessId: number, token: string): Promise<void> {
+    return this.repository.acknowledgeChangesNotice(businessId, token);
   }
 
   async updateSettings(businessId: number, payload: UpdateBusinessSettingsDto, token: string): Promise<BusinessSettings> {
@@ -18,6 +26,8 @@ export class BusinessSettingsService {
       updated.taxId,
       currentSettings.tablesEnabled,
       currentSettings.plan,
+      currentSettings.changesNoticeViewed,
+      currentSettings.changesNoticeViewedAt,
     );
   }
 

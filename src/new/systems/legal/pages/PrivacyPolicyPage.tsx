@@ -7,6 +7,8 @@ import "../../landing-ravekh/pages/LandingPage.css";
 export const PrivacyPolicyPage = () => {
   const { policySlug } = useParams<{ policySlug: string }>();
   const policy = PRIVACY_POLICIES.find((item) => item.slug === policySlug);
+  const returnPath = policySlug === "ravekh-crm" ? "/crm" : "/";
+  const returnLabel = policySlug === "ravekh-crm" ? "Volver a RAVEKH CRM" : "Volver al inicio";
 
   if (!policy) {
     return <Navigate to="/politicas" replace />;
@@ -15,8 +17,8 @@ export const PrivacyPolicyPage = () => {
   return (
     <main className="min-h-screen bg-fondo-oscuro text-white px-4 py-10 md:px-10">
       <div className="max-w-5xl mx-auto">
-        <Link to="/" className="inline-flex mb-6 text-sm underline">
-          ← Volver al inicio
+        <Link to={returnPath} className="inline-flex mb-6 text-sm underline">
+          ← {returnLabel}
         </Link>
 
         <div className="rounded-2xl border border-white/20 bg-white/5 p-5 md:p-8">

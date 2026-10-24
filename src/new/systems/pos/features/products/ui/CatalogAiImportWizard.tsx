@@ -2220,7 +2220,7 @@ export const CatalogAiImportWizard = ({
             <div className="catalog-ai-wizard__processing-step">
               <div className="catalog-ai-wizard__progress-ring" style={{ "--progress": `${progressPercent * 3.6}deg` } as React.CSSProperties}>
                 <div>
-                  <span>✦</span>
+                  <span></span>
                   <strong>{progressPercent}%</strong>
                 </div>
               </div>
@@ -2235,7 +2235,7 @@ export const CatalogAiImportWizard = ({
               </div>
 
               <div className="catalog-ai-wizard__notice">
-                <span>✦</span>
+                <span></span>
                 <div>
                   <strong>Aún no se ha creado ningún producto</strong>
                   <p>Primero revisarás y aprobarás cada resultado.</p>
@@ -2867,7 +2867,7 @@ export const CatalogAiImportWizard = ({
             <div className="catalog-ai-wizard__busy-card">
               <div className="catalog-ai-wizard__busy-orbit" aria-hidden="true">
                 <span />
-                <strong>✦</strong>
+                <strong></strong>
               </div>
 
               <span className="catalog-ai-wizard__busy-eyebrow">

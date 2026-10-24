@@ -4,6 +4,7 @@ import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
+import { FiBox, FiChevronDown, FiShoppingCart, FiStar } from "react-icons/fi";
 import { MORE_MODULE_SECTIONS } from "../config/moreModules";
 import {
   MoreModuleExecutionContext,
@@ -390,10 +391,10 @@ export const PosV2MorePage = () => {
         document.body.removeChild(helper);
       }
 
-      setActionMessage("URL del catálogo copiada.");
+      setActionMessage("Enlace del catálogo copiado.");
     } catch {
       setActionMessage(
-        "No fue posible copiar la URL. Puedes copiarla manualmente.",
+        "No pudimos copiar el enlace. Puedes seleccionarlo y copiarlo.",
       );
     }
   };
@@ -453,7 +454,7 @@ export const PosV2MorePage = () => {
   const openChangePlanModal = () => {
     setUnlockModal({
       title: "Cambia tu plan",
-      message: `Tu negocio está actualmente en el plan ${currentPlanName}. Sube de plan para desbloquear más capacidad, catálogo online y herramientas premium.`,
+      message: `Tu negocio está actualmente en el plan ${currentPlanName}. Sube de plan para desbloquear más capacidad, catálogo en línea y más herramientas.`,
       buttonText: "Continuar al pago",
       unlockFeature: "Catalog",
     });
@@ -476,7 +477,7 @@ export const PosV2MorePage = () => {
         );
         if (products.length === 0) {
           setActionMessage(
-            "No encontramos productos disponibles para exportar en PDF.",
+            "No encontramos productos disponibles para descargar en PDF.",
           );
           return;
         }
@@ -525,8 +526,8 @@ export const PosV2MorePage = () => {
       return {
         title: "Ventas bloqueadas",
         message:
-          "Tu módulo POS está desactivado. Desbloquéalo para acceder a ventas, cobrar más rápido y vender sin límites.",
-        buttonText: "Desbloquear POS",
+          "Activa las ventas para registrar compras y cobrar a tus clientes.",
+        buttonText: "Activar ventas",
         unlockFeature: "Pos",
       };
     }
@@ -551,10 +552,10 @@ export const PosV2MorePage = () => {
       isPosFeatureBlocked(features.fidelity)
     ) {
       return {
-        title: "Desbloquea fidelidad",
+        title: "Activa las recompensas para clientes",
         message:
-          "Activa las herramientas de fidelidad para crear cupones, registrar visitas y premiar a tus clientes frecuentes.",
-        buttonText: "Desbloquear fidelidad",
+          "Crea cupones, registra visitas y premia a tus clientes frecuentes.",
+        buttonText: "Activar recompensas",
         unlockFeature: "Fidelity",
       };
     }
@@ -579,7 +580,7 @@ export const PosV2MorePage = () => {
       setBetaError(
         cause instanceof Error
           ? cause.message
-          : "No fue posible ejecutar la acción beta.",
+          : "No pudimos completar la acción. Inténtalo de nuevo.",
       );
     } finally {
       setBetaLoadingId(null);
@@ -649,8 +650,8 @@ export const PosV2MorePage = () => {
         </section>
         <section className="pos-v2-more__plan-banner" aria-label="Cambiar plan">
           <div>
-            <span className="pos-v2-more__plan-eyebrow">Plan actual</span>
-            <h3>Cambiar plan de pago</h3>
+            <span className="pos-v2-more__plan-eyebrow">Plan actual</span><h3>Cambiar de plan</h3>
+
             <p>
               Plan actual: <strong>{currentPlanName}</strong>.
             </p>
@@ -661,7 +662,7 @@ export const PosV2MorePage = () => {
             className="pos-v2-more__plan-primary"
             onClick={openChangePlanModal}
           >
-            Cambiar / subir plan
+            Ver planes
           </button>
         </section>
 
@@ -889,13 +890,13 @@ export const PosV2MorePage = () => {
                 <div className="pos-v2-more__banner-modal" role="dialog" aria-modal="true" aria-labelledby="catalog-banner-title">
                   <header className="pos-v2-more__banner-modal-header">
                     <div>
-                      <h4 id="catalog-banner-title">Creador de imagen QR</h4>
+                      <h4 id="catalog-banner-title">Imagen para compartir tu catálogo</h4>
                       <p>Edita los textos directamente sobre la imagen.</p>
                     </div>
                     <button type="button" className="pos-v2-more__banner-close" onClick={() => setShowCatalogQr(false)} aria-label="Cerrar creador de imagen">×</button>
                   </header>
                   <div className="pos-v2-more__banner-toolbar">
-                    <div className="pos-v2-more__banner-colors" aria-label="Color del banner">
+                    <div className="pos-v2-more__banner-colors" aria-label="Color de la imagen">
                       {BANNER_COLORS.map((color) => (
                         <button key={color} type="button" className={bannerColor === color ? "is-active" : ""} style={{ backgroundColor: color }} onClick={() => setBannerColor(color)} aria-label={`Usar color ${color}`} />
                       ))}
@@ -906,7 +907,7 @@ export const PosV2MorePage = () => {
                     </div>
                   </div>
                   <div className="pos-v2-more__banner-stage">
-                    <svg ref={bannerRef} className="pos-v2-more__catalog-banner" viewBox="0 0 720 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vista previa del banner publicitario">
+                    <svg ref={bannerRef} className="pos-v2-more__catalog-banner" viewBox="0 0 720 420" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Vista previa de la imagen promocional">
                   <defs>
                     <linearGradient id="catalog-banner-gradient" x1="0" y1="0" x2="1" y2="1">
                       <stop offset="0" stopColor={bannerImage ? "#111827" : bannerColor} stopOpacity={bannerImage ? ".2" : "1"} />
@@ -940,7 +941,7 @@ export const PosV2MorePage = () => {
                     <input autoCorrect="on" spellCheck={true} className="pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--cta" value={bannerCta} onChange={(event) => setBannerCta(event.target.value)} maxLength={24} placeholder="Llamada a la acción" aria-label="Llamada a la acción del banner" />
                   </div>
                   <footer className="pos-v2-more__banner-modal-footer">
-                    <span>Los campos marcados sobre la imagen son editables.</span>
+                    <span>Toca los textos de la imagen para cambiarlos.</span>
                     <button type="button" className="pos-v2-more__banner-download" onClick={downloadCatalogBanner}>Descargar imagen promocional</button>
                   </footer>
                 </div>
@@ -962,9 +963,9 @@ export const PosV2MorePage = () => {
               disabled={pdfLoading || checkingPlanAccess}
             >
               {checkingPlanAccess
-                ? "Validando plan..."
+                ? "Revisando tu plan..."
                 : pdfLoading
-                  ? "Generando PDF..."
+                  ? "Preparando PDF..."
                   : "Descargar PDF"}
             </button>
           </div>
@@ -974,27 +975,27 @@ export const PosV2MorePage = () => {
 
         {filteredSections.length === 0 ? (
           <section className="pos-v2-more__empty">
-            <p>No encontramos módulos con ese filtro.</p>
+            <p>No encontramos opciones con esa búsqueda.</p>
             <button
               type="button"
               onClick={() => {
                 setQuery("");
               }}
             >
-              Limpiar filtros y volver a operativos
+              Ver todas las opciones
             </button>
           </section>
         ) : null}
 
         <section className="pos-v2-more__actions">
           <article>
-            <h3>Sesión actual</h3>
+            <details open><summary className="pos-v2-more__collapse-title"><h3>Tu cuenta</h3><FiChevronDown aria-hidden="true" /></summary>
             <p>
               Cambia de usuario o cierra tu sesión de forma segura.
             </p>
             <button type="button" onClick={() => setShowSignOutConfirm(true)}>
               Cambiar usuario / cerrar sesión
-            </button>
+            </button></details>
           </article>
         </section>
 
@@ -1006,7 +1007,7 @@ export const PosV2MorePage = () => {
         {betaResult ? (
           <section
             className="pos-v2-more__result"
-            aria-label={`Resultado módulo ${betaResult.title}`}
+            aria-label={`Resultado de ${betaResult.title}`}
           >
             <header>
               <h3>Resultado: {betaResult.title}</h3>
@@ -1031,7 +1032,7 @@ export const PosV2MorePage = () => {
             setUnlockModal({
               title: `Activa ${blockedAction?.requiredPlan ?? "tu plan"}`,
               message:
-                "Completa el pago para activar el paquete seleccionado y desbloquear esta función.",
+                "Completa el pago de tu plan para usar esta herramienta.",
               buttonText: "Continuar al pago",
               unlockFeature: "Catalog",
             });
