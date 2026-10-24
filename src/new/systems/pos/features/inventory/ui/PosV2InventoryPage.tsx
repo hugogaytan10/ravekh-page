@@ -1,3 +1,4 @@
+import { posMoneyFormatter as moneyFormatter } from "../../../shared/config/posCurrency";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
@@ -9,7 +10,6 @@ const API_BASE_URL = getPosApiBaseUrl();
 const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
 const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 
-const moneyFormatter = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 });
 
 type SessionState = { token: string; businessId: number; hasSession: boolean };
 type InventoryCard = { id: number; name: string; stock: number; price: number; status: "low" | "ok" };
@@ -160,7 +160,7 @@ export const PosV2InventoryPage = () => {
   };
 
   return (
-    <PosV2Shell title="Inventario" subtitle="Control de stock desacoplado del código anterior para operación y pruebas v2.">
+    <PosV2Shell title="Inventario" subtitle="Consulta las existencias de tus productos.">
       <section className="pos-v2-inventory">
         <header className="pos-v2-inventory__header">
           <div>
@@ -183,7 +183,7 @@ export const PosV2InventoryPage = () => {
         <section className="pos-v2-inventory__filters">
           <label>
             Buscar producto
-            <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ej. Café, Hamburguesa..." />
+            <input autoCorrect="on" spellCheck={true} value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Ej. Café, Hamburguesa..." />
           </label>
           <label>
             Umbral stock bajo

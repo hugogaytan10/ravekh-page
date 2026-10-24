@@ -1,12 +1,8 @@
-export type PosPrinterProtocol = "wifi" | "bluetooth" | "usb";
 export type PosPrinterPaperMm = "58" | "80";
 
 export type PosPrinterConfig = {
   id: string;
   name: string;
-  protocol: PosPrinterProtocol;
-  address: string;
-  port: number;
   paperMm: PosPrinterPaperMm;
   isDefault: boolean;
   createdAt: string;
@@ -16,7 +12,6 @@ export const POS_PRINTERS_STORAGE_KEY = "pos-v2-printers";
 
 const asPaperMm = (value: unknown): PosPrinterPaperMm => (value === "58" ? "58" : "80");
 
-const isProtocol = (value: unknown): value is PosPrinterProtocol => value === "wifi" || value === "bluetooth" || value === "usb";
 
 export const readPosPrinters = (): PosPrinterConfig[] => {
   try {
@@ -34,20 +29,13 @@ export const readPosPrinters = (): PosPrinterConfig[] => {
         const record = entry as Record<string, unknown>;
         const id = String(record.id ?? "").trim();
         const name = String(record.name ?? "").trim();
-        const address = String(record.address ?? "").trim();
-        const port = Number(record.port ?? 0);
-        const protocol = record.protocol;
-
-        if (!id || !name || !address || !Number.isFinite(port) || port <= 0 || !isProtocol(protocol)) {
+        if (!id || !name) {
           return null;
         }
 
         return {
           id,
           name,
-          protocol,
-          address,
-          port,
           paperMm: asPaperMm(record.paperMm),
           isDefault: Boolean(record.isDefault),
           createdAt: String(record.createdAt ?? ""),

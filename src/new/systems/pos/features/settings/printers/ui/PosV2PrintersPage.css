@@ -16,8 +16,8 @@
 
 .pos-v2-printers input,
 .pos-v2-printers select {
-  border: 1px solid #d1d5db;
-  border-radius: 10px;
+  border: 1px solid var(--pos-v2-border);
+  border-radius: 8px;
   min-height: 42px;
   padding: 0.45rem 0.65rem;
 }
@@ -30,11 +30,11 @@
 
 .pos-v2-printers button {
   border: none;
-  border-radius: 10px;
+  border-radius: 8px;
   min-height: 42px;
-  background: #6d01d1;
-  color: #fff;
-  font-weight: 700;
+  background: var(--pos-v2-accent);
+  color: var(--pos-v2-text-inverse);
+  font-weight: 600;
 }
 
 .pos-v2-printers__actions {
@@ -44,10 +44,10 @@
 }
 
 .pos-v2-printers__result {
-  border: 1px solid #ddd6fe;
-  background: #f5f3ff;
-  color: #5b21b6;
-  border-radius: 10px;
+  border: 1px solid var(--pos-v2-border);
+  background: var(--pos-v2-surface-alt);
+  color: var(--pos-v2-accent);
+  border-radius: 8px;
   padding: 0.55rem;
 }
 
@@ -60,14 +60,14 @@
 }
 
 .pos-v2-printers__list li {
-  border: 1px solid #e5e7eb;
-  border-radius: 10px;
+  border: 1px solid var(--pos-v2-border);
+  border-radius: 8px;
   padding: 0.6rem;
   display: flex;
   justify-content: space-between;
   gap: 0.6rem;
   align-items: center;
-  background: #fff;
+  background: var(--pos-v2-surface);
 }
 
 .pos-v2-printers__list li strong,
@@ -76,7 +76,7 @@
 }
 
 .pos-v2-printers__list li small {
-  color: #6b7280;
+  color: var(--pos-v2-text-muted);
 }
 
 .pos-v2-printers__item-actions {
@@ -93,29 +93,29 @@
 .pos-v2-printers__item-actions span {
   font-size: 0.85rem;
   font-weight: 700;
-  color: #15803d;
+  color: var(--pos-v2-success-text);
 }
 
 :root[data-theme="dark"] .pos-v2-printers input,
 :root[data-theme="dark"] .pos-v2-printers select {
-  background: #111827;
-  border-color: #374151;
-  color: #f9fafb;
+  background: var(--pos-v2-surface);
+  border-color: var(--pos-v2-border);
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .pos-v2-printers__result {
   border-color: rgba(139, 92, 246, 0.45);
   background: rgba(76, 29, 149, 0.4);
-  color: #ddd6fe;
+  color: var(--pos-v2-text-muted);
 }
 
 :root[data-theme="dark"] .pos-v2-printers__list li {
-  background: #111827;
-  border-color: #374151;
+  background: var(--pos-v2-surface);
+  border-color: var(--pos-v2-border);
 }
 
 :root[data-theme="dark"] .pos-v2-printers__list li small {
-  color: #cbd5e1;
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .pos-v2-printers__item-actions span {

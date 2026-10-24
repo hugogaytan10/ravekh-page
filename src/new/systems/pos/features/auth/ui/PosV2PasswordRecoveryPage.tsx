@@ -1,3 +1,4 @@
+import { usePosTheme } from "../../../shared/ui/usePosTheme";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Eye } from "../../../../../../assets/POS/Eye";
@@ -16,6 +17,7 @@ type SecurityQuestionOption = {
 };
 
 export const PosV2PasswordRecoveryPage = () => {
+  usePosTheme();
   const navigate = useNavigate();
   const [user, setUser] = useState("");
   const [selectedQuestionId, setSelectedQuestionId] = useState("");

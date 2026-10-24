@@ -28,7 +28,8 @@ const RecoverPasswordPage: React.FC = () => {
   const location = useLocation();
   const { theme } = useCouponsTheme();
 
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(new URLSearchParams(location.search).get("email") || "");
+  const [code, setCode] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -84,13 +85,18 @@ const RecoverPasswordPage: React.FC = () => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
-    const normalizedPassword = password.trim();
-    const normalizedConfirmPassword = confirmPassword.trim();
+    const normalizedPassword = password;
+    const normalizedConfirmPassword = confirmPassword;
 
     setErrorMessage("");
     setSuccessMessage("");
 
-    if (!normalizedEmail || !normalizedPassword || !normalizedConfirmPassword) {
+    if (!/^\d{8}$/.test(code)) {
+      setErrorMessage("Ingresa el código de 8 dígitos que te entregó el negocio.");
+      return;
+    }
+
+    if (!normalizedEmail || !normalizedPassword.trim() || !normalizedConfirmPassword.trim()) {
       setErrorMessage("Todos los campos son requeridos.");
       return;
     }
@@ -110,6 +116,7 @@ const RecoverPasswordPage: React.FC = () => {
     try {
       const response = (await resetPassword({
         Email: normalizedEmail,
+        Code: code,
         Password: normalizedPassword,
       })) as ResetPasswordResponse;
 
@@ -177,9 +184,9 @@ const RecoverPasswordPage: React.FC = () => {
         style={{ color: theme.textPrimary }}
       >
         <div className="mt-8 mb-6">
-          <h1 className="text-3xl font-extrabold tracking-tight">Recuperar contraseña</h1>
+          <h1 className="text-3xl font-extrabold tracking-tight">Recuperar mi cuenta</h1>
           <p className="mt-2 text-sm font-medium" style={{ color: theme.textMuted }}>
-            Ingresa tu correo y crea una nueva contraseña.
+            Pide al negocio un código de acceso. Ingresa el correo con el que te registraron, el código y tu nueva contraseña. No necesitas recibir correos ni iniciar sesión.
           </p>
         </div>
 
@@ -198,6 +205,20 @@ const RecoverPasswordPage: React.FC = () => {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             maxLength={80}
+          />
+
+          <label htmlFor="customer-access-code" className="block text-left text-sm font-semibold">Código que te entregó el negocio</label>
+          <input
+            id="customer-access-code"
+            type="text"
+            inputMode="numeric"
+            autoComplete="one-time-code"
+            placeholder="Código de 8 dígitos"
+            className="w-full rounded-2xl px-5 py-3.5 text-base font-medium"
+            style={{ backgroundColor: theme.surface, color: theme.textPrimary }}
+            value={code}
+            onChange={event => setCode(event.target.value.replace(/\D/g, "").slice(0, 8))}
+            maxLength={8}
           />
 
           <input
@@ -250,7 +271,7 @@ const RecoverPasswordPage: React.FC = () => {
           }}
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Actualizando..." : "Actualizar contraseña"}
+          {isSubmitting ? "Guardando..." : "Guardar contraseña"}
         </button>
 
         <p className="mt-6 text-sm font-semibold" style={{ color: theme.textMuted }}>

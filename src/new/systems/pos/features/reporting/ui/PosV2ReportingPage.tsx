@@ -1,3 +1,8 @@
+import { loadReportTicket, renderReportTicket } from "./reportTicket";
+import { readTicketCustomization } from "../../../shared/config/posTicket";
+import { readPosPrinters, getDefaultPosPrinter } from "../../../shared/config/posPrinters";
+import { Link } from "react-router-dom";
+import { posMoneyFormatter as moneyFormatter } from "../../../shared/config/posCurrency";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
@@ -19,15 +24,21 @@ import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import type { IncomePoint, ReportRange, ReportSale, SalesTicket } from "../model/SalesReport";
 import type { ReportSummaryViewModel } from "../pages/ReportingInsightsPage";
-import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
+import {
+  POS_SESSION_STORAGE_KEYS,
+  resolvePosOperatorRole,
+} from "../../../shared/config/posSession";
+import { onPosBranchUpdated, readActivePosBranchId, type PosBranch } from "../../../shared/config/posBranch";
+import { PosBranchApi } from "../../../shared/api/PosBranchApi";
+import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
+import { combineTopItems, loadAllTicketPages, type TopChartItem } from "./reportingAggregation";
 import "./PosV2ReportingPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
 const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
 const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 
-const moneyFormatter = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 });
 const dateFormatter = new Intl.DateTimeFormat("es-MX", { dateStyle: "medium", timeStyle: "short" });
 const BRAND_PURPLE = "#6d01d1";
 const BRAND_VIOLET = "#7c3aed";
@@ -47,12 +58,6 @@ const PAYMENT_OPTIONS: Array<{ value: "TODOS" | "EFECTIVO" | "TARJETA"; label: s
   { value: "EFECTIVO", label: "Efectivo" },
   { value: "TARJETA", label: "Tarjeta" },
 ];
-const PENDING_MODULES = [
-  { id: "sales-tax", title: "Impuestos", detail: "Configuración fiscal por negocio" },
-  { id: "exports", title: "Exportar reportes", detail: "Descargas para contabilidad y auditoría" },
-  { id: "cash-closing", title: "Cortes de caja", detail: "Cierre de turnos con resumen de efectivo" },
-];
-
 const DEFAULT_SUMMARY: ReportSummaryViewModel = {
   balance: 0,
   income: 0,
@@ -65,6 +70,7 @@ const DEFAULT_SUMMARY: ReportSummaryViewModel = {
   bestCategory: "Sin datos",
 };
 
+ChartJS.defaults.color = "#8F8998";
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, ArcElement, BarElement, Tooltip, Legend, Filler);
 
 type ToastState = { type: "success" | "error"; message: string } | null;
@@ -73,8 +79,6 @@ type TrendPoint = IncomePoint & {
   widthPercentage: number;
   deltaLabel: string;
 };
-
-type TopChartItem = { name: string; quantity: number };
 
 const clampPercentage = (value: number): number => {
   if (!Number.isFinite(value)) return 0;
@@ -118,13 +122,6 @@ const initialSalesDates = () => {
   return { from: toDateInput(new Date(today.getFullYear(), today.getMonth(), 1)), to: toDateInput(today) };
 };
 
-const escapeHtml = (value: unknown): string => String(value ?? "")
-  .replace(/&/g, "&amp;")
-  .replace(/</g, "&lt;")
-  .replace(/>/g, "&gt;")
-  .replace(/"/g, "&quot;")
-  .replace(/'/g, "&#039;");
-
 const getSafeSession = () => {
   const token = (window.localStorage.getItem(TOKEN_KEY) ?? "").trim();
   const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY) ?? "");
@@ -132,12 +129,66 @@ const getSafeSession = () => {
   return {
     token,
     businessId,
+    role: resolvePosOperatorRole(token),
     hasSession: token.length > 0 && Number.isFinite(businessId) && businessId > 0,
   };
 };
 
+
+const combineReportSummaries = (rows: ReportSummaryViewModel[]): ReportSummaryViewModel => {
+  if (rows.length === 0) return DEFAULT_SUMMARY;
+
+  const income = rows.reduce((sum, row) => sum + Number(row.income || 0), 0);
+  const earnings = rows.reduce((sum, row) => sum + Number(row.earnings || 0), 0);
+  const balance = rows.reduce((sum, row) => sum + Number(row.balance || 0), 0);
+  const totalSales = rows.reduce((sum, row) => sum + Number(row.totalSales || 0), 0);
+
+  const cashTransactions = rows.reduce(
+    (sum, row) => sum + (Number(row.cashSalesPercentage || 0) / 100) * Number(row.totalSales || 0),
+    0,
+  );
+  const cardTransactions = rows.reduce(
+    (sum, row) => sum + (Number(row.cardSalesPercentage || 0) / 100) * Number(row.totalSales || 0),
+    0,
+  );
+
+  return {
+    balance,
+    income,
+    earnings,
+    averageSale: totalSales > 0 ? income / totalSales : 0,
+    totalSales,
+    cashSalesPercentage: totalSales > 0 ? (cashTransactions / totalSales) * 100 : 0,
+    cardSalesPercentage: totalSales > 0 ? (cardTransactions / totalSales) * 100 : 0,
+    bestSeller: "Sin datos",
+    bestCategory: "Sin datos",
+  };
+};
+
+const combineIncomeSeries = (sets: IncomePoint[][]): IncomePoint[] => {
+  const byDate = new Map<string, number>();
+
+  for (const series of sets) {
+    for (const point of series) {
+      byDate.set(
+        point.dateLabel,
+        (byDate.get(point.dateLabel) ?? 0) + Number(point.amount || 0),
+      );
+    }
+  }
+
+  return Array.from(byDate.entries())
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([dateLabel, amount]) => ({ dateLabel, amount }));
+};
+
 export const PosV2ReportingPage = () => {
   const [session] = useState(() => getSafeSession());
+  const [reportBranches, setReportBranches] = useState<PosBranch[]>([]);
+  const [reportBranchId, setReportBranchId] = useState(() => readActivePosBranchId(session.businessId) || -1);
+  const [branchesLoading, setBranchesLoading] = useState(false);
+  const [branchError, setBranchError] = useState<string | null>(null);
+
   const [range, setRange] = useState<ReportRange>("MONTH");
   const [paymentFilter, setPaymentFilter] = useState<"TODOS" | "EFECTIVO" | "TARJETA">("TODOS");
   const [summary, setSummary] = useState<ReportSummaryViewModel>(DEFAULT_SUMMARY);
@@ -173,11 +224,36 @@ export const PosV2ReportingPage = () => {
     };
   }, []);
 
+  const branchApi = useMemo(
+    () => new PosBranchApi(new FetchHttpClient(API_BASE_URL)),
+    [],
+  );
+
   const businessId = session.businessId;
   const cleanToken = session.token;
   const hasBusinessId = session.hasSession;
   const hasToken = session.hasSession;
+  const isAdmin = session.role === "admin";
   const navigate = useNavigate();
+
+  const isAllBranches = isAdmin && reportBranchId === 0;
+
+  const selectedReportBranch = useMemo(
+    () => reportBranches.find((branch) => branch.id === reportBranchId) ?? null,
+    [reportBranchId, reportBranches],
+  );
+
+  const reportBranchIds = useMemo(() => {
+    if (isAllBranches) {
+      return reportBranches.map((branch) => branch.id);
+    }
+
+    return reportBranchId > 0 ? [reportBranchId] : [];
+  }, [isAllBranches, reportBranchId, reportBranches]);
+
+  const selectedBranchLabel = isAllBranches
+    ? "Todas las sucursales"
+    : selectedReportBranch?.name ?? "Sucursal activa";
 
   const showToast = useCallback((type: "success" | "error", message: string) => {
     setToast({ type, message });
@@ -189,6 +265,28 @@ export const PosV2ReportingPage = () => {
     const timeout = window.setTimeout(() => setToast(null), 3400);
     return () => window.clearTimeout(timeout);
   }, [toast]);
+
+  useEffect(() => onPosBranchUpdated((branch) => {
+    if (branch.businessId === businessId) setReportBranchId(branch.id);
+  }), [businessId]);
+
+  useEffect(() => {
+    ++reportRequestRef.current;
+    ++salesRequestRef.current;
+    ++topChartsRequestRef.current;
+    ++salesTicketsRequestRef.current;
+    setSummary(DEFAULT_SUMMARY);
+    setSeries([]);
+    setSales([]);
+    setTopProducts([]);
+    setTopEmployees([]);
+    setTopCustomers([]);
+    setSalesTickets([]);
+    setSalesTicketsPage(1);
+    setSalesTicketsTotalPages(0);
+    setSalesTicketsTotalItems(0);
+    setSelectedPoint(null);
+  }, [reportBranchId]);
 
   const loadReporting = useCallback(async () => {
     if (!hasBusinessId) {
@@ -202,9 +300,27 @@ export const PosV2ReportingPage = () => {
     setError(null);
 
     try {
+      if (reportBranchIds.length === 0) {
+        setSummary(DEFAULT_SUMMARY);
+        setSeries([]);
+        return;
+      }
+
+      const summaryPromise = Promise.all(
+        reportBranchIds.map((branchId) =>
+          reportingPage.loadSummary(businessId, range, cleanToken, branchId),
+        ),
+      ).then(combineReportSummaries);
+
+      const incomePromise = Promise.all(
+        reportBranchIds.map((branchId) =>
+          reportingPage.loadIncomeSeries(businessId, range, cleanToken, branchId),
+        ),
+      ).then(combineIncomeSeries);
+
       const [summaryResult, incomeResult] = await Promise.allSettled([
-        reportingPage.loadSummary(businessId, range, cleanToken),
-        reportingPage.loadIncomeSeries(businessId, range, cleanToken),
+        summaryPromise,
+        incomePromise,
       ]);
 
       if (reportRequestRef.current !== reportRequestId) {
@@ -224,7 +340,7 @@ export const PosV2ReportingPage = () => {
         setLoading(false);
       }
     }
-  }, [businessId, cleanToken, hasBusinessId, reportingPage, range, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, reportBranchIds, reportingPage, range, showToast]);
 
   const loadSales = useCallback(async () => {
     if (!hasBusinessId || !hasToken) {
@@ -236,11 +352,32 @@ export const PosV2ReportingPage = () => {
     salesRequestRef.current = salesRequestId;
     setSalesLoading(true);
     try {
-      const details = await reportingPage.loadSalesDetails(businessId, tableRange, paymentFilter, cleanToken);
+      if (reportBranchIds.length === 0) {
+        setSales([]);
+        return;
+      }
+
+      const detailSets = await Promise.all(
+        reportBranchIds.map((branchId) =>
+          reportingPage.loadSalesDetails(
+            businessId,
+            tableRange,
+            paymentFilter,
+            cleanToken,
+            branchId,
+          ),
+        ),
+      );
+
       if (salesRequestRef.current !== salesRequestId) {
         return;
       }
-      setSales(details);
+
+      setSales(
+        detailSets
+          .flat()
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()),
+      );
     } catch (cause) {
       const message = cause instanceof Error ? cause.message : "No se pudieron cargar ventas detalladas.";
       if (salesRequestRef.current === salesRequestId) {
@@ -251,7 +388,7 @@ export const PosV2ReportingPage = () => {
         setSalesLoading(false);
       }
     }
-  }, [businessId, cleanToken, hasBusinessId, hasToken, reportingPage, paymentFilter, tableRange, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, hasToken, paymentFilter, reportBranchIds, reportingPage, tableRange, showToast]);
 
   const loadTopCharts = useCallback(async () => {
     if (!hasBusinessId || !hasToken) {
@@ -266,21 +403,48 @@ export const PosV2ReportingPage = () => {
     setTopChartsLoading(true);
 
     try {
-      const [productsRows, employeeRows, customerRows] = await Promise.all([
-        reportingPage.loadProductsLeaderboard(businessId, range, cleanToken),
-        reportingPage.loadEmployeesLeaderboard(businessId, range, cleanToken),
-        reportingPage.loadCustomersLeaderboard(businessId, range, cleanToken),
+      if (reportBranchIds.length === 0) {
+        setTopProducts([]);
+        setTopEmployees([]);
+        setTopCustomers([]);
+        return;
+      }
+
+      const [productSets, employeeSets, customerSets] = await Promise.all([
+        Promise.all(
+          reportBranchIds.map((branchId) =>
+            reportingPage.loadProductsLeaderboard(businessId, range, cleanToken, branchId),
+          ),
+        ),
+        Promise.all(
+          reportBranchIds.map((branchId) =>
+            reportingPage.loadEmployeesLeaderboard(businessId, range, cleanToken, branchId),
+          ),
+        ),
+        Promise.all(
+          reportBranchIds.map((branchId) =>
+            reportingPage.loadCustomersLeaderboard(businessId, range, cleanToken, branchId),
+          ),
+        ),
       ]);
+
       if (topChartsRequestRef.current !== requestId) {
         return;
       }
 
-      setTopProducts(productsRows.slice(0, 5).map((item) => ({ name: item.name, quantity: item.quantity || item.totalSales })));
-      setTopEmployees(employeeRows.slice(0, 5).map((item) => ({ name: item.name, quantity: item.totalSales })));
-      setTopCustomers(customerRows.slice(0, 5).map((item) => ({ name: item.name, quantity: item.totalSales })));
+      const combinedProducts = combineTopItems(productSets);
+      const combinedEmployees = combineTopItems(employeeSets);
+      const combinedCustomers = combineTopItems(customerSets);
+
+      setTopProducts(combinedProducts);
+      setTopEmployees(combinedEmployees);
+      setTopCustomers(combinedCustomers);
       setSummary((previous) => ({
         ...previous,
-        bestSeller: previous.bestSeller !== "Sin datos" ? previous.bestSeller : (productsRows[0]?.name ?? "Sin datos"),
+        bestSeller:
+          previous.bestSeller !== "Sin datos"
+            ? previous.bestSeller
+            : combinedProducts[0]?.name ?? "Sin datos",
       }));
     } catch (cause) {
       if (topChartsRequestRef.current === requestId) {
@@ -294,7 +458,7 @@ export const PosV2ReportingPage = () => {
         setTopChartsLoading(false);
       }
     }
-  }, [businessId, cleanToken, hasBusinessId, hasToken, range, reportingPage, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, hasToken, range, reportBranchIds, reportingPage, showToast]);
 
   const loadSalesTickets = useCallback(async () => {
     if (!hasBusinessId || !hasToken) return;
@@ -306,19 +470,65 @@ export const PosV2ReportingPage = () => {
     const requestId = ++salesTicketsRequestRef.current;
     setSalesTicketsLoading(true);
     try {
-      const result = await reportingPage.loadSalesTicketsByDateRange(
-        businessId,
-        salesDates.from,
-        salesDates.to,
-        Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Mexico_City",
-        salesTicketsPage,
-        50,
-        cleanToken,
-      );
-      if (salesTicketsRequestRef.current !== requestId) return;
-      setSalesTickets(result.items);
-      setSalesTicketsTotalPages(result.pagination.totalPages);
-      setSalesTicketsTotalItems(result.pagination.totalItems);
+      if (reportBranchIds.length === 0) {
+        setSalesTickets([]);
+        setSalesTicketsTotalPages(0);
+        setSalesTicketsTotalItems(0);
+        return;
+      }
+
+      const timezone =
+        Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Mexico_City";
+
+      if (isAllBranches) {
+        const ticketSets = await Promise.all(
+          reportBranchIds.map((branchId) =>
+            loadAllTicketPages((page, pageSize) =>
+              reportingPage.loadSalesTicketsByDateRange(
+                businessId,
+                salesDates.from,
+                salesDates.to,
+                timezone,
+                page,
+                pageSize,
+                cleanToken,
+                branchId,
+              ),
+            ),
+          ),
+        );
+
+        if (salesTicketsRequestRef.current !== requestId) return;
+
+        const merged = ticketSets
+          .flat()
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+        const pageSize = 50;
+        const totalItems = merged.length;
+        const totalPages = totalItems > 0 ? Math.ceil(totalItems / pageSize) : 0;
+        const start = (salesTicketsPage - 1) * pageSize;
+
+        setSalesTickets(merged.slice(start, start + pageSize));
+        setSalesTicketsTotalPages(totalPages);
+        setSalesTicketsTotalItems(totalItems);
+      } else {
+        const result = await reportingPage.loadSalesTicketsByDateRange(
+          businessId,
+          salesDates.from,
+          salesDates.to,
+          timezone,
+          salesTicketsPage,
+          50,
+          cleanToken,
+          reportBranchIds[0],
+        );
+
+        if (salesTicketsRequestRef.current !== requestId) return;
+        setSalesTickets(result.items);
+        setSalesTicketsTotalPages(result.pagination.totalPages);
+        setSalesTicketsTotalItems(result.pagination.totalItems);
+      }
     } catch (cause) {
       if (salesTicketsRequestRef.current === requestId) {
         setSalesTickets([]);
@@ -327,13 +537,74 @@ export const PosV2ReportingPage = () => {
     } finally {
       if (salesTicketsRequestRef.current === requestId) setSalesTicketsLoading(false);
     }
-  }, [businessId, cleanToken, hasBusinessId, hasToken, reportingPage, salesDates, salesTicketsPage, showToast]);
+  }, [businessId, cleanToken, hasBusinessId, hasToken, isAllBranches, reportBranchIds, reportingPage, salesDates, salesTicketsPage, showToast]);
 
   useEffect(() => {
-    if (hasBusinessId) {
+    if (!session.hasSession || !isAdmin) {
+      return;
+    }
+
+    let cancelled = false;
+    setBranchesLoading(true);
+    setBranchError(null);
+
+    branchApi
+      .list(cleanToken)
+      .then((branches) => {
+        if (cancelled) return;
+
+        setReportBranches(branches);
+
+        const globalBranchId = readActivePosBranchId(businessId);
+        const fallback =
+          branches.find((branch) => branch.id === globalBranchId) ??
+          branches.find((branch) => branch.isMain) ??
+          branches[0] ??
+          null;
+
+        setReportBranchId((current) => {
+          if (current === 0) {
+            return 0;
+          }
+
+          const selectedExists = branches.some((branch) => branch.id === current);
+          return selectedExists ? current : fallback?.id ?? 0;
+        });
+      })
+      .catch((cause) => {
+        if (cancelled) return;
+        setBranchError(
+          cause instanceof Error
+            ? cause.message
+            : "No se pudieron cargar las sucursales para reportes.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setBranchesLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    branchApi,
+    businessId,
+    cleanToken,
+    isAdmin,
+    session.hasSession,
+  ]);
+
+  useEffect(() => {
+    const hasValidScope =
+      reportBranchId > 0 ||
+      (isAdmin && reportBranchId === 0 && reportBranches.length > 0);
+
+    if (hasBusinessId && hasValidScope) {
       loadReporting();
     }
-  }, [hasBusinessId, loadReporting]);
+  }, [hasBusinessId, isAdmin, loadReporting, reportBranchId, reportBranches.length]);
 
   useEffect(() => {
     loadSales();
@@ -417,7 +688,7 @@ export const PosV2ReportingPage = () => {
       legend: { display: false },
     },
     scales: {
-      x: { grid: { display: false }, ticks: { color: "#475569" } },
+      x: { grid: { display: false }, ticks: { color: "#8F8998" } },
       y: {
         beginAtZero: true,
         ticks: {
@@ -601,28 +872,34 @@ export const PosV2ReportingPage = () => {
     showToast("success", "Reporte de ventas exportado.");
   };
 
-  const reprintTicket = (sale: SalesTicket) => {
+  const reprintTicket = async (sale: SalesTicket) => {
     const printWindow = window.open("", "_blank", "width=520,height=800");
     if (!printWindow) {
       showToast("error", "Permite ventanas emergentes para reimprimir el ticket.");
       return;
     }
-    const productRows = sale.products.map((product) => `
-      <tr><td>${escapeHtml(product.quantity)} x ${escapeHtml(product.itemName)}</td><td>${escapeHtml(moneyFormatter.format(product.detailAmount))}</td></tr>
-    `).join("");
-    printWindow.document.write(`<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Ticket ${sale.id}</title><style>
-      body{font-family:Arial,sans-serif;color:#111;margin:0}.actions{padding:12px;text-align:center}.ticket{width:76mm;margin:auto;padding:3mm}.ticket h1{text-align:center;font-size:18px}.meta{font-size:12px;line-height:1.5}table{width:100%;border-collapse:collapse;font-size:12px}td{padding:5px 0;border-bottom:1px dashed #aaa}td:last-child{text-align:right}.total{font-size:16px;text-align:right;margin-top:10px}@media print{.actions{display:none}.ticket{margin:0}}
-    </style></head><body><div class="actions"><button onclick="window.print()">Imprimir ticket</button></div><main class="ticket">
-      <h1>Ticket de venta #${escapeHtml(sale.id)}</h1><div class="meta">Fecha: ${escapeHtml(formatDate(sale.date))}<br>Pago: ${escapeHtml(sale.paymentMethod)}<br>Empleado: ${escapeHtml(sale.employeeName ?? "Sin empleado")}<br>Cliente: ${escapeHtml(sale.customerName ?? "Público general")}</div>
-      <table><tbody>${productRows}</tbody></table><p>Descuento: ${escapeHtml(moneyFormatter.format(sale.discountApplied))}<br>Impuestos: ${escapeHtml(moneyFormatter.format(sale.taxesApplied))}</p><p class="total"><strong>Total: ${escapeHtml(moneyFormatter.format(sale.total))}</strong></p>
-    </main></body></html>`);
+    printWindow.document.write('<!doctype html><html lang="es"><head><meta charset="utf-8"><title>Cargando ticket</title></head><body><p role="status">Cargando detalle de la venta…</p></body></html>');
     printWindow.document.close();
-    printWindow.focus();
+    try {
+      const http = new FetchHttpClient(API_BASE_URL);
+      const [ticket, business] = await Promise.all([
+        loadReportTicket(http, sale, cleanToken),
+        http.request<Record<string, unknown>>({ method: "GET", path: `business/${businessId}`, token: cleanToken, branchId: sale.branchId }),
+      ]);
+      if (printWindow.closed) return;
+      const html = renderReportTicket(ticket, business, readTicketCustomization(businessId), getDefaultPosPrinter(readPosPrinters())?.paperMm ?? "80");
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+      printWindow.focus();
+    } catch (cause) {
+      printWindow.close();
+      showToast("error", cause instanceof Error ? cause.message : "No se pudo cargar el detalle de la venta para reimprimir.");
+    }
   };
-
   if (!session.hasSession) {
     return (
-      <PosV2Shell title="Reportes" subtitle="Analítica operacional v2 moderna y desacoplada">
+      <PosV2Shell title="Reportes" >
         <section className="pos-v2-reporting">
           <section className="pos-v2-reporting__session-empty">
             <h2>Sesión requerida</h2>
@@ -635,13 +912,39 @@ export const PosV2ReportingPage = () => {
   }
 
   return (
-    <PosV2Shell title="Reportes" subtitle="Analítica operacional v2 enfocada en decisiones rápidas">
+    <PosV2Shell title="Reportes">
       <section className="pos-v2-reporting">
         <header className="pos-v2-reporting__header">
           <div>
-            <h2>Insights de ventas</h2>
+            <h2>Reportes</h2>
+            {isAdmin ? <Link to="/pos/intelligence">Análisis del negocio →</Link> : null}
           </div>
           <div className="pos-v2-reporting__filters">
+            {isAdmin ? (
+              <label className="pos-v2-reporting__branch-filter">
+                Sucursal
+                <select
+                  value={reportBranchId}
+                  onChange={(event) => {
+                    setReportBranchId(Number(event.target.value));
+                    setSalesTicketsPage(1);
+                  }}
+                  disabled={branchesLoading || reportBranches.length === 0}
+                >
+                  {branchesLoading ? <option value={reportBranchId}>Cargando sucursales…</option> : null}
+                  {!branchesLoading && reportBranches.length === 0 ? <option value={reportBranchId}>Sin sucursales</option> : null}
+                  {!branchesLoading && reportBranches.length > 0 ? (
+                    <option value={0}>Todas las sucursales</option>
+                  ) : null}
+                  {reportBranches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}{branch.isMain ? " · Principal" : ""}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            ) : null}
+
             <label>
               Rango
               <select value={range} onChange={(event) => setRange(event.target.value as ReportRange)}>
@@ -653,9 +956,25 @@ export const PosV2ReportingPage = () => {
           </div>
         </header>
 
+        <div className="pos-v2-reporting__scope">
+          <span>Reporte de:</span>
+          <strong>{selectedBranchLabel}</strong>
+          <small>
+            {isAllBranches
+              ? `Consolidado de ${reportBranches.length} sucursales`
+              : isAdmin
+                ? "Vista administrativa por sucursal"
+                : "Sucursal operativa actual"}
+          </small>
+        </div>
+
+        {branchError ? <p className="pos-v2-reporting__error">{branchError}</p> : null}
         {error ? <p className="pos-v2-reporting__error">{error}</p> : null}
         {toast ? <p className={`pos-v2-reporting__toast is-${toast.type}`}>{toast.message}</p> : null}
 
+        <section className="pos-v2-reporting__metrics" aria-label="Resumen del periodo" aria-busy={loading}>
+          {[{label:"Ingresos",value:moneyFormatter.format(summary.income)},{label:"Ganancia",value:moneyFormatter.format(summary.earnings)},{label:"Ticket promedio",value:moneyFormatter.format(summary.averageSale)},{label:"Ventas",value:String(summary.totalSales)},{label:"Balance",value:moneyFormatter.format(summary.balance)}].map(metric=><article key={metric.label}><span>{metric.label}</span><strong>{loading?"…":metric.value}</strong></article>)}
+        </section>
         <section className="pos-v2-reporting__content">
           {loading ? (
             Array.from({ length: 4 }).map((_, index) => (
@@ -757,7 +1076,7 @@ export const PosV2ReportingPage = () => {
               </div>
             </header>
             <p className="pos-v2-reporting__table-summary">
-              {salesTicketsTotalItems} tickets · Página {salesTicketsPage} de {salesTicketsTotalPages}
+              {salesTicketsTotalItems} tickets · Página {salesTicketsPage} de {Math.max(1, salesTicketsTotalPages)}
             </p>
             {salesTicketsLoading ? (
               <div className="pos-v2-reporting__table-skeleton" aria-hidden="true">
@@ -781,7 +1100,7 @@ export const PosV2ReportingPage = () => {
                           <td>{sale.employeeName ?? "Sin empleado"}</td>
                           <td>{sale.products.map((product) => `${product.quantity}x ${product.itemName}`).join(", ") || "Sin detalle"}</td>
                           <td>{moneyFormatter.format(sale.total)}</td>
-                          <td><button type="button" onClick={() => reprintTicket(sale)}>Reimprimir</button></td>
+                          <td><button type="button" onClick={() => void reprintTicket(sale)}>Reimprimir</button></td>
                         </tr>
                       ))}
                     </tbody>
@@ -789,7 +1108,7 @@ export const PosV2ReportingPage = () => {
                 </div>
                 <nav className="pos-v2-reporting__pagination" aria-label="Paginación del reporte de ventas">
                   <button type="button" onClick={() => setSalesTicketsPage((page) => Math.max(1, page - 1))} disabled={salesTicketsPage <= 1}>Anterior</button>
-                  <span>Página {salesTicketsPage} de {salesTicketsTotalPages}</span>
+                  <span>Página {salesTicketsPage} de {Math.max(1, salesTicketsTotalPages)}</span>
                   <button type="button" onClick={() => setSalesTicketsPage((page) => Math.min(salesTicketsTotalPages, page + 1))} disabled={salesTicketsPage >= salesTicketsTotalPages}>Siguiente</button>
                 </nav>
               </>
@@ -821,7 +1140,7 @@ export const PosV2ReportingPage = () => {
                 </div>
                 <label>
                   Buscar
-                  <input
+                  <input autoCorrect="on" spellCheck={true}
                     value={salesQuery}
                     onChange={(event) => setSalesQuery(event.target.value)}
                     placeholder="Producto, dirección o estado"
@@ -894,26 +1213,7 @@ export const PosV2ReportingPage = () => {
             ) : null}
           </article>
 
-          <article className="pos-v2-reporting__card is-full">
-            <header>
-              <h3>Módulos en ruta (v2)</h3>
-              <span>UX lista para integrar endpoints existentes del sistema anterior</span>
-            </header>
-            <div className="pos-v2-reporting__module-grid">
-              {PENDING_MODULES.map((module) => (
-                <button
-                  key={module.id}
-                  type="button"
-                  className="pos-v2-reporting__module-card"
-                  onClick={() => navigate(module.id === "cash-closing" ? POS_V2_PATHS.cashClosing : POS_V2_PATHS.morePreview(module.id))}
-                >
-                  <strong>{module.title}</strong>
-                  <small>{module.detail}</small>
-                  <span>{module.id === "cash-closing" ? "Abrir módulo" : "Abrir vista previa"}</span>
-                </button>
-              ))}
-            </div>
-          </article>
+
         </section>
 
         {selectedPoint ? (

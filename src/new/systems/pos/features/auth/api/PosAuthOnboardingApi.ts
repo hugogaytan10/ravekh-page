@@ -52,10 +52,11 @@ const DEFAULT_SIGN_UP_PLAN = "GRATUITO";
 
 export class PosAuthOnboardingApi implements IAuthOnboardingRepository {
   constructor(private readonly httpClient: HttpClient) {}
-async getSecurityQuestionStatus(employeeId: number): Promise<SecurityQuestionStatus> {
+async getSecurityQuestionStatus(employeeId: number, token: string): Promise<SecurityQuestionStatus> {
   return this.httpClient.request<SecurityQuestionStatus>({
     method: "GET",
     path: `security-questions/status/${employeeId}`,
+    token,
   });
 }
   async login(credentials: LoginCredentials): Promise<AuthSession> {

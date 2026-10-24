@@ -1,6 +1,7 @@
+import { usePosTheme } from "./usePosTheme";
 import { MouseEvent, ReactNode, useEffect, useMemo, useState } from "react";
 import { NavLink, useLocation, useNavigate } from "react-router-dom";
-import { FiBarChart2, FiBox, FiDollarSign, FiMoreHorizontal, FiShoppingCart } from "react-icons/fi";
+import { FiBarChart2, FiBox, FiDollarSign, FiMoreHorizontal, FiShoppingCart, FiChevronLeft } from "react-icons/fi";
 import { isSalesOnlyOperator, readPosSessionSnapshot } from "../config/posSession";
 import { POS_V2_PATHS } from "../../routing/PosV2Paths";
 import { fetchPosBusinessFeatures, isPosModuleBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures } from "../config/posFeatureFlags";
@@ -17,9 +18,13 @@ type PosV2ShellProps = {
   children: ReactNode;
 };
 
-type UiTheme = "light" | "dark";
-
-const THEME_STORAGE_KEY = "pos-v2-ui-theme";
+const ROOT_PATHS = new Set<string>([
+  POS_V2_PATHS.sales,
+  POS_V2_PATHS.products,
+  POS_V2_PATHS.finances,
+  POS_V2_PATHS.reports,
+  POS_V2_PATHS.more,
+]);
 
 const NAV_ITEMS = [
   { to: POS_V2_PATHS.sales, label: "Ventas", Icon: FiShoppingCart },
@@ -29,29 +34,18 @@ const NAV_ITEMS = [
   { to: POS_V2_PATHS.more, label: "Más", Icon: FiMoreHorizontal },
 ];
 
-export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
+export const PosV2Shell = ({ title, subtitle, children }: PosV2ShellProps) => {
   const navigate = useNavigate();
   const location = useLocation();
   const [features, setFeatures] = useState<PosBusinessFeatures>(POS_FEATURES_UNKNOWN);
   const [showSalesUnlock, setShowSalesUnlock] = useState(false);
+  const [theme, setTheme] = usePosTheme();
   const [showChangesNotice, setShowChangesNotice] = useState(false);
   const [acknowledgingChangesNotice, setAcknowledgingChangesNotice] = useState(false);
   const businessSettingsService = useMemo(
     () => new ModernSystemsFactory(getPosApiBaseUrl()).createPosBusinessSettingsService(),
     [],
   );
-  const [theme, setTheme] = useState<UiTheme>(() => {
-    const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-    if (stored === "light" || stored === "dark") {
-      return stored;
-    }
-
-    if (window.matchMedia?.("(prefers-color-scheme: dark)").matches) {
-      return "dark";
-    }
-
-    return "light";
-  });
 
   useEffect(() => {
     const session = readPosSessionSnapshot();
@@ -103,16 +97,13 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
     }
   };
 
-  useEffect(() => {
-    document.documentElement.setAttribute("data-theme", theme);
-    window.localStorage.setItem(THEME_STORAGE_KEY, theme);
-  }, [theme]);
-
   const navItems = useMemo(() => {
     const { token } = readPosSessionSnapshot();
     if (!token || !isSalesOnlyOperator(token)) return NAV_ITEMS;
     return NAV_ITEMS.filter((item) => item.to === POS_V2_PATHS.sales || item.to === POS_V2_PATHS.more);
   }, []);
+
+  const canGoBack = !ROOT_PATHS.has(location.pathname);
 
   const shouldShowBottomNav = useMemo(() => {
     return navItems.some((item) => item.to === location.pathname);
@@ -125,11 +116,16 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
   };
 
   return (
-    <div className="pos-v2-shell">
+    <div className={`pos-v2-shell${shouldShowBottomNav ? " pos-v2-shell--with-nav" : ""}`}>
       <header className="pos-v2-shell__header">
         <div className="pos-v2-shell__title-row">
-          <button type="button" className="pos-v2-shell__back" onClick={() => navigate(-1)}>← Regresar</button>
-          <h1 className="pos-v2-shell__title">{title}</h1>
+          {canGoBack ? (
+            <button type="button" className="pos-v2-shell__back" onClick={() => navigate(-1)} aria-label="Regresar a la pantalla anterior"><FiChevronLeft size={24} aria-hidden="true" /></button>
+          ) : null}
+          <div className="pos-v2-shell__heading">
+            <h1 className="pos-v2-shell__title">{title}</h1>
+            {subtitle ? <p className="pos-v2-shell__subtitle">{subtitle}</p> : null}
+          </div>
         </div>
         <div className="pos-v2-shell__header-actions">
           <button
@@ -151,7 +147,7 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
       <main className="pos-v2-shell__content">{children}</main>
 
       {shouldShowBottomNav ? (
-        <nav className="pos-v2-shell__bottom-nav" aria-label="Navegación principal POS v2">
+        <nav className="pos-v2-shell__bottom-nav" aria-label="Navegación principal">
           {navItems.map(({ to, label, Icon }) => (
             <NavLink
               key={to}
@@ -187,7 +183,7 @@ export const PosV2Shell = ({ title, children }: PosV2ShellProps) => {
             aria-labelledby="pos-v2-shell-changes-notice-title"
             aria-describedby="pos-v2-shell-changes-notice-description"
           >
-            
+
             <span className="pos-v2-changes-notice__eyebrow">Novedades RAVEKH</span>
             <h2 id="pos-v2-shell-changes-notice-title">Próximas actualizaciones en RAVEKH</h2>
             <div id="pos-v2-shell-changes-notice-description" className="pos-v2-changes-notice__content">

@@ -87,6 +87,7 @@ export type SalesTicketProduct = {
 };
 
 export type SalesTicket = {
+  branchId?: number;
   id: number;
   type: string;
   date: string;

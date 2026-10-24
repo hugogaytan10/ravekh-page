@@ -1,226 +1,200 @@
-import { HttpClient } from "../../../../core/api/HttpClient";
+import { HttpClient } from "../../../../../core/api/HttpClient";
 import { IFinanceRepository } from "../interface/IFinanceRepository";
 import { CreateFinanceEntryInput, FinanceEntry, FinanceOverview } from "../model/FinanceEntry";
 
 type FinanceEntryResponse = {
+  Id?: number;
+  Branch_Id?: number;
   Name?: string;
   Amount?: number | string;
   Date?: string;
-  CreatedAt?: string;
-  Created_At?: string;
-  Created?: string;
-  name?: string;
-  amount?: number | string;
-  createdAt?: string;
-  created_at?: string;
-  date?: string;
-  Description?: string;
+  MoneyTipe?: string;
+  Source?: string;
+  Order_Id?: number | null;
+  Command_Id?: number | null;
 };
 
-type LegacyListResponse = {
-  Incomes?: FinanceEntryResponse[] | FinanceEntryResponse;
-  Expenses?: FinanceEntryResponse[] | FinanceEntryResponse;
-  Income?: FinanceEntryResponse[] | FinanceEntryResponse;
-  Expense?: FinanceEntryResponse[] | FinanceEntryResponse;
-  incomes?: FinanceEntryResponse[] | FinanceEntryResponse;
-  expenses?: FinanceEntryResponse[] | FinanceEntryResponse;
-  income?: FinanceEntryResponse[] | FinanceEntryResponse;
-  expense?: FinanceEntryResponse[] | FinanceEntryResponse;
-  data?: unknown;
-  Data?: unknown;
-  result?: unknown;
-  Result?: unknown;
-  payload?: unknown;
-  Payload?: unknown;
+type ListWrapper = { data?: FinanceEntryResponse[] };
+type SummaryRow = { MoneyTipe?: string; income?: number; expenses?: number; net?: number };
+type SummaryResponse = { data?: { currencies?: SummaryRow[] } } | { currencies?: SummaryRow[] };
+
+const isoDate = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+const monthRange = (month: number) => {
+  const now = new Date();
+  const from = new Date(now.getFullYear(), month, 1);
+  const to = new Date(now.getFullYear(), month + 1, 0);
+  return { from: isoDate(from), to: isoDate(to) };
 };
+
+const todayRange = () => {
+  const today = isoDate(new Date());
+  return { from: today, to: today };
+};
+
+const toFinanceEntry = (row: FinanceEntryResponse, fallbackName = ""): FinanceEntry =>
+  new FinanceEntry(
+    String(row.Name ?? fallbackName).trim(),
+    Number(row.Amount ?? 0),
+    row.Date,
+    Number(row.Id ?? 0) || undefined,
+    row.Source ? String(row.Source).trim().toUpperCase() : undefined,
+    row.Order_Id == null ? null : Number(row.Order_Id),
+    row.Command_Id == null ? null : Number(row.Command_Id),
+    Number(row.Branch_Id ?? 0) || undefined,
+    row.MoneyTipe ? String(row.MoneyTipe).trim().toUpperCase() : undefined,
+  );
 
 export class PosFinanceApi implements IFinanceRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
-  async getOverview(businessId: number, token: string): Promise<FinanceOverview> {
-    const [monthIncome, monthExpenses, todayIncome, todayExpenses] = await Promise.all([
-      this.httpClient.request<unknown>({ method: "GET", path: `income/month/${businessId}`, token }),
-      this.httpClient.request<unknown>({ method: "GET", path: `expenses/month/${businessId}`, token }),
-      this.httpClient.request<unknown>({ method: "GET", path: `income/today/${businessId}`, token }),
-      this.httpClient.request<unknown>({ method: "GET", path: `expenses/today/${businessId}`, token }),
+  async getOverview(_businessId: number, token: string, branchId?: number): Promise<FinanceOverview> {
+    const now = new Date();
+    const month = monthRange(now.getMonth());
+    const today = todayRange();
+
+    const [monthSummary, todaySummary] = await Promise.all([
+      this.summary(month.from, month.to, token, branchId),
+      this.summary(today.from, today.to, token, branchId),
     ]);
 
     return new FinanceOverview(
-      this.extractAmount(monthIncome),
-      this.extractAmount(monthExpenses),
-      this.extractAmount(todayIncome),
-      this.extractAmount(todayExpenses),
+      monthSummary.income,
+      monthSummary.expenses,
+      todaySummary.income,
+      todaySummary.expenses,
     );
   }
 
-  async getIncomeByMonth(businessId: number, month: number, token: string): Promise<FinanceEntry[]> {
-    const payload = await this.httpClient.request<FinanceEntryResponse[] | LegacyListResponse>({
+  async getIncomeByMonth(
+    _businessId: number,
+    month: number,
+    token: string,
+    branchId?: number,
+  ): Promise<FinanceEntry[]> {
+    const range = monthRange(month);
+    return this.list("income", range.from, range.to, token, branchId);
+  }
+
+  async getIncomeToday(_businessId: number, token: string, branchId?: number): Promise<FinanceEntry[]> {
+    const range = todayRange();
+    return this.list("income", range.from, range.to, token, branchId);
+  }
+
+  async getExpensesByMonth(
+    _businessId: number,
+    month: number,
+    token: string,
+    branchId?: number,
+  ): Promise<FinanceEntry[]> {
+    const range = monthRange(month);
+    return this.list("expenses", range.from, range.to, token, branchId);
+  }
+
+  async getExpensesToday(_businessId: number, token: string, branchId?: number): Promise<FinanceEntry[]> {
+    const range = todayRange();
+    return this.list("expenses", range.from, range.to, token, branchId);
+  }
+
+  async createIncome(
+    input: CreateFinanceEntryInput,
+    token: string,
+    branchId?: number,
+  ): Promise<FinanceEntry> {
+    const response = await this.httpClient.request<{ data?: FinanceEntryResponse } | FinanceEntryResponse>({
       method: "POST",
-      path: `income/bymonth/${businessId}`,
-      body: { month: month + 1 },
+      path: "finances/branch/income/manual",
       token,
+      branchId,
+      body: {
+        Name: input.name.toUpperCase(),
+        Amount: input.amount,
+        MoneyTipe: "MXN",
+      },
     });
-    return this.mapEntries(payload, "income");
+
+    const row = "data" in response ? response.data ?? {} : response;
+    return toFinanceEntry(
+      {
+        ...row,
+        Name: row.Name ?? input.name,
+        Amount: row.Amount ?? input.amount,
+        Branch_Id: row.Branch_Id ?? branchId,
+      },
+      input.name,
+    );
   }
 
-  async getIncomeToday(businessId: number, token: string): Promise<FinanceEntry[]> {
-    const payload = await this.httpClient.request<FinanceEntryResponse[] | LegacyListResponse>({
-      method: "GET",
-      path: `income/today/${businessId}`,
-      token,
-    });
-    return this.mapEntries(payload, "income");
-  }
-
-  async getExpensesByMonth(businessId: number, month: number, token: string): Promise<FinanceEntry[]> {
-    const payload = await this.httpClient.request<FinanceEntryResponse[] | LegacyListResponse>({
+  async createExpense(
+    input: CreateFinanceEntryInput,
+    token: string,
+    branchId?: number,
+  ): Promise<FinanceEntry> {
+    const response = await this.httpClient.request<{ data?: FinanceEntryResponse } | FinanceEntryResponse>({
       method: "POST",
-      path: `expenses/bymonth/${businessId}`,
-      body: { month: month + 1 },
+      path: "finances/branch/expenses",
       token,
+      branchId,
+      body: {
+        Name: input.name.toUpperCase(),
+        Amount: input.amount,
+        MoneyTipe: "MXN",
+      },
     });
-    return this.mapEntries(payload, "expense");
+
+    const row = "data" in response ? response.data ?? {} : response;
+    return toFinanceEntry(
+      {
+        ...row,
+        Name: row.Name ?? input.name,
+        Amount: row.Amount ?? input.amount,
+        Branch_Id: row.Branch_Id ?? branchId,
+      },
+      input.name,
+    );
   }
 
-  async getExpensesToday(businessId: number, token: string): Promise<FinanceEntry[]> {
-    const payload = await this.httpClient.request<FinanceEntryResponse[] | LegacyListResponse>({
+  private async list(
+    kind: "income" | "expenses",
+    from: string,
+    to: string,
+    token: string,
+    branchId?: number,
+  ): Promise<FinanceEntry[]> {
+    const response = await this.httpClient.request<ListWrapper | FinanceEntryResponse[]>({
       method: "GET",
-      path: `expenses/today/${businessId}`,
+      path: `finances/branch/${kind}`,
       token,
+      branchId,
+      query: { from, to },
     });
-    return this.mapEntries(payload, "expense");
+
+    const rows = Array.isArray(response) ? response : response.data ?? [];
+    return rows.map((row) => toFinanceEntry(row));
   }
 
-  async createIncome(input: CreateFinanceEntryInput, token: string): Promise<FinanceEntry> {
-    const payload = await this.httpClient.request<FinanceEntryResponse>({ method: "POST", path: "income", body: this.mapCreatePayload(input), token });
-    return this.mapEntry(payload, input.name, input.amount);
-  }
+  private async summary(
+    from: string,
+    to: string,
+    token: string,
+    branchId?: number,
+  ): Promise<{ income: number; expenses: number }> {
+    const response = await this.httpClient.request<SummaryResponse>({
+      method: "GET",
+      path: "finances/branch/summary",
+      token,
+      branchId,
+      query: { from, to },
+    });
 
-  async createExpense(input: CreateFinanceEntryInput, token: string): Promise<FinanceEntry> {
-    const payload = await this.httpClient.request<FinanceEntryResponse>({ method: "POST", path: "expenses", body: this.mapCreatePayload(input), token });
-    return this.mapEntry(payload, input.name, input.amount);
-  }
+    const data = "data" in response ? response.data ?? {} : response;
+    const rows = data.currencies ?? [];
+    const mxn = rows.find((row) => String(row.MoneyTipe ?? "").toUpperCase() === "MXN") ?? rows[0];
 
-  private mapCreatePayload(input: CreateFinanceEntryInput): Record<string, unknown> {
     return {
-      Business_Id: input.businessId,
-      Name: input.name.toUpperCase(),
-      Amount: input.amount,
+      income: Number(mxn?.income ?? 0),
+      expenses: Number(mxn?.expenses ?? 0),
     };
-  }
-
-  private mapEntries(payload: FinanceEntryResponse[] | LegacyListResponse = [], type: "income" | "expense"): FinanceEntry[] {
-    const rows = this.extractRows(payload, type);
-
-    return rows
-      .map((entry) => this.mapEntry(entry))
-      .filter((entry) => entry.name.trim().length > 0 || entry.amount !== 0);
-  }
-
-  private extractRows(payload: unknown, type: "income" | "expense"): FinanceEntryResponse[] {
-    if (Array.isArray(payload)) {
-      return payload as FinanceEntryResponse[];
-    }
-
-    if (!payload || typeof payload !== "object") {
-      return [];
-    }
-
-    const record = payload as Record<string, unknown>;
-
-    const typedCandidates = type === "income"
-      ? [record.Incomes, record.Income, record.incomes, record.income]
-      : [record.Expenses, record.Expense, record.expenses, record.expense];
-
-    for (const candidate of typedCandidates) {
-      if (Array.isArray(candidate)) return candidate as FinanceEntryResponse[];
-      if (this.isFinanceEntryLike(candidate)) return [candidate as FinanceEntryResponse];
-    }
-
-    const wrappers = [record.data, record.Data, record.result, record.Result, record.payload, record.Payload];
-    for (const wrapped of wrappers) {
-      const extracted = this.extractRows(wrapped, type);
-      if (extracted.length > 0) {
-        return extracted;
-      }
-    }
-
-    const firstArray = Object.values(record).find((value) => Array.isArray(value));
-    if (Array.isArray(firstArray)) {
-      return firstArray as FinanceEntryResponse[];
-    }
-
-    if (this.isFinanceEntryLike(record)) {
-      return [record as FinanceEntryResponse];
-    }
-
-    return [];
-  }
-
-  private isFinanceEntryLike(value: unknown): boolean {
-    if (!value || typeof value !== "object" || Array.isArray(value)) return false;
-
-    const row = value as Record<string, unknown>;
-    return ["Name", "name", "Description", "Amount", "amount", "Date", "date", "CreatedAt", "createdAt", "Created_At", "created_at", "Created"]
-      .some((key) => row[key] !== undefined);
-  }
-
-  private mapEntry(payload: FinanceEntryResponse = {}, fallbackName = "", fallbackAmount = 0): FinanceEntry {
-    return new FinanceEntry(
-      String(payload.name ?? payload.Name ?? payload.Description ?? fallbackName ?? "").trim(),
-      this.toSafeAmount(payload.amount ?? payload.Amount ?? fallbackAmount),
-      payload.createdAt ?? payload.CreatedAt ?? payload.created_at ?? payload.Created_At ?? payload.date ?? payload.Date ?? payload.Created,
-    );
-  }
-
-  private extractAmount(value: unknown): number {
-    if (typeof value === "number") return this.toSafeAmount(value);
-    if (typeof value === "string") return this.toSafeAmount(value);
-
-    if (Array.isArray(value)) {
-      return value.reduce((accumulator, row) => accumulator + this.extractAmount(row), 0);
-    }
-
-    if (value && typeof value === "object") {
-      const objectValue = value as Record<string, unknown>;
-      const candidates = [
-        "Amount", "amount",
-        "Income", "income", "Incomes", "incomes",
-        "Expenses", "expenses", "Expense", "expense",
-        "total", "Total",
-      ] as const;
-
-      for (const key of candidates) {
-        const raw = objectValue[key];
-        if (raw !== undefined) {
-          return this.extractAmount(raw);
-        }
-      }
-
-      const wrappers = [
-        objectValue.TotalsByCurrency,
-        objectValue.totalsByCurrency,
-        objectValue.data,
-        objectValue.Data,
-        objectValue.result,
-        objectValue.Result,
-        objectValue.payload,
-        objectValue.Payload,
-      ];
-
-      for (const wrapped of wrappers) {
-        if (wrapped !== undefined) {
-          const amount = this.extractAmount(wrapped);
-          if (amount !== 0) return amount;
-        }
-      }
-    }
-
-    return 0;
-  }
-
-  private toSafeAmount(value: unknown): number {
-    const amount = Number(value ?? 0);
-    return Number.isFinite(amount) ? amount : 0;
   }
 }

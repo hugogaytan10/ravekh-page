@@ -1,4 +1,6 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { readPosCurrency, resolvePosCurrency } from "../../../shared/config/posCurrency";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { cashClosingCsv } from "../model/CashClosing";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
@@ -12,7 +14,6 @@ const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
 const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 const EMPLOYEE_ID_KEY = POS_SESSION_STORAGE_KEYS.employeeId;
 
-const moneyFormatter = new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 });
 
 type EmployeeOption = { id: number; fullName: string };
 type ClosingView = {
@@ -61,6 +62,9 @@ export const PosV2CashClosingPage = () => {
   const [employees, setEmployees] = useState<EmployeeOption[]>([]);
   const [recentClosings, setRecentClosings] = useState<ClosingView[]>([]);
   const [currentTotal, setCurrentTotal] = useState(0);
+  const [currentCurrency, setCurrentCurrency] = useState(() => readPosCurrency().code as string);
+  const requestSequence = useRef(0);
+  const moneyFormatter = new Intl.NumberFormat("es-MX", { style: "currency", currency: resolvePosCurrency(currentCurrency).iso });
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -75,22 +79,35 @@ export const PosV2CashClosingPage = () => {
   }, []);
 
   const refreshEmployeeData = async (employeeId: number, token: string) => {
+    const requestId = ++requestSequence.current;
     const [currentResult, historyResult] = await Promise.allSettled([
-      page.loadCurrentTotal(employeeId, token),
+      page.loadCurrentPreview(employeeId, token),
       page.listByEmployee(employeeId, token),
     ]);
+    if (requestId !== requestSequence.current) return;
 
     if (currentResult.status === "fulfilled") {
-      setCurrentTotal(Number(currentResult.value || 0));
+      setCurrentTotal(currentResult.value.total);
+      setCurrentCurrency(currentResult.value.currency);
     } else {
       setCurrentTotal(0);
+      setError(currentResult.reason instanceof Error ? currentResult.reason.message : "No se pudo consultar el corte actual.");
     }
 
     if (historyResult.status === "fulfilled") {
       setRecentClosings(historyResult.value.slice(0, 12));
     } else {
       setRecentClosings([]);
+      setError(historyResult.reason instanceof Error ? historyResult.reason.message : "No se pudo consultar el historial de cortes.");
     }
+  };
+
+  const exportClosings = async () => {
+    await runWithPlanAccess("cashClosing.export", () => {
+      const url = URL.createObjectURL(new Blob(["\uFEFF", cashClosingCsv(recentClosings)], { type: "text/csv;charset=utf-8" }));
+      const link = document.createElement("a"); link.href = url; link.download = `cortes-${selectedEmployeeId}.csv`; link.click();
+      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    });
   };
 
   const refreshData = async () => {
@@ -160,6 +177,7 @@ export const PosV2CashClosingPage = () => {
     };
 
     run();
+    return () => { requestSequence.current++; };
   }, [selectedEmployeeId]);
 
   const handleSubmit = async (event: FormEvent) => {
@@ -187,18 +205,18 @@ export const PosV2CashClosingPage = () => {
       setError(null);
 
       try {
-        const totalBeforeClosing = await page.loadCurrentTotal(employeeId, session.token);
-        const normalizedTotal = Number(totalBeforeClosing || 0);
+        const preview = await page.loadCurrentPreview(employeeId, session.token);
+        const normalizedTotal = preview.total;
         if (!Number.isFinite(normalizedTotal) || normalizedTotal <= 0) {
           setCurrentTotal(0);
           setError("No hay ventas acumuladas para cerrar caja.");
           return;
         }
         await page.register({ employeeId }, session.token);
-        setToast(`Corte registrado por ${moneyFormatter.format(normalizedTotal)}.`);
+        setToast(`Corte registrado por ${new Intl.NumberFormat("es-MX", { style: "currency", currency: resolvePosCurrency(preview.currency).iso }).format(normalizedTotal)}.`);
         await refreshEmployeeData(employeeId, session.token);
-      } catch {
-        setError("No fue posible registrar el corte de caja.");
+      } catch (cause) {
+        setError(cause instanceof Error ? cause.message : "No fue posible registrar el corte de caja.");
       } finally {
         setSaving(false);
       }
@@ -206,12 +224,12 @@ export const PosV2CashClosingPage = () => {
   };
 
   return (
-    <PosV2Shell title="Corte de caja" subtitle="Control moderno de cierres por empleado y revisión de diferencias.">
+    <PosV2Shell title="Corte de caja" subtitle="Consulta y registra los cortes de tus empleados.">
       <section className="pos-v2-cash-closing">
         <header className="pos-v2-cash-closing__header">
           <div>
             <h2>Cierre de turno</h2>
-            <p>Calcula el total del día por empleado y confirma el corte contra el endpoint histórico desacoplado.</p>
+            <p>Selecciona un empleado para consultar su total actual y el historial de cortes de esta sucursal.</p>
           </div>
           <button type="button" onClick={refreshData} disabled={loading || saving || checkingPlanAccess}>Actualizar</button>
         </header>
@@ -220,7 +238,7 @@ export const PosV2CashClosingPage = () => {
         {error ? <p className="pos-v2-cash-closing__error">{error}</p> : null}
         {toast ? <p className="pos-v2-cash-closing__toast">{toast}</p> : null}
         {!canCloseCash ? <p className="pos-v2-cash-closing__warning">Solo cuentas dueñas/administradoras pueden ejecutar el cierre.</p> : null}
-        {session.hasSession && canCloseCash && !loading && !hasSalesToClose ? (
+        {session.hasSession && canCloseCash && !loading && !error && !hasSalesToClose ? (
           <p className="pos-v2-cash-closing__warning">No hay ventas registradas todavía (total en $0.00), así que el corte está deshabilitado.</p>
         ) : null}
 
@@ -237,7 +255,7 @@ export const PosV2CashClosingPage = () => {
               </select>
             </label>
             <p className="pos-v2-cash-closing__hint">
-              Total calculado por backend para cierre actual: <strong>{moneyFormatter.format(currentTotal)}</strong>
+              Total para el corte actual: <strong>{moneyFormatter.format(currentTotal)}</strong>
             </p>
             <button type="submit" disabled={saving || loading || checkingPlanAccess || !canCloseCash || !hasSalesToClose}>{saving ? "Guardando..." : checkingPlanAccess ? "Validando plan..." : "Confirmar corte"}</button>
           </form>
@@ -257,6 +275,7 @@ export const PosV2CashClosingPage = () => {
 
           <article className="pos-v2-cash-closing__card">
             <h3>Historial reciente</h3>
+            <button type="button" disabled={loading || saving || checkingPlanAccess || recentClosings.length === 0} onClick={() => void exportClosings()}>Exportar historial mostrado</button>
             <ul className="pos-v2-cash-closing__history">
               {recentClosings.map((closing) => (
                 <li key={closing.id}>
@@ -264,7 +283,7 @@ export const PosV2CashClosingPage = () => {
                     <strong>Corte #{closing.id}</strong>
                     <small>{closing.date ? new Date(closing.date).toLocaleString("es-MX") : "Sin fecha"}{closing.employeeName ? ` · ${closing.employeeName}` : ""}</small>
                   </div>
-                  <span className={closing.total > 0 ? "is-positive" : "is-equal"}>{moneyFormatter.format(closing.total)}</span>
+                  <span className={closing.total > 0 ? "is-positive" : "is-equal"}>{closing.total.toLocaleString("es-MX", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                 </li>
               ))}
               {!loading && recentClosings.length === 0 ? <li className="is-empty">Aún no hay cierres registrados.</li> : null}

@@ -1,3 +1,5 @@
+import { OnlineStoreTools } from "./OnlineStoreTools";
+import { posMoneyFormatter } from "../../../shared/config/posCurrency";
 import { useEffect, useMemo, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
@@ -154,7 +156,7 @@ export const PosV2OnlineOrdersPage = () => {
     }
   };
 
-  const formatCurrency = (value: number) => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(value);
+  const formatCurrency = (value: number) => posMoneyFormatter.format(value);
   const getStatusLabel = (status: string) => STATUS_COPY[status.toUpperCase()] ?? status;
 
   const summarizeItems = (items: OnlineOrderCardViewModel["items"] | null | undefined) => {
@@ -214,11 +216,12 @@ export const PosV2OnlineOrdersPage = () => {
 
   return (
     <PosV2Shell title="Tienda en línea" subtitle="Gestión completa de pedidos del canal online">
+      <OnlineStoreTools />
       <section className="pos-v2-online-orders">
         <header>
           <div>
             <h2>Pedidos online</h2>
-            <p>Revisa, filtra y actualiza el estado de pedidos sin salir del POS v2.</p>
+            <p>Revisa y actualiza el estado de tus pedidos.</p>
           </div>
           <button type="button" onClick={loadOrders} disabled={loading}>
             {loading ? "Actualizando..." : "Actualizar"}
@@ -238,7 +241,7 @@ export const PosV2OnlineOrdersPage = () => {
             <button type="button" className={filter === "pending" ? "is-active" : ""} onClick={() => setFilter("pending")}>Pendientes</button>
             <button type="button" className={filter === "all" ? "is-active" : ""} onClick={() => setFilter("all")}>Todos</button>
           </div>
-          <input
+          <input autoCorrect="on" spellCheck={true}
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}

@@ -25,6 +25,7 @@ import {
   normalizeWholesalePriceTiers,
 } from "./catalogPrice";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
+import { buildCatalogPath, getCatalogCartKey, readCatalogBranchContext } from "./catalogBranchContext";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", {
@@ -33,18 +34,7 @@ const money = (value: number) =>
     maximumFractionDigits: 2,
   }).format(value);
 
-const normalizeOptionText = (value?: string | null) =>
-  value?.trim().toLowerCase() ?? "";
-
-const variantMatchesColor = (
-  variant: StorefrontVariant,
-  color: StorefrontProductExtra | null,
-) => {
-  const variantColor = normalizeOptionText(variant.color);
-  if (!variantColor) return true;
-  if (!color) return false;
-  return variantColor === normalizeOptionText(color.description);
-};
+import { selectVariantForColor, variantMatchesColor } from "./catalogVariantSelection";
 
 export const CatalogProductDetailPage = () => {
   useCatalogThemeSync();
@@ -76,12 +66,13 @@ export const CatalogProductDetailPage = () => {
     yPercent: 50,
   });
   const [showMagnifier, setShowMagnifier] = useState(false);
+  const branchContext = readCatalogBranchContext();
 
   const pageLogic = useMemo(() => {
-    const repository = new CatalogStorefrontApi(getPosApiBaseUrl());
+    const repository = new CatalogStorefrontApi(getPosApiBaseUrl(), branchContext.branchSlug, branchContext.businessId);
     const service = new CatalogStorefrontService(repository);
     return new CatalogStorefrontExperiencePage(service);
-  }, []);
+  }, [branchContext.branchSlug, branchContext.businessId]);
 
   useEffect(() => {
     const run = async () => {
@@ -242,7 +233,7 @@ export const CatalogProductDetailPage = () => {
           selectedVariant.wholesaleMinQuantity,
         )
       : [];
-    const wholesalePricesToStore = selectedVariant && variantWholesalePrices.length > 0
+    const wholesalePricesToStore = selectedVariant
       ? variantWholesalePrices
       : productWholesalePrices;
     const firstWholesaleTier = wholesalePricesToStore[0] ?? null;
@@ -250,7 +241,7 @@ export const CatalogProductDetailPage = () => {
     const wholesaleMinQuantityToStore = firstWholesaleTier?.minQuantity ?? null;
     const costToStore = selectedVariant?.costPerItem ?? undefined;
 
-    const key = `catalog-v2-cart:${product.businessId}`;
+    const key = getCatalogCartKey(product.businessId, branchContext.branchSlug);
     const raw = window.localStorage.getItem(key);
     const current = raw ? (JSON.parse(raw) as StorefrontCartItem[]) : [];
     const existing = current.find(
@@ -296,7 +287,7 @@ export const CatalogProductDetailPage = () => {
       return;
     }
 
-    navigate(`/v2/catalogo/${product!.businessId}`);
+    navigate(buildCatalogPath(product!.businessId, branchContext.branchSlug));
   };
 
   const buyNow = () => {
@@ -350,7 +341,7 @@ export const CatalogProductDetailPage = () => {
         selectedVariant.wholesaleMinQuantity,
       )
     : [];
-  const selectedWholesaleTiers = selectedVariant && variantWholesaleTiers.length > 0
+  const selectedWholesaleTiers = selectedVariant
     ? variantWholesaleTiers
     : productWholesaleTiers;
   const effectivePrice = selectedVariant
@@ -381,7 +372,8 @@ export const CatalogProductDetailPage = () => {
         onClick={() => {
           const origin = location.state as { catalogPage?: number; catalogProductId?: number } | null;
           const catalogPage = Math.max(1, Number(origin?.catalogPage) || 1);
-          navigate(`/v2/catalogo/${product.businessId}${catalogPage > 1 ? `?page=${catalogPage}` : ""}`, {
+          const catalogPath = buildCatalogPath(product.businessId, branchContext.branchSlug);
+          navigate(`${catalogPath}${catalogPage > 1 ? `?page=${catalogPage}` : ""}`, {
             state: { restoreProductId: origin?.catalogProductId },
           });
         }}
@@ -610,19 +602,9 @@ export const CatalogProductDetailPage = () => {
                         : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
                     }`}
                     onClick={() => {
-                      setSelectedColorId((current) =>
-                        current === color.id ? null : color.id,
-                      );
-                      setSelectedVariantId((current) => {
-                        if (!current || current === "base") return current;
-                        const currentVariant =
-                          variants.find((variant) => variant.id === current) ??
-                          null;
-                        return currentVariant &&
-                          variantMatchesColor(currentVariant, color)
-                          ? current
-                          : null;
-                      });
+                      const nextColor = selectedColorId === color.id ? null : color;
+                      setSelectedColorId(nextColor?.id ?? null);
+                      setSelectedVariantId(current => selectVariantForColor(variants, nextColor, current));
                     }}
                   >
                     {color.description}

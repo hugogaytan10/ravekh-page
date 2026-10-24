@@ -1,3 +1,4 @@
+import {isVariantAvailableForSale} from "../model/variantAvailability";
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { POS_ENDPOINTS } from "../../../shared/api/posEndpoints";
 import { toPaginationMeta } from "../../../shared/model/Pagination";
@@ -5,6 +6,7 @@ import { IProductRepository, ProductCategory, SalesProductsPaginatedResult } fro
 import { CreateProductDto, Product, SalesProductVariant } from "../model/Product";
 
 type LegacyVariantResponse = {
+  Available?: boolean | number | null;
   Id?: number | null;
   Description?: string | null;
   Color?: string | null;
@@ -46,23 +48,7 @@ export class PosProductApi implements IProductRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
   async listByBusiness(businessId: number, token: string): Promise<Product[]> {
-    let [withoutStock, withStock] = await Promise.all([
-      this.httpClient.request<ProductResponse[]>({
-        method: "GET",
-        path: POS_ENDPOINTS.productsStockNull(businessId),
-        token,
-      }),
-      this.httpClient.request<ProductResponse[]>({
-        method: "GET",
-        path: POS_ENDPOINTS.productsStockGtZero(businessId),
-        token,
-      }),
-    ]);
-
-    if (!withoutStock) withoutStock = [];
-    if (!withStock) withStock = [];
-
-    return [...withoutStock, ...withStock].map((item) => this.toDomain(item));
+    return this.listAvailableByBusinessAll(businessId, token, "MAX");
   }
 
   async listAvailableByBusinessPaginated(
@@ -70,13 +56,14 @@ export class PosProductApi implements IProductRepository {
     token: string,
     limit: string,
     page: number,
+    query?: string,
+    categoryId?: number,
   ): Promise<SalesProductsPaginatedResult> {
     const payload = await this.httpClient.request<SalesProductsPayload>({
-      method: "POST",
-      path: POS_ENDPOINTS.productsStockAvailableGtZero(businessId),
+      method: "GET",
+      path: query ? POS_ENDPOINTS.productsSearchByBranch(businessId) : POS_ENDPOINTS.productsByBusinessBranch(businessId),
       token,
-      query: { page },
-      body: { Limit: limit },
+      query: query ? { page, pageSize: 20, query, categoryId, limit } : { page, limit },
     });
 
     return this.toPaginatedResult(payload, page, 20);
@@ -88,14 +75,16 @@ export class PosProductApi implements IProductRepository {
     limit: string,
     page: number,
   ): Promise<SalesProductsPaginatedResult> {
+    const sessionBusinessId = Number(window.localStorage.getItem("pos-v2-business-id") ?? 0);
+    if (!sessionBusinessId) return { products: [], pagination: toPaginationMeta(undefined, page, 20, 0) };
     const payload = await this.httpClient.request<SalesProductsPayload>({
       method: "GET",
-      path: POS_ENDPOINTS.productsByCategory(categoryId),
+      path: POS_ENDPOINTS.productsSearchByBranch(sessionBusinessId),
       token,
-      query: { limit, page },
+      query: {page, pageSize: 20, categoryId, limit},
     });
-
-    return this.toPaginatedResult(payload, page, 20);
+    const result = this.toPaginatedResult(payload, page, 20);
+    return {...result, pagination: {...result.pagination, categoryIds: [categoryId]}};
   }
 
   async listAvailableByBusinessAll(
@@ -103,14 +92,28 @@ export class PosProductApi implements IProductRepository {
     token: string,
     limit: string,
   ): Promise<Product[]> {
-    const payload = await this.httpClient.request<SalesProductsPayload>({
-      method: "POST",
-      path: POS_ENDPOINTS.productsStockAvailableGtZeroAll(businessId),
+    const first = await this.httpClient.request<SalesProductsPayload>({
+      method: "GET",
+      path: POS_ENDPOINTS.productsByBusinessBranch(businessId),
       token,
-      body: { Limit: limit },
+      query: { page: 1, limit },
     });
+    const firstRows = Array.isArray(first) ? first : first?.products ?? first?.data ?? [];
+    if (Array.isArray(first)) return firstRows.map((item) => this.toDomain(item));
 
-    const rows = Array.isArray(payload) ? payload : payload?.products ?? payload?.data ?? [];
+    const totalPages = Math.max(1, Number(first.pagination?.totalPages ?? 1));
+    const pages = totalPages > 1
+      ? await Promise.all(Array.from({ length: totalPages - 1 }, (_, index) => this.httpClient.request<SalesProductsPayload>({
+          method: "GET",
+          path: POS_ENDPOINTS.productsByBusinessBranch(businessId),
+          token,
+          query: { page: index + 2, limit },
+        })))
+      : [];
+    const rows = [
+      ...firstRows,
+      ...pages.flatMap((payload) => Array.isArray(payload) ? payload : payload?.products ?? payload?.data ?? []),
+    ];
     return rows.map((item) => this.toDomain(item));
   }
 
@@ -132,9 +135,18 @@ export class PosProductApi implements IProductRepository {
   async create(payload: CreateProductDto, token: string): Promise<Product> {
     const created = await this.httpClient.request<ProductResponse>({
       method: "POST",
-      path: POS_ENDPOINTS.products(),
+      path: POS_ENDPOINTS.productsByBusinessBranch(payload.businessId),
       token,
-      body: { Product: payload, Variants: null },
+      body: {
+        Business_Id: payload.businessId,
+        Name: payload.name,
+        Price: payload.price,
+        Stock: payload.stock,
+        ForSale: 1,
+        ShowInStore: 1,
+        Available: 1,
+        Showprice: 1,
+      },
     });
 
     return this.toDomain(created);
@@ -173,7 +185,7 @@ export class PosProductApi implements IProductRepository {
       Array.isArray(item.Images) ? item.Images.filter(Boolean) : [],
       item.ForSale ?? true,
       item.Available ?? true,
-      Array.isArray(item.Variants) ? item.Variants.map((variant) => this.toDomainVariant(variant)) : [],
+      Array.isArray(item.Variants) ? item.Variants.filter(isVariantAvailableForSale).map((variant) => this.toDomainVariant(variant)) : [],
     );
   }
 

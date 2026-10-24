@@ -3,17 +3,24 @@ import { PosProductsApi } from "../../../../src/new/systems/pos/features/product
 import { ProductsService } from "../../../../src/new/systems/pos/features/products/services/ProductsService";
 
 export async function run(): Promise<void> {
+  const previousWindow = globalThis.window;
+  Object.defineProperty(globalThis, "window", {
+    configurable: true,
+    value: { localStorage: { getItem: (key: string) => key === "pos-v2-business-id" ? "7" : null } },
+  });
+
+  try {
   const calls: Array<{ method: string; path: string; body?: unknown }> = [];
   const httpClient = {
     async request({ method, path, query, body }: { method: string; path: string; query?: Record<string, unknown>; body?: unknown }) {
       calls.push({ method, path, body });
-      if (method === "PUT") return undefined;
+      if (method === "PATCH") return undefined;
       assert.equal(method, "GET");
-      assert.equal(path, "products/business/noavailable/7");
-      assert.deepEqual(query, { page: 2, limit: 20 });
+      assert.equal(path, "products/business/7/branch/search");
+      assert.deepEqual(query, { page: 2, pageSize: 20, available: 0 });
       return {
         products: [{ Id: 9, Business_Id: 7, Name: "Producto anterior", Available: 0 }],
-        pagination: { page: 2, pageSize: 20, total: 21, totalPages: 2 },
+        pagination: { page: 2, pageSize: 20, totalItems: 21, totalPages: 2 },
       };
     },
   };
@@ -28,8 +35,12 @@ export async function run(): Promise<void> {
 
   await service.restoreProduct(9, "token");
   assert.deepEqual(calls[1], {
-    method: "PUT",
-    path: "products/available/9",
+    method: "PATCH",
+    path: "products/business/7/branch/9",
     body: { Available: 1 },
   });
+  } finally {
+    if (previousWindow === undefined) delete (globalThis as { window?: Window }).window;
+    else Object.defineProperty(globalThis, "window", { configurable: true, value: previousWindow });
+  }
 }

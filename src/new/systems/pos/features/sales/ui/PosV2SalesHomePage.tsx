@@ -1,3 +1,7 @@
+import { shareSaleTicket, type CompletedSale, type CompletedSaleLine } from "./saleTicket";
+import {isVariantAvailableForSale} from "../model/variantAvailability";
+import { DEFAULT_TICKET_CUSTOMIZATION, readTicketCustomization, escapeTicketHtml, ticketContactHtml, ticketFooterHtml } from "../../../shared/config/posTicket";
+import { persistPosCurrency, readPosCurrency, posMoneyFormatter } from "../../../shared/config/posCurrency";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import {
@@ -17,6 +21,7 @@ import {
 import "./PosV2SalesHomePage.css";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
+import { buildPosAuthHeaders } from "../../../shared/config/posBranch";
 import {
   POS_SESSION_STORAGE_KEYS,
   readPosSessionSnapshot,
@@ -35,6 +40,8 @@ import {
   readPosBusinessFeatures,
 } from "../../../shared/config/posFeatureFlags";
 import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
+import { clampSaleQuantityToStock } from "../model/saleStock";
+import { createIdempotencyKey } from "../../../../../core/api/FetchHttpClient";
 import {
   formatRemainingStock,
   getStockLimitMessage,
@@ -89,27 +96,6 @@ type PaymentMethod =
   | "LINK DE PAGO"
   | "OTROS";
 type MobileStep = "catalog" | "cart" | "checkout";
-type CompletedSaleLine = {
-  name: string;
-  quantity: number;
-  unitPrice: number;
-  lineTotal: number;
-};
-type CompletedSale = {
-  folio: string;
-  paymentMethodLabel: string;
-  table: string;
-  subtotal: number;
-  discount: number;
-  taxAmount: number;
-  taxableBase: number;
-  taxDescription?: string;
-  total: number;
-  customerName?: string;
-  createdAt: string;
-  items: CompletedSaleLine[];
-};
-
 type SaleLimitDetails = {
   limit?: number;
   totalOrdersThisMonth?: number;
@@ -188,6 +174,7 @@ type ProductExtrasVm = {
 } | null;
 
 type VariantApiResponse = {
+  Available?: boolean | number | null;
   Id?: number | null;
   Description?: string | null;
   Color?: string | null;
@@ -218,6 +205,13 @@ type TableProductDetailApiResponse = {
   ProductPrice?: number | null;
   Price1?: number | null;
   ProductId?: number | null;
+  Item_Id?: number | null;
+  Item_Quantity?: number | null;
+  Item_Name?: string | null;
+  Item_Description?: string | null;
+  Item_Price?: number | null;
+  Color_Id?: number | null;
+  Size_Id?: number | null;
 };
 type TableApiResponse = {
   Id?: number | null;
@@ -315,25 +309,29 @@ const toVariantLabel = (variant: SaleVariantVm): string => {
 };
 
 export const PosV2SalesHomePage = () => {
+  const saleIdempotencyRef = useRef<{ fingerprint: string; key: string } | null>(null);
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
+  const productQuery = search.trim().length >= 2 ? search.trim() : "";
   const [categoryKey, setCategoryKey] = useState("all");
   const [isGrid, setIsGrid] = useState(true);
   const [products, setProducts] = useState<SaleItemVm[]>([]);
+  const [catalogRevision, setCatalogRevision] = useState(0);
   const [categories, setCategories] = useState<CategoryVm[]>([]);
   const [availableCategoryIds, setAvailableCategoryIds] = useState<number[]>(
     [],
   );
   const [loadingProducts, setLoadingProducts] = useState(true);
-  const [searchingGlobalCatalog, setSearchingGlobalCatalog] = useState(false);
   const [productsError, setProductsError] = useState<string | null>(null);
   const [cart, setCart] = useState<Record<string, CartItemVm>>({});
-  const [stockRevision, setStockRevision] = useState(0);
   const [discountPercent, setDiscountPercent] = useState("0");
   const [fixedDiscount, setFixedDiscount] = useState("0");
   const discountSourceRef = useRef<"percent" | "fixed">("percent");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("EFECTIVO");
+  const [payLater, setPayLater] = useState(false);
+  const [initialPayment, setInitialPayment] = useState("0");
   const [ticket, setTicket] = useState<string | null>(null);
+  const [ticketShareMessage, setTicketShareMessage] = useState("");
   const [mobileStep, setMobileStep] = useState<MobileStep>("catalog");
   const [validationError, setValidationError] = useState<string | null>(null);
   const [planUpgradePrompt, setPlanUpgradePrompt] =
@@ -358,6 +356,8 @@ export const PosV2SalesHomePage = () => {
   const [quoteBusinessName, setQuoteBusinessName] = useState("Mi negocio");
   const [quoteClientName, setQuoteClientName] = useState("");
   const [quoteLogoUrl, setQuoteLogoUrl] = useState("");
+  const [cashierName, setCashierName] = useState("");
+  const [ticketBusiness, setTicketBusiness] = useState({ phone: "", address: "" });
   const [quoteIssueDate, setQuoteIssueDate] = useState(() => getIsoDate(0));
   const [quoteValidUntil, setQuoteValidUntil] = useState(() => getIsoDate(7));
   const [isMobileTablesOpen, setIsMobileTablesOpen] = useState(false);
@@ -383,15 +383,12 @@ export const PosV2SalesHomePage = () => {
     product: SaleItemVm;
     variants: SaleVariantVm[];
     extras: ProductExtrasVm;
-    selectedVariantKey: string | null;
+    selectedVariantKeys: string[];
     selectedSizeId: number | null;
     quantities: Record<string, number>;
   } | null>(null);
   const [extrasCache, setExtrasCache] = useState<
     Record<number, ProductExtrasVm>
-  >({});
-  const [variantsCache, setVariantsCache] = useState<
-    Record<number, SaleVariantVm[]>
   >({});
   const [imageLoadErrors, setImageLoadErrors] = useState<Record<number, true>>(
     {},
@@ -400,8 +397,10 @@ export const PosV2SalesHomePage = () => {
   const [variantModalError, setVariantModalError] = useState<string | null>(
     null,
   );
+  const activeTableDraftRef = useRef("");
   const loadingTableDraftRef = useRef(false);
   const skippingDraftSyncRef = useRef(false);
+  const tableDraftSyncRef = useRef<Promise<void>>(Promise.resolve());
   const keepCartForNextTableSelectionRef = useRef(false);
 
   const debugLog = (...args: unknown[]) => {
@@ -562,17 +561,22 @@ export const PosV2SalesHomePage = () => {
     const factory = new ModernSystemsFactory(API_BASE_URL);
     const productService = factory.createPosProductService();
 
+    let active = true;
     setLoadingProducts(true);
+    setProducts([]);
     setProductsError(null);
-    productService
+    const timeout = window.setTimeout(() => {
+      productService
       .getSellableProductsPaginated(
         businessId,
         token,
         planLimit,
         currentPage,
         Number.isFinite(categoryId) ? categoryId : null,
+        productQuery || undefined,
       )
       .then((response) => {
+        if (!active) return;
         const mapped: SaleItemVm[] = response.products.map((item) =>
           toSaleItemVm(item),
         );
@@ -588,21 +592,26 @@ export const PosV2SalesHomePage = () => {
           response.pagination.hasPrev || response.pagination.page > 1,
         );
 
-        if (categoryId === null) {
+        if (categoryId === null && !productQuery) {
           setAvailableCategoryIds(response.pagination.categoryIds);
         }
       })
       .catch((error) => {
+        if (!active) return;
         setProducts([]);
-        setGlobalSearchProducts([]);
         setProductsError(
           error instanceof Error
             ? error.message
             : "No pudimos cargar tus productos.",
         );
       })
-      .finally(() => setLoadingProducts(false));
-  }, [categoryKey, currentPage, isPlanLimitReady, planLimit, stockRevision]);
+      .finally(() => { if (active) setLoadingProducts(false); });
+    }, productQuery ? ALL_PRODUCTS_SEARCH_DEBOUNCE_MS : 0);
+    return () => {
+      active = false;
+      window.clearTimeout(timeout);
+    };
+  }, [catalogRevision, categoryKey, currentPage, isPlanLimitReady, planLimit, productQuery]);
 
 
   useEffect(() => {
@@ -618,6 +627,11 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
+    const employeeId = readPosSessionSnapshot().employeeId;
+    if (employeeId) {
+      fetch(new URL(`employee/${employeeId}`, API_BASE_URL).toString(), { headers: buildPosAuthHeaders(token) })
+        .then(response => response.ok ? response.json() : null).then(user => { if (user?.Name) setCashierName(String(user.Name)); }).catch(() => undefined);
+    }
     const factory = new ModernSystemsFactory(API_BASE_URL);
     const businessService = factory.createPosBusinessSettingsService();
 
@@ -661,6 +675,9 @@ export const PosV2SalesHomePage = () => {
                 name?: string;
                 Logo?: string;
                 logo?: string;
+                PhoneNumber?: string;
+                Address?: string;
+                MoneyTipe?: string;
               } & PosBusinessFeatureResponse)
             | null,
         ) => {
@@ -669,6 +686,8 @@ export const PosV2SalesHomePage = () => {
             payload.Name ?? payload.name ?? "",
           ).trim();
           const logoUrl = String(payload.Logo ?? payload.logo ?? "").trim();
+          setTicketBusiness({ phone: payload.PhoneNumber || "", address: payload.Address || "" });
+          persistPosCurrency(businessId, payload.MoneyTipe);
           if (businessName) setQuoteBusinessName(businessName);
           if (logoUrl) setQuoteLogoUrl(logoUrl);
           setCouponsPlan(
@@ -777,16 +796,12 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
-    const headers = {
-      "Content-Type": "application/json",
-      token,
-      Authorization: `Bearer ${token}`,
-    };
+    const headers = buildPosAuthHeaders(token);
 
     setLoadingTables(true);
 
     fetch(
-      new URL(`table_zones/business/${businessId}`, API_BASE_URL).toString(),
+      new URL("restaurant/branch/zones", API_BASE_URL).toString(),
       { headers },
     )
       .then(async (zonesResponse) => {
@@ -798,8 +813,9 @@ export const PosV2SalesHomePage = () => {
 
         const zonesPayload = (await zonesResponse.json().catch(() => null)) as
           | TableZoneApiResponse[]
+          | { data?: TableZoneApiResponse[] }
           | null;
-        const rawZones = Array.isArray(zonesPayload) ? zonesPayload : [];
+        const rawZones = Array.isArray(zonesPayload) ? zonesPayload : zonesPayload?.data ?? [];
         const normalizedZones = rawZones
           .map((zone) => ({
             id: Number(zone.Id ?? 0),
@@ -817,7 +833,7 @@ export const PosV2SalesHomePage = () => {
         rawZones.forEach((zone) => {
           const zoneId = Number(zone.Id ?? 0);
           const rows = Array.isArray(zone.Tables) ? zone.Tables : [];
-          if (zoneId <= 0 || rows.length === 0) return;
+          if (zoneId <= 0) return;
 
           preloadedTables[zoneId] = rows
             .map((table) => ({
@@ -833,10 +849,7 @@ export const PosV2SalesHomePage = () => {
                     zoneId,
                 ) || zoneId,
             }))
-            .filter(
-              (table) =>
-                table.id > 0 && table.name.length > 0 && table.isAvailable,
-            )
+            .filter((table) => table.id > 0 && table.name.length > 0)
             .map(({ id, name, zoneId }) => ({ id, name, zoneId }))
             .sort((a, b) => a.id - b.id);
         });
@@ -845,7 +858,7 @@ export const PosV2SalesHomePage = () => {
       })
       .then(({ normalizedZones, preloadedTables }) => {
         debugLog(
-          "Zonas cargadas desde endpoint /table_zones/business/:businessId",
+          "Zonas cargadas desde endpoint /restaurant/branch/zones",
           normalizedZones,
         );
         setTableZones(normalizedZones);
@@ -896,11 +909,7 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
-    const headers = {
-      "Content-Type": "application/json",
-      token,
-      Authorization: `Bearer ${token}`,
-    };
+    const headers = buildPosAuthHeaders(token);
 
     setLoadingTables(true);
     fetch(
@@ -1014,18 +1023,13 @@ export const PosV2SalesHomePage = () => {
     }
   }, [categoryOptions, categoryKey]);
 
-  const debouncedSearch = useMemo(() => search.trim().toLowerCase(), [search]);
-
-  useEffect(() => {
-    setSearchingGlobalCatalog(false);
-  }, [debouncedSearch]);
-
   const filteredProducts = useMemo(() => {
+    if (productQuery) return products;
     const normalized = search.trim().toLowerCase();
     return products.filter((product) =>
       product.name.toLowerCase().includes(normalized),
     );
-  }, [products, search]);
+  }, [products, search, productQuery]);
 
   useEffect(() => {
     setCurrentPage(1);
@@ -1068,7 +1072,7 @@ export const PosV2SalesHomePage = () => {
     productCatalog?: SaleItemVm,
   ): CartItemVm | null => {
     const directProductId = Number(row.Product_Id ?? row.ProductId ?? 0);
-    const fallbackId = Number(row.Id ?? 0);
+    const fallbackId = Number(row.Item_Id ?? row.Id ?? 0);
     const productId =
       Number.isFinite(directProductId) && directProductId > 0
         ? directProductId
@@ -1082,7 +1086,7 @@ export const PosV2SalesHomePage = () => {
       Number.isFinite(variantIdCandidate) && variantIdCandidate > 0
         ? variantIdCandidate
         : null;
-    const quantityCandidate = Number(row.Quantity ?? 1);
+    const quantityCandidate = Number(row.Item_Quantity ?? row.Quantity ?? 1);
     const quantity =
       Number.isFinite(quantityCandidate) && quantityCandidate > 0
         ? Math.floor(quantityCandidate)
@@ -1094,12 +1098,13 @@ export const PosV2SalesHomePage = () => {
           null)
         : null;
 
-    const fallbackName = String(row.ProductName ?? row.Name ?? "").trim();
+    const fallbackName = String(row.Item_Name ?? row.ProductName ?? row.Name ?? "").trim();
     const fallbackVariantLabel = String(
-      row.VariantName ?? row.Description ?? "",
+      row.VariantName ?? row.Item_Description ?? row.Description ?? "",
     ).trim();
     const rawPrice = Number(
       row.VariantPrice ??
+        row.Item_Price ??
         row.Price ??
         row.Price1 ??
         row.ProductPrice ??
@@ -1125,8 +1130,8 @@ export const PosV2SalesHomePage = () => {
         : (productCatalog?.stock ?? null),
       variantId,
       variantLabel,
-      colorId: null,
-      sizeId: null,
+      colorId: row.Color_Id ? Number(row.Color_Id) : null,
+      sizeId: row.Size_Id ? Number(row.Size_Id) : null,
       colorLabel: variantFromCatalog?.color ?? null,
       sizeLabel: variantFromCatalog?.size ?? null,
     };
@@ -1134,7 +1139,20 @@ export const PosV2SalesHomePage = () => {
 
   useEffect(() => {
     const { token } = getCurrentSession();
-    if (!token || !selectedTableId) return;
+    const previousTableId = activeTableDraftRef.current;
+    activeTableDraftRef.current = selectedTableId;
+    if (previousTableId && previousTableId !== selectedTableId) {
+      setCart({});
+      setSelectedCustomerId("");
+      setDiscountPercent("0");
+      setFixedDiscount("0");
+      discountSourceRef.current = "percent";
+    }
+    if (!token || !selectedTableId) {
+      loadingTableDraftRef.current = false;
+      skippingDraftSyncRef.current = false;
+      return;
+    }
 
     const tableId = Number(selectedTableId);
     if (!Number.isFinite(tableId) || tableId <= 0) return;
@@ -1144,19 +1162,17 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
-    const headers = {
-      "Content-Type": "application/json",
-      token,
-      Authorization: `Bearer ${token}`,
-    };
+    let cancelled = false;
+    let releaseTimer: number | undefined;
+    const headers = buildPosAuthHeaders(token);
 
     loadingTableDraftRef.current = true;
     skippingDraftSyncRef.current = true;
 
-    fetch(
-      new URL(`table_products/products/${tableId}`, API_BASE_URL).toString(),
+    tableDraftSyncRef.current.then(() => fetch(
+      new URL(`restaurant/branch/tables/${tableId}/items`, API_BASE_URL).toString(),
       { headers },
-    )
+    ))
       .then(async (response) => {
         if (!response.ok) {
           throw new Error(
@@ -1166,8 +1182,10 @@ export const PosV2SalesHomePage = () => {
 
         const payload = (await response.json().catch(() => [])) as
           | TableProductDetailApiResponse[]
+          | { data?: TableProductDetailApiResponse[] }
           | null;
-        const rows = Array.isArray(payload) ? payload : [];
+        if (cancelled) return;
+        const rows = Array.isArray(payload) ? payload : payload?.data ?? [];
 
         const nextCart = rows.reduce<Record<string, CartItemVm>>(
           (accumulator, row) => {
@@ -1188,6 +1206,7 @@ export const PosV2SalesHomePage = () => {
         setCart(nextCart);
       })
       .catch((error) => {
+        if (cancelled) return;
         console.error("[POS-V2-SALES] Error al cargar borrador de mesa", error);
         setValidationError(
           error instanceof Error
@@ -1196,11 +1215,17 @@ export const PosV2SalesHomePage = () => {
         );
       })
       .finally(() => {
+        if (cancelled) return;
         loadingTableDraftRef.current = false;
-        window.setTimeout(() => {
+        releaseTimer = window.setTimeout(() => {
           skippingDraftSyncRef.current = false;
         }, 0);
       });
+
+    return () => {
+      cancelled = true;
+      if (releaseTimer !== undefined) window.clearTimeout(releaseTimer);
+    };
   }, [products, selectedTableId]);
 
   useEffect(() => {
@@ -1217,62 +1242,34 @@ export const PosV2SalesHomePage = () => {
     const tableId = Number(selectedTableId);
     if (!Number.isFinite(tableId) || tableId <= 0) return;
 
-    const headers = {
-      "Content-Type": "application/json",
-      token,
-      Authorization: `Bearer ${token}`,
-    };
+    const headers = buildPosAuthHeaders(token);
 
     const syncDraft = async () => {
-      const payload = Object.values(cart).map((item) => ({
-        Table_Id: tableId,
-        Product_Id: item.productId,
-        Variant_Id: item.variantId ?? undefined,
+      const items = Object.values(cart).map((item) => ({
+        ...(item.variantId ? { Variant_Id: item.variantId } : { Product_Id: item.productId }),
         Quantity: item.quantity,
+        Color_Id: item.colorId ?? undefined,
+        Size_Id: item.sizeId ?? undefined,
       }));
 
-      if (payload.length === 0) {
-        const existingResponse = await fetch(
-          new URL(`table_products/table/${tableId}`, API_BASE_URL).toString(),
-          { headers },
-        );
-        const existingPayload = (await existingResponse
-          .json()
-          .catch(() => [])) as TableProductApiResponse[] | null;
-        const existingRows = Array.isArray(existingPayload)
-          ? existingPayload
-          : [];
-        await Promise.all(
-          existingRows
-            .map((row) => Number(row.Id))
-            .filter((id) => Number.isFinite(id) && id > 0)
-            .map((id) =>
-              fetch(new URL(`table_products/${id}`, API_BASE_URL).toString(), {
-                method: "DELETE",
-                headers,
-              }),
-            ),
-        );
-        return;
-      }
-
       const response = await fetch(
-        new URL("table_products", API_BASE_URL).toString(),
+        new URL(`restaurant/branch/tables/${tableId}/items`, API_BASE_URL).toString(),
         {
-          method: "POST",
+          method: items.length === 0 ? "DELETE" : "PUT",
           headers,
-          body: JSON.stringify(payload),
+          body: items.length === 0 ? undefined : JSON.stringify({ items }),
         },
       );
 
       if (!response.ok) {
-        throw new Error(
-          `No se pudo guardar borrador en mesa (${response.status}).`,
-        );
+        throw new Error(`No se pudo guardar borrador en mesa (${response.status}).`);
       }
     };
 
-    syncDraft().catch((error) => {
+    // Conserva el orden: un PUT atrasado no debe recrear productos tras Vaciar.
+    tableDraftSyncRef.current = tableDraftSyncRef.current.catch(() => undefined).then(syncDraft);
+    void tableDraftSyncRef.current.catch((error) => {
+      setValidationError("No se pudieron guardar los cambios de la mesa. Revisa tu conexión e inténtalo de nuevo.");
       console.error(
         "[POS-V2-SALES] Error al sincronizar borrador de mesa",
         error,
@@ -1362,11 +1359,7 @@ export const PosV2SalesHomePage = () => {
       const response = await fetch(
         new URL(`extras/product/${productId}`, API_BASE_URL).toString(),
         {
-          headers: {
-            "Content-Type": "application/json",
-            token,
-            Authorization: `Bearer ${token}`,
-          },
+          headers: buildPosAuthHeaders(token),
         },
       );
 
@@ -1420,10 +1413,6 @@ export const PosV2SalesHomePage = () => {
   const loadProductVariants = async (
     product: SaleItemVm,
   ): Promise<SaleVariantVm[]> => {
-    if (Object.prototype.hasOwnProperty.call(variantsCache, product.id)) {
-      return variantsCache[product.id];
-    }
-
     const { token } = getCurrentSession();
     if (!token) {
       return product.variants;
@@ -1431,13 +1420,9 @@ export const PosV2SalesHomePage = () => {
 
     try {
       const response = await fetch(
-        new URL(`variants/product/${product.id}`, API_BASE_URL).toString(),
+        new URL(`variants/product/${product.id}/branch`, API_BASE_URL).toString(),
         {
-          headers: {
-            "Content-Type": "application/json",
-            token,
-            Authorization: `Bearer ${token}`,
-          },
+          headers: buildPosAuthHeaders(token),
         },
       );
 
@@ -1447,9 +1432,12 @@ export const PosV2SalesHomePage = () => {
 
       const payload = (await response.json().catch(() => [])) as
         | VariantApiResponse[]
+        | { data?: VariantApiResponse[] }
         | null;
-      const normalized = Array.isArray(payload)
-        ? payload.map((variant) => ({
+      const variantRows = Array.isArray(payload) ? payload : payload?.data ?? [];
+      const normalized = variantRows
+        .filter(isVariantAvailableForSale)
+        .map((variant) => ({
             id:
               typeof variant.Id === "number" && Number.isFinite(variant.Id)
                 ? variant.Id
@@ -1470,18 +1458,11 @@ export const PosV2SalesHomePage = () => {
               Number.isFinite(variant.Stock)
                 ? variant.Stock
                 : null,
-          }))
-        : [];
+          }));
 
-      const resolved = normalized.length > 0 ? normalized : product.variants;
-      setVariantsCache((current) => ({ ...current, [product.id]: resolved }));
-      return resolved;
+      return normalized;
     } catch {
-      setVariantsCache((current) => ({
-        ...current,
-        [product.id]: product.variants,
-      }));
-      return product.variants;
+      return [];
     }
   };
 
@@ -1525,6 +1506,12 @@ export const PosV2SalesHomePage = () => {
 
     setCart((current) => {
       const existing = current[cartKey];
+      const nextQuantity = clampSaleQuantityToStock(
+        (existing?.quantity ?? 0) + normalizedQuantity,
+        stock,
+      );
+      if (nextQuantity <= (existing?.quantity ?? 0)) return current;
+
       return {
         ...current,
         [cartKey]: {
@@ -1532,7 +1519,7 @@ export const PosV2SalesHomePage = () => {
           productId: product.id,
           name: itemName,
           price: basePrice,
-          quantity: (existing?.quantity ?? 0) + normalizedQuantity,
+          quantity: nextQuantity,
           stock,
           variantId: variant?.id ?? null,
           variantLabel,
@@ -1557,6 +1544,10 @@ export const PosV2SalesHomePage = () => {
     const hasVariants = variants.length > 0;
 
     if (!hasVariants && !hasExtraSize) {
+      if (!hasBaseStock) {
+        setValidationError("Este producto no tiene stock disponible.");
+        return;
+      }
       addToCartEntry(product, null);
       return;
     }
@@ -1598,9 +1589,7 @@ export const PosV2SalesHomePage = () => {
       product,
       variants: modalVariants,
       extras,
-      selectedVariantKey: modalVariants[0]
-        ? toCartKey(product.id, modalVariants[0].id)
-        : null,
+      selectedVariantKeys: [],
       selectedSizeId: null,
       quantities: modalVariants.reduce<Record<string, number>>(
         (accumulator, variant) => {
@@ -1620,35 +1609,35 @@ export const PosV2SalesHomePage = () => {
 
     const target = cart[cartKey];
     if (!target) return;
-    if (safeQuantity <= 0) {
-      const { [cartKey]: _, ...rest } = cart;
-      setCart(rest);
-      setValidationError(null);
-      return;
-    }
-
     const quantityInOtherRows = Object.values(cart)
-      .filter(
-        (item) =>
-          item.cartKey !== cartKey &&
-          item.productId === target.productId &&
-          item.variantId === target.variantId,
-      )
+      .filter(item => item.cartKey !== cartKey && item.productId === target.productId && item.variantId === target.variantId)
       .reduce((total, item) => total + item.quantity, 0);
-    const stockError = getStockLimitMessage(
-      target.stock,
-      quantityInOtherRows + safeQuantity,
-    );
-    if (stockError) {
-      setValidationError(`${stockError} de ${target.name}`);
-      return;
+    const remainingStock = target.stock === null ? null : Math.max(0, target.stock - quantityInOtherRows);
+    const allowedQuantity = clampSaleQuantityToStock(safeQuantity, remainingStock);
+    if (allowedQuantity < safeQuantity) {
+      setValidationError(
+        `${target.name} sólo tiene ${target.stock ?? 0} unidades disponibles.`,
+      );
+    } else {
+      setValidationError(null);
     }
 
-    setCart({
-      ...cart,
-      [cartKey]: { ...target, quantity: safeQuantity },
+    setCart((current) => {
+      const currentTarget = current[cartKey];
+      if (!currentTarget) return current;
+      if (allowedQuantity <= 0) {
+        const { [cartKey]: _, ...rest } = current;
+        return rest;
+      }
+
+      return {
+        ...current,
+        [cartKey]: {
+          ...currentTarget,
+          quantity: allowedQuantity,
+        },
+      };
     });
-    setValidationError(null);
   };
 
   const updateQuantity = (cartKey: string, delta: number) => {
@@ -1657,15 +1646,25 @@ export const PosV2SalesHomePage = () => {
     setQuantity(cartKey, target.quantity + delta);
   };
 
+  const toggleVariantSelection = (key: string) => {
+    setVariantSelection(current => current ? {
+      ...current,
+      selectedVariantKeys: current.selectedVariantKeys.includes(key)
+        ? current.selectedVariantKeys.filter(selected => selected !== key)
+        : [...current.selectedVariantKeys, key],
+    } : null);
+    setVariantModalError(null);
+  };
+
   const confirmVariantSelection = () => {
     if (!variantSelection) return;
-    const variant = variantSelection.selectedVariantKey
-      ? (variantSelection.variants.find(
-          (item) =>
-            toCartKey(variantSelection.product.id, item.id) ===
-            variantSelection.selectedVariantKey,
-        ) ?? null)
-      : null;
+    const selectedVariants = variantSelection.variants.filter(item =>
+      variantSelection.selectedVariantKeys.includes(toCartKey(variantSelection.product.id, item.id)),
+    );
+    if (variantSelection.variants.length > 0 && selectedVariants.length === 0) {
+      setVariantModalError("Selecciona al menos un producto o variante.");
+      return;
+    }
 
     const selectedSize =
       variantSelection.extras?.TALLA.find(
@@ -1680,19 +1679,25 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
-    const selectedKey = variantSelection.selectedVariantKey ?? "";
-    const quantity = Math.max(
-      1,
-      Math.floor(variantSelection.quantities[selectedKey] ?? 1),
-    );
-    const wasAdded = addToCartEntry(
-      variantSelection.product,
-      variant,
-      quantity,
-      null,
-      selectedSize,
-    );
-    if (!wasAdded) return;
+    const entries = selectedVariants.length > 0 ? selectedVariants : [null];
+    for (const variant of entries) {
+      const selectionKey = toCartKey(variantSelection.product.id, variant?.id ?? null);
+      const quantity = Math.max(1, Math.floor(variantSelection.quantities[selectionKey] ?? 1));
+      const requested = Object.values(cart)
+        .filter(item => item.productId === variantSelection.product.id && item.variantId === (variant?.id ?? null))
+        .reduce((total, item) => total + item.quantity, quantity);
+      const stock = variant ? variant.stock : variantSelection.product.stock;
+      if (clampSaleQuantityToStock(requested, stock) < requested) {
+        setVariantModalError(
+          (variant?.description || variantSelection.product.name) + " sólo tiene " + (stock ?? 0) + " unidades disponibles.",
+        );
+        return;
+      }
+    }
+    entries.forEach(variant => {
+      const quantity = Math.max(1, Math.floor(variantSelection.quantities[toCartKey(variantSelection.product.id, variant?.id ?? null)] ?? 1));
+      addToCartEntry(variantSelection.product, variant?.id === null ? null : variant, quantity, null, selectedSize);
+    });
     setVariantSelection(null);
     setValidationError(null);
     setVariantModalError(null);
@@ -1786,6 +1791,15 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
+    if (payLater && (!selectedCustomerId || selectedTableId)) {
+      setValidationError("Para cobrar después, selecciona un cliente y retira la mesa activa.");
+      return;
+    }
+    const advance = Number(initialPayment.replace(",", "."));
+    if (payLater && (!Number.isFinite(advance) || advance < 0 || advance >= totals.total)) {
+      setValidationError("El abono inicial debe ser de $0 o mayor y menor al total de la venta.");
+      return;
+    }
     const { token } = getCurrentSession();
     const employeeId = token ? resolveEmployeeId(token) : 0;
 
@@ -1801,29 +1815,30 @@ export const PosV2SalesHomePage = () => {
     }
 
     const lineItems = cartItems.map((item) => ({
-      Product_Id: item.productId,
+      ...(item.variantId ? { Variant_Id: item.variantId } : { Product_Id: item.productId }),
       Quantity: item.quantity,
-      Price: item.price,
-      Cost: 0,
-      Variant_Id: item.variantId ?? undefined,
       Color_Id: item.colorId ?? undefined,
       Size_Id: item.sizeId ?? undefined,
     }));
 
-    const payloadByTable = {
-      Employee_Id: employeeId,
+    const checkoutPayload = {
       Customer_Id: selectedCustomerId ? Number(selectedCustomerId) : undefined,
-      PaymentMethod: paymentMethod,
+      ...(payLater ? { Status: "PENDIENTE", AmountReceived: advance } : { PaymentMethod: paymentMethod }),
       Total: totals.total,
-      Discount: discountValue,
+      Discount: totals.discount,
       Tax: Boolean(salesTax && applyTax),
+      TaxValue: salesTax && applyTax ? salesTax.value : null,
+      IsPercent: salesTax && applyTax ? salesTax.isPercent : false,
+      TotalTaxes: totals.taxAmount,
+      TotalDiscount: totals.discount,
+      MoneyTipe: readPosCurrency().code,
     };
 
     setIsCompletingSale(true);
     setValidationError(null);
     setPlanUpgradePrompt(null);
     debugLog("Intentando finalizar venta.", {
-      endpoint: selectedTableId ? "commands" : "orders",
+      endpoint: selectedTableId ? "commands/branch" : "orders/branch",
       selectedTable: selectedTableName,
       employeeId,
       items: lineItems,
@@ -1832,27 +1847,40 @@ export const PosV2SalesHomePage = () => {
     });
 
     try {
-      const endpoint = selectedTableId ? "commands" : "orders";
-      const payload = selectedTableId
-        ? {
-            Command: {
-              ...payloadByTable,
-              Table_Id: Number(selectedTableId),
-            },
-            Commands_has_Products: lineItems,
-          }
-        : {
-            Order: payloadByTable,
-            OrderDetails: lineItems,
-          };
+      const tableId = selectedTableId ? Number(selectedTableId) : 0;
+
+      if (tableId) {
+        await tableDraftSyncRef.current;
+        // Fuerza la última versión del borrador antes de cobrar para evitar carreras entre effects.
+        const draftResponse = await fetch(
+          new URL(`restaurant/branch/tables/${tableId}/items`, API_BASE_URL).toString(),
+          {
+            method: "PUT",
+            headers: buildPosAuthHeaders(token),
+            body: JSON.stringify({ items: lineItems }),
+          },
+        );
+        if (!draftResponse.ok) {
+          const draftError = await draftResponse.json().catch(() => null) as { message?: string } | null;
+          throw new Error(draftError?.message ?? "No pudimos guardar la comanda antes del cobro.");
+        }
+      }
+
+      const endpoint = tableId
+        ? `commands/branch/tables/${tableId}/checkout`
+        : "orders/branch";
+      const payload = tableId
+        ? checkoutPayload
+        : { ...checkoutPayload, Status: payLater ? "PENDIENTE" : "ENTREGADO", Details: lineItems };
+      const fingerprint = JSON.stringify({ endpoint, payload });
+      if (saleIdempotencyRef.current?.fingerprint !== fingerprint) {
+        saleIdempotencyRef.current = { fingerprint, key: createIdempotencyKey() };
+      }
+      const idempotencyKey = saleIdempotencyRef.current.key;
 
       const response = await fetch(new URL(endpoint, API_BASE_URL).toString(), {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          token,
-          Authorization: `Bearer ${token}`,
-        },
+        headers: buildPosAuthHeaders(token, { idempotencyKey }),
         body: JSON.stringify(payload),
       });
 
@@ -1873,9 +1901,10 @@ export const PosV2SalesHomePage = () => {
         );
       }
       debugLog("Venta registrada correctamente.", responseData);
+      saleIdempotencyRef.current = null;
 
       const folio = `RVK-${Date.now().toString().slice(-6)}`;
-      const paymentMethodLabel =
+      const paymentMethodLabel = payLater ? "Cobrar después" :
         PAYMENT_METHOD_OPTIONS.find((option) => option.value === paymentMethod)
           ?.label ?? paymentMethod;
       const printableItems: CompletedSaleLine[] = cartItems.map((item) => ({
@@ -1888,6 +1917,7 @@ export const PosV2SalesHomePage = () => {
       setTicket(
         `Venta ${folio} · ${paymentMethodLabel} · ${selectedTableName} · Total $${totals.total.toFixed(2)}`,
       );
+      setTicketShareMessage("");
       setCompletedSale({
         folio,
         paymentMethodLabel,
@@ -1903,54 +1933,12 @@ export const PosV2SalesHomePage = () => {
         )?.name,
         createdAt: new Date().toISOString(),
         items: printableItems,
+        cashierName,
       });
-      if (selectedTableId) {
-        const tableId = Number(selectedTableId);
-        if (Number.isFinite(tableId) && tableId > 0) {
-          fetch(
-            new URL(`table_products/table/${tableId}`, API_BASE_URL).toString(),
-            {
-              headers: {
-                "Content-Type": "application/json",
-                token,
-                Authorization: `Bearer ${token}`,
-              },
-            },
-          )
-            .then(async (response) => {
-              const payload = (await response.json().catch(() => [])) as
-                | TableProductApiResponse[]
-                | null;
-              const rows = Array.isArray(payload) ? payload : [];
-              await Promise.all(
-                rows
-                  .map((row) => Number(row.Id))
-                  .filter((id) => Number.isFinite(id) && id > 0)
-                  .map((id) =>
-                    fetch(
-                      new URL(`table_products/${id}`, API_BASE_URL).toString(),
-                      {
-                        method: "DELETE",
-                        headers: {
-                          "Content-Type": "application/json",
-                          token,
-                          Authorization: `Bearer ${token}`,
-                        },
-                      },
-                    ),
-                  ),
-              );
-            })
-            .catch((error) => {
-              console.error(
-                "[POS-V2-SALES] Error al limpiar borrador de mesa al finalizar venta",
-                error,
-              );
-            });
-        }
-      }
       setCart({});
-      setStockRevision((current) => current + 1);
+      setPayLater(false);
+      setInitialPayment("0");
+      setCatalogRevision((current) => current + 1);
       setDiscountPercent("0");
       setFixedDiscount("0");
       discountSourceRef.current = "percent";
@@ -1989,11 +1977,7 @@ export const PosV2SalesHomePage = () => {
         new URL("visits/qr/dynamic/next", API_BASE_URL).toString(),
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            token,
-            Authorization: `Bearer ${token}`,
-          },
+          headers: buildPosAuthHeaders(token),
           body: JSON.stringify({ businessId, domain: couponsDomain }),
         },
       );
@@ -2021,11 +2005,7 @@ export const PosV2SalesHomePage = () => {
       new URL("visits/qr/generate", API_BASE_URL).toString(),
       {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          token,
-          Authorization: `Bearer ${token}`,
-        },
+        headers: buildPosAuthHeaders(token),
         body: JSON.stringify({
           businessId,
           quantity: 1,
@@ -2055,6 +2035,16 @@ export const PosV2SalesHomePage = () => {
     return null;
   };
 
+  const handleShareSaleTicket = async (sale: CompletedSale) => {
+    setTicketShareMessage("");
+    try {
+      const result = await shareSaleTicket(sale, quoteBusinessName);
+      if (result === "downloaded") setTicketShareMessage("Ticket descargado. Puedes adjuntarlo desde tus archivos.");
+    } catch (error) {
+      setTicketShareMessage(error instanceof Error ? error.message : "No se pudo compartir el ticket.");
+    }
+  };
+
   const handlePrintSaleTicket = async (sale: CompletedSale) => {
     if (!hasPrintableSaleData(sale)) {
       setValidationError(
@@ -2063,12 +2053,14 @@ export const PosV2SalesHomePage = () => {
       return;
     }
 
+    const { businessId: ticketBusinessId } = getCurrentSession();
+    const settings = isFreeSalesPlan ? { ...DEFAULT_TICKET_CUSTOMIZATION, showVisitQr: false } : readTicketCustomization(ticketBusinessId);
     const configuredPrinters = readPosPrinters();
     const defaultPrinter = getDefaultPosPrinter(configuredPrinters);
     const resolvedPaper = defaultPrinter?.paperMm ?? "80";
     if (!defaultPrinter) {
       setUiMessage(
-        "No hay impresora predeterminada registrada. Se usa formato estándar de 80 mm para imprimir.",
+        "Se usa el formato de ticket de 80 mm. Elige la impresora en el diálogo de impresión.",
       );
     }
 
@@ -2076,12 +2068,12 @@ export const PosV2SalesHomePage = () => {
     const printableLines = sale.items
       .map(
         (item) =>
-          `<li><span>${item.name} x${item.quantity}</span><strong>$${item.lineTotal.toFixed(2)}</strong></li>`,
+          `<li><span>${escapeTicketHtml(item.name)} x${item.quantity}</span><strong>${posMoneyFormatter.format(item.lineTotal)}</strong></li>`,
       )
       .join("");
-    const storeName = quoteBusinessName.trim() || "Mi negocio";
-    const ticketLogoMarkup = quoteLogoUrl.trim()
-      ? `<img class="ticket-logo" src="${quoteLogoUrl.trim()}" alt="Logo de ${storeName}" />`
+    const storeName = escapeTicketHtml(quoteBusinessName.trim() || "Mi negocio");
+    const ticketLogoMarkup = settings.showLogo && /^https?:\/\//i.test(quoteLogoUrl.trim())
+      ? `<img class="ticket-logo" src="${escapeTicketHtml(quoteLogoUrl.trim())}" alt="Logo de ${storeName}" />`
       : "";
     const saleDate = new Date(sale.createdAt);
     const safeSaleDate = Number.isNaN(saleDate.getTime())
@@ -2092,7 +2084,7 @@ export const PosV2SalesHomePage = () => {
     const printDate = new Date();
     let visitQrUrl: string | null = null;
 
-    if (hasPosLoyaltyModule(couponsPlan)) {
+    if (settings.showVisitQr && !isFreeSalesPlan && hasPosLoyaltyModule(couponsPlan)) {
       try {
         visitQrUrl = await resolveVisitQrUrlForTicket();
       } catch (error) {
@@ -2108,7 +2100,7 @@ export const PosV2SalesHomePage = () => {
       ? `<section style="margin-top: 3mm; padding-top: 2mm; border-top: 1px dashed #d1d5db; text-align: center;">
           <p style="font-weight: 700; margin-bottom: 1.5mm;">Escanea para registrar tu visita</p>
           <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=${encodeURIComponent(visitQrUrl)}" alt="QR de visita" width="180" height="180" style="display:block;margin:0 auto 1.4mm;" />
-          <p class="meta" style="word-break: break-all;">${visitQrUrl}</p>
+          <p class="meta" style="word-break: break-all;">${escapeTicketHtml(visitQrUrl)}</p>
         </section>`
       : "";
 
@@ -2116,7 +2108,7 @@ export const PosV2SalesHomePage = () => {
 <html>
   <head>
     <meta charset="utf-8" />
-    <title>Ticket ${sale.folio}</title>
+    <title>Ticket ${escapeTicketHtml(sale.folio)}</title>
     <style>
       @page { size: ${resolvedPaper}mm auto; margin: 3mm; }
       * { box-sizing: border-box; }
@@ -2126,7 +2118,7 @@ export const PosV2SalesHomePage = () => {
       .ticket { width: ${pageWidth}; padding: 2mm; margin: 8px auto; background: #fff; }
       .ticket-logo { display: block; max-width: 70%; max-height: 22mm; margin: 0 auto 2mm; object-fit: contain; }
       h1 { margin: 0 0 2mm; font-size: 14px; text-align: center; }
-      p { margin: 0 0 1.4mm; font-size: 11px; }
+      p { margin: 0 0 1.4mm; font-size: 11px; white-space: pre-wrap; overflow-wrap: anywhere; }
       ul { list-style: none; margin: 2mm 0; padding: 0; display: grid; gap: 1mm; }
       li { display: flex; justify-content: space-between; gap: 3mm; border-bottom: 1px dashed #d1d5db; padding-bottom: 1mm; font-size: 11px; }
       .total { font-size: 12px; font-weight: 700; margin-top: 1.6mm; }
@@ -2144,20 +2136,23 @@ export const PosV2SalesHomePage = () => {
       ${ticketLogoMarkup}
       <h1>Ticket de venta</h1>
       <p><strong>Tienda:</strong> ${storeName}</p>
+      ${isFreeSalesPlan ? "" : ticketContactHtml(settings, ticketBusiness.phone, ticketBusiness.address)}
       <p class="meta">Formato: ${resolvedPaper} mm</p>
-      <p><strong>Folio:</strong> ${sale.folio}</p>
+      <p><strong>Folio:</strong> ${escapeTicketHtml(sale.folio)}</p>
       <p><strong>Fecha:</strong> ${saleDateLabel}</p>
       <p><strong>Hora:</strong> ${saleTimeLabel}</p>
       <p><strong>Impresión:</strong> ${printDate.toLocaleString("es-MX")}</p>
-      <p><strong>Mesa:</strong> ${sale.table}</p>
-      <p><strong>Método:</strong> ${sale.paymentMethodLabel}</p>
-      <p><strong>Cliente:</strong> ${sale.customerName ?? "General"}</p>
+      <p><strong>Mesa:</strong> ${escapeTicketHtml(sale.table)}</p>
+      ${settings.showPaymentMethod ? `<p><strong>Método:</strong> ${escapeTicketHtml(sale.paymentMethodLabel)}</p>` : ""}
+      ${settings.showCashier ? `<p><strong>Vendedor:</strong> ${escapeTicketHtml(sale.cashierName || cashierName || "Vendedor")}</p>` : ""}
+      <p><strong>Cliente:</strong> ${escapeTicketHtml(sale.customerName ?? "General")}</p>
       <ul>${printableLines}</ul>
-      <p><strong>Subtotal:</strong> $${sale.subtotal.toFixed(2)}</p>
-      ${sale.discount > 0 ? `<p><strong>Descuento:</strong> -$${sale.discount.toFixed(2)}</p>` : ""}
-      ${sale.taxAmount > 0 ? `<p><strong>Base gravable:</strong> $${sale.taxableBase.toFixed(2)}</p>` : ""}
-      ${sale.taxAmount > 0 ? `<p><strong>${sale.taxDescription || "Impuesto"}:</strong> $${sale.taxAmount.toFixed(2)}</p>` : ""}
-      <p class="total">Total: $${sale.total.toFixed(2)}</p>
+      <p><strong>Subtotal:</strong> ${posMoneyFormatter.format(sale.subtotal)}</p>
+      ${sale.discount > 0 ? `<p><strong>Descuento:</strong> -${posMoneyFormatter.format(sale.discount)}</p>` : ""}
+      ${sale.taxAmount > 0 ? `<p><strong>Base gravable:</strong> ${posMoneyFormatter.format(sale.taxableBase)}</p>` : ""}
+      ${sale.taxAmount > 0 ? `<p><strong>${escapeTicketHtml(sale.taxDescription || "Impuesto")}:</strong> ${posMoneyFormatter.format(sale.taxAmount)}</p>` : ""}
+      <p class="total">Total: ${posMoneyFormatter.format(sale.total)}</p>
+      ${ticketFooterHtml(settings)}
       ${visitQrMarkup}
     </section>
   </body>
@@ -2196,8 +2191,8 @@ export const PosV2SalesHomePage = () => {
           <td>${index + 1}</td>
           <td>${item.name}</td>
           <td>${item.quantity}</td>
-          <td>$${item.price.toFixed(2)}</td>
-          <td>$${(item.price * item.quantity).toFixed(2)}</td>
+          <td>${posMoneyFormatter.format(item.price)}</td>
+          <td>${posMoneyFormatter.format(item.price * item.quantity)}</td>
         </tr>
       `,
       )
@@ -2255,9 +2250,9 @@ export const PosV2SalesHomePage = () => {
       </table>
 
       <div class="summary">
-        <p><span>Subtotal</span><strong>$${subtotal.toFixed(2)}</strong></p>
-        <p><span>Impuesto</span><strong>$${tax.toFixed(2)}</strong></p>
-        <p class="total"><span>Total</span><strong>$${total.toFixed(2)}</strong></p>
+        <p><span>Subtotal</span><strong>${posMoneyFormatter.format(subtotal)}</strong></p>
+        <p><span>Impuesto</span><strong>${posMoneyFormatter.format(tax)}</strong></p>
+        <p class="total"><span>Total</span><strong>${posMoneyFormatter.format(total)}</strong></p>
       </div>
 
       <p class="foot">Esta cotización respeta precios hasta la fecha de vigencia indicada.</p>
@@ -2326,9 +2321,9 @@ export const PosV2SalesHomePage = () => {
             </div>
 
             <div className="pos-v2-sales-home__search">
-              <input
+              <input autoCorrect="on" spellCheck={true}
                 value={search}
-                onChange={(event) => setSearch(event.target.value)}
+                onChange={(event) => { setSearch(event.target.value); setCurrentPage(1); }}
                 placeholder="Buscar producto"
               />
             </div>
@@ -2375,11 +2370,7 @@ export const PosV2SalesHomePage = () => {
           {loadingProducts ? (
             <p className="pos-v2-sales-home__empty">Cargando productos…</p>
           ) : null}
-          {!loadingProducts && searchingGlobalCatalog ? (
-            <p className="pos-v2-sales-home__empty">
-              Buscando en todo el catálogo…
-            </p>
-          ) : null}
+
           {productsError ? (
             <p className="pos-v2-sales-home__error">{productsError}</p>
           ) : null}
@@ -2391,10 +2382,7 @@ export const PosV2SalesHomePage = () => {
                 (variant) => variant.stock === null || variant.stock > 0,
               );
               const hasBaseStock = product.stock === null || product.stock > 0;
-              const hasBlockedVariants =
-                !hasBaseStock &&
-                product.variants.length > 0 &&
-                sellableVariants.length === 0;
+              const isOutOfStock = !hasBaseStock && sellableVariants.length === 0;
               const shouldShowImage =
                 Boolean(product.image) && !imageLoadErrors[product.id];
 
@@ -2441,11 +2429,11 @@ export const PosV2SalesHomePage = () => {
                     ) : null}
                   </div>
                   <div className="pos-v2-sales-home__product-side">
-                    <strong>${product.price.toFixed(2)}</strong>
+                    <strong>{posMoneyFormatter.format(product.price)}</strong>
                     <button
                       type="button"
                       onClick={() => void addToCart(product)}
-                      disabled={hasBlockedVariants}
+                      disabled={isOutOfStock}
                     >
                       {product.variants.length > 0
                         ? "Elegir variante"
@@ -2471,7 +2459,7 @@ export const PosV2SalesHomePage = () => {
               aria-label="Paginación de productos"
             >
               {search.trim().length >= 2 ? (
-                <span>Búsqueda global activa</span>
+                <span>Búsqueda en la sucursal</span>
               ) : null}
               <button
                 type="button"
@@ -2479,7 +2467,7 @@ export const PosV2SalesHomePage = () => {
                   setCurrentPage((page) => Math.max(1, page - 1));
                   scrollToProductsTop();
                 }}
-                disabled={search.trim().length >= 2 || !hasPrevPage}
+                disabled={!hasPrevPage}
               >
                 Anterior
               </button>
@@ -2500,12 +2488,10 @@ export const PosV2SalesHomePage = () => {
                       goToPage();
                     }
                   }}
-                  disabled={search.trim().length >= 2}
                 />
                 <button
                   type="button"
                   onClick={goToPage}
-                  disabled={search.trim().length >= 2}
                 >
                   Ir
                 </button>
@@ -2516,7 +2502,7 @@ export const PosV2SalesHomePage = () => {
                   setCurrentPage((page) => page + 1);
                   scrollToProductsTop();
                 }}
-                disabled={search.trim().length >= 2 || !hasNextPage}
+                disabled={!hasNextPage}
               >
                 Siguiente
               </button>
@@ -2525,7 +2511,7 @@ export const PosV2SalesHomePage = () => {
         </section>
 
         <aside
-          className={`pos-v2-sales-home__cart-panel ${mobileStep === "cart" || mobileStep === "checkout" ? "is-mobile-active" : ""}`}
+          className={`pos-v2-sales-home__cart-panel ${mobileStep === "cart" || mobileStep === "checkout" ? "is-mobile-active" : ""} ${mobileStep === "checkout" ? "is-checkout" : ""}`}
         >
           <div
             className={`pos-v2-sales-home__cart-content ${mobileStep === "cart" ? "is-mobile-active" : ""}`}
@@ -2540,12 +2526,10 @@ export const PosV2SalesHomePage = () => {
               </button>
             </div>
 
-            <h2>Mesa · {selectedTableName}</h2>
+            <header className="pos-v2-sales-home__cart-heading"><h2>Carrito</h2>{selectedTableId ? <span>{selectedTableName}</span> : null}</header>
 
             {cartItems.length === 0 ? (
-              <p className="pos-v2-sales-home__empty">
-                No hay productos agregados.
-              </p>
+              <div className="pos-v2-sales-home__cart-empty"><FiShoppingBag size={32} aria-hidden="true" /><strong>Tu carrito está vacío</strong><p>Agrega productos para comenzar una venta.</p></div>
             ) : null}
 
             {cartItems.length > 0 ? (
@@ -2581,12 +2565,13 @@ export const PosV2SalesHomePage = () => {
                         {item.quantity > 1 ? (
                           "-1"
                         ) : (
-                          <FiTrash2 size={14} color="#b91c1c" />
+                          <FiTrash2 size={14} color="var(--pos-v2-danger-text)" />
                         )}
                       </button>
                       <input
                         type="number"
                         min="0"
+                        max={item.stock ?? undefined}
                         className="flex items-center justify-center"
                         value={item.quantity}
                         onChange={(event) =>
@@ -2606,24 +2591,26 @@ export const PosV2SalesHomePage = () => {
               </ul>
             ) : null}
 
-            <div className="pos-v2-sales-home__totals">
+            <div className="pos-v2-sales-home__totals" aria-label="Resumen del carrito">
+              {cartItems.length > 0 ? <>
               <p>
                 <span>Subtotal</span>
-                <strong>${totals.subtotal.toFixed(2)}</strong>
+                <strong>{posMoneyFormatter.format(totals.subtotal)}</strong>
               </p>
               <p>
                 <span>Descuento</span>
-                <strong>-${totals.discount.toFixed(2)}</strong>
+                <strong>-{posMoneyFormatter.format(totals.discount)}</strong>
               </p>
               {salesTax && applyTax ? (
                 <p>
                   <span>{salesTax.description}</span>
-                  <strong>${totals.taxAmount.toFixed(2)}</strong>
+                  <strong>{posMoneyFormatter.format(totals.taxAmount)}</strong>
                 </p>
               ) : null}
+              </> : null}
               <p className="is-total">
                 <span>Total</span>
-                <strong>${totals.total.toFixed(2)}</strong>
+                <strong>{posMoneyFormatter.format(totals.total)}</strong>
               </p>
             </div>
 
@@ -2658,7 +2645,7 @@ export const PosV2SalesHomePage = () => {
                 />
               </label>
               <label>
-                Fijo ($)
+                Fijo ({readPosCurrency().code})
                 <input
                   type="number"
                   min="0"
@@ -2682,9 +2669,9 @@ export const PosV2SalesHomePage = () => {
               </label>
             </div>
 
-            <div
+            {!payLater && <div
               className="pos-v2-sales-home__payment-methods"
-              role="radiogroup"
+              role="group"
               aria-label="Selecciona método de pago"
             >
               {PAYMENT_METHOD_OPTIONS.map(({ value, label, Icon }) => {
@@ -2703,7 +2690,7 @@ export const PosV2SalesHomePage = () => {
                   </button>
                 );
               })}
-            </div>
+            </div>}
 
             <label>
               Zona de mesas
@@ -2734,7 +2721,7 @@ export const PosV2SalesHomePage = () => {
               Mesa
               <select
                 value={selectedTableId}
-                onChange={(event) => handleSelectTable(event.target.value)}
+                onChange={(event) => { handleSelectTable(event.target.value); if (event.target.value) setPayLater(false); }}
                 disabled={areSalesRelationSelectorsLocked || loadingTables || (!isFreeSalesPlan && !selectedTableZoneId)}
               >
                 <option value="">Sin mesa (orden directa)</option>
@@ -2758,6 +2745,7 @@ export const PosV2SalesHomePage = () => {
                       return;
                     }
                     setSelectedCustomerId(event.target.value);
+                    if (!event.target.value) setPayLater(false);
                   }}
                   disabled={areSalesRelationSelectorsLocked}
                 >
@@ -2770,6 +2758,45 @@ export const PosV2SalesHomePage = () => {
                 </select>
               </label>
             ) : null}
+            {Boolean(selectedCustomerId) && !selectedTableId && (
+              <div className="pos-v2-sales-home__credit-control">
+                <label className="pos-v2-sales-home__credit-row">
+                  <span className="pos-v2-sales-home__credit-label">Cobrar después</span>
+                  <input
+                    className="pos-v2-sales-home__credit-checkbox"
+                    type="checkbox"
+                    role="switch"
+                    aria-label="Cobrar después"
+                    checked={payLater}
+                    onChange={(event) => {
+                      setPayLater(event.target.checked);
+                      if (!event.target.checked) setInitialPayment("0");
+                      setValidationError(null);
+                    }}
+                  />
+                  <span className="pos-v2-sales-home__credit-switch" aria-hidden="true" />
+                </label>
+                {payLater && (
+                  <div className="pos-v2-sales-home__credit-advance">
+                    <label htmlFor="credit-initial-payment">Abono inicial</label>
+                    <input
+                      id="credit-initial-payment"
+                      type="number"
+                      inputMode="decimal"
+                      min="0"
+                      step="0.01"
+                      max={Math.max(0, totals.total - 0.01)}
+                      value={initialPayment}
+                      onChange={(event) => {
+                        setInitialPayment(event.target.value);
+                        setValidationError(null);
+                      }}
+                    />
+                    <small>Saldo pendiente: {posMoneyFormatter.format(totals.total - (Number(initialPayment) || 0))}</small>
+                  </div>
+                )}
+              </div>
+            )}
             {isFreeSalesPlan ? (
               <small className="pos-v2-sales-home__customer-hint">
                 Mesas, zonas y clientes están disponibles desde un plan superior.
@@ -2789,7 +2816,7 @@ export const PosV2SalesHomePage = () => {
                   <small>
                     {salesTax.isPercent
                       ? `${salesTax.value}%`
-                      : `$${salesTax.value.toFixed(2)}`}
+                      : posMoneyFormatter.format(salesTax.value)}
                   </small>
                 </div>
                 {salesTax.canBeRemovedAtSale ? (
@@ -2821,21 +2848,21 @@ export const PosV2SalesHomePage = () => {
             <div className="pos-v2-sales-home__totals">
               <p>
                 <span>Subtotal</span>
-                <strong>${totals.subtotal.toFixed(2)}</strong>
+                <strong>{posMoneyFormatter.format(totals.subtotal)}</strong>
               </p>
               <p>
                 <span>Descuento</span>
-                <strong>-${totals.discount.toFixed(2)}</strong>
+                <strong>-{posMoneyFormatter.format(totals.discount)}</strong>
               </p>
               {salesTax && applyTax ? (
                 <p>
                   <span>{salesTax.description}</span>
-                  <strong>${totals.taxAmount.toFixed(2)}</strong>
+                  <strong>{posMoneyFormatter.format(totals.taxAmount)}</strong>
                 </p>
               ) : null}
               <p className="is-total">
                 <span>Total</span>
-                <strong>${totals.total.toFixed(2)}</strong>
+                <strong>{posMoneyFormatter.format(totals.total)}</strong>
               </p>
             </div>
 
@@ -2865,7 +2892,7 @@ export const PosV2SalesHomePage = () => {
               <h4>Cotización (PDF)</h4>
               <label>
                 Nombre del cliente
-                <input
+                <input autoCorrect="on" spellCheck={true}
                   value={quoteClientName}
                   onChange={(event) => setQuoteClientName(event.target.value)}
                   placeholder="Ej. María López"
@@ -2997,7 +3024,7 @@ export const PosV2SalesHomePage = () => {
                     variant.id,
                   );
                   const isActive =
-                    optionKey === variantSelection.selectedVariantKey;
+                    variantSelection.selectedVariantKeys.includes(optionKey);
                   const quantity = Math.max(
                     1,
                     Math.floor(variantSelection.quantities[optionKey] ?? 1),
@@ -3011,42 +3038,30 @@ export const PosV2SalesHomePage = () => {
                       : formatRemainingStock(variant.stock);
 
                   return (
-                    <label
+                    <div
                       key={optionKey}
                       className={`pos-v2-sales-home__variant-option ${isActive ? "is-active" : ""}`}
                     >
                       <input
-                        type="radio"
-                        name="variant-selection"
+                        type="checkbox"
                         checked={isActive}
                         onChange={() => {
-                          if (isActive) return;
-                          setVariantSelection((current) =>
-                            current
-                              ? { ...current, selectedVariantKey: optionKey }
-                              : null,
-                          );
-                          setVariantModalError(null);
+                          toggleVariantSelection(optionKey);
                         }}
                         aria-label={`Seleccionar variante ${variant.description || "Variante"}`}
                       />
                       <button
                         type="button"
                         className={isActive ? "is-active" : ""}
+                        aria-pressed={isActive}
                         onClick={() => {
-                          if (isActive) return;
-                          setVariantSelection((current) =>
-                            current
-                              ? { ...current, selectedVariantKey: optionKey }
-                              : null,
-                          );
-                          setVariantModalError(null);
+                          toggleVariantSelection(optionKey);
                         }}
                       >
                         <strong>{variant.description || "Variante"}</strong>
                         <small>{chips || "Sin atributos adicionales"}</small>
-                        {stockLabel ? <small>{stockLabel}</small> : null}
-                        <span>${variant.price.toFixed(2)}</span>
+                        <small>{stockLabel}</small>
+                        <span>{posMoneyFormatter.format(variant.price)}</span>
                       </button>
                       <div
                         className="pos-v2-sales-home__variant-row-qty"
@@ -3064,7 +3079,7 @@ export const PosV2SalesHomePage = () => {
                               );
                               return {
                                 ...current,
-                                selectedVariantKey: optionKey,
+                                selectedVariantKeys: current.selectedVariantKeys.includes(optionKey) ? current.selectedVariantKeys : [...current.selectedVariantKeys, optionKey],
                                 quantities: {
                                   ...current.quantities,
                                   [optionKey]: Math.max(1, currentQty - 1),
@@ -3078,6 +3093,7 @@ export const PosV2SalesHomePage = () => {
                         <input
                           type="number"
                           min="1"
+                          max={variant.stock ?? undefined}
                           value={quantity}
                           onChange={(event) => {
                             const value = Number(event.target.value);
@@ -3085,13 +3101,18 @@ export const PosV2SalesHomePage = () => {
                               if (!current) return null;
                               return {
                                 ...current,
-                                selectedVariantKey: optionKey,
+                                selectedVariantKeys: current.selectedVariantKeys.includes(optionKey) ? current.selectedVariantKeys : [...current.selectedVariantKeys, optionKey],
                                 quantities: {
                                   ...current.quantities,
-                                  [optionKey]:
-                                    Number.isFinite(value) && value > 0
-                                      ? Math.floor(value)
-                                      : 1,
+                                  [optionKey]: Math.max(
+                                    1,
+                                    clampSaleQuantityToStock(
+                                      Number.isFinite(value) && value > 0
+                                        ? value
+                                        : 1,
+                                      variant.stock,
+                                    ),
+                                  ),
                                 },
                               };
                             });
@@ -3109,10 +3130,16 @@ export const PosV2SalesHomePage = () => {
                               );
                               return {
                                 ...current,
-                                selectedVariantKey: optionKey,
+                                selectedVariantKeys: current.selectedVariantKeys.includes(optionKey) ? current.selectedVariantKeys : [...current.selectedVariantKeys, optionKey],
                                 quantities: {
                                   ...current.quantities,
-                                  [optionKey]: currentQty + 1,
+                                  [optionKey]: Math.max(
+                                    1,
+                                    clampSaleQuantityToStock(
+                                      currentQty + 1,
+                                      variant.stock,
+                                    ),
+                                  ),
                                 },
                               };
                             });
@@ -3121,7 +3148,7 @@ export const PosV2SalesHomePage = () => {
                           +1
                         </button>
                       </div>
-                    </label>
+                    </div>
                   );
                 })
               ) : (
@@ -3132,13 +3159,11 @@ export const PosV2SalesHomePage = () => {
             </div>
 
             <p className="pos-v2-sales-home__variant-selected">
-              Variante elegida:{" "}
+              Selección:{" "}
               <strong>
-                {variantSelection.variants.find(
-                  (item) =>
-                    toCartKey(variantSelection.product.id, item.id) ===
-                    variantSelection.selectedVariantKey,
-                )?.description ?? "Sin seleccionar"}
+                {variantSelection.variants.filter(item =>
+                  variantSelection.selectedVariantKeys.includes(toCartKey(variantSelection.product.id, item.id)),
+                ).map(item => item.description || variantSelection.product.name).join(", ") || "Sin seleccionar"}
               </strong>
             </p>
 
@@ -3155,7 +3180,7 @@ export const PosV2SalesHomePage = () => {
                 onClick={confirmVariantSelection}
                 disabled={
                   variantSelection.variants.length > 0 &&
-                  !variantSelection.selectedVariantKey
+                  variantSelection.selectedVariantKeys.length === 0
                 }
               >
                 Confirmar y agregar
@@ -3175,7 +3200,7 @@ export const PosV2SalesHomePage = () => {
           onClick={() => setMobileStep("cart")}
         >
           <span>{totals.items} prod.</span>
-          <strong>${totals.total.toFixed(2)}</strong>
+          <strong>{posMoneyFormatter.format(totals.total)}</strong>
           <em>Ver mesa</em>
         </button>
       ) : null}
@@ -3236,7 +3261,7 @@ export const PosV2SalesHomePage = () => {
           className="is-summary"
           onClick={() => setMobileStep("cart")}
         >
-          {totals.items.toFixed(2)}x Items = ${totals.total.toFixed(2)}
+          {totals.items.toFixed(2)}x Items = {posMoneyFormatter.format(totals.total)}
         </button>
       </div>
 
@@ -3402,15 +3427,19 @@ export const PosV2SalesHomePage = () => {
               <strong>{completedSale.customerName ?? "General"}</strong>
             </p>
             <p>
-              Total: <strong>${completedSale.total.toFixed(2)}</strong>
+              Total: <strong>{posMoneyFormatter.format(completedSale.total)}</strong>
             </p>
 
+            {ticketShareMessage ? <p role="status">{ticketShareMessage}</p> : null}
             <div className="pos-v2-sales-home__sale-modal-actions">
               <button
                 type="button"
                 onClick={() => handlePrintSaleTicket(completedSale)}
               >
                 Imprimir ticket
+              </button>
+              <button type="button" onClick={() => void handleShareSaleTicket(completedSale)}>
+                Compartir ticket
               </button>
               <button
                 type="button"
@@ -3426,4 +3455,3 @@ export const PosV2SalesHomePage = () => {
     </PosV2Shell>
   );
 };
-

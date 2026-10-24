@@ -1,4 +1,4 @@
-import { IProductsRepository, ProductImportResult, ProductsPaginatedResult } from "../interface/IProductsRepository";
+import { IProductsRepository, ProductImportResult, ProductsPaginatedResult, ProductListFilters } from "../interface/IProductsRepository";
 import { ManagedProduct, ProductCategory, ProductExtra, SaveManagedProductDto } from "../model/ManagedProduct";
 
 export class ProductsService {
@@ -16,8 +16,8 @@ export class ProductsService {
     return this.repository.listReallyAllByBusiness(businessId, token);
   }
 
-  async listProductsPaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult> {
-    return this.repository.listByBusinessPaginated(businessId, token, page, limit);
+  async listProductsPaginated(businessId: number, token: string, page: number, limit: string | number, filters?: ProductListFilters): Promise<ProductsPaginatedResult> {
+    return this.repository.listByBusinessPaginated(businessId, token, page, limit, filters);
   }
 
   async listNoAvailableProductsPaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult> {
@@ -28,8 +28,8 @@ export class ProductsService {
     return this.repository.listByBusinessAllForSearch(businessId, token, limit);
   }
 
-  async getProduct(productId: number, token: string): Promise<ManagedProduct | null> {
-    return this.repository.getById(productId, token);
+  async getProduct(productId: number, token: string, businessId?: number): Promise<ManagedProduct | null> {
+    return this.repository.getById(productId, token, businessId);
   }
 
   async saveProduct(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct> {

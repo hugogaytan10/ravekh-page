@@ -1,3 +1,4 @@
+import { FiChevronDown, FiChevronRight } from "react-icons/fi";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getPosApiBaseUrl } from "../../../pos/shared/config/posEnv";
@@ -8,6 +9,8 @@ import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import { formatCatalogPrice, getApplicableWholesaleTier, getEffectiveCatalogPriceForQuantity, normalizeWholesalePriceTiers } from "./catalogPrice";
 import "./CatalogOrderInfoPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
+import { buildCatalogPath, getCatalogCartKey, getPendingStripeCatalogOrderKey, readCatalogBranchContext } from "./catalogBranchContext";
+import { getCachedCatalogCheckoutOptions, loadCatalogCheckoutOptions } from "./catalogCheckoutOptions";
 
 type PaymentMethod = "efectivo" | "transferencia" | "tarjeta" | "enlace";
 type OpenSection = "contact" | "delivery" | "address" | "payment" | null;
@@ -30,7 +33,6 @@ type PendingStripeCatalogOrder = {
   orderPayload: CatalogOrderPayload;
 };
 
-const getPendingStripeOrderKey = (businessId: number) => `catalog-v2-pending-stripe-order:${businessId}`;
 const processingStripeOrderKeys = new Set<string>();
 
 type CartItem = StorefrontCartItem;
@@ -44,6 +46,21 @@ const defaultShippingOptions: ShippingOptions = {
   State: true,
   References: true,
   PaymentMetod: true,
+};
+
+const toShippingOptions = (payload: any): ShippingOptions => {
+  const row = Array.isArray(payload) ? payload[0] : payload;
+  if (!row) return defaultShippingOptions;
+  return {
+    ContactInformation: Number(row.ContactInformation) === 1,
+    ShippingMetod: Number(row.ShippingMetod) === 1,
+    Street: Number(row.Street) === 1,
+    ZipCode: Number(row.ZipCode) === 1,
+    City: Number(row.City) === 1,
+    State: Number(row.State) === 1,
+    References: Number(row.References) === 1,
+    PaymentMetod: Number(row.PaymentMetod) === 1,
+  };
 };
 
 const hasAnyAddressFieldEnabled = (options: ShippingOptions) =>
@@ -76,9 +93,14 @@ const buildWhatsAppProductLine = (item: CartItem) => {
 export const CatalogOrderInfoPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
-  const api = useMemo(() => new CatalogStorefrontApi(getPosApiBaseUrl()), []);
+  const branchContext = readCatalogBranchContext();
   const storeName = window.localStorage.getItem("catalog-v2-store-name") || "Catálogo";
-  const businessId = Number(window.localStorage.getItem("idBusiness") || 0);
+  const businessId = Number(branchContext.businessId || 0);
+  const api = useMemo(
+    () => new CatalogStorefrontApi(getPosApiBaseUrl(), branchContext.branchSlug, businessId),
+    [branchContext.branchSlug, businessId],
+  );
+  const cachedCheckoutOptions = getCachedCatalogCheckoutOptions(businessId);
   const usesSimplifiedCheckout = businessId === 481;
 
   const [name, setName] = useState("");
@@ -93,8 +115,13 @@ export const CatalogOrderInfoPage = () => {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("efectivo");
   const [generalError, setGeneralError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [cardEnabled, setCardEnabled] = useState(false);
-  const [shippingOptions, setShippingOptions] = useState<ShippingOptions>(defaultShippingOptions);
+  const [cardEnabled, setCardEnabled] = useState(
+    () => branchContext.isMain && Boolean(cachedCheckoutOptions?.businessConfig?.stripeAccountId && cachedCheckoutOptions.businessConfig.chargesEnabled),
+  );
+  const [shippingOptions, setShippingOptions] = useState<ShippingOptions>(
+    () => toShippingOptions(cachedCheckoutOptions?.shippingResponse),
+  );
+  const [checkoutOptionsLoading, setCheckoutOptionsLoading] = useState(!cachedCheckoutOptions);
   const [openSection, setOpenSection] = useState<OpenSection>("contact");
   const [stripeReturnHandled, setStripeReturnHandled] = useState(false);
   const checkoutOptions = useMemo(
@@ -129,38 +156,38 @@ export const CatalogOrderInfoPage = () => {
   };
 
   useEffect(() => {
+    let cancelled = false;
+
     const run = async () => {
-      if (!businessId) return;
-
-      const [businessConfig, shippingResponse] = await Promise.all([
-        api.getBusinessCheckoutConfig(String(businessId)),
-        fetch(`${getPosApiBaseUrl().replace(/\/$/, "")}/shippingoptions/business/${businessId}`).then((response) =>
-          response.ok ? response.json() : null,
-        ),
-      ]);
-
-      setCardEnabled(Boolean(businessConfig?.stripeAccountId && businessConfig?.chargesEnabled));
-      if (!businessConfig?.stripeAccountId || !businessConfig?.chargesEnabled) {
-        setPaymentMethod("efectivo");
+      if (!businessId) {
+        setCheckoutOptionsLoading(false);
+        return;
       }
 
-      const row = Array.isArray(shippingResponse) ? shippingResponse[0] : shippingResponse;
-      if (!row) return;
+      try {
+        const { businessConfig, shippingResponse } =
+          await loadCatalogCheckoutOptions(api, businessId);
+        if (cancelled) return;
 
-      setShippingOptions({
-        ContactInformation: Number(row.ContactInformation) === 1,
-        ShippingMetod: Number(row.ShippingMetod) === 1,
-        Street: Number(row.Street) === 1,
-        ZipCode: Number(row.ZipCode) === 1,
-        City: Number(row.City) === 1,
-        State: Number(row.State) === 1,
-        References: Number(row.References) === 1,
-        PaymentMetod: Number(row.PaymentMetod) === 1,
-      });
+        const cardAvailable = branchContext.isMain && Boolean(businessConfig?.stripeAccountId && businessConfig?.chargesEnabled);
+        setCardEnabled(cardAvailable);
+        if (!cardAvailable) setPaymentMethod("efectivo");
+
+        setShippingOptions(toShippingOptions(shippingResponse));
+      } catch {
+        if (!cancelled) {
+          setGeneralError("No fue posible cargar las opciones del pedido.");
+        }
+      } finally {
+        if (!cancelled) setCheckoutOptionsLoading(false);
+      }
     };
 
     void run();
-  }, [api, businessId]);
+    return () => {
+      cancelled = true;
+    };
+  }, [api, branchContext.isMain, businessId]);
 
   useEffect(() => {
     if (!businessId || stripeReturnHandled) return;
@@ -181,7 +208,7 @@ export const CatalogOrderInfoPage = () => {
       setGeneralError(null);
 
       try {
-        const pendingOrderKey = getPendingStripeOrderKey(businessId);
+        const pendingOrderKey = getPendingStripeCatalogOrderKey(businessId, branchContext.branchSlug);
         const pendingRaw = window.localStorage.getItem(pendingOrderKey);
         window.localStorage.removeItem(pendingOrderKey);
         const pending = pendingRaw ? (JSON.parse(pendingRaw) as PendingStripeCatalogOrder) : null;
@@ -195,8 +222,8 @@ export const CatalogOrderInfoPage = () => {
           throw new Error("El pago fue exitoso, pero no se pudo registrar el pedido en el servidor.");
         }
 
-        window.localStorage.removeItem(`catalog-v2-cart:${businessId}`);
-        navigate(`/v2/catalogo/${businessId}`, { replace: true });
+        window.localStorage.removeItem(getCatalogCartKey(businessId, branchContext.branchSlug));
+        navigate(buildCatalogPath(businessId, branchContext.branchSlug), { replace: true });
       } catch (e: any) {
         setGeneralError(e?.message || "El pago fue exitoso, pero no se pudo registrar el pedido.");
       } finally {
@@ -206,7 +233,7 @@ export const CatalogOrderInfoPage = () => {
     };
 
     void completeStripeOrder();
-  }, [api, businessId, navigate, stripeReturnHandled]);
+  }, [api, branchContext.branchSlug, businessId, navigate, stripeReturnHandled]);
 
   useEffect(() => {
     if (openSection) return;
@@ -286,7 +313,7 @@ export const CatalogOrderInfoPage = () => {
   const handleSubmit = async () => {
     if (!validate()) return;
 
-    const raw = window.localStorage.getItem(`catalog-v2-cart:${businessId}`);
+    const raw = window.localStorage.getItem(getCatalogCartKey(businessId, branchContext.branchSlug));
     const cart = raw ? (JSON.parse(raw) as CartItem[]) : [];
     if (!cart.length) {
       setGeneralError("Tu carrito está vacío.");
@@ -323,6 +350,9 @@ export const CatalogOrderInfoPage = () => {
       };
 
       if (paymentMethod === "tarjeta") {
+        if (!branchContext.isMain) {
+          throw new Error("El pago con tarjeta para esta sucursal se habilitará cuando el pedido de catálogo sea multi-sucursal en el backend.");
+        }
         const [stripeConfig, businessConfig] = await Promise.all([
           api.getStripeConfig(),
           api.getBusinessCheckoutConfig(String(businessId)),
@@ -358,26 +388,31 @@ export const CatalogOrderInfoPage = () => {
         }
 
         window.localStorage.setItem(
-          getPendingStripeOrderKey(businessId),
+          getPendingStripeCatalogOrderKey(businessId, branchContext.branchSlug),
           JSON.stringify({ businessId, orderPayload } satisfies PendingStripeCatalogOrder),
         );
 
         const stripe = await getStripe(stripeConfig.publishableKey);
         const result = await stripe.redirectToCheckout({ sessionId: session.sessionId });
         if (result?.error?.message) {
-          window.localStorage.removeItem(getPendingStripeOrderKey(businessId));
+          window.localStorage.removeItem(getPendingStripeCatalogOrderKey(businessId, branchContext.branchSlug));
           throw new Error(result.error.message);
         }
 
         return;
       }
 
-      const orderResult = await api.createCatalogOrder(orderPayload);
-      if (!orderResult) {
-        throw new Error("No se pudo registrar el pedido en el servidor.");
+      // El endpoint legacy ordersCatalog todavía descuenta el inventario global de Principal.
+      // Por seguridad sólo registramos ahí los pedidos de la sucursal principal. Las sucursales
+      // secundarias continúan el pedido por WhatsApp hasta que orders_catalog sea branch-aware.
+      if (branchContext.isMain) {
+        const orderResult = await api.createCatalogOrder(orderPayload);
+        if (!orderResult) {
+          throw new Error("No se pudo registrar el pedido en el servidor.");
+        }
       }
 
-      const storePhone = (window.localStorage.getItem("telefono") || "").replace(/\D/g, "");
+      const storePhone = (branchContext.phone || window.localStorage.getItem("telefono") || "").replace(/\D/g, "");
       const lines = cart.map(buildWhatsAppProductLine);
       const message = [
         `Hola ${storeName}, quiero hacer mi pedido:`,
@@ -399,8 +434,8 @@ export const CatalogOrderInfoPage = () => {
 
       const whatsappUrl = `https://wa.me/${storePhone}?text=${encodeURIComponent(message)}`;
       window.location.href = whatsappUrl;
-      window.localStorage.removeItem(`catalog-v2-cart:${businessId}`);
-      navigate(`/v2/catalogo/${businessId}`);
+      window.localStorage.removeItem(getCatalogCartKey(businessId, branchContext.branchSlug));
+      navigate(buildCatalogPath(businessId, branchContext.branchSlug));
     } catch (e: any) {
       setGeneralError(e?.message || "No se pudo preparar el pedido.");
     } finally {
@@ -418,17 +453,18 @@ export const CatalogOrderInfoPage = () => {
       <section className="catalog-v2-order-info__content">
         <h2>Información del pedido</h2>
         {generalError ? <p className="catalog-v2-order-info__error">{generalError}</p> : null}
+        {checkoutOptionsLoading ? <p>Preparando las opciones del pedido…</p> : null}
 
-        {checkoutOptions.ContactInformation ? (
+        {!checkoutOptionsLoading && checkoutOptions.ContactInformation ? (
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "contact" ? null : "contact"))}>
               <h3>Información de contacto</h3>
-              <span>{openSection === "contact" ? "▾" : "▸"}</span>
+              {openSection === "contact" ? <FiChevronDown aria-hidden="true" /> : <FiChevronRight aria-hidden="true" />}
             </button>
             <div className={`section-content ${openSection === "contact" ? "open" : ""}`}>
               <div className="grid">
                 <label ref={fieldRefs.name}>Nombre completo
-                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Introduce tu nombre" />
+                  <input autoCorrect="on" spellCheck={true} value={name} onChange={(e) => setName(e.target.value)} placeholder="Introduce tu nombre" />
                   {errors.name ? <small>{errors.name}</small> : null}
                 </label>
                 {!usesSimplifiedCheckout ? (
@@ -446,11 +482,11 @@ export const CatalogOrderInfoPage = () => {
           </article>
         ) : null}
 
-        {checkoutOptions.ShippingMetod ? (
+        {!checkoutOptionsLoading && checkoutOptions.ShippingMetod ? (
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "delivery" ? null : "delivery"))}>
               <h3>Método de entrega</h3>
-              <span>{openSection === "delivery" ? "▾" : "▸"}</span>
+              {openSection === "delivery" ? <FiChevronDown aria-hidden="true" /> : <FiChevronRight aria-hidden="true" />}
             </button>
             <div className={`section-content ${openSection === "delivery" ? "open" : ""}`}>
               <div className="grid">
@@ -466,17 +502,17 @@ export const CatalogOrderInfoPage = () => {
           </article>
         ) : null}
 
-        {deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled(checkoutOptions) ? (
+        {!checkoutOptionsLoading && deliveryMethod === "domicilio" && hasAnyAddressFieldEnabled(checkoutOptions) ? (
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "address" ? null : "address"))}>
               <h3>Dirección de entrega</h3>
-              <span>{openSection === "address" ? "▾" : "▸"}</span>
+              {openSection === "address" ? <FiChevronDown aria-hidden="true" /> : <FiChevronRight aria-hidden="true" />}
             </button>
             <div className={`section-content ${openSection === "address" ? "open" : ""}`}>
               <div className="grid">
                 {checkoutOptions.Street ? (
                   <label ref={fieldRefs.street}>Calle
-                    <input value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Introduce tu calle" />
+                    <input autoCorrect="on" spellCheck={true} value={street} onChange={(e) => setStreet(e.target.value)} placeholder="Introduce tu calle" />
                     {errors.street ? <small>{errors.street}</small> : null}
                   </label>
                 ) : null}
@@ -488,19 +524,19 @@ export const CatalogOrderInfoPage = () => {
                 ) : null}
                 {checkoutOptions.City ? (
                   <label ref={fieldRefs.city}>Municipio
-                    <input value={city} onChange={(e) => setCity(e.target.value)} placeholder="Municipio" />
+                    <input autoCorrect="on" spellCheck={true} value={city} onChange={(e) => setCity(e.target.value)} placeholder="Municipio" />
                     {errors.city ? <small>{errors.city}</small> : null}
                   </label>
                 ) : null}
                 {checkoutOptions.State ? (
                   <label ref={fieldRefs.state}>Estado
-                    <input value={state} onChange={(e) => setState(e.target.value)} placeholder="Estado" />
+                    <input autoCorrect="on" spellCheck={true} value={state} onChange={(e) => setState(e.target.value)} placeholder="Estado" />
                     {errors.state ? <small>{errors.state}</small> : null}
                   </label>
                 ) : null}
                 {checkoutOptions.References ? (
                   <label className="full">Referencia (opcional)
-                    <input value={references} onChange={(e) => setReferences(e.target.value)} placeholder="Introduce una referencia" />
+                    <input autoCorrect="on" spellCheck={true} value={references} onChange={(e) => setReferences(e.target.value)} placeholder="Introduce una referencia" />
                   </label>
                 ) : null}
               </div>
@@ -508,11 +544,11 @@ export const CatalogOrderInfoPage = () => {
           </article>
         ) : null}
 
-        {checkoutOptions.PaymentMetod ? (
+        {!checkoutOptionsLoading && checkoutOptions.PaymentMetod ? (
           <article className="card open">
             <button type="button" className="card-toggle" onClick={() => setOpenSection((prev) => (prev === "payment" ? null : "payment"))}>
               <h3>Método de pago</h3>
-              <span>{openSection === "payment" ? "▾" : "▸"}</span>
+              {openSection === "payment" ? <FiChevronDown aria-hidden="true" /> : <FiChevronRight aria-hidden="true" />}
             </button>
             <div className={`section-content ${openSection === "payment" ? "open" : ""}`}>
               <div className="grid">
@@ -534,7 +570,7 @@ export const CatalogOrderInfoPage = () => {
           </article>
         ) : null}
 
-        <button type="button" className="submit" onClick={handleSubmit} disabled={submitting}>
+        <button type="button" className="submit" onClick={handleSubmit} disabled={submitting || checkoutOptionsLoading}>
           {submitting ? "Procesando..." : "Preparar pedido"}
         </button>
       </section>

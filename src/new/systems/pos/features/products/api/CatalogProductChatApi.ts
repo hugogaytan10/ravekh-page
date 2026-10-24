@@ -1,3 +1,5 @@
+import { readActivePosBranchId } from "../../../shared/config/posBranch";
+
 export type CatalogProductChatStatus =
   | "ACTIVE"
   | "COMPLETED"
@@ -122,6 +124,9 @@ const ERROR_MESSAGES: Record<string, string> = {
   SESSION_NOT_FOUND: "No encontramos esta conversación.",
   SESSION_EXPIRED: "La conversación expiró. Inicia una nueva.",
   SESSION_NOT_ACTIVE: "Esta conversación ya terminó.",
+  SESSION_BRANCH_MISMATCH: "Esta conversación pertenece a otra sucursal. Vuelve a la sucursal original.",
+  INVALID_BRANCH_HEADER: "La sucursal no es válida.",
+  BRANCH_ACCESS_DENIED: "No tienes acceso a esta sucursal.",
   IMAGE_LIMIT_EXCEEDED: "Alcanzaste el límite de imágenes del producto.",
   INVALID_IMAGE_TYPE: "El formato de una imagen no es compatible.",
   FILE_TOO_LARGE: "Una imagen supera el tamaño permitido.",
@@ -466,6 +471,10 @@ export class CatalogProductChatApi {
     const headers = new Headers(init.headers);
     headers.set("Accept", "application/json");
     headers.set("Authorization", `Bearer ${this.token}`);
+    const branchId = readActivePosBranchId();
+    if (Number.isInteger(branchId) && branchId > 0) {
+      headers.set("X-Branch-Id", String(branchId));
+    }
     headers.set("Cache-Control", "no-cache, no-store, max-age=0");
     headers.set("Pragma", "no-cache");
     if (init.body && !(init.body instanceof FormData)) {
