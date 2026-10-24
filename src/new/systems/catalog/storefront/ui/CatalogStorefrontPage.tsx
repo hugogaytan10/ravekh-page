@@ -19,7 +19,7 @@ import { formatCatalogTotal, getEffectiveCatalogPrice, normalizeWholesalePriceTi
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import "./CatalogStorefrontPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
-import { buildCatalogPath, getCatalogCartKey, persistCatalogBranchContext } from "./catalogBranchContext";
+import { getCatalogCartKey, persistCatalogBranchContext } from "./catalogBranchContext";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
@@ -561,13 +561,6 @@ export const CatalogStorefrontPage = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
-  const handleBranchChange = (nextBranchId: number) => {
-    const nextBranch = store?.availableBranches?.find((branch) => branch.id === nextBranchId);
-    if (!nextBranch || !businessId) return;
-    const nextPath = buildCatalogPath(businessId, nextBranch.isMain ? null : nextBranch.slug);
-    navigate(nextPath);
-  };
-
   return (
     <main className="catalog-v2">
       <Helmet>
@@ -601,20 +594,7 @@ export const CatalogStorefrontPage = () => {
           <h1>{store?.name || "Catálogo digital"}</h1>
         </div>
         <div className="catalog-v2__header-actions">
-          {(store?.availableBranches?.length ?? 0) > 1 ? (
-            <label className="catalog-v2__branch-picker">
-              <span>Sucursal</span>
-              <select
-                value={store?.branch?.id ?? ""}
-                onChange={(event) => handleBranchChange(Number(event.target.value))}
-                aria-label="Cambiar sucursal del catálogo"
-              >
-                {store?.availableBranches?.map((branch) => (
-                  <option key={branch.id} value={branch.id}>{branch.name}</option>
-                ))}
-              </select>
-            </label>
-          ) : store?.branch?.name ? (
+          {store?.branch?.name ? (
             <span className="catalog-v2__branch-name">{store.branch.name}</span>
           ) : null}
           {!catalogUnavailable ? (
