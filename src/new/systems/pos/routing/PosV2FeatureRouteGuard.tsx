@@ -2,6 +2,7 @@ import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { fetchPosBusinessFeatures, isPosFeatureBlocked, isPosModuleBlocked, POS_FEATURES_UNKNOWN, PosBusinessFeatures, PosFeatureKey } from "../shared/config/posFeatureFlags";
 import { readPosSessionSnapshot } from "../shared/config/posSession";
+import { POS_BUSINESS_UPDATED_EVENT } from "../shared/config/posSessionRuntime";
 import { POS_V2_PATHS } from "./PosV2Paths";
 
 type PosV2FeatureRouteGuardProps = {
@@ -34,6 +35,12 @@ export const PosV2FeatureRouteGuard = ({ children, feature, fallbackPath = POS_V
     return () => {
       cancelled = true;
     };
+  }, []);
+
+  useEffect(() => {
+    const update = (event: Event) => setFeatures((event as CustomEvent<PosBusinessFeatures>).detail);
+    window.addEventListener(POS_BUSINESS_UPDATED_EVENT, update);
+    return () => window.removeEventListener(POS_BUSINESS_UPDATED_EVENT, update);
   }, []);
 
   if (!features) return null;

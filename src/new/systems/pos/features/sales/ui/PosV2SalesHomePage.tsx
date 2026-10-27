@@ -36,9 +36,11 @@ import {
   normalizePosCouponsPlan,
 } from "../../../shared/config/posLoyaltyPlan";
 import {
+  PosBusinessFeatures,
   PosBusinessFeatureResponse,
   readPosBusinessFeatures,
 } from "../../../shared/config/posFeatureFlags";
+import { POS_BUSINESS_UPDATED_EVENT } from "../../../shared/config/posSessionRuntime";
 import { WEB_COUPONS_DOMAIN } from "../../../../loyalty/features/coupons/config/couponsEnv";
 import { clampSaleQuantityToStock } from "../model/saleStock";
 import { createIdempotencyKey } from "../../../../../core/api/FetchHttpClient";
@@ -375,6 +377,15 @@ export const PosV2SalesHomePage = () => {
   const [hasNextPage, setHasNextPage] = useState(false);
   const [hasPrevPage, setHasPrevPage] = useState(false);
   const [planLimit, setPlanLimit] = useState("");
+  useEffect(() => {
+    const update = (event: Event) => {
+      const business = (event as CustomEvent<PosBusinessFeatures>).detail;
+      if (business.plan) setPlanLimit(business.plan);
+      setCouponsPlan(normalizePosCouponsPlan(business.fidelity ?? 0));
+    };
+    window.addEventListener(POS_BUSINESS_UPDATED_EVENT, update);
+    return () => window.removeEventListener(POS_BUSINESS_UPDATED_EVENT, update);
+  }, []);
   const [isPlanLimitReady, setIsPlanLimitReady] = useState(false);
   const isFreeSalesPlan = FREE_SALES_PLAN_VALUES.has(planLimit.trim().toUpperCase());
   const areSalesRelationSelectorsLocked = !isPlanLimitReady;
