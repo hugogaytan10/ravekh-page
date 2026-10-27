@@ -70,6 +70,85 @@ body {
     
 }
 
+/* Base compartida: evita que textos largos o la flecha nativa desborden layouts. */
+select:not([multiple]) {
+    min-width: 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    -webkit-appearance: none;
+    appearance: none;
+    padding-inline-end: 2.35rem !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236d01d1' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+    background-position: right 11px center !important;
+    background-size: 18px 18px !important;
+    background-repeat: no-repeat !important;
+}
+
+select:not([multiple]):focus-visible {
+    outline: 2px solid #7c3aed;
+    outline-offset: 2px;
+}
+
+select:not([multiple]):disabled {
+    cursor: not-allowed;
+    opacity: 0.65;
+}
+
+:root[data-theme="dark"] select:not([multiple]) {
+    color-scheme: dark;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23c4b5fd' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E") !important;
+}
+
+@supports (appearance: base-select) {
+    select:not([multiple]),
+    ::picker(select) {
+        appearance: base-select;
+    }
+
+    select:not([multiple])::picker-icon {
+        display: none;
+    }
+
+    ::picker(select) {
+        border: 1px solid var(--border-default);
+        border-radius: var(--radius-md);
+        background: var(--bg-surface);
+        color: var(--text-primary);
+        box-shadow: 0 14px 35px rgba(15, 23, 42, 0.18);
+        overflow: hidden;
+    }
+}
+
+details > summary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.75rem;
+    list-style: none;
+}
+
+details > summary::-webkit-details-marker {
+    display: none;
+}
+
+details > summary::after {
+    content: "";
+    flex: 0 0 auto;
+    width: 8px;
+    height: 8px;
+    margin-inline: 4px;
+    border-right: 2px solid currentColor;
+    border-bottom: 2px solid currentColor;
+    transform: rotate(45deg);
+}
+
+details[open] > summary::after {
+    transform: rotate(225deg);
+}
+
 .theme-icon {
     filter: var(--icon-filter);
 }

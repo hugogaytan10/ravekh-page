@@ -1,3 +1,4 @@
+@import "../../../shared/ui/PosMobileTheme.css";
 .pos-v2-auth-page {
   width: 100%;
   min-height: 100vh;
@@ -5,13 +6,13 @@
   align-items: center;
   justify-content: center;
   padding: 1rem;
-  background: #f5f3ff;
+  background: var(--pos-v2-surface-alt);
 }
 
 .pos-v2-auth-container {
-  background-color: #fff;
-  border-radius: 10px;
-  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.25), 0 10px 10px rgba(0, 0, 0, 0.22);
+  background-color: var(--pos-v2-surface);
+  border-radius: 8px;
+  box-shadow: none;
   position: relative;
   overflow: hidden;
   width: 768px;
@@ -55,7 +56,7 @@
 }
 
 .pos-v2-form {
-  background-color: #fff;
+  background-color: var(--pos-v2-surface);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -72,14 +73,14 @@
   padding: 12px 15px;
   margin: 8px 0;
   width: 100%;
-  color: #111827;
+  color: var(--pos-v2-text);
 }
 
 .pos-v2-btn {
-  border-radius: 20px;
-  border: 1px solid #6d01d1;
-  background-color: #6d01d1;
-  color: #fff;
+  border-radius: 8px;
+  border: 1px solid var(--pos-v2-accent);
+  background-color: var(--pos-v2-accent);
+  color: var(--pos-v2-text-inverse);
   font-size: 12px;
   font-weight: bold;
   padding: 12px 45px;
@@ -100,11 +101,11 @@
 
 .pos-v2-btn-ghost {
   background-color: transparent;
-  border-color: #fff;
+  border-color: var(--pos-v2-text-inverse);
 }
 
 .pos-v2-error {
-  color: #dc2626;
+  color: var(--pos-v2-danger-text);
   font-size: 0.8rem;
   width: 100%;
   text-align: left;
@@ -115,7 +116,7 @@
   align-self: flex-end;
   border: none;
   background: transparent;
-  color: #4b5563;
+  color: var(--pos-v2-text-muted);
   font-size: 0.75rem;
   margin-top: 0.5rem;
   cursor: pointer;
@@ -128,7 +129,7 @@
 .pos-v2-mobile-switch {
   background: transparent;
   border: none;
-  color: #6d01d1;
+  color: var(--pos-v2-accent-text);
   font-weight: 700;
   margin-top: 0.9rem;
   display: inline-block;
@@ -147,8 +148,8 @@
 }
 
 .pos-v2-overlay {
-  background: linear-gradient(to right, #542c7a, #6d01d1);
-  color: #fff;
+  background: linear-gradient(to right, #542c7a, var(--pos-v2-accent));
+  color: var(--pos-v2-text-inverse);
   position: relative;
   left: -100%;
   height: 100%;
@@ -242,7 +243,7 @@
 
   .pos-v2-auth-container {
     min-height: calc(100dvh - 1.5rem);
-    border-radius: 12px;
+    border-radius: 8px;
   }
 
   .pos-v2-form {
@@ -287,27 +288,27 @@
 }
 
 :root[data-theme="dark"] .pos-v2-auth-page {
-  background: #0b1120;
+  background: var(--pos-v2-surface);
 }
 
 :root[data-theme="dark"] .pos-v2-auth-container,
 :root[data-theme="dark"] .pos-v2-form {
-  background-color: #111827;
-  color: #f8fafc;
+  background-color: var(--pos-v2-surface);
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .pos-v2-input {
-  background-color: #0f172a;
-  border: 1px solid #334155;
-  color: #e2e8f0;
+  background-color: var(--pos-v2-surface);
+  border: 1px solid var(--pos-v2-border);
+  color: var(--pos-v2-text-muted);
 }
 
 :root[data-theme="dark"] .pos-v2-forgot-link {
-  color: #cbd5e1;
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .pos-v2-mobile-switch {
-  color: #67e8f9;
+  color: var(--pos-v2-text);
 }
 
 
@@ -321,7 +322,7 @@
 .pos-v2-label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--pos-v2-text);
   margin-top: 0.5rem;
 }
 
@@ -348,7 +349,7 @@
 
 .pos-v2-file-name {
   font-size: 0.75rem;
-  color: #4b5563;
+  color: var(--pos-v2-text-muted);
   margin-top: 0.15rem;
 }
 
@@ -361,11 +362,11 @@
 
 :root[data-theme="dark"] .pos-v2-label,
 :root[data-theme="dark"] .pos-v2-file-name {
-  color: #cbd5e1;
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .pos-v2-file-warning {
-  color: #fbbf24;
+  color: var(--pos-v2-danger-text);
 }
 
 .pos-v2-security-prompt-backdrop {
@@ -382,10 +383,10 @@
 .pos-v2-security-prompt {
   width: min(100%, 440px);
   border: 1px solid rgba(109, 1, 209, 0.14);
-  border-radius: 24px;
-  background: #ffffff;
+  border-radius: 8px;
+  background: var(--pos-v2-surface);
   padding: 1.5rem;
-  box-shadow: 0 28px 80px rgba(15, 23, 42, 0.28);
+  box-shadow: none;
   text-align: left;
 }
 
@@ -394,8 +395,8 @@
   width: fit-content;
   margin-bottom: 0.8rem;
   border-radius: 999px;
-  background: #f5f3ff;
-  color: #6d01d1;
+  background: var(--pos-v2-surface-alt);
+  color: var(--pos-v2-accent-text);
   padding: 0.42rem 0.72rem;
   font-size: 0.72rem;
   font-weight: 800;
@@ -405,13 +406,13 @@
 
 .pos-v2-security-prompt h2 {
   margin: 0;
-  color: #111827;
+  color: var(--pos-v2-text);
   font-size: 1.35rem;
 }
 
 .pos-v2-security-prompt p {
   margin: 0.75rem 0 0;
-  color: #4b5563;
+  color: var(--pos-v2-text-muted);
   line-height: 1.5;
 }
 
@@ -423,10 +424,10 @@
 }
 
 .pos-v2-security-prompt__skip {
-  border: 1px solid #ddd6fe;
-  border-radius: 20px;
-  background: #fff;
-  color: #4c1d95;
+  border: 1px solid var(--pos-v2-border);
+  border-radius: 8px;
+  background: var(--pos-v2-surface);
+  color: var(--pos-v2-accent-text);
   padding: 12px 20px;
   font-size: 12px;
   font-weight: 800;
@@ -436,42 +437,58 @@
 
 .pos-v2-security-prompt__skip:hover,
 .pos-v2-security-prompt__skip:focus-visible {
-  background: #f5f3ff;
+  background: var(--pos-v2-surface-alt);
   outline: none;
 }
 
 :root[data-theme="dark"] .pos-v2-security-prompt {
-  background: #111827;
-  border-color: #334155;
+  background: var(--pos-v2-surface);
+  border-color: var(--pos-v2-border);
 }
 
 :root[data-theme="dark"] .pos-v2-security-prompt h2 {
-  color: #f8fafc;
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .pos-v2-security-prompt p {
-  color: #cbd5e1;
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .pos-v2-security-prompt__eyebrow {
   background: rgba(109, 1, 209, 0.22);
-  color: #ddd6fe;
+  color: var(--pos-v2-text-muted);
 }
 
 :root[data-theme="dark"] .pos-v2-security-prompt__skip {
-  background: #0f172a;
-  border-color: #334155;
-  color: #ddd6fe;
+  background: var(--pos-v2-surface);
+  border-color: var(--pos-v2-border);
+  color: var(--pos-v2-text-muted);
 }
 
 .pos-v2-notice {
-  color: #15803d;
+  color: var(--pos-v2-success-text);
   font-size: 0.8rem;
   width: 100%;
   text-align: left;
   margin-top: 0.25rem;
 }
 
+.pos-v2-auth-page { background:var(--pos-v2-background); color:var(--pos-v2-text); padding:24px; min-height:100dvh; }
+.pos-v2-auth-container { width:min(560px,100%); min-height:650px; background:var(--pos-v2-background); border-radius:0; box-shadow:none; overflow:visible; }
+.pos-v2-form-container { position:relative; width:100%; height:auto; transform:none !important; }
+.pos-v2-sign-in-container, .pos-v2-sign-up-container { display:none; opacity:1; z-index:auto; animation:none !important; }
+.pos-v2-auth-container:not(.right-panel-active) .pos-v2-sign-in-container, .pos-v2-auth-container.right-panel-active .pos-v2-sign-up-container { display:block; transform:none; }
+.pos-v2-overlay-container { display:none; }
+.pos-v2-form { background:var(--pos-v2-background); color:var(--pos-v2-text); padding:24px 0; text-align:left; align-items:stretch; gap:8px; }
+.pos-v2-form h1 { font-size:24px; font-weight:600; color:var(--pos-v2-text); margin-bottom:8px; }
+.pos-v2-form .pos-v2-label { font-size:12px; font-weight:500; color:var(--pos-v2-text-muted); }
+.pos-v2-input { min-height:44px; background:var(--pos-v2-input-bg); border:1px solid var(--pos-v2-border); border-radius:8px; padding:10px 12px; color:var(--pos-v2-text); font-size:16px; }
+.pos-v2-btn { border-radius:8px; min-height:52px; font-size:18px; font-weight:600; letter-spacing:0; text-transform:none; padding:12px 24px; background:var(--pos-v2-accent); border-color:var(--pos-v2-accent); color:var(--pos-v2-text-inverse); }
+.pos-v2-mobile-switch { display:block; color:var(--pos-v2-accent-text); font-size:14px; margin-top:16px; text-decoration:none; }
+.pos-v2-forgot-link { color:var(--pos-v2-text-muted); font-size:12px; }
+@media(max-width:600px) { .pos-v2-auth-page { padding:20px; } .pos-v2-auth-container { min-height:0; } }
+
+:root[data-theme='dark'] .pos-v2-auth-page,:root[data-theme='dark'] .pos-v2-auth-container,:root[data-theme='dark'] .pos-v2-form{background:var(--pos-v2-background)}
 .pos-v2-changes-notice-backdrop {
   position: fixed;
   inset: 0;

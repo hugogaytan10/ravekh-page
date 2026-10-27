@@ -1,4 +1,4 @@
-import { CashClosing, CreateCashClosingDto } from "../model/CashClosing";
+import { CashClosing, CashClosingPreview, CreateCashClosingDto } from "../model/CashClosing";
 
 export interface EmployeeSummary {
   id: number;
@@ -8,6 +8,6 @@ export interface EmployeeSummary {
 export interface ICashClosingRepository {
   listEmployeesByBusiness(businessId: number, token: string): Promise<EmployeeSummary[]>;
   listByEmployee(employeeId: number, token: string): Promise<CashClosing[]>;
-  getCurrentTotalByEmployee(employeeId: number, token: string): Promise<number>;
+  getCurrentPreviewByEmployee(employeeId: number, token: string): Promise<CashClosingPreview>;
   create(payload: CreateCashClosingDto, token: string): Promise<void>;
 }

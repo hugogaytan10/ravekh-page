@@ -22,9 +22,9 @@
   gap: 0.85rem;
   border-radius: 26px;
   padding: 1.35rem;
-  background: #ffffff;
-  color: #0f172a;
-  box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+  background: var(--pos-v2-surface);
+  color: var(--pos-v2-text);
+  box-shadow: none;
 }
 
 .pos-feature-unlock__badge {
@@ -50,7 +50,7 @@
 }
 
 .pos-feature-unlock__card p {
-  color: #475569;
+  color: var(--pos-v2-text-muted);
   line-height: 1.55;
 }
 
@@ -65,31 +65,31 @@
   border: 0;
   border-radius: 999px;
   padding: 0.8rem 1rem;
-  background: #111827;
-  color: #ffffff;
+  background: var(--pos-v2-accent);
+  color: var(--pos-v2-text-inverse);
   font-weight: 800;
   cursor: pointer;
 }
 
 .pos-feature-unlock__actions button.is-secondary {
-  border: 1px solid #cbd5e1;
-  background: #ffffff;
-  color: #334155;
+  border: 1px solid var(--pos-v2-border);
+  background: var(--pos-v2-surface);
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .pos-feature-unlock__card {
-  background: #111827;
-  color: #f8fafc;
+  background: var(--pos-v2-surface);
+  color: var(--pos-v2-text);
   border: 1px solid rgba(148, 163, 184, 0.22);
 }
 
 :root[data-theme="dark"] .pos-feature-unlock__card p {
-  color: #cbd5e1;
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .pos-feature-unlock__actions button.is-secondary {
-  background: #1f2937;
-  color: #e2e8f0;
+  background: var(--pos-v2-surface);
+  color: var(--pos-v2-text-muted);
   border-color: rgba(148, 163, 184, 0.3);
 }
 
@@ -130,18 +130,18 @@
   align-items: center;
   gap: 0.35rem 1rem;
   min-height: 58px;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
+  border: 1px solid var(--pos-v2-border);
+  border-radius: 8px;
   padding: 0.8rem 0.9rem;
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--pos-v2-surface);
+  color: var(--pos-v2-text);
   text-align: left;
   cursor: pointer;
 }
 
 .pos-feature-unlock__plans button:hover:not(:disabled),
 .pos-feature-unlock__plans button:focus-visible:not(:disabled) {
-  border-color: #111827;
+  border-color: var(--pos-v2-border);
   outline: none;
 }
 
@@ -159,7 +159,7 @@
 
 .pos-feature-unlock__plans small {
   grid-column: 1 / 2;
-  color: #64748b;
+  color: var(--pos-v2-text-muted);
   font-size: 0.8rem;
   font-weight: 600;
   line-height: 1.35;
@@ -167,7 +167,7 @@
 
 .pos-feature-unlock__plans span {
   justify-self: end;
-  color: #334155;
+  color: var(--pos-v2-text);
   font-size: 0.95rem;
   font-weight: 800;
 }
@@ -180,10 +180,10 @@
 
 .pos-feature-unlock__payment-element {
   min-height: 120px;
-  border: 1px solid #e2e8f0;
-  border-radius: 18px;
+  border: 1px solid var(--pos-v2-border);
+  border-radius: 8px;
   padding: 1rem;
-  background: #f8fafc;
+  background: var(--pos-v2-surface);
 }
 
 .pos-feature-unlock__payment button {
@@ -191,14 +191,14 @@
   border: 0;
   border-radius: 999px;
   padding: 0.8rem 1rem;
-  background: #111827;
-  color: #ffffff;
+  background: var(--pos-v2-accent);
+  color: var(--pos-v2-text-inverse);
   font-weight: 800;
   cursor: pointer;
 }
 
 .pos-feature-unlock__error {
-  color: #b91c1c !important;
+  color: var(--pos-v2-danger-text) !important;
   font-weight: 700;
 }
 
@@ -208,12 +208,12 @@
 
 :root[data-theme="dark"] .pos-feature-unlock__plans button,
 :root[data-theme="dark"] .pos-feature-unlock__payment-element {
-  background: #0f172a;
+  background: var(--pos-v2-surface);
   border-color: rgba(148, 163, 184, 0.25);
-  color: #f8fafc;
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .pos-feature-unlock__plans small,
 :root[data-theme="dark"] .pos-feature-unlock__plans span {
-  color: #cbd5e1;
+  color: var(--pos-v2-text);
 }

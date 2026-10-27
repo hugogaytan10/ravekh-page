@@ -14,7 +14,7 @@ export interface IAuthOnboardingRepository {
   closeOtherSessions(payload: LoginSessionLimitPayload): Promise<void>;
   signUp(payload: SignUpPayload): Promise<AuthSession>;
   getQuestions(): Promise<SecurityQuestion[]>;
-  getSecurityQuestionStatus(employeeId: number): Promise<SecurityQuestionStatus>;
+  getSecurityQuestionStatus(employeeId: number, token: string): Promise<SecurityQuestionStatus>;
   comparePasswordAnswers(
     payload: CompareSecurityQuestionPayload,
     user: string,

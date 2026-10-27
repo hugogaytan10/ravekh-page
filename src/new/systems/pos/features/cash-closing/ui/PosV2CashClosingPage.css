@@ -17,18 +17,18 @@
 
 .pos-v2-cash-closing__header p {
   margin: 0.35rem 0 0;
-  color: #64748b;
+  color: var(--pos-v2-text-muted);
 }
 
 .pos-v2-cash-closing__header button,
 .pos-v2-cash-closing__form button {
-  border: 1px solid #cbd5e1;
-  border-radius: 10px;
+  border: 1px solid var(--pos-v2-border);
+  border-radius: 8px;
   min-height: 38px;
   padding: 0.45rem 0.8rem;
-  background: #0f172a;
-  color: #fff;
-  font-weight: 700;
+  background: var(--pos-v2-accent);
+  color: var(--pos-v2-text-inverse);
+  font-weight: 600;
 }
 
 .pos-v2-cash-closing__header button:disabled,
@@ -37,9 +37,9 @@
 }
 
 .pos-v2-cash-closing__card {
-  background: #fff;
-  border: 1px solid #e2e8f0;
-  border-radius: 14px;
+  background: var(--pos-v2-surface);
+  border: 1px solid var(--pos-v2-border);
+  border-radius: 8px;
   padding: 0.9rem;
   display: grid;
   gap: 0.65rem;
@@ -59,16 +59,16 @@
   display: grid;
   gap: 0.25rem;
   font-size: 0.86rem;
-  color: #334155;
+  color: var(--pos-v2-text);
   font-weight: 600;
 }
 
 .pos-v2-cash-closing__form input,
 .pos-v2-cash-closing__form select {
   min-height: 40px;
-  border-radius: 10px;
-  border: 1px solid #cbd5e1;
-  background: #fff;
+  border-radius: 8px;
+  border: 1px solid var(--pos-v2-border);
+  background: var(--pos-v2-surface);
   padding: 0.45rem 0.65rem;
 }
 
@@ -86,9 +86,9 @@
 }
 
 .pos-v2-cash-closing__history li {
-  border: 1px solid #e2e8f0;
-  background: #f8fafc;
-  border-radius: 10px;
+  border: 1px solid var(--pos-v2-border);
+  background: var(--pos-v2-surface);
+  border-radius: 8px;
   padding: 0.55rem 0.65rem;
   display: flex;
   justify-content: space-between;
@@ -102,12 +102,12 @@
 }
 
 .pos-v2-cash-closing__history li small {
-  color: #64748b;
+  color: var(--pos-v2-text-muted);
 }
 
 .pos-v2-cash-closing__history li.is-empty {
   justify-content: center;
-  color: #64748b;
+  color: var(--pos-v2-text-muted);
 }
 
 .pos-v2-cash-closing__current {
@@ -119,31 +119,31 @@
 .pos-v2-cash-closing__toast,
 .pos-v2-cash-closing__warning {
   margin: 0;
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 0.65rem 0.75rem;
 }
 
 .pos-v2-cash-closing__error {
-  border: 1px solid #fecaca;
-  background: #fef2f2;
-  color: #991b1b;
+  border: 1px solid var(--pos-v2-danger-border);
+  background: var(--pos-v2-danger-bg);
+  color: var(--pos-v2-danger-text);
 }
 
 .pos-v2-cash-closing__toast {
-  border: 1px solid #bbf7d0;
-  background: #f0fdf4;
+  border: 1px solid var(--pos-v2-success-border);
+  background: var(--pos-v2-success-bg);
   color: #166534;
 }
 
 .pos-v2-cash-closing__warning {
   border: 1px solid #fde68a;
-  background: #fffbeb;
+  background: var(--pos-v2-warning-bg);
   color: #92400e;
 }
 
 .pos-v2-cash-closing__hint {
   margin: 0;
-  color: #475569;
+  color: var(--pos-v2-text-muted);
 }
 
 .is-equal {
@@ -152,12 +152,12 @@
 }
 
 .is-positive {
-  color: #6d28d9;
+  color: var(--pos-v2-accent-text);
   font-weight: 700;
 }
 
 .is-negative {
-  color: #b91c1c;
+  color: var(--pos-v2-danger-text);
   font-weight: 700;
 }
 
@@ -171,59 +171,59 @@
 :root[data-theme="dark"] .pos-v2-cash-closing__history li small,
 :root[data-theme="dark"] .pos-v2-cash-closing__history li.is-empty,
 :root[data-theme="dark"] .pos-v2-cash-closing__form label {
-  color: #cbd5e1;
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .pos-v2-cash-closing__card,
 :root[data-theme="dark"] .pos-v2-cash-closing__history li {
-  background: #111827;
-  border-color: #374151;
+  background: var(--pos-v2-surface);
+  border-color: var(--pos-v2-border);
 }
 
 :root[data-theme="dark"] .pos-v2-cash-closing__form input,
 :root[data-theme="dark"] .pos-v2-cash-closing__form select {
-  background: #0f172a;
-  border-color: #475569;
-  color: #f8fafc;
+  background: var(--pos-v2-surface);
+  border-color: var(--pos-v2-border);
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .pos-v2-cash-closing__header button,
 :root[data-theme="dark"] .pos-v2-cash-closing__form button {
-  background: #6f5cc6;
-  border-color: #c4b5fd;
-  color: #f5f3ff;
+  background: var(--pos-v2-accent);
+  border-color: var(--pos-v2-border);
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .pos-v2-cash-closing__error {
   border-color: rgba(220, 38, 38, 0.35);
   background: rgba(127, 29, 29, 0.35);
-  color: #fecaca;
+  color: var(--pos-v2-danger-text);
 }
 
 :root[data-theme="dark"] .pos-v2-cash-closing__toast {
-  border-color: rgba(22, 163, 74, 0.4);
+  border-color: var(--pos-v2-success-border);
   background: rgba(20, 83, 45, 0.35);
-  color: #bbf7d0;
+  color: var(--pos-v2-success-text);
 }
 
 :root[data-theme="dark"] .pos-v2-cash-closing__warning {
-  border-color: rgba(245, 158, 11, 0.45);
+  border-color: var(--pos-v2-danger-border);
   background: rgba(146, 64, 14, 0.35);
-  color: #fde68a;
+  color: var(--pos-v2-warning);
 }
 
 :root[data-theme="dark"] .pos-v2-cash-closing__hint {
-  color: #cbd5e1;
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .is-equal {
-  color: #86efac;
+  color: var(--pos-v2-success-text);
 }
 
 :root[data-theme="dark"] .is-positive {
-  color: #7dd3fc;
+  color: var(--pos-v2-text);
 }
 
 :root[data-theme="dark"] .is-negative {
-  color: #fda4af;
+  color: var(--pos-v2-danger-text);
 }

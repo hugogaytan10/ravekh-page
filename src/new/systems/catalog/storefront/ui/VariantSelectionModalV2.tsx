@@ -4,14 +4,7 @@ import { StorefrontProductExtra, StorefrontVariant } from "../api/CatalogStorefr
 import type { StorefrontWholesalePrice } from "../model/CatalogStorefrontModels";
 import { formatCatalogPrice, getApplicableWholesaleTier, getEffectiveCatalogPriceForQuantity, getNextWholesaleTier, normalizeWholesalePriceTiers } from "./catalogPrice";
 
-const normalizeOptionText = (value?: string | null) => value?.trim().toLowerCase() ?? "";
-
-const variantMatchesColor = (variant: StorefrontVariant, color: StorefrontProductExtra | null) => {
-  const variantColor = normalizeOptionText(variant.color);
-  if (!variantColor) return true;
-  if (!color) return false;
-  return variantColor === normalizeOptionText(color.description);
-};
+import { selectVariantForColor, variantMatchesColor } from "./catalogVariantSelection";
 
 type Props = {
   open: boolean;
@@ -78,7 +71,7 @@ export const VariantSelectionModalV2 = ({
       : [],
     [selectedVariant],
   );
-  const selectedWholesaleTiers = selectedVariant && variantWholesaleTiers.length > 0
+  const selectedWholesaleTiers = selectedVariant
     ? variantWholesaleTiers
     : productWholesaleTiers;
   const selectedPrice = selectedVariant
@@ -187,12 +180,9 @@ export const VariantSelectionModalV2 = ({
                         : "border-[var(--border-default)] bg-[var(--bg-surface)] text-[var(--text-secondary)]"
                         }`}
                       onClick={() => {
-                        setSelectedColorId((current) => (current === color.id ? null : color.id));
-                        setSelectedVariantId((current) => {
-                          if (!current || current === "base") return current;
-                          const currentVariant = variants.find((variant) => variant.id === current) ?? null;
-                          return currentVariant && variantMatchesColor(currentVariant, color) ? current : null;
-                        });
+                        const nextColor = selectedColorId === color.id ? null : color;
+                        setSelectedColorId(nextColor?.id ?? null);
+                        setSelectedVariantId(current => selectVariantForColor(variants, nextColor, current));
                       }}
                     >
                       {color.description}

@@ -1,5 +1,5 @@
 import { EmployeeSummary, ICashClosingRepository } from "../interface/ICashClosingRepository";
-import { CashClosing, CreateCashClosingDto } from "../model/CashClosing";
+import { CashClosing, CashClosingPreview, CreateCashClosingDto } from "../model/CashClosing";
 
 export class CashClosingService {
   constructor(private readonly repository: ICashClosingRepository) {}
@@ -13,7 +13,11 @@ export class CashClosingService {
   }
 
   async getCurrentTotal(employeeId: number, token: string): Promise<number> {
-    return this.repository.getCurrentTotalByEmployee(employeeId, token);
+    return (await this.getCurrentPreview(employeeId, token)).total;
+  }
+
+  async getCurrentPreview(employeeId: number, token: string): Promise<CashClosingPreview> {
+    return this.repository.getCurrentPreviewByEmployee(employeeId, token);
   }
 
   async registerClosing(payload: CreateCashClosingDto, token: string): Promise<void> {

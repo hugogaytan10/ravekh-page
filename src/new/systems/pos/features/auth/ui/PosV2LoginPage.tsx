@@ -1,6 +1,14 @@
+import { usePosTheme } from "../../../shared/ui/usePosTheme";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { ModernSystemsFactory } from "../../../../../index";
+import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
+import { PosBranchApi } from "../../../shared/api/PosBranchApi";
+import {
+  clearPosBranchSelection,
+  persistPosBranch,
+  readActivePosBranchId,
+} from "../../../shared/config/posBranch";
 import { getBusinessLogoDimensionWarning, uploadBusinessLogoToCloudinary } from "../../../shared/api/cloudinaryUpload";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import {
@@ -69,6 +77,7 @@ const FormField = ({
 );
 
 export const PosV2LoginPage = () => {
+  usePosTheme();
   const navigate = useNavigate();
   const location = useLocation();
   const [mode, setMode] = useState<PanelMode>("signin");
@@ -161,8 +170,23 @@ export const PosV2LoginPage = () => {
     let destination: AuthenticatedDestination = "sales";
 
     try {
+      const branches = await new PosBranchApi(new FetchHttpClient(API_BASE_URL)).list(session.token);
+      const storedBranchId = readActivePosBranchId(session.businessId);
+      const activeBranch =
+        branches.find((branch) => branch.id === storedBranchId) ??
+        branches.find((branch) => branch.isMain) ??
+        branches[0];
+
+      if (activeBranch) persistPosBranch(activeBranch);
+      else clearPosBranchSelection();
+    } catch (cause) {
+      console.warn("No se pudo resolver la sucursal de la sesión:", cause);
+    }
+
+    try {
       const status = await authPage.getSecurityQuestionStatus(
         session.employeeId,
+        session.token,
       );
 
       if (status.shouldPrompt || !status.configured) {
@@ -589,7 +613,7 @@ await finishAuthenticatedFlow(session, "signup");
             aria-labelledby="pos-v2-changes-notice-title"
             aria-describedby="pos-v2-changes-notice-description"
           >
-            
+
             <span className="pos-v2-changes-notice__eyebrow">Novedades RAVEKH</span>
             <h2 id="pos-v2-changes-notice-title">Próximas actualizaciones en RAVEKH</h2>
             <div id="pos-v2-changes-notice-description" className="pos-v2-changes-notice__content">

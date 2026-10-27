@@ -16,13 +16,19 @@ export class PosInventoryApi implements IInventoryRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
   async listByBusiness(businessId: number, token: string): Promise<InventoryItem[]> {
-    const response = await this.httpClient.request<ProductResponse[]>({
+    const first = await this.httpClient.request<ProductResponse[] | { data?: ProductResponse[]; pagination?: Record<string, unknown> }>({
       method: "GET",
-      path: POS_ENDPOINTS.productsByBusiness(businessId),
+      path: POS_ENDPOINTS.productsByBusinessBranch(businessId),
       token,
+      query: { page: 1, limit: "MAX" },
     });
-
-    return response.map((item) => this.toDomain(item));
+    const firstRows = Array.isArray(first) ? first : first.data ?? [];
+    const totalPages = Array.isArray(first) ? 1 : Math.max(1, Number(first.pagination?.totalPages ?? 1));
+    const rest = totalPages > 1 ? await Promise.all(Array.from({ length: totalPages - 1 }, (_, index) => this.httpClient.request<ProductResponse[] | { data?: ProductResponse[] }>({
+      method: "GET", path: POS_ENDPOINTS.productsByBusinessBranch(businessId), token, query: { page: index + 2, limit: "MAX" },
+    }))) : [];
+    const rows = [...firstRows, ...rest.flatMap((page) => Array.isArray(page) ? page : page.data ?? [])];
+    return rows.map((item) => this.toDomain(item));
   }
 
   async listByBusinessPaginated(businessId: number, token: string, page: number, limit: number): Promise<InventoryPaginatedResult> {
@@ -31,7 +37,7 @@ export class PosInventoryApi implements IInventoryRepository {
       { products?: ProductResponse[]; data?: ProductResponse[]; pagination?: Record<string, unknown> }
     >({
       method: "GET",
-      path: POS_ENDPOINTS.productsByBusiness(businessId),
+      path: POS_ENDPOINTS.productsByBusinessBranch(businessId),
       token,
       query: { page, limit },
     });
@@ -47,12 +53,10 @@ export class PosInventoryApi implements IInventoryRepository {
 
   async updateStock(productId: number, payload: UpdateInventoryStockDto, token: string): Promise<void> {
     await this.httpClient.request<void>({
-      method: "PUT",
-      path: POS_ENDPOINTS.productById(productId),
+      method: "PATCH",
+      path: POS_ENDPOINTS.branchProductInventory(productId),
       token,
-      body: {
-        Stock: payload.stock,
-      },
+      body: { Stock: payload.stock },
     });
   }
 

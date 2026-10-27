@@ -70,7 +70,7 @@ const ChangeName: React.FC = () => {
             <label className="text-sm font-semibold" htmlFor="coupon-name">
               Nombre completo
             </label>
-            <input
+            <input autoCorrect="on" spellCheck={true}
               id="coupon-name"
               type="text"
               className="mt-3 w-full rounded-2xl px-5 py-3 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.08)]"

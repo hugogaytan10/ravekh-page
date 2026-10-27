@@ -1,3 +1,4 @@
+import { FiShoppingBag, FiMapPin, FiUsers, FiCreditCard, FiUserCheck, FiGift, FiCamera, FiPrinter, FiDollarSign, FiSettings, FiTrendingUp, FiChevronRight } from "react-icons/fi";
 import { ModernSystemsFactory } from "../../../../../index";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -17,11 +18,19 @@ import {
   isSalesOnlyOperator,
   POS_SESSION_STORAGE_KEYS,
   readPosSessionSnapshot,
+  resolvePosOperatorRole,
   readPosStringList,
   writePosStringList,
 } from "../../../shared/config/posSession";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { buildPosPublicCatalogUrl } from "../../../shared/config/posExternalLinks";
+import {
+  persistPosBranch,
+  PosBranch,
+  readPosBranchSnapshot,
+} from "../../../shared/config/posBranch";
+import { PosBranchApi } from "../../../shared/api/PosBranchApi";
+import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
 import { onPosBusinessUpdated } from "../../../shared/config/posBusinessEvents";
 import {
   fetchPosBusinessFeatures,
@@ -39,6 +48,7 @@ import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
 import { downloadProductsCatalogPdf } from "./productCatalogPdf";
 import "./PosV2MorePage.css";
 
+const MODULE_ICONS: Record<string, typeof FiSettings> = { "online-store": FiShoppingBag, branches: FiMapPin, customers: FiUsers, "pending-payments": FiCreditCard, employees: FiUserCheck, coupons: FiGift, visits: FiCamera, printers: FiPrinter, "cash-closing": FiDollarSign, settings: FiSettings, intelligence: FiTrendingUp };
 const API_BASE_URL = getPosApiBaseUrl();
 const FAVORITES_KEY = POS_SESSION_STORAGE_KEYS.moreFavorites;
 const BANNER_COLORS = ["#4338CA", "#0EA5E9", "#059669", "#D946EF", "#F97316"];
@@ -81,6 +91,16 @@ export const PosV2MorePage = () => {
   } | null>(null);
   const [pdfLoading, setPdfLoading] = useState(false);
   const [showCatalogQr, setShowCatalogQr] = useState(false);
+  const [catalogBranches, setCatalogBranches] = useState<PosBranch[]>([]);
+  const [catalogBranchId, setCatalogBranchId] = useState(() => {
+    const snapshot = readPosBranchSnapshot();
+    return snapshot.branchId;
+  });
+  const [activeBranchId, setActiveBranchId] = useState(
+    () => readPosBranchSnapshot().branchId,
+  );
+  const [catalogBranchesLoading, setCatalogBranchesLoading] = useState(false);
+  const [catalogBranchesError, setCatalogBranchesError] = useState("");
   const [bannerTitle, setBannerTitle] = useState("Promo especial de la semana");
   const [bannerSubtitle, setBannerSubtitle] = useState("Escanea el QR y conoce el catálogo completo de nuestra tienda.");
   const [bannerCta, setBannerCta] = useState("Escanear QR");
@@ -104,15 +124,41 @@ export const PosV2MorePage = () => {
     return factory.createPosProductsService();
   }, []);
   const sessionSnapshot = useMemo(() => readPosSessionSnapshot(), []);
+  const branchApi = useMemo(
+    () => new PosBranchApi(new FetchHttpClient(API_BASE_URL)),
+    [],
+  );
   const isSalesOnlyUser = useMemo(
     () => isSalesOnlyOperator(sessionSnapshot.token),
     [sessionSnapshot.token],
   );
-  const allowedModuleIdsForSalesOnly = useMemo(() => new Set(["printers"]), []);
-  const catalogUrl = useMemo(
-    () => buildPosPublicCatalogUrl(sessionSnapshot.businessId),
-    [sessionSnapshot.businessId],
+  const allowedModuleIdsForSalesOnly = useMemo(() => new Set(["printers", "settings"]), []);
+
+  const selectedCatalogBranch = useMemo(
+    () =>
+      catalogBranches.find((branch) => branch.id === catalogBranchId) ??
+      catalogBranches.find((branch) => branch.isMain) ??
+      catalogBranches[0] ??
+      null,
+    [catalogBranchId, catalogBranches],
   );
+
+  const catalogUrl = useMemo(
+    () =>
+      buildPosPublicCatalogUrl(
+        sessionSnapshot.businessId,
+        selectedCatalogBranch?.slug || null,
+      ),
+    [selectedCatalogBranch?.slug, sessionSnapshot.businessId],
+  );
+
+  const catalogBranchLabel =
+    selectedCatalogBranch?.name ||
+    selectedCatalogBranch?.slug ||
+    "Principal";
+
+  const selectedCatalogEnabled =
+    selectedCatalogBranch?.catalogEnabled !== false;
   const bannerTitleLines = wrapBannerText(bannerTitle || "Promo especial", 29, 2);
   const bannerSubtitleLines = wrapBannerText(
     bannerSubtitle || "Escanea el QR para conocer más productos.",
@@ -148,6 +194,7 @@ export const PosV2MorePage = () => {
   const filteredSections = useMemo(() => {
     return MORE_MODULE_SECTIONS.map((section) => {
       const items = section.items.filter((item) => {
+        if (item.id === "intelligence" && resolvePosOperatorRole(sessionSnapshot.token) !== "admin") return false;
         const matchesRole =
           !isSalesOnlyUser || allowedModuleIdsForSalesOnly.has(item.id);
         const matchesStatus = isReadyModule(item);
@@ -168,6 +215,81 @@ export const PosV2MorePage = () => {
     isSalesOnlyUser,
     normalizedQuery,
     modulePage,
+  ]);
+
+  useEffect(() => {
+    if (!sessionSnapshot.token || !sessionSnapshot.businessId) {
+      setCatalogBranches([]);
+      setCatalogBranchId(0);
+      return;
+    }
+
+    let cancelled = false;
+
+    setCatalogBranchesLoading(true);
+    setCatalogBranchesError("");
+
+    branchApi
+      .list(sessionSnapshot.token)
+      .then((branches) => {
+        if (cancelled) return;
+
+        setCatalogBranches(branches);
+
+        const activeSnapshot = readPosBranchSnapshot();
+        const activeBranch =
+          branches.find((branch) => branch.id === activeSnapshot.branchId) ??
+          branches.find((branch) => branch.isMain) ??
+          branches[0] ??
+          null;
+
+        setActiveBranchId(activeBranch?.id ?? 0);
+        if (activeBranch && activeBranch.id !== activeSnapshot.branchId) {
+          persistPosBranch(activeBranch);
+        }
+
+        setCatalogBranchId((current) => {
+          if (branches.some((branch) => branch.id === current)) {
+            return current;
+          }
+
+          if (
+            activeSnapshot.businessId === sessionSnapshot.businessId &&
+            branches.some((branch) => branch.id === activeSnapshot.branchId)
+          ) {
+            return activeSnapshot.branchId;
+          }
+
+          return (
+            branches.find((branch) => branch.isMain)?.id ??
+            branches[0]?.id ??
+            0
+          );
+        });
+      })
+      .catch((cause) => {
+        if (cancelled) return;
+
+        setCatalogBranches([]);
+        setCatalogBranchesError(
+          cause instanceof Error
+            ? cause.message
+            : "No fue posible cargar las sucursales.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setCatalogBranchesLoading(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    branchApi,
+    sessionSnapshot.businessId,
+    sessionSnapshot.token,
   ]);
 
   useEffect(() => {
@@ -242,6 +364,18 @@ export const PosV2MorePage = () => {
   };
 
   const copyCatalogUrl = async () => {
+    if (!selectedCatalogBranch) {
+      setActionMessage("Selecciona una sucursal para copiar su catálogo.");
+      return;
+    }
+
+    if (!selectedCatalogEnabled) {
+      setActionMessage(
+        `El catálogo público de ${catalogBranchLabel} está desactivado.`,
+      );
+      return;
+    }
+
     try {
       if (navigator?.clipboard?.writeText) {
         await navigator.clipboard.writeText(catalogUrl);
@@ -371,6 +505,15 @@ export const PosV2MorePage = () => {
     setUnlockModal({ title, message, buttonText, unlockFeature });
   };
 
+  const changeActiveBranch = (branchId: number) => {
+    const branch = catalogBranches.find((item) => item.id === branchId);
+    if (!branch) return;
+    persistPosBranch(branch);
+    setActiveBranchId(branch.id);
+    setCatalogBranchId(branch.id);
+    setActionMessage(`Sucursal activa: ${branch.name}.`);
+  };
+
   const getLockedModule = (
     item: MoreModuleLink,
   ): {
@@ -406,8 +549,7 @@ export const PosV2MorePage = () => {
       (item.id === "coupons" ||
         item.id === "visits" ||
         item.id === "loyalty") &&
-      features.fidelity !== 1 &&
-      features.fidelity !== 2
+      isPosFeatureBlocked(features.fidelity)
     ) {
       return {
         title: "Activa las recompensas para clientes",
@@ -480,19 +622,38 @@ export const PosV2MorePage = () => {
   return (
     <PosV2Shell
       title="Más"
-      subtitle="Herramientas y ajustes para tu negocio."
+      subtitle="Administra tu negocio"
     >
       <section className="pos-v2-more">
-        <header className="pos-v2-more__header">
-          <h2>Herramientas para tu negocio</h2>
-        </header>
+
+        <section className="pos-v2-more__branch-switcher" aria-label="Sucursal operativa">
+          <div>
+            <strong>Sucursal operativa</strong>
+            <span>Sucursal seleccionada para trabajar.</span>
+          </div>
+          <select
+            value={activeBranchId || ""}
+            onChange={(event) => changeActiveBranch(Number(event.target.value))}
+            disabled={catalogBranchesLoading || catalogBranches.length === 0}
+            aria-label="Cambiar sucursal operativa"
+          >
+            {catalogBranchesLoading ? <option value="">Cargando sucursales…</option> : null}
+            {!catalogBranchesLoading && catalogBranches.length === 0 ? (
+              <option value="">Sin sucursales disponibles</option>
+            ) : null}
+            {catalogBranches.map((branch) => (
+              <option key={branch.id} value={branch.id}>
+                {branch.name}{branch.isMain ? " · Principal" : ""}
+              </option>
+            ))}
+          </select>
+        </section>
         <section className="pos-v2-more__plan-banner" aria-label="Cambiar plan">
           <div>
             <span className="pos-v2-more__plan-eyebrow">Plan actual</span><h3>Cambiar de plan</h3>
 
             <p>
-              Tu negocio está en el plan <strong>{currentPlanName}</strong>.
-              Elige un plan con más espacio para productos y herramientas para vender en línea.
+              Plan actual: <strong>{currentPlanName}</strong>.
             </p>
           </div>
 
@@ -506,110 +667,222 @@ export const PosV2MorePage = () => {
         </section>
 
         {favoriteItems.length > 0 ? (
-          <section
-            className="pos-v2-more__favorites"
-            aria-label="Accesos rápidos"
-          >
-            <div className="pos-v2-more__section-head"><h3>Accesos rápidos</h3>
-              <p>
-                Tus herramientas favoritas, siempre a la mano.
-              </p>
-            </div>
-            <div className="pos-v2-more__favorites-head">
-              <small>{favoriteItems.length} favorito(s)</small>
-              <button
-                type="button"
-                className="pos-v2-more__clear-favorites"
-                onClick={() => setFavorites([])}
-              >
-                Limpiar favoritos
-              </button>
-            </div>
-            <div className="pos-v2-more__favorite-chips">
+          <section className="pos-v2-more__favorites" aria-label="Favoritos">
+            <div className="pos-v2-more__section-head"><h3>Favoritos</h3></div>
+            <div className="pos-v2-more__grid">
               {favoriteItems.map((item) => (
-                <button
-                  key={`favorite-${item.id}`}
-                  type="button"
-                  className="pos-v2-more__favorite-chip"
-                  onClick={() => openModule(item)}
-                  disabled={betaLoadingId === item.id}
-                  title={item.description}
-                >
-                  {item.id === "sales" ? <FiShoppingCart aria-hidden="true" /> : item.id === "products" ? <FiBox aria-hidden="true" /> : <FiStar aria-hidden="true" />}
-                  {item.title}
+                <button key={`favorite-${item.id}`} type="button"
+                  className="pos-v2-more__module-link" onClick={() => void openModule(item)}>
+                  <span>{item.title}</span><span aria-hidden="true">›</span>
                 </button>
               ))}
             </div>
           </section>
-        ) : (
+        ) : null}
+
+        {filteredSections.map((section) => (
           <section
-            className="pos-v2-more__favorites pos-v2-more__favorites--empty"
-            aria-label="Accesos rápidos"
+            key={section.title}
+            className={`pos-v2-more__section${section.title === "Mi negocio" ? " pos-v2-more__section--primary" : ""}`}
+            aria-label={section.title}
           >
-            <h3>Accesos rápidos</h3>
-            <p>Marca con ☆ tus herramientas favoritas para tenerlas a la mano.</p>
+            <div className="pos-v2-more__section-head">
+              <h3>{section.title}</h3>
+              <p>{section.subtitle}</p>
+            </div>
+            <div className="pos-v2-more__grid">
+              {section.items.map((item) => (
+                <div key={`${section.title}-${item.id}`} className="pos-v2-more__module-row">
+                  <button type="button" className="pos-v2-more__module-link"
+                    onClick={() => void openModule(item)} disabled={betaLoadingId === item.id}>
+                    <span className="pos-v2-more__module-icon" aria-hidden="true">{(() => { const Icon = MODULE_ICONS[item.id] || FiSettings; return <Icon size={24} />; })()}</span><span>{betaLoadingId === item.id ? "Cargando…" : item.title}</span>
+                    <FiChevronRight className="pos-v2-more__module-chevron" aria-hidden="true" />
+                  </button>
+                  <button type="button"
+                    className={`pos-v2-more__favorite ${favorites.includes(item.id) ? "is-active" : ""}`}
+                    onClick={() => toggleFavorite(item.id)}
+                    aria-label={favorites.includes(item.id) ? `Quitar ${item.title} de favoritos` : `Agregar ${item.title} a favoritos`}
+                    aria-pressed={favorites.includes(item.id)}>
+                    {favorites.includes(item.id) ? "★" : "☆"}
+                  </button>
+                </div>
+              ))}
+            </div>
           </section>
-        )}
+        ))}
 
         <section
           className="pos-v2-more__quick-tools"
           aria-label="Herramientas rápidas"
         >
-          <div className="pos-v2-more__section-head"><h3>Herramientas rápidas</h3>
-            <p>Comparte tu catálogo o descárgalo para tus clientes.</p>
+          <div className="pos-v2-more__section-head">
+            <h3>Comparte tu catálogo</h3>
+            <p>Enlaces, QR y material para tus clientes.</p>
           </div>
-          <div className="pos-v2-more__quick-tools-grid">
-            {allItems
-              .filter((item) =>
-                [
-                  "coupons",
-                  "visits",
-                  "customers",
-                  "employees",
-                  "catalog-settings",
-                  "exports",
-                  "cash-closing",
-                  "online-store",
-                ].includes(item.id),
-              )
-              .map((item) => (
-                <button
-                  key={item.id}
-                  type="button"
-                  onClick={() => openModule(item)}
-                >
-                  {item.title}
-                </button>
-              ))}
-          </div>
-          <div className="pos-v2-more__catalog-copy">
-            <label htmlFor="public-catalog-url">Enlace de tu catálogo</label>
-            <input id="public-catalog-url" value={catalogUrl} readOnly />
-            <div className="pos-v2-more__quick-tools-grid">
-              <button
-                type="button"
-                onClick={() => {
-                  if (isPosFeatureBlocked(features.catalog)) {
-                    openUnlockModal(
-                      "Desbloquea tu tienda en línea",
-                      "Activa el catálogo para vender en línea, mostrar tus productos y recibir pedidos desde tu tienda digital.",
-                      "Desbloquear catálogo",
-                      "Catalog",
-                    );
-                    return;
-                  }
-                  window.open(catalogUrl, "_blank", "noopener,noreferrer");
-                }}
-              >
-                Abrir catálogo
-              </button>
-              <button type="button" onClick={() => void copyCatalogUrl()}>
-                Copiar enlace
-              </button>
-              <button type="button" onClick={() => setShowCatalogQr(true)}>
-                Crear imagen con código QR
-              </button>
+          <div id="catalog-tools" className="pos-v2-more__catalog-copy">
+            <div className="pos-v2-more__catalog-heading">
+              <div>
+                <strong>Catálogos por sucursal</strong>
+                <span>
+                  Abre, copia o genera el QR del catálogo público de cada sucursal.
+                </span>
+              </div>
+
+              {catalogBranches.length > 1 ? (
+                <span className="pos-v2-more__catalog-count">
+                  {catalogBranches.length} sucursales
+                </span>
+              ) : null}
             </div>
+
+            {catalogBranchesLoading ? (
+              <div className="pos-v2-more__catalog-status">
+                Cargando sucursales…
+              </div>
+            ) : null}
+
+            {catalogBranchesError ? (
+              <div className="pos-v2-more__catalog-status is-error">
+                {catalogBranchesError}
+              </div>
+            ) : null}
+
+            {!catalogBranchesLoading && !catalogBranchesError && catalogBranches.length === 0 ? (
+              <div className="pos-v2-more__catalog-status">
+                No hay sucursales disponibles.
+              </div>
+            ) : null}
+
+            {catalogBranches.length > 0 ? (
+              <>
+                <div
+                  className="pos-v2-more__catalog-branches"
+                  role="list"
+                  aria-label="Catálogos por sucursal"
+                >
+                  {catalogBranches.map((branch) => {
+                    const branchUrl = buildPosPublicCatalogUrl(
+                      sessionSnapshot.businessId,
+                      branch.slug || null,
+                    );
+                    const selected = branch.id === selectedCatalogBranch?.id;
+
+                    return (
+                      <button
+                        key={branch.id}
+                        type="button"
+                        role="listitem"
+                        className={`pos-v2-more__catalog-branch${selected ? " is-active" : ""}`}
+                        onClick={() => setCatalogBranchId(branch.id)}
+                      >
+                        <span className="pos-v2-more__catalog-branch-name">
+                          {branch.name}
+                          {branch.isMain ? (
+                            <small>Principal</small>
+                          ) : null}
+                        </span>
+
+                        <span
+                          className={`pos-v2-more__catalog-branch-state${
+                            branch.catalogEnabled ? " is-enabled" : " is-disabled"
+                          }`}
+                        >
+                          {branch.catalogEnabled ? "Publicado" : "Desactivado"}
+                        </span>
+
+                        <small className="pos-v2-more__catalog-branch-url">
+                          {branch.slug
+                            ? `/${branch.slug}`
+                            : branchUrl}
+                        </small>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <label htmlFor="public-catalog-branch">
+                  Catálogo seleccionado
+                </label>
+                <select
+                  id="public-catalog-branch"
+                  className="pos-v2-more__catalog-select"
+                  value={selectedCatalogBranch?.id ?? ""}
+                  onChange={(event) =>
+                    setCatalogBranchId(Number(event.target.value))
+                  }
+                >
+                  {catalogBranches.map((branch) => (
+                    <option key={branch.id} value={branch.id}>
+                      {branch.name}
+                      {branch.isMain ? " · Principal" : ""}
+                      {!branch.catalogEnabled ? " · Catálogo desactivado" : ""}
+                    </option>
+                  ))}
+                </select>
+
+                <label htmlFor="public-catalog-url">
+                  URL pública de catálogo · {catalogBranchLabel}
+                </label>
+                <input
+                  id="public-catalog-url"
+                  value={catalogUrl}
+                  readOnly
+                />
+
+                {!selectedCatalogEnabled ? (
+                  <div className="pos-v2-more__catalog-status is-warning">
+                    El catálogo de <strong>{catalogBranchLabel}</strong> está
+                    desactivado. Actívalo en Sucursales antes de compartirlo.
+                  </div>
+                ) : null}
+
+                <div className="pos-v2-more__quick-tools-grid">
+                  <button
+                    type="button"
+                    disabled={!selectedCatalogBranch || !selectedCatalogEnabled}
+                    onClick={() => {
+                      if (isPosFeatureBlocked(features.catalog)) {
+                        openUnlockModal(
+                          "Desbloquea tu tienda en línea",
+                          "Activa el catálogo para vender en línea, mostrar tus productos y recibir pedidos desde tu tienda digital.",
+                          "Desbloquear catálogo",
+                          "Catalog",
+                        );
+                        return;
+                      }
+
+                      if (!selectedCatalogBranch || !selectedCatalogEnabled) {
+                        return;
+                      }
+
+                      window.open(
+                        catalogUrl,
+                        "_blank",
+                        "noopener,noreferrer",
+                      );
+                    }}
+                  >
+                    Abrir catálogo
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!selectedCatalogBranch || !selectedCatalogEnabled}
+                    onClick={() => void copyCatalogUrl()}
+                  >
+                    Copiar URL
+                  </button>
+
+                  <button
+                    type="button"
+                    disabled={!selectedCatalogBranch || !selectedCatalogEnabled}
+                    onClick={() => setShowCatalogQr(true)}
+                  >
+                    Generar imagen QR
+                  </button>
+                </div>
+              </>
+            ) : null}
             {showCatalogQr ? (
               <div className="pos-v2-more__banner-modal-backdrop" role="presentation" onMouseDown={(event) => {
                 if (event.target === event.currentTarget) setShowCatalogQr(false);
@@ -663,9 +936,9 @@ export const PosV2MorePage = () => {
                     <text x="182" y="356" fill="#E5E7EB" fontSize="17">Escanéalo para ver productos y promociones.</text>
                   </g>
                     </svg>
-                    <textarea className={`pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--title${bannerTitleLines.length > 1 ? " is-multiline" : ""}`} value={bannerTitle} onChange={(event) => setBannerTitle(event.target.value.replace(/\n/g, " "))} maxLength={48} rows={2} placeholder="Escribe un título" aria-label="Título de la imagen" />
-                    <textarea className="pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--subtitle" style={{ top: bannerTitleLines.length > 1 ? "49%" : "38%" }} value={bannerSubtitle} onChange={(event) => setBannerSubtitle(event.target.value.replace(/\n/g, " "))} maxLength={110} rows={2} placeholder="Escribe un subtítulo" aria-label="Texto de la imagen" />
-                    <input className="pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--cta" value={bannerCta} onChange={(event) => setBannerCta(event.target.value)} maxLength={24} placeholder="Texto junto al código QR" aria-label="Texto junto al código QR" />
+                    <textarea autoCorrect="on" spellCheck={true} className={`pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--title${bannerTitleLines.length > 1 ? " is-multiline" : ""}`} value={bannerTitle} onChange={(event) => setBannerTitle(event.target.value.replace(/\n/g, " "))} maxLength={48} rows={2} placeholder="Escribe un título" aria-label="Título del banner" />
+                    <textarea autoCorrect="on" spellCheck={true} className="pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--subtitle" style={{ top: bannerTitleLines.length > 1 ? "49%" : "38%" }} value={bannerSubtitle} onChange={(event) => setBannerSubtitle(event.target.value.replace(/\n/g, " "))} maxLength={110} rows={2} placeholder="Escribe un subtítulo" aria-label="Subtítulo del banner" />
+                    <input autoCorrect="on" spellCheck={true} className="pos-v2-more__banner-direct-input pos-v2-more__banner-direct-input--cta" value={bannerCta} onChange={(event) => setBannerCta(event.target.value)} maxLength={24} placeholder="Llamada a la acción" aria-label="Llamada a la acción del banner" />
                   </div>
                   <footer className="pos-v2-more__banner-modal-footer">
                     <span>Toca los textos de la imagen para cambiarlos.</span>
@@ -698,51 +971,7 @@ export const PosV2MorePage = () => {
           </div>
         </section>
 
-        {filteredSections.map((section) => (
-          <details open
-            key={section.title}
-            className="pos-v2-more__section"
-            aria-label={section.title}
-          >
-            <summary className="pos-v2-more__collapse-title"><h3>{section.title}</h3><FiChevronDown aria-hidden="true" /></summary><div className="pos-v2-more__section-head">
-              <p>{section.subtitle}</p>
-            </div>
-            <div className="pos-v2-more__grid">
-              {section.items.map((item) => (
-                <article
-                  key={`${section.title}-${item.title}`}
-                  className="pos-v2-more__item"
-                >
-                  <div className="pos-v2-more__meta">
-                    <h4>{item.title}</h4>
-                  </div>
-                  <p>{item.description}</p>
-                    <button
-                      type="button"
-                      onClick={() => openModule(item)}
-                      className="pos-v2-more__card-open"
-                      aria-label={`Abrir ${item.title}`}
-                      disabled={betaLoadingId === item.id}
-                      aria-busy={betaLoadingId === item.id}
-                    />
-                    <button
-                      type="button"
-                      className={`pos-v2-more__favorite ${favorites.includes(item.id) ? "is-active" : ""}`}
-                      onClick={() => toggleFavorite(item.id)}
-                      aria-pressed={favorites.includes(item.id)}
-                      aria-label={
-                        favorites.includes(item.id)
-                          ? `Quitar ${item.title} de favoritos`
-                          : `Agregar ${item.title} a favoritos`
-                      }
-                    >
-                      <span aria-hidden="true">{favorites.includes(item.id) ? "★" : "☆"}</span>
-                    </button>
-                </article>
-              ))}
-            </div>
-          </details>
-        ))}
+
 
         {filteredSections.length === 0 ? (
           <section className="pos-v2-more__empty">
@@ -762,7 +991,7 @@ export const PosV2MorePage = () => {
           <article>
             <details open><summary className="pos-v2-more__collapse-title"><h3>Tu cuenta</h3><FiChevronDown aria-hidden="true" /></summary>
             <p>
-              Cierra sesión para entrar con otra cuenta o cambiar de negocio.
+              Cambia de usuario o cierra tu sesión de forma segura.
             </p>
             <button type="button" onClick={() => setShowSignOutConfirm(true)}>
               Cambiar usuario / cerrar sesión

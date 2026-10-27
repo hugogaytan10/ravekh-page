@@ -3,6 +3,7 @@ import { IRewardRepository } from "../interface/IRewardRepository";
 import {
   CreateRewardCouponDto,
   DynamicVisitQrToken,
+  normalizeDynamicVisitQr,
   GenerateVisitQrDto,
   RedeemVisitQrDto,
   RedeemVisitResult,
@@ -217,17 +218,7 @@ export class LoyaltyApi implements IRewardRepository {
       body: { businessId, domain },
     });
 
-    const normalized = response?.qrUrl ? response : response?.data;
-    const qrUrl = String(normalized?.qrUrl ?? "").trim();
-    if (!qrUrl) {
-      throw new Error("No se recibió un QR dinámico válido.");
-    }
-
-    return {
-      token: String(normalized?.token ?? "").trim(),
-      qrUrl,
-      refreshAfterSeconds: Number(normalized?.refreshAfterSeconds ?? 60),
-    };
+    return normalizeDynamicVisitQr(response?.qrUrl ? response : response?.data);
   }
 
   async redeemVisitQr(payload: RedeemVisitQrDto, token: string): Promise<RedeemVisitResult> {

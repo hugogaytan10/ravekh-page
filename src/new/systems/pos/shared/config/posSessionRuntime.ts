@@ -10,6 +10,8 @@ export type PersistedPosSession = {
   email: string;
 };
 
+export const POS_BUSINESS_UPDATED_EVENT = "ravekh:pos-business-updated";
+
 export const POS_SESSION_UPDATED_EVENT = "ravekh:pos-session-updated";
 
 export const persistPosSession = (session: PersistedPosSession): void => {

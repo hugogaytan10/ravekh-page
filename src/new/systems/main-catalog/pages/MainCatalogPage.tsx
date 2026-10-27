@@ -17,7 +17,7 @@ import {
 import { trackMetaEvent } from "../../../../../scripts/metaPixel";
 import "./MainCatalogPage.css";
 // importacion del video de demostracion
-import demoVideo from "../../../../assets/landingCatalog/recorrido-catalogo.mp4";
+import demoVideo from "../../../assets/recorrido-catalogo.mp4";
 const MAIN_SALES_PATH = "/MainSales";
 const DEMO_CATALOG_PATH = "/v2/catalogo/1";
 const START_INTRO_PRICE = 189;

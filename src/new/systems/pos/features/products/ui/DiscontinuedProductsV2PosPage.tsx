@@ -1,6 +1,7 @@
+import { posMoneyFormatter } from "../../../shared/config/posCurrency";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import Repeat from "../../../../../../assets/POS/Repeat";
+import { FiRefreshCw, FiChevronRight } from "react-icons/fi";
 import { ModernSystemsFactory } from "../../../../../index";
 import { ManagedProduct } from "../model/ManagedProduct";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
@@ -137,7 +138,7 @@ export const DiscontinuedProductsV2PosPage = () => {
               ← Volver a productos
             </button>
             <button type="button" className="pos-v2-products__refresh" onClick={() => loadProducts(currentPage)} disabled={loading} aria-label={loading ? "Actualizando productos" : "Actualizar productos"} title="Actualizar productos">
-              <span aria-hidden="true"><Repeat width={20} height={20} strokeColor="currentColor" /></span>
+              <span aria-hidden="true"><FiRefreshCw size={20} /></span>
             </button>
             {isSelecting ? (
               <button
@@ -214,7 +215,7 @@ export const DiscontinuedProductsV2PosPage = () => {
                     </div>
                     <p className="pos-v2-products__simple-meta">{product.categoryName || "Sin categoría"}</p>
                     <div className="pos-v2-products__card-meta">
-                      <strong>{product.price === null ? "Sin precio" : new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(product.price)}</strong>
+                      <strong>{product.price === null ? "Sin precio" : posMoneyFormatter.format(product.price)}</strong>
                       <small>Stock: {product.stock ?? 0}</small>
                     </div>
                     {!isSelecting ? (

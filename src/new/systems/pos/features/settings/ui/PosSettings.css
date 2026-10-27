@@ -1,0 +1,48 @@
+.pos-settings { max-width: 960px; margin: auto; display: grid; gap: 16px; }
+.pos-settings__card { background: var(--pos-v2-surface); border: 1px solid var(--pos-v2-border); border-radius: 8px; padding: 20px; }
+.pos-settings h2, .pos-settings h3 { margin: 0 0 10px; color: var(--pos-v2-text); }
+.pos-settings p { color: var(--pos-v2-text-muted); }
+.pos-settings__row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--pos-v2-border); }
+.pos-settings__row:last-child { border-bottom: 0; }
+.pos-settings__row input[type=checkbox] { width: 22px; height: 22px; accent-color: var(--pos-v2-accent-strong); flex-shrink: 0; }
+.pos-settings__field { display: grid; gap: 6px; margin: 14px 0; }
+.pos-settings input:not([type=checkbox]):not([type=radio]), .pos-settings textarea { width: 100%; padding: 10px 12px; border: 1px solid var(--pos-v2-border); border-radius: 8px; color: var(--pos-v2-text); background: var(--pos-v2-input-bg); }
+.pos-settings button, .pos-settings__link { min-height: 44px; padding: 10px 16px; border-radius: 8px; background: var(--pos-v2-accent-strong); color: white; border: 0; cursor: pointer; }
+.pos-settings button:disabled { opacity: .5; cursor: default; }
+.pos-settings__link { display: flex; align-items: center; gap: 12px; justify-content: space-between; background: var(--pos-v2-surface); color: var(--pos-v2-text); text-decoration: none; border-bottom: 1px solid var(--pos-v2-border); border-radius: 0; }
+.pos-settings__actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 16px; }
+.pos-settings__preview { padding: 24px; background: white; color: #222; text-align: center; border: 1px dashed #aaa; max-width: 320px; margin: 0 auto; overflow-wrap: anywhere; }
+.pos-settings__preview p { color: #444; white-space: pre-wrap; }
+.pos-settings__preview img { max-height: 64px; max-width: 100%; margin: auto; }
+.pos-settings__split { display: grid; grid-template-columns: minmax(0,1fr) minmax(260px,.8fr); gap: 24px; }
+.pos-settings__notice { padding: 14px; border-radius: 8px; background: var(--pos-v2-surface-alt); }
+.pos-settings [role=alert] { color: var(--pos-v2-danger-text); }
+.pos-settings__stats { display: grid; grid-template-columns: repeat(auto-fit,minmax(120px,1fr)); gap: 12px; }
+.pos-settings__stats strong { display: block; font-size: 24px; }
+.pos-settings__insight { border-left: 4px solid var(--pos-v2-accent); }
+.pos-settings__insight[data-severity=CRITICAL] { border-left-color: var(--pos-v2-danger-border); }
+.pos-settings__insight[data-severity=WARNING] { border-left-color: #d97706; }
+.pos-settings__insight[data-severity=POSITIVE] { border-left-color: var(--pos-v2-success-border); }
+.pos-settings__metrics { display: flex; flex-wrap: wrap; gap: 20px; }
+.pos-settings__metrics div { display: grid; gap: 4px; }
+.pos-settings__metrics dt { color: var(--pos-v2-text-muted); }
+.pos-settings__metrics dd { margin: 0; font-weight: 600; }
+@media(max-width:640px) { .pos-settings__split { grid-template-columns: minmax(0,1fr); } .pos-settings__card { padding: 16px; } }
+
+.pos-settings { max-width:1100px; }
+.pos-settings__card { padding:16px; }
+.pos-settings__link { min-height:58px; gap:12px; padding:12px; font-size:14px; font-weight:500; }
+.pos-settings__icon { width:36px; height:36px; border:.5px solid var(--pos-v2-border); border-radius:50%; background:var(--pos-v2-background); display:grid; place-items:center; flex-shrink:0; }
+.pos-settings__link > span:not(.pos-settings__icon) { flex:1; }
+.pos-settings__row { font-size:13px; font-weight:500; }
+.pos-settings__row input[type=checkbox] { appearance:none; width:40px; height:24px; border-radius:12px; background:var(--pos-v2-border); position:relative; cursor:pointer; }
+.pos-settings__row input[type=checkbox]::after { content:""; position:absolute; width:18px; height:18px; left:3px; top:3px; border-radius:50%; background:#fff; transition:transform .15s; }
+.pos-settings__row input[type=checkbox]:checked { background:var(--pos-v2-accent); }
+.pos-settings__row input[type=checkbox]:checked::after { transform:translateX(16px); }
+.pos-settings__field { font-size:12px; font-weight:500; }
+.pos-settings__preview { font-family:Poppins,sans-serif; }
+.pos-settings fieldset { min-width:0; }
+.pos-settings button { font-weight:600; }
+.pos-settings [aria-pressed=true] { background:var(--pos-v2-accent); color:var(--pos-v2-text-inverse); }
+
+.pos-v2-shell .pos-settings__preview h3{color:#4E4E4E}

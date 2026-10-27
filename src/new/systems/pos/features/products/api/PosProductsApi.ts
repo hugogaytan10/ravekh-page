@@ -1,8 +1,10 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { POS_ENDPOINTS } from "../../../shared/api/posEndpoints";
 import { toPaginationMeta } from "../../../shared/model/Pagination";
-import { IProductsRepository, ProductImportResult, ProductsPaginatedResult } from "../interface/IProductsRepository";
+import { IProductsRepository, ProductListFilters, ProductImportResult, ProductsPaginatedResult } from "../interface/IProductsRepository";
 import { ManagedProduct, ProductCategory, ProductExtra, ProductVariant, SaveManagedProductDto } from "../model/ManagedProduct";
+import { createIdempotencyKey } from "../../../../../core/api/FetchHttpClient";
+import { readActivePosBranchId } from "../../../shared/config/posBranch";
 
 type ProductResponse = {
   Id?: number;
@@ -63,9 +65,13 @@ type ProductResponse = {
   variants?: LegacyVariantResponse[];
   VariantsCount?: number | string | null;
   variantsCount?: number | string | null;
+  WholesalePrices?: Array<{ Id?: number; Product_Id?: number | null; Price?: number; MinQuantity?: number }>;
+  wholesalePrices?: Array<{ id?: number; productId?: number | null; price?: number; minQuantity?: number }>;
 };
 
 type LegacyVariantResponse = {
+  Visible?: boolean | number | string | null;
+  Available?: boolean | number | string | null;
   Id?: number;
   id?: number;
   Product_Id?: number;
@@ -100,6 +106,8 @@ type LegacyVariantResponse = {
   minStock?: number | null;
   OptStock?: number | null;
   optStock?: number | null;
+  WholesalePrices?: Array<{ Id?: number; Variant_Id?: number | null; Price?: number; MinQuantity?: number }>;
+  wholesalePrices?: Array<{ id?: number; variantId?: number | null; price?: number; minQuantity?: number }>;
 };
 
 type ExtraResponse = {
@@ -129,44 +137,60 @@ type CategoryResponse = {
 };
 
 export class PosProductsApi implements IProductsRepository {
+  private pendingCreate: { fingerprint: string; idempotencyKey: string } | null = null;
   constructor(private readonly httpClient: HttpClient) {}
 
+  private async requestBranchProducts(
+    businessId: number,
+    token: string,
+    page = 1,
+    limit: string | number = "MAX",
+  ): Promise<{ rows: ProductResponse[]; pagination?: Record<string, unknown> }> {
+    const payload = await this.httpClient.request<
+      ProductResponse[] | { data?: ProductResponse[]; products?: ProductResponse[]; pagination?: Record<string, unknown> }
+    >({
+      method: "GET",
+      path: POS_ENDPOINTS.productsByBusinessBranch(businessId),
+      token,
+      query: { page, limit },
+    });
+
+    return {
+      rows: Array.isArray(payload) ? payload : payload.data ?? payload.products ?? [],
+      pagination: Array.isArray(payload) ? undefined : payload.pagination,
+    };
+  }
+
+  private async listAllBranchProducts(
+    businessId: number,
+    token: string,
+    limit: string | number = "MAX",
+  ): Promise<ProductResponse[]> {
+    const first = await this.requestBranchProducts(businessId, token, 1, limit);
+    const totalPages = Math.max(1, Number(first.pagination?.totalPages ?? 1));
+    if (totalPages <= 1) return first.rows;
+
+    const rest = await Promise.all(
+      Array.from({ length: totalPages - 1 }, (_, index) =>
+        this.requestBranchProducts(businessId, token, index + 2, limit),
+      ),
+    );
+
+    return [first, ...rest].flatMap((page) => page.rows);
+  }
+
   async listByBusiness(businessId: number, token: string): Promise<ManagedProduct[]> {
-    return this.listProductsFromPath(POS_ENDPOINTS.productsByBusiness(businessId), token);
+    const rows = await this.listAllBranchProducts(businessId, token);
+    return rows.map((product) => this.toDomain(product));
   }
 
   async listAllByBusiness(businessId: number, token: string, limit: string): Promise<ManagedProduct[]> {
-    const products = await this.httpClient.request<ProductResponse[] | { data?: ProductResponse[]; Data?: ProductResponse[]; Products?: ProductResponse[] }>({
-      method: "POST",
-      path: POS_ENDPOINTS.productsStockAvailableGtZeroAll(businessId),
-      token,
-      body: { Limit: limit },
-    });
-
-    const rows = Array.isArray(products)
-      ? products
-      : products?.data ?? products?.Data ?? products?.Products ?? [];
-
+    const rows = await this.listAllBranchProducts(businessId, token, limit);
     return rows.map((product) => this.toDomain(product));
   }
 
   async listReallyAllByBusiness(businessId: number, token: string): Promise<ManagedProduct[]> {
-    const products = await this.httpClient.request<
-      ProductResponse[] | { data?: ProductResponse[]; Data?: ProductResponse[]; Products?: ProductResponse[]; products?: ProductResponse[] }
-    >({
-      method: "GET",
-      path: POS_ENDPOINTS.productsReallyAll(businessId),
-      token,
-    });
-
-    const rows = Array.isArray(products)
-      ? products
-      : products?.data ??
-        products?.Data ??
-        products?.Products ??
-        products?.products ??
-        [];
-
+    const rows = await this.listAllBranchProducts(businessId, token);
     return rows.map((product) => this.toDomain(product));
   }
 
@@ -184,33 +208,23 @@ export class PosProductsApi implements IProductsRepository {
     return rows.map((product) => this.toDomain(product));
   }
 
-  async listByBusinessPaginated(businessId: number, token: string, page: number, limit: string | number): Promise<ProductsPaginatedResult> {
+  async listByBusinessPaginated(businessId: number, token: string, page: number, limit: string | number, filters?: ProductListFilters): Promise<ProductsPaginatedResult> {
     const resolvedLimit = Math.max(1, Number(limit) || 20);
-    const payload = await this.httpClient.request<
-      ProductResponse[] |
-      { products?: ProductResponse[]; data?: ProductResponse[]; pagination?: Record<string, unknown> }
-    >({
-      method: "POST",
-      path: POS_ENDPOINTS.productsStockAvailableGtZero(businessId),
-      token,
-      query: { page },
-      body: { Limit: String(limit) },
-    });
-
-    const rows = Array.isArray(payload)
-      ? payload
-      : payload?.products ?? payload?.data ?? [];
-
-    const paginationPayload = Array.isArray(payload) ? undefined : payload?.pagination;
-    const categoryIds = Array.isArray(paginationPayload?.categoryIds)
-      ? paginationPayload.categoryIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
+    const payload = filters
+      ? await this.httpClient.request<{ data: ProductResponse[]; pagination?: Record<string, unknown> }>({
+          method: "GET",
+          path: POS_ENDPOINTS.productsSearchByBranch(businessId),
+          token,
+          query: { ...filters, page, pageSize: 20, searchDescription: true },
+        }).then(response => ({ rows: response.data ?? [], pagination: response.pagination }))
+      : await this.requestBranchProducts(businessId, token, page, limit);
+    const categoryIds = Array.isArray(payload.pagination?.categoryIds)
+      ? payload.pagination.categoryIds.map((id) => Number(id)).filter((id) => Number.isFinite(id))
       : [];
-    const pagedRows = rows;
-
     return {
-      products: pagedRows.map((product) => this.toDomain(product)),
+      products: payload.rows.map((product) => this.toDomain(product)),
       pagination: {
-        ...toPaginationMeta(paginationPayload, page, resolvedLimit, pagedRows.length),
+        ...toPaginationMeta(payload.pagination, page, resolvedLimit, payload.rows.length),
         categoryIds,
       },
     };
@@ -223,9 +237,9 @@ export class PosProductsApi implements IProductsRepository {
       { products?: ProductResponse[]; data?: ProductResponse[]; pagination?: Record<string, unknown> }
     >({
       method: "GET",
-      path: POS_ENDPOINTS.productsNoAvailableByBusiness(businessId),
+      path: POS_ENDPOINTS.productsSearchByBranch(businessId),
       token,
-      query: { page, limit: resolvedLimit },
+      query: { page, pageSize: resolvedLimit, available: 0 },
     });
 
     const rows = Array.isArray(payload) ? payload : payload?.products ?? payload?.data ?? [];
@@ -245,125 +259,51 @@ export class PosProductsApi implements IProductsRepository {
 
 
   async listByBusinessAllForSearch(businessId: number, token: string, limit: string | number): Promise<ManagedProduct[]> {
-    const payload = await this.httpClient.request<
-      ProductResponse[] |
-      { products?: ProductResponse[]; data?: ProductResponse[]; Data?: ProductResponse[]; Products?: ProductResponse[] }
-    >({
-      method: "POST",
-      path: POS_ENDPOINTS.productsStockAvailableGtZeroAll(businessId),
-      token,
-      body: { Limit: String(limit) },
-    });
-
-    const rows = Array.isArray(payload)
-      ? payload
-      : payload?.products ?? payload?.data ?? payload?.Data ?? payload?.Products ?? [];
-
+    const rows = await this.listAllBranchProducts(businessId, token, limit);
     return rows.map((product) => this.toDomain(product));
   }
 
-  async getById(productId: number, token: string): Promise<ManagedProduct | null> {
-    const [product, extrasResponse, variantsResponse] = await Promise.all([
-      this.httpClient.request<ProductResponse | { data?: ProductResponse; Data?: ProductResponse } | null>({
-        method: "GET",
-        path: POS_ENDPOINTS.productById(productId),
-        token,
-      }),
-      this.httpClient.request<unknown>({
-        method: "GET",
-        path: POS_ENDPOINTS.productExtras(productId),
-        token,
-      }).catch(() => null),
-      this.httpClient.request<LegacyVariantResponse[] | { data?: LegacyVariantResponse[]; Data?: LegacyVariantResponse[] } | null>({
-        method: "GET",
-        path: POS_ENDPOINTS.variantsByProduct(productId),
-        token,
-      }).catch(() => null),
-    ]);
-
-    if (!product) {
-      return null;
+  async getById(productId: number, token: string, businessId?: number): Promise<ManagedProduct | null> {
+    const branchId = readActivePosBranchId();
+    let master: ProductResponse = {};
+    if (!businessId) {
+      const product = await this.httpClient.request<ProductResponse | { data?: ProductResponse; Data?: ProductResponse } | null>({ method: "GET", path: POS_ENDPOINTS.productById(productId), token, branchId });
+      if (!product) return null;
+      const row = "data" in product || "Data" in product ? product.data ?? product.Data ?? null : product;
+      if (!row) return null;
+      master = row;
+      businessId = Number(master.Business_Id ?? master.business_Id ?? master.businessId ?? 0);
+      if (!businessId) return null;
     }
-
-    const normalized = "data" in product || "Data" in product ? product.data ?? product.Data ?? null : product;
-    if (!normalized) return null;
-
-    return this.toDomain(normalized, this.toDomainExtras(extrasResponse), this.toDomainVariants(this.normalizeVariantsPayload(variantsResponse)));
+    const [branchResponse, extrasResponse, variantsResponse] = await Promise.all([
+      this.httpClient.request<{data?: ProductResponse}>({method: "GET", path: POS_ENDPOINTS.branchProductById(businessId, productId), token, branchId}).catch((error: unknown) => {
+        if ((error as {status?: number})?.status === 404) return null;
+        throw error;
+      }),
+      this.httpClient.request<unknown>({ method: "GET", path: POS_ENDPOINTS.productExtras(productId), token, branchId }).catch(() => null),
+      this.httpClient.request<LegacyVariantResponse[] | { data?: LegacyVariantResponse[]; Data?: LegacyVariantResponse[]; variants?: LegacyVariantResponse[]; Variants?: LegacyVariantResponse[] } | null>({ method: "GET", path: POS_ENDPOINTS.variantsByProductBranch(productId), token, branchId }).catch(() => null),
+    ]);
+    const effective = branchResponse?.data;
+    if (!effective) return null;
+    const merged: ProductResponse = { ...master, ...effective, Images: effective.Images ?? effective.images ?? master.Images ?? master.images };
+    return this.toDomain(merged, this.toDomainExtras(extrasResponse), this.toDomainVariants(this.normalizeVariantsPayload(variantsResponse)));
   }
 
   async create(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct> {
-    let response: ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number; insertId?: number } | null;
-    let createdProductId: number | null = null;
-    let variantsSyncedViaCreatePayload = false;
-    try {
-      response = await this.httpClient.request<ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number; insertId?: number } | null>({
-        method: "POST",
-        path: POS_ENDPOINTS.products(),
-        token,
-        body: this.toMutationBody(payload, true, true),
-      });
-      variantsSyncedViaCreatePayload = true;
-    } catch (cause) {
-      if (!payload.extras?.length) throw cause;
-      response = await this.httpClient.request<ProductResponse | { Product?: ProductResponse; product?: ProductResponse; Id?: number; id?: number; insertId?: number } | null>({
-        method: "POST",
-        path: POS_ENDPOINTS.products(),
-        token,
-        body: this.toMutationBody(payload, false, true),
-      });
-      variantsSyncedViaCreatePayload = true;
-      const created = this.extractCreatedProduct(response);
-      const productId = created?.Id ?? created?.id;
-      if (productId) {
-        createdProductId = Number(productId);
-        await this.persistExtras(productId, payload.extras, token);
-      }
+    const body = this.toBranchProductPayload(payload);
+    const fingerprint = JSON.stringify(body);
+    if (this.pendingCreate?.fingerprint !== fingerprint) {
+      this.pendingCreate = { fingerprint, idempotencyKey: createIdempotencyKey() };
     }
-
-    const created = this.extractCreatedProduct(response);
-    const fallbackInsertId = response && typeof response === "object" && "insertId" in response
-      ? Number((response as { insertId?: number }).insertId ?? 0)
-      : 0;
-    createdProductId = createdProductId ?? (Number(created?.Id ?? created?.id ?? 0) || (Number.isFinite(fallbackInsertId) && fallbackInsertId > 0 ? fallbackInsertId : null));
-
-    if (!variantsSyncedViaCreatePayload && createdProductId && (payload.variants?.length ?? 0) > 0) {
-      await this.syncVariants(createdProductId, payload.variants ?? [], token);
-    }
-
-    if (created) {
-      return this.toDomain(created, this.extractCreatedExtras(response));
-    }
-
-    return new ManagedProduct(
-      payload.id ?? 0,
-      payload.businessId,
-      payload.name,
-      payload.description,
-      payload.color ?? null,
-      payload.forSale,
-      payload.showInStore,
-      payload.showPrice,
-      payload.available,
-      payload.volume ?? false,
-      payload.categoryId ?? null,
-      null,
-      payload.price ?? null,
-      payload.promotionPrice ?? null,
-      payload.costPerItem ?? null,
-      payload.stock ?? null,
-      payload.expDate ?? null,
-      payload.minStock ?? null,
-      payload.optStock ?? null,
-      payload.quantity ?? null,
-      payload.image ?? null,
-      payload.images ?? [],
-      payload.barcode ?? null,
-      payload.variants ?? [],
-      payload.extras ?? [],
-      payload.variants?.length ?? 0,
-      payload.wholesalePrice ?? null,
-      payload.wholesaleMinQuantity ?? null,
-    );
+    const idempotencyKey = this.pendingCreate.idempotencyKey;
+    const created = await this.httpClient.request<{ success?: boolean; data?: { productId?: number } } | { productId?: number }>({ method: "POST", path: POS_ENDPOINTS.productsByBusinessBranch(payload.businessId), token, idempotencyKey, body });
+    const wrapper = created as { data?: { productId?: number }; productId?: number };
+    const productId = Number(wrapper.data?.productId ?? wrapper.productId ?? 0);
+    if (!productId) throw new Error("El backend no devolvió el id del producto creado.");
+    await this.httpClient.request<unknown>({ method: "PUT", path: POS_ENDPOINTS.productById(productId), token, body: this.toLegacyMasterPayload({ ...payload, id: productId }) });
+    await Promise.all([this.syncExtras(productId, payload.extras ?? [], token), this.syncVariants(productId, payload.variants ?? [], token)]);
+    this.pendingCreate = null;
+    return (await this.getById(productId, token, payload.businessId)) ?? this.toDomain({ ...this.toLegacy(payload), Id: productId }, payload.extras ?? [], payload.variants ?? []);
   }
 
   async addProductExtras(productId: number, extras: ProductExtra[], token: string): Promise<void> {
@@ -402,27 +342,11 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   async update(payload: SaveManagedProductDto, token: string): Promise<ManagedProduct> {
-    if (!payload.id) {
-      throw new Error("Product id is required for updates.");
-    }
-
-    const updated = await this.httpClient.request<ProductResponse | null>({
-      method: "PUT",
-      path: POS_ENDPOINTS.productById(payload.id),
-      token,
-      body: this.toLegacy(payload),
-    });
-
-    await Promise.all([
-      this.syncVariants(payload.id, payload.variants ?? [], token),
-      this.syncExtras(payload.id, payload.extras ?? [], token),
-    ]);
-
-    if (!updated) {
-      return this.toDomain(this.toLegacy(payload), payload.extras ?? []);
-    }
-
-    return this.toDomain(updated, payload.extras ?? []);
+    if (!payload.id) throw new Error("Product id is required for updates.");
+    await this.httpClient.request<unknown>({ method: "PUT", path: POS_ENDPOINTS.productById(payload.id), token, body: this.toLegacyMasterPayload(payload) });
+    await this.httpClient.request<unknown>({ method: "PATCH", path: POS_ENDPOINTS.branchProductById(payload.businessId, payload.id), token, body: this.toBranchProductPayload(payload) });
+    await Promise.all([this.syncVariants(payload.id, payload.variants ?? [], token), this.syncExtras(payload.id, payload.extras ?? [], token)]);
+    return (await this.getById(payload.id, token, payload.businessId)) ?? this.toDomain(this.toLegacy(payload), payload.extras ?? [], payload.variants ?? []);
   }
 
   private toAvailabilityFlag(value: ProductResponse["Available"]): boolean {
@@ -432,44 +356,20 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   async archive(productId: number, token: string): Promise<void> {
-    await this.httpClient.request<void>({
-      method: "PUT",
-      path: POS_ENDPOINTS.productAvailability(productId),
-      token,
-      body: { Available: 0 },
-    });
+    const businessId = Number(window.localStorage.getItem("pos-v2-business-id") ?? 0);
+    if (!businessId) throw new Error("No encontramos el negocio de la sesión.");
+    await this.httpClient.request<void>({ method: "PATCH", path: POS_ENDPOINTS.branchProductById(businessId, productId), token, body: { Available: 0 } });
   }
 
-  async archiveMany(productIds: number[], token: string): Promise<void> {
-    await this.httpClient.request<void>({
-      method: "PUT",
-      path: POS_ENDPOINTS.productsMassiveAvailability(),
-      token,
-      body: {
-        product: productIds.map((id) => ({ id, Available: 0 })),
-      },
-    });
-  }
+  async archiveMany(productIds: number[], token: string): Promise<void> { await Promise.all(productIds.map((productId) => this.archive(productId, token))); }
 
   async restore(productId: number, token: string): Promise<void> {
-    await this.httpClient.request<void>({
-      method: "PUT",
-      path: POS_ENDPOINTS.productAvailability(productId),
-      token,
-      body: { Available: 1 },
-    });
+    const businessId = Number(window.localStorage.getItem("pos-v2-business-id") ?? 0);
+    if (!businessId) throw new Error("No encontramos el negocio de la sesión.");
+    await this.httpClient.request<void>({ method: "PATCH", path: POS_ENDPOINTS.branchProductById(businessId, productId), token, body: { Available: 1 } });
   }
 
-  async restoreMany(productIds: number[], token: string): Promise<void> {
-    await this.httpClient.request<void>({
-      method: "PUT",
-      path: POS_ENDPOINTS.productsMassiveAvailability(),
-      token,
-      body: {
-        product: productIds.map((id) => ({ id, Available: 1 })),
-      },
-    });
-  }
+  async restoreMany(productIds: number[], token: string): Promise<void> { await Promise.all(productIds.map((productId) => this.restore(productId, token))); }
 
   async listCategoriesByBusiness(businessId: number, token: string): Promise<ProductCategory[]> {
     const payload = await this.httpClient.request<CategoryResponse[] | { data?: CategoryResponse[]; Data?: CategoryResponse[] } | null>({
@@ -747,6 +647,12 @@ export class PosProductsApi implements IProductsRepository {
       variantsCount,
       product.WholesalePrice ?? product.wholesalePrice ?? null,
       product.WholesaleMinQuantity ?? product.wholesaleMinQuantity ?? null,
+      (product.WholesalePrices ?? product.wholesalePrices ?? []).map((tier) => ({
+        id: "Id" in tier ? tier.Id : tier.id,
+        productId: "Product_Id" in tier ? tier.Product_Id ?? null : tier.productId ?? null,
+        price: Number(tier.Price ?? tier.price ?? 0),
+        minQuantity: Number(tier.MinQuantity ?? tier.minQuantity ?? 0),
+      })),
     );
   }
 
@@ -754,13 +660,93 @@ export class PosProductsApi implements IProductsRepository {
     if (!Array.isArray(payload)) {
       return [];
     }
-    return payload.map((variant) => this.toDomainVariant(variant));
+    return payload
+      .filter((variant) => Number(variant.Visible ?? 1) !== 0 || Number(variant.Available ?? 1) !== 0)
+      .map((variant) => this.toDomainVariant(variant));
   }
 
   private normalizeVariantsPayload(payload: LegacyVariantResponse[] | { data?: LegacyVariantResponse[]; Data?: LegacyVariantResponse[]; variants?: LegacyVariantResponse[]; Variants?: LegacyVariantResponse[] } | null): LegacyVariantResponse[] | null {
     if (!payload) return null;
     if (Array.isArray(payload)) return payload;
     return payload.data ?? payload.Data ?? payload.variants ?? payload.Variants ?? null;
+  }
+
+  private toBranchProductPayload(payload: SaveManagedProductDto): Record<string, unknown> {
+    const usesVariants = Array.isArray(payload.variants) && payload.variants.length > 0;
+    const body: Record<string, unknown> = {
+      Barcode: payload.barcode ?? null,
+      Category_Id: payload.categoryId ?? null,
+      Name: payload.name,
+      Color: payload.color?.trim() || null,
+      Description: payload.description,
+      CostPerItem: payload.costPerItem ?? null,
+      ForSale: payload.forSale ? 1 : 0,
+      Volume: payload.volume ? 1 : 0,
+      ExpDate: payload.expDate ?? null,
+      Price: payload.price ?? null,
+      PromotionPrice: payload.promotionPrice ?? null,
+      ShowInStore: payload.showInStore ? 1 : 0,
+      Available: payload.available ? 1 : 0,
+      Showprice: payload.showPrice ? 1 : 0,
+      Source: "MANUAL",
+    };
+
+    // El inventario de un producto con variantes vive en branch_variant_inventory.
+    // Enviar Stock al endpoint del producto provocaría que el backend rechace la
+    // actualización (y, peor aún, conceptualmente duplicaría inventario).
+    if (!usesVariants) {
+      body.Stock = payload.stock ?? 0;
+      body.MinStock = payload.minStock ?? null;
+      body.OptStock = payload.optStock ?? null;
+    }
+
+    return body;
+  }
+
+  private toLegacyMasterPayload(payload: SaveManagedProductDto): Record<string, unknown> {
+    return {
+      Business_Id: payload.businessId,
+      Category_Id: payload.categoryId ?? null,
+      Name: payload.name,
+      Description: payload.description,
+      Color: payload.color?.trim() || "#000000",
+      ForSale: payload.forSale,
+      Volume: payload.volume ?? false,
+      Images: payload.images ?? [],
+      Barcode: payload.barcode ?? null,
+      CostPerItem: payload.costPerItem ?? null,
+      ExpDate: payload.expDate ?? null,
+      WholesalePrices: (payload.wholesalePrices ?? []).map((tier) => ({
+        Id: tier.id,
+        Product_Id: payload.id ?? null,
+        Price: tier.price,
+        MinQuantity: tier.minQuantity,
+      })),
+    };
+  }
+
+  private toBranchVariantPayload(variant: ProductVariant): Record<string, unknown> {
+    return {
+      Barcode: variant.barcode ?? null,
+      Description: variant.description,
+      Color: variant.color?.trim() || null,
+      Image: variant.Image ?? null,
+      Price: variant.price ?? null,
+      PromotionPrice: variant.promotionPrice ?? null,
+      CostPerItem: variant.costPerItem ?? null,
+      Stock: variant.stock ?? 0,
+      ExpDate: variant.expDate ?? null,
+      MinStock: variant.minStock ?? null,
+      OptStock: variant.optStock ?? null,
+      Visible: 1,
+      Available: 1,
+      WholesalePrices: (variant.wholesalePrices ?? []).map((tier) => ({
+        Id: tier.id,
+        Variant_Id: variant.id ?? null,
+        Price: tier.price,
+        MinQuantity: tier.minQuantity,
+      })),
+    };
   }
 
   private toLegacy(payload: SaveManagedProductDto): ProductResponse {
@@ -808,6 +794,12 @@ export class PosProductsApi implements IProductsRepository {
       expDate: variant.ExpDate ?? variant.expDate ?? null,
       minStock: variant.MinStock ?? variant.minStock ?? null,
       optStock: variant.OptStock ?? variant.optStock ?? null,
+      wholesalePrices: (variant.WholesalePrices ?? variant.wholesalePrices ?? []).map((tier) => ({
+        id: "Id" in tier ? tier.Id : tier.id,
+        variantId: "Variant_Id" in tier ? tier.Variant_Id ?? null : tier.variantId ?? null,
+        price: Number(tier.Price ?? tier.price ?? 0),
+        minQuantity: Number(tier.MinQuantity ?? tier.minQuantity ?? 0),
+      })),
     };
   }
 
@@ -895,52 +887,17 @@ export class PosProductsApi implements IProductsRepository {
   }
 
   private async syncVariants(productId: number, variants: ProductVariant[], token: string): Promise<void> {
-    const current = await this.httpClient.request<LegacyVariantResponse[] | null>({
-      method: "GET",
-      path: POS_ENDPOINTS.variantsByProduct(productId),
-      token,
-    }).catch(() => null);
-    const currentRows = Array.isArray(current) ? current.map((variant) => this.toDomainVariant(variant)) : [];
-
-    const desiredById = new Map(
-      variants
-        .filter((variant): variant is ProductVariant & { id: number } => typeof variant.id === "number")
-        .map((variant) => [variant.id, variant]),
-    );
-    const currentIds = new Set(currentRows.filter((variant) => typeof variant.id === "number").map((variant) => variant.id as number));
-
-    await Promise.all(
-      variants.map((variant) => {
-        const variantPayload = this.withoutVariantId(this.toLegacyVariant({ ...variant, productId }));
-
-        if (typeof variant.id === "number") {
-          return this.httpClient.request<void>({
-            method: "PUT",
-            path: POS_ENDPOINTS.variantById(variant.id),
-            token,
-            body: variantPayload,
-          });
-        }
-
-        return this.httpClient.request<void>({
-          method: "POST",
-          path: POS_ENDPOINTS.variants(),
-          token,
-          body: variantPayload,
-        });
-      }),
-    );
-
-    const toDelete = [...currentIds].filter((id) => !desiredById.has(id));
-    if (toDelete.length === 0) return;
-
-    await Promise.all(
-      toDelete.map((variantId) => this.httpClient.request<void>({
-        method: "DELETE",
-        path: POS_ENDPOINTS.variantById(variantId),
-        token,
-      })),
-    );
+    const currentPayload = await this.httpClient.request<LegacyVariantResponse[] | { data?: LegacyVariantResponse[]; Data?: LegacyVariantResponse[]; variants?: LegacyVariantResponse[]; Variants?: LegacyVariantResponse[] } | null>({ method: "GET", path: POS_ENDPOINTS.variantsByProductBranch(productId), token }).catch(() => null);
+    const currentRows = this.toDomainVariants(this.normalizeVariantsPayload(currentPayload));
+    const desiredIds = new Set(variants.filter((variant) => typeof variant.id === "number").map((variant) => variant.id as number));
+    await Promise.all(variants.map((variant) => {
+      const body = this.toBranchVariantPayload({ ...variant, productId });
+      return typeof variant.id === "number"
+        ? this.httpClient.request<void>({ method: "PATCH", path: POS_ENDPOINTS.variantByIdBranch(variant.id), token, body })
+        : this.httpClient.request<void>({ method: "POST", path: POS_ENDPOINTS.variantsByProductBranch(productId), token, body });
+    }));
+    const removed = currentRows.filter((variant) => typeof variant.id === "number" && !desiredIds.has(variant.id as number));
+    await Promise.all(removed.map((variant) => this.httpClient.request<void>({ method: "PATCH", path: POS_ENDPOINTS.variantByIdBranch(variant.id as number), token, body: { Visible: 0, Available: 0 } })));
   }
 
   private async syncExtras(productId: number, extras: ProductExtra[], token: string): Promise<void> {

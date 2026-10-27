@@ -19,6 +19,7 @@ import { formatCatalogTotal, getEffectiveCatalogPrice, normalizeWholesalePriceTi
 import { CatalogSocialFooter } from "./CatalogSocialFooter";
 import "./CatalogStorefrontPage.css";
 import { useCatalogThemeSync } from "./useCatalogThemeSync";
+import { buildCatalogPath, getCatalogCartKey, persistCatalogBranchContext } from "./catalogBranchContext";
 
 const money = (value: number) =>
   new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 2 }).format(value);
@@ -78,8 +79,9 @@ export const CatalogStorefrontPage = () => {
   useCatalogThemeSync();
   const navigate = useNavigate();
   const location = useLocation();
-  const params = useParams<{ businessId?: string; Id?: string; categoryId?: string }>();
+  const params = useParams<{ businessId?: string; Id?: string; branchSlug?: string; categoryId?: string }>();
   const businessId = params.businessId ?? params.Id ?? "";
+  const branchSlug = params.branchSlug?.trim() || null;
   const routedCategoryId = useMemo(() => {
     const categoryId = Number(params.categoryId);
     return Number.isInteger(categoryId) && categoryId > 0 ? categoryId : null;
@@ -130,10 +132,10 @@ export const CatalogStorefrontPage = () => {
   );
 
   const pageLogic = useMemo(() => {
-    const repository = new CatalogStorefrontApi(getPosApiBaseUrl());
+    const repository = new CatalogStorefrontApi(getPosApiBaseUrl(), branchSlug, businessId);
     const service = new CatalogStorefrontService(repository);
     return new CatalogStorefrontExperiencePage(service);
-  }, []);
+  }, [branchSlug, businessId]);
   const catalogUnavailable = useMemo(
     () =>
       visitLimitReached ||
@@ -150,7 +152,7 @@ export const CatalogStorefrontPage = () => {
     setPriceMax(DEFAULT_PRICE_MAX_BOUND);
     setPriceCeiling(DEFAULT_PRICE_MAX_BOUND);
     setVisitLimitReached(false);
-  }, [businessId]);
+  }, [businessId, branchSlug]);
 
   useEffect(() => {
     setPage(Math.max(1, Number(new URLSearchParams(location.search).get("page")) || 1));
@@ -224,8 +226,14 @@ export const CatalogStorefrontPage = () => {
         setCategories(categoriesResponse);
         setPlanLimit(business?.plan?.trim() || undefined);
         window.localStorage.setItem("catalog-v2-store-name", business?.name ?? "Catálogo");
-        window.localStorage.setItem("idBusiness", businessId);
-        window.localStorage.setItem("telefono", business?.phone ?? "");
+        persistCatalogBranchContext({
+          businessId,
+          branchId: business?.branch?.id ?? null,
+          branchSlug: business?.branch?.isMain ? null : (business?.branch?.slug || branchSlug),
+          branchName: business?.branch?.name ?? null,
+          isMain: business?.branch?.isMain ?? branchSlug == null,
+          phone: business?.phone ?? null,
+        });
       } catch {
         if (requestId !== businessContextRequestRef.current) return;
         setError("No fue posible cargar la información del negocio.");
@@ -294,7 +302,8 @@ export const CatalogStorefrontPage = () => {
 
   useEffect(() => {
     if (!businessId) return;
-    const saved = window.localStorage.getItem(`catalog-v2-cart:${businessId}`);
+    setCartReady(false);
+    const saved = window.localStorage.getItem(getCatalogCartKey(businessId, branchSlug));
     if (!saved) {
       setCart([]);
       setCartReady(true);
@@ -309,12 +318,12 @@ export const CatalogStorefrontPage = () => {
     } finally {
       setCartReady(true);
     }
-  }, [businessId]);
+  }, [businessId, branchSlug]);
 
   useEffect(() => {
     if (!businessId || !cartReady) return;
-    window.localStorage.setItem(`catalog-v2-cart:${businessId}`, JSON.stringify(cart));
-  }, [businessId, cart, cartReady]);
+    window.localStorage.setItem(getCatalogCartKey(businessId, branchSlug), JSON.stringify(cart));
+  }, [businessId, branchSlug, cart, cartReady]);
 
   useEffect(() => {
     if (!toast) return;
@@ -486,7 +495,7 @@ export const CatalogStorefrontPage = () => {
           variant.wholesalePrice,
           variant.wholesaleMinQuantity,
         );
-    const selectedWholesalePrices = variantWholesalePrices.length > 0
+    const selectedWholesalePrices = !isBaseProduct
       ? variantWholesalePrices
       : productWholesalePrices;
     const firstSelectedWholesalePrice = selectedWholesalePrices[0] ?? null;
@@ -528,7 +537,7 @@ export const CatalogStorefrontPage = () => {
 
     setCart(nextCart);
     if (businessId) {
-      window.localStorage.setItem(`catalog-v2-cart:${businessId}`, JSON.stringify(nextCart));
+      window.localStorage.setItem(getCatalogCartKey(businessId, branchSlug), JSON.stringify(nextCart));
     }
 
     setVariantModalOpen(false);
@@ -543,8 +552,10 @@ export const CatalogStorefrontPage = () => {
     }
   };
 
+  // Un producto publicado no debe desaparecer sólo porque todavía no tenga foto.
+  // StorefrontProductGrid ya renderiza el placeholder "Sin imagen".
   const productsWithImage = useMemo(
-    () => filteredProducts.filter((product) => Boolean(product.image && product.image.trim().length > 0)),
+    () => filteredProducts,
     [filteredProducts],
   );
   const handleFilterCategory = (categoryId: number | null) => {
@@ -599,12 +610,17 @@ export const CatalogStorefrontPage = () => {
           </span>
           <h1>{store?.name || "Catálogo digital"}</h1>
         </div>
-        {!catalogUnavailable ? (
+        <div className="catalog-v2__header-actions">
+          {store?.branch?.name ? (
+            <span className="catalog-v2__branch-name">{store.branch.name}</span>
+          ) : null}
+          {!catalogUnavailable ? (
           <Link to="/catalogo/pedido" className="catalog-v2__cart-link" aria-label="Ver carrito">
             <FiShoppingCart />
             {totalItems > 0 ? <span>{totalItems}</span> : null}
           </Link>
-        ) : null}
+          ) : null}
+        </div>
       </header>
 
 
@@ -634,7 +650,7 @@ export const CatalogStorefrontPage = () => {
         <>
       <section className="flex gap-2" aria-label="Búsqueda de productos">
         <div className="relative flex-1">
-          <input
+          <input autoCorrect="on" spellCheck={true}
             type="search"
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -656,7 +672,7 @@ export const CatalogStorefrontPage = () => {
 
       <section className="flex gap-3 overflow-x-auto py-1" aria-label="Categorías de catálogo">
         <Link
-          to={`/v2/catalogo/${businessId}`}
+          to={buildCatalogPath(businessId, branchSlug)}
           onClick={handleCategoryRouteChange}
           className={`whitespace-nowrap border-b-2 bg-transparent pb-1 text-sm ${routedCategoryId === null
             ? "border-[var(--text-primary)] text-[var(--text-primary)] font-semibold"
@@ -669,7 +685,7 @@ export const CatalogStorefrontPage = () => {
         {categories.map((category) => (
           <Link
             key={category.id}
-            to={`/v2/catalogo/${businessId}/categoria/${category.id}`}
+            to={`${buildCatalogPath(businessId, branchSlug)}/categoria/${category.id}`}
             onClick={handleCategoryRouteChange}
             className={`whitespace-nowrap border-b-2 bg-transparent pb-1 text-sm ${routedCategoryId === category.id
               ? "border-[var(--text-primary)] text-[var(--text-primary)] font-semibold"
@@ -775,7 +791,7 @@ export const CatalogStorefrontPage = () => {
               </summary>
               <div className="mt-3 grid gap-2 border-t border-[var(--border-default)] pt-3">
                 {categories.length > 6 ? (
-                  <input
+                  <input autoCorrect="on" spellCheck={true}
                     type="search"
                     value={categorySearch}
                     onChange={(event) => setCategorySearch(event.target.value)}

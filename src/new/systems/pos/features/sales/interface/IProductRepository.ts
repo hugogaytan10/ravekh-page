@@ -22,6 +22,8 @@ export interface IProductRepository {
     token: string,
     limit: string,
     page: number,
+    query?: string,
+    categoryId?: number,
   ): Promise<SalesProductsPaginatedResult>;
   listAvailableByBusinessAll(
     businessId: number,

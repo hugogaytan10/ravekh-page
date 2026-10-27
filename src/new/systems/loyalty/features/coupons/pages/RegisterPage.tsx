@@ -81,13 +81,16 @@ const RegisterPage: React.FC = () => {
         Password: normalizedPassword,
       });
 
+      if (registerResponse.RequiresAccountCompletion) {
+        navigate(`/coupons/reset-password?email=${encodeURIComponent(normalizedEmail)}`, {replace: true});
+        return;
+      }
+
       const registerUserId = parseNumericId(registerResponse?.Id ?? registerResponse?.id);
 
       if (registerUserId) {
-        persistCuponesAuthSession({
-          Id: registerUserId,
-          Name: normalizedName,
-        });
+        const loginResponse = await loginCupones({ Email: normalizedEmail, Password: normalizedPassword });
+        persistCuponesAuthSession(loginResponse);
 
         if (effectivePendingCouponId) {
           clearPendingCouponClaimId();
@@ -120,7 +123,7 @@ const RegisterPage: React.FC = () => {
 
       navigate("/coupons/home");
     } catch (error) {
-      setErrorMessage("No se pudo registrar la cuenta. Intenta nuevamente.");
+      setErrorMessage(error instanceof Error ? error.message : "No se pudo registrar la cuenta. Intenta nuevamente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -169,7 +172,7 @@ const RegisterPage: React.FC = () => {
             value={password}
             onChange={(event) => setPassword(event.target.value)}
           />
-          <input
+          <input autoCorrect="on" spellCheck={true}
             type="text"
             placeholder="Nombre completo"
             className="w-full rounded-2xl px-5 py-3.5 text-base font-medium shadow-[0_6px_14px_rgba(0,0,0,0.08)]"

@@ -69,3 +69,15 @@ export interface RegisterRewardVisitDto {
   customerReference: string;
   visits: number;
 }
+
+export const normalizeDynamicVisitQr = (payload: unknown): DynamicVisitQrToken => {
+  const row = payload && typeof payload === "object" ? payload as Record<string, unknown> : {};
+  const qrUrl = typeof row.qrUrl === "string" ? row.qrUrl.trim() : "";
+  if (!qrUrl) throw new Error("No se recibió un QR dinámico válido.");
+  const seconds = Number(row.refreshAfterSeconds);
+  return {
+    token: typeof row.token === "string" ? row.token.trim() : "",
+    qrUrl,
+    refreshAfterSeconds: Number.isFinite(seconds) && seconds > 0 ? Math.min(600, Math.max(5, seconds)) : 60,
+  };
+};
