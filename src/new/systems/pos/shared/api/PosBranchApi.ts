@@ -1,6 +1,19 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { PosBranch } from "../config/posBranch";
 
+export type BranchCopyInventoryRow = {kind: 'product' | 'variant'; id: number; name: string; stock: number | null};
+export type BranchCopyOptions = {
+  version: 2;
+  categories: boolean;
+  products: boolean;
+  prices: boolean;
+  shipping: boolean;
+  tables?:boolean;
+  inventoryMode: 'copy' | 'zero' | 'manual';
+  inventory?: Array<Pick<BranchCopyInventoryRow, 'kind' | 'id' | 'stock'>>;
+};
+export const initialBranchCopyOptions = (): BranchCopyOptions => ({version: 2, categories: true, products: true, prices: true, shipping: true, tables:false, inventoryMode: 'zero', inventory: []});
+
 export type CreatePosBranchInput = {
   name: string;
   code: string;
@@ -11,9 +24,10 @@ export type CreatePosBranchInput = {
   references?: string | null;
   catalogEnabled?: boolean;
   copyCatalogFromBranchId?: number | null;
+  copyOptions?: BranchCopyOptions;
 };
 
-export type UpdatePosBranchInput = Partial<Omit<CreatePosBranchInput, "copyCatalogFromBranchId">> & {
+export type UpdatePosBranchInput = Partial<Omit<CreatePosBranchInput, "copyCatalogFromBranchId" | "copyOptions">> & {
   active?: boolean;
 };
 
@@ -63,7 +77,16 @@ type ApiWrapper<T> = {
 const toBoolean = (value: unknown): boolean =>
   value === true || value === 1 || value === "1" || String(value ?? "").toLowerCase() === "true";
 
+export type StockTransferItem = {kind: 'product' | 'variant'; id: number; name: string; stock: number};
+export type StockTransferInput = {sourceBranchId: number; targetBranchId: number; kind: StockTransferItem['kind']; itemId: number; quantity: number};
 export class PosBranchApi {
+  async transferItems(sourceBranchId: number, token: string): Promise<StockTransferItem[]> {
+    const result=await this.httpClient.request<{data:StockTransferItem[]}>({method:'GET',path:'stock-transfers/items',query:{sourceBranchId},token,skipBranchHeader:true});
+    return result.data;
+  }
+  async transferStock(input: StockTransferInput, token: string, idempotencyKey: string) {
+    return this.httpClient.request({method:'POST',path:'stock-transfers',body:input,token,idempotencyKey,skipBranchHeader:true});
+  }
   constructor(private readonly httpClient: HttpClient) {}
 
   async list(token: string): Promise<PosBranch[]> {
@@ -88,7 +111,23 @@ export class PosBranchApi {
     return this.toDomain("data" in response ? response.data ?? {} : response);
   }
 
+  async copyCapabilities(token:string):Promise<void> {
+    const response=await this.httpClient.request<{copyContractVersion:number}>({method:'GET',path:'branches/copy-capabilities',token,skipBranchHeader:true});
+    if(response.copyContractVersion!==2)throw new Error('Las opciones de copia aún no están disponibles.');
+  }
+  async copyPreview(branchId: number, token: string): Promise<BranchCopyInventoryRow[]> {
+    const response = await this.httpClient.request<{copyContractVersion?: number; data?: BranchCopyInventoryRow[]}>({
+      method: 'GET', path: `branches/${branchId}/copy-preview`, token, skipBranchHeader: true,
+    });
+    if (response.copyContractVersion !== 2 || !Array.isArray(response.data)) throw new Error('Las opciones de copia aún no están disponibles. Intenta de nuevo más tarde.');
+    return response.data;
+  }
+
   async create(input: CreatePosBranchInput, token: string): Promise<PosBranch> {
+    if(input.copyOptions?.tables){
+      const capabilities=await this.httpClient.request<{tableCopyVersion?:number}>({method:'GET',path:'branches/copy-capabilities',token,skipBranchHeader:true});
+      if(capabilities.tableCopyVersion!==1)throw new Error('La copia de mesas aún no está disponible en el servidor.');
+    }
     const response = await this.httpClient.request<ApiWrapper<BranchResponse>>({
       method: "POST",
       path: "branches",
@@ -104,6 +143,7 @@ export class PosBranchApi {
         references: input.references ?? null,
         catalogEnabled: input.catalogEnabled ?? true,
         copyCatalogFromBranchId: input.copyCatalogFromBranchId ?? null,
+        ...(input.copyOptions ? {copyOptions: input.copyOptions} : {}),
       },
     });
     return this.toDomain(response.data ?? {});

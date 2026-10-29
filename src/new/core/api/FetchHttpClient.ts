@@ -54,6 +54,9 @@ export class FetchHttpClient implements HttpClient {
         const branchId = request.branchId ?? readActivePosBranchId();
         if (Number.isInteger(branchId) && branchId > 0) {
           headers["X-Branch-Id"] = String(branchId);
+          if(/^(?:coupons|couponhasusers)(?:\/|$)/.test(request.path)) headers["X-Coupon-Scope"]="branch-v1";
+          if(/^(?:visits|visits\/qr\/(?:generate|dynamic\/next))$/.test(request.path)) headers["X-Visit-Scope"]="branch-v1";
+          if(/^(?:categories|products)(?:\/|$)/.test(request.path)) headers['X-Category-Scope']='branch-v1';
         }
       }
     }

@@ -1,3 +1,6 @@
+import {buildPosAuthHeaders,readActivePosBranchId} from "../../../../pos/shared/config/posBranch";
+import {readPosSessionSnapshot} from "../../../../pos/shared/config/posSession";
+import {getCuponesToken} from "./session";
 import { COUPONS_API_URL } from "../config/couponsEnv";
 import type { ClaimCouponPayload, Coupon, CouponHasUser, CreateCouponPayload } from "../models/coupon";
 import type { LoginPayload } from "../models/auth";
@@ -155,7 +158,8 @@ const redeemCouponByUser = async (couponId: number, userId: number): Promise<unk
   const response = await fetch(`${COUPONS_API_URL}couponhasusers/coupon/${couponId}/user/${userId}`, {
     method: "PUT",
     headers: {
-      "Content-Type": "application/json",
+      ...buildPosAuthHeaders(readPosSessionSnapshot().token || getCuponesToken()),
+      ...(readActivePosBranchId()?{"X-Coupon-Scope":"branch-v1"}:{}),
     },
   });
 

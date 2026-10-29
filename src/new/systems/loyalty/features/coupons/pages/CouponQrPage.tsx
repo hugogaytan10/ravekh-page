@@ -1,3 +1,4 @@
+import {couponBranchLabel} from "../../../rewards-management/model/RewardCoupon";
 import React, { useEffect, useMemo } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import cuponsito from "../assets/cuponsito.png";
@@ -160,6 +161,7 @@ const CouponQrPage: React.FC = () => {
             <div className="mt-6 space-y-1 text-sm font-semibold" style={{ color: theme.textMuted }}>
               <p>Código: {coupon.QR}</p>
               <p>{coupon.Description}</p>
+                  <p className="text-xs">{couponBranchLabel(coupon.Branch_Ids,coupon.Branch_Names)}</p>
             </div>
           </section>
 

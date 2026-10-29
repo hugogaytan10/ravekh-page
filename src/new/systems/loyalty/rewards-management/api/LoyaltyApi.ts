@@ -13,6 +13,8 @@ import {
 } from "../model/RewardCoupon";
 
 type CouponResponse = {
+  Branch_Ids?: number[] | null;
+  Branch_Names?: string[];
   Id: number;
   Business_Id: number;
   QR: string;
@@ -92,13 +94,21 @@ export class LoyaltyApi implements IRewardRepository {
     return rows.map((row) => this.toDomain(row));
   }
 
+  private async requireCouponScope(payload:CreateRewardCouponDto,token:string):Promise<void> {
+    if(payload.branchIds===undefined) return;
+    const capabilities=await this.httpClient.request<{couponBranchScopeVersion?:number}>({method:'GET',path:'coupons/branch-capabilities',token});
+    if(capabilities?.couponBranchScopeVersion!==1)throw new Error('El alcance de cupones por sucursal aún no está disponible.');
+  }
+
   async createCoupon(payload: CreateRewardCouponDto, token: string): Promise<RewardCoupon> {
+    await this.requireCouponScope(payload,token);
     const response = await this.httpClient.request<CouponEnvelope | CouponResponse | number>({
       method: "POST",
       path: "coupons",
       token,
       body: {
         Business_Id: payload.businessId,
+        ...(payload.branchIds!==undefined ? {Branch_Ids:payload.branchIds} : {}),
         QR: payload.qr,
         Description: payload.description,
         LimitUsers: payload.maxRedemptions,
@@ -107,19 +117,21 @@ export class LoyaltyApi implements IRewardRepository {
     });
 
     if (typeof response === "number" && Number.isFinite(response) && response > 0) {
-      return new RewardCoupon(response, payload.businessId, payload.qr, payload.description, payload.maxRedemptions, 0, payload.valid ?? "");
+      return new RewardCoupon(response, payload.businessId, payload.qr, payload.description, payload.maxRedemptions, 0, payload.valid ?? "",payload.branchIds ?? null);
     }
 
     return this.toDomain(response);
   }
 
   async updateCoupon(couponId: number, payload: CreateRewardCouponDto, token: string): Promise<RewardCoupon> {
+    await this.requireCouponScope(payload,token);
     const response = await this.httpClient.request<CouponEnvelope | CouponResponse | number>({
       method: "PUT",
       path: `coupons/${couponId}`,
       token,
       body: {
         Business_Id: payload.businessId,
+        ...(payload.branchIds!==undefined ? {Branch_Ids:payload.branchIds} : {}),
         QR: payload.qr,
         Description: payload.description,
         LimitUsers: payload.maxRedemptions,
@@ -128,7 +140,7 @@ export class LoyaltyApi implements IRewardRepository {
     });
 
     if (typeof response === "number" && Number.isFinite(response) && response > 0) {
-      return new RewardCoupon(response, payload.businessId, payload.qr, payload.description, payload.maxRedemptions, 0, payload.valid ?? "");
+      return new RewardCoupon(response, payload.businessId, payload.qr, payload.description, payload.maxRedemptions, 0, payload.valid ?? "",payload.branchIds ?? null);
     }
 
     const looksLikeUpdateResult = typeof response === "object" && response !== null
@@ -266,7 +278,7 @@ export class LoyaltyApi implements IRewardRepository {
     const description = String(normalized.Description ?? "");
     const limitUsers = Number(normalized.LimitUsers ?? 0);
 
-    return new RewardCoupon(id, businessId, qr, description, limitUsers, Number(normalized.TotalUsers ?? 0), String(normalized.Valid ?? ""));
+    return new RewardCoupon(id, businessId, qr, description, limitUsers, Number(normalized.TotalUsers ?? 0), String(normalized.Valid ?? ""),normalized.Branch_Ids ?? null,normalized.Branch_Names ?? []);
   }
 
   private toVisitDomain(response: VisitResponse, fallbackBusinessId: number): RewardVisit | null {

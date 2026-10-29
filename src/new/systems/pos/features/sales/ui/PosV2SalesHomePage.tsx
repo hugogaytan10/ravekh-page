@@ -21,7 +21,7 @@ import {
 import "./PosV2SalesHomePage.css";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
-import { buildPosAuthHeaders } from "../../../shared/config/posBranch";
+import { buildPosAuthHeaders,readActivePosBranchId,onPosBranchUpdated } from "../../../shared/config/posBranch";
 import {
   POS_SESSION_STORAGE_KEYS,
   readPosSessionSnapshot,
@@ -346,12 +346,17 @@ export const PosV2SalesHomePage = () => {
   } | null>(null);
   const [isCompletingSale, setIsCompletingSale] = useState(false);
   const [tables, setTables] = useState<TableVm[]>([]);
+  const [tableBranchId,setTableBranchId]=useState(()=>readActivePosBranchId());
   const [tableZones, setTableZones] = useState<TableZoneVm[]>([]);
   const [tablesByZone, setTablesByZone] = useState<Record<number, TableVm[]>>(
     {},
   );
   const [selectedTableZoneId, setSelectedTableZoneId] = useState<string>("");
   const [selectedTableId, setSelectedTableId] = useState<string>("");
+  useEffect(()=>onPosBranchUpdated(branch=>{
+    setTableBranchId(branch.id);setTableZones([]);setTables([]);setTablesByZone({});
+    setSelectedTableZoneId('');setSelectedTableId('');
+  }),[]);
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(
     null,
   );
@@ -868,6 +873,7 @@ export const PosV2SalesHomePage = () => {
         return { normalizedZones, preloadedTables };
       })
       .then(({ normalizedZones, preloadedTables }) => {
+        if(readActivePosBranchId()!==tableBranchId)return;
         debugLog(
           "Zonas cargadas desde endpoint /restaurant/branch/zones",
           normalizedZones,
@@ -877,6 +883,7 @@ export const PosV2SalesHomePage = () => {
         setTablesError(null);
       })
       .catch((error) => {
+        if(readActivePosBranchId()!==tableBranchId)return;
         console.error("[POS-V2-SALES] Error al cargar zonas", error);
         setTables([]);
         setTableZones([]);
@@ -888,7 +895,7 @@ export const PosV2SalesHomePage = () => {
         );
       })
       .finally(() => setLoadingTables(false));
-  }, []);
+  }, [tableBranchId]);
 
   useEffect(() => {
     if (isFreeSalesPlan || tableZones.length === 0) {
@@ -1988,7 +1995,7 @@ export const PosV2SalesHomePage = () => {
         new URL("visits/qr/dynamic/next", API_BASE_URL).toString(),
         {
           method: "POST",
-          headers: buildPosAuthHeaders(token),
+          headers: {...buildPosAuthHeaders(token), "X-Visit-Scope":"branch-v1"},
           body: JSON.stringify({ businessId, domain: couponsDomain }),
         },
       );
@@ -2016,7 +2023,7 @@ export const PosV2SalesHomePage = () => {
       new URL("visits/qr/generate", API_BASE_URL).toString(),
       {
         method: "POST",
-        headers: buildPosAuthHeaders(token),
+        headers: {...buildPosAuthHeaders(token), "X-Visit-Scope":"branch-v1"},
         body: JSON.stringify({
           businessId,
           quantity: 1,

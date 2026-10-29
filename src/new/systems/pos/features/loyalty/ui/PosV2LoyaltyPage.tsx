@@ -1,3 +1,6 @@
+import {CouponBranchScope} from "./CouponBranchScope";
+import {couponBranchLabel} from "../../../../loyalty/rewards-management/model/RewardCoupon";
+import {buildPosAuthHeaders, onPosBranchUpdated, readActivePosBranchId} from "../../../shared/config/posBranch";
 import { FiPlus, FiGrid, FiCamera, FiUsers, FiChevronRight } from "react-icons/fi";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useSearchParams } from "react-router-dom";
@@ -92,7 +95,7 @@ const getVisitCycleProgress = (totalVisits: number, minVisits: number) => {
   };
 };
 
-const isCouponActive = (coupon: { maxRedemptions: number; totalUsers: number; valid: string }) => {
+const isCouponActive = (coupon: { maxRedemptions: number; totalUsers: number; valid: string; branchIds?:number[]|null; branchNames?:string[] }) => {
   const availableByLimit = Number(coupon.totalUsers) < Number(coupon.maxRedemptions);
   if (!coupon.valid) return availableByLimit;
   const expiration = new Date(coupon.valid);
@@ -113,12 +116,13 @@ export const PosV2LoyaltyPage = () => {
       hasSession: snapshot.token.length > 0 && Number.isFinite(snapshot.businessId) && snapshot.businessId > 0,
     };
   });
+  const [couponBranchIds,setCouponBranchIds]=useState<number[]|null>(null);
   const [description, setDescription] = useState("");
   const [limitUsers, setLimitUsers] = useState("10");
   const [validDateTime, setValidDateTime] = useState("");
   const [topClientsSort, setTopClientsSort] = useState<"mostFrequent" | "leastFrequent">("mostFrequent");
   const [visitLog, setVisitLog] = useState<Array<{ userId: number; userName: string; date: string; visitCount: number; totalVisits: number; minVisits: number }>>([]);
-  const [couponList, setCouponList] = useState<Array<{ id: number; qr: string; description: string; maxRedemptions: number; totalUsers: number; valid: string }>>([]);
+  const [couponList, setCouponList] = useState<Array<{ id: number; qr: string; description: string; maxRedemptions: number; totalUsers: number; valid: string; branchIds?:number[]|null; branchNames?:string[] }>>([]);
   const [loadingVisits, setLoadingVisits] = useState(false);
   const [visitError, setVisitError] = useState<string | null>(null);
   const [loadingCoupons, setLoadingCoupons] = useState(false);
@@ -132,6 +136,33 @@ export const PosV2LoyaltyPage = () => {
   const businessInfoRequestRef = useRef(0);
   const [unlockModal, setUnlockModal] = useState<{ title: string; message: string; buttonText: string; unlockFeature?: UnlockFeature } | null>(null);
   const [couponDescriptionQuery, setCouponDescriptionQuery] = useState("");
+  const [branchKey,setBranchKey]=useState(()=>readActivePosBranchId());
+  const [historyCustomer,setHistoryCustomer]=useState<{userId:number;userName:string}|null>(null);
+  const [customerVisits,setCustomerVisits]=useState<Array<{Id?:number;Date?:string;BranchName?:string|null}>>([]);
+  const [historyLoading,setHistoryLoading]=useState(false);
+  const [historyError,setHistoryError]=useState("");
+  useEffect(()=>onPosBranchUpdated(branch=>{
+    setBranchKey(branch.id);
+    dynamicQrVersionRef.current+=1;
+    setDynamicQr(null);
+    setVisitQrTokens([]);
+    setHistoryCustomer(null);
+  }),[]);
+  useEffect(()=>{
+    if(!historyCustomer) return;
+    const controller=new AbortController();
+    setHistoryLoading(true);setHistoryError("");setCustomerVisits([]);
+    fetch(new URL(`visits/user/${historyCustomer.userId}/business/${session.businessId}`,API_BASE_URL),{
+      headers:buildPosAuthHeaders(session.token),signal:controller.signal,
+    }).then(async response=>{
+      if(!response.ok) throw new Error("No se pudo cargar el historial de visitas.");
+      const rows=await response.json();
+      if(!controller.signal.aborted) setCustomerVisits(Array.isArray(rows)?rows:rows?.visits||[]);
+    }).catch(error=>{
+      if(!controller.signal.aborted)setHistoryError(error.message);
+    }).finally(()=>{if(!controller.signal.aborted)setHistoryLoading(false);});
+    return ()=>controller.abort();
+  },[historyCustomer,session.businessId,session.token]);
   const [visitQuery, setVisitQuery] = useState("");
   const [visitQrQuantity, setVisitQrQuantity] = useState("1");
   const [visitQrTtl, setVisitQrTtl] = useState("60");
@@ -144,7 +175,7 @@ export const PosV2LoyaltyPage = () => {
   const [isTopClientsModalOpen, setIsTopClientsModalOpen] = useState(false);
   const [modalCouponQuery, setModalCouponQuery] = useState("");
   const [printerFormat, setPrinterFormat] = useState<"58" | "80">("80");
-  const [couponEditing, setCouponEditing] = useState<{ id: number; qr: string; description: string; maxRedemptions: string; validDateTime: string } | null>(null);
+  const [couponEditing, setCouponEditing] = useState<{ id: number; qr: string; description: string; maxRedemptions: string; validDateTime: string; branchIds:number[]|null } | null>(null);
   const [deletingCouponId, setDeletingCouponId] = useState<number | null>(null);
   const dynamicQrRequestInFlightRef = useRef(false);
   const dynamicQrVersionRef = useRef(0);
@@ -185,6 +216,7 @@ export const PosV2LoyaltyPage = () => {
       return;
     }
 
+    if(couponBranchIds!==null&&!couponBranchIds.length){setError("Selecciona al menos una sucursal.");return;}
     setSavingCoupon(true);
     setError(null);
     setToast("");
@@ -192,7 +224,7 @@ export const PosV2LoyaltyPage = () => {
     try {
       const created = await page.createCoupon(
         session.businessId,
-        { qr, description: safeDescription, maxRedemptions, valid: toLegacyDateTime(validDateTime) },
+        { qr, description: safeDescription, maxRedemptions, valid: toLegacyDateTime(validDateTime), branchIds:couponBranchIds },
         session.token,
       );
       setCoupon(created);
@@ -202,8 +234,8 @@ export const PosV2LoyaltyPage = () => {
       setLimitUsers("10");
       setValidDateTime("");
       setCouponQrValue(created.qr || qr);
-    } catch {
-      setError("No fue posible crear el cupón de fidelidad.");
+    } catch(cause) {
+      setError(cause instanceof Error?cause.message:"No fue posible crear el cupón de fidelidad.");
     } finally {
       setSavingCoupon(false);
     }
@@ -414,6 +446,7 @@ export const PosV2LoyaltyPage = () => {
       return;
     }
 
+    if(couponEditing.branchIds!==null&&!couponEditing.branchIds.length){setError("Selecciona al menos una sucursal.");return;}
     try {
       const updated = await page.updateCoupon(
         couponEditing.id,
@@ -423,6 +456,7 @@ export const PosV2LoyaltyPage = () => {
           description: couponEditing.description.trim(),
           maxRedemptions,
           valid: toLegacyDateTime(couponEditing.validDateTime),
+          branchIds:couponEditing.branchIds,
         },
         session.token,
       );
@@ -431,8 +465,8 @@ export const PosV2LoyaltyPage = () => {
       setCoupon((prev) => (prev?.id === updated.id ? { ...prev, ...updated } : prev));
       setCouponEditing(null);
       setToast("Cupón actualizado correctamente.");
-    } catch {
-      setError("No se pudo actualizar el cupón.");
+    } catch(cause) {
+      setError(cause instanceof Error?cause.message:"No se pudo actualizar el cupón.");
     }
   };
 
@@ -522,7 +556,7 @@ export const PosV2LoyaltyPage = () => {
       dynamicQrRequestInFlightRef.current = false;
       setDynamicQrLoading(false);
     }
-  }, [defaultDomain, page, session.businessId, session.hasSession, session.token]);
+  }, [branchKey, defaultDomain, page, session.businessId, session.hasSession, session.token]);
 
   useEffect(() => {
     if (!dynamicQrActive) return;
@@ -532,7 +566,7 @@ export const PosV2LoyaltyPage = () => {
       setDynamicQr(nextQr);
       setError(null);
     });
-  }, [dynamicQrActive, refreshDynamicQr, session.businessId]);
+  }, [branchKey, dynamicQrActive, refreshDynamicQr, session.businessId]);
 
   useEffect(() => {
     if (!dynamicQrActive || dynamicQrLoading) return;
@@ -615,6 +649,7 @@ export const PosV2LoyaltyPage = () => {
         {loyaltyModuleEnabled && (loyaltyView === "all" || loyaltyView === "coupons") && showSection("create") ? <article className="pos-v2-loyalty__card">
           <h2>Crear cupón</h2>
           <form onSubmit={handleCreate} className="pos-v2-loyalty__form">
+            <CouponBranchScope value={couponBranchIds} onChange={setCouponBranchIds} token={session.token}/>
             <p className="pos-v2-loyalty__hint">Descripción y límite son obligatorios. QR automático.</p>
             <label>
               Descripción del beneficio <span>*</span>
@@ -638,6 +673,7 @@ export const PosV2LoyaltyPage = () => {
             <div className="pos-v2-loyalty__detail">
               <p><strong>ID:</strong> {coupon.id}</p>
               <p><strong>Descripción:</strong> {coupon.description}</p>
+              <p>{couponBranchLabel(coupon.branchIds,coupon.branchNames)}</p>
               <p><strong>Límite:</strong> {coupon.maxRedemptions} canjes</p>
               <p><strong>QR:</strong> <span className="pos-v2-loyalty__code">{coupon.qr || couponQrValue || "N/A"}</span></p>
               {coupon.valid ? <p><strong>Vigencia:</strong> {new Date(coupon.valid).toLocaleString("es-MX")}</p> : null}
@@ -781,6 +817,7 @@ export const PosV2LoyaltyPage = () => {
                     : ""}
                 </small>
                 <small>Última visita: {visit.lastVisit ? new Date(visit.lastVisit).toLocaleDateString("es-MX") : "N/A"}</small>
+                <button type="button" className="pos-v2-loyalty__ghost-btn" onClick={()=>{setIsTopClientsModalOpen(false);setHistoryCustomer(visit);}}>Ver visitas y sucursales</button>
               </article>
             ))}
             {!loadingVisits && !visitError && topClients.length === 0 ? <p>Aún no hay datos para top de clientes.</p> : null}
@@ -825,6 +862,7 @@ export const PosV2LoyaltyPage = () => {
                         <strong>{isActive ? "Activo" : "Inactivo"}</strong>
                       </div>
                       <small>{entry.totalUsers}/{entry.maxRedemptions} canjes</small>
+                      <small>{couponBranchLabel(entry.branchIds,entry.branchNames)}</small>
                       <small className="pos-v2-loyalty__code">{couponLink}</small>
                       <div className="pos-v2-loyalty__quick-actions">
                         <button type="button" onClick={() => { setCoupon(entry); setIsCouponsModalOpen(false); openSection("detail"); }}>Ver cupón</button>
@@ -835,6 +873,7 @@ export const PosV2LoyaltyPage = () => {
                             qr: entry.qr,
                             description: entry.description,
                             maxRedemptions: String(entry.maxRedemptions),
+                            branchIds:entry.branchIds ?? null,
                             validDateTime: entry.valid ? new Date(entry.valid).toISOString().slice(0, 16) : "",
                           })}
                         >
@@ -881,10 +920,31 @@ export const PosV2LoyaltyPage = () => {
                         : ""}
                     </small>
                     <small>Última visita: {visit.lastVisit ? new Date(visit.lastVisit).toLocaleString("es-MX") : "N/A"}</small>
+                    <button type="button" className="pos-v2-loyalty__ghost-btn" onClick={()=>{setIsTopClientsModalOpen(false);setHistoryCustomer(visit);}}>Ver visitas y sucursales</button>
                   </article>
                 ))}
                 {!loadingVisits && !visitError && topClients.length === 0 ? <p>No hay datos para mostrar.</p> : null}
               </div>
+            </div>
+          </section>
+        ) : null}
+
+        {historyCustomer ? (
+          <section className="pos-v2-loyalty__modal" role="dialog" aria-modal="true" aria-label="Historial de visitas">
+            <div className="pos-v2-loyalty__modal-card">
+              <div className="pos-v2-loyalty__modal-head">
+                <h3>Visitas de {historyCustomer.userName}</h3>
+                <button type="button" onClick={()=>setHistoryCustomer(null)} aria-label="Cerrar historial">×</button>
+              </div>
+              {historyLoading ? <p role="status">Cargando visitas…</p> : historyError ? <p role="alert">{historyError}</p> : (
+                <div className="pos-v2-loyalty__detail">
+                  {customerVisits.map((visit,index)=><article key={visit.Id ?? index} className="pos-v2-loyalty__row-card">
+                    <p>{visit.BranchName || "Sucursal no registrada"}</p>
+                    <small>{visit.Date ? new Date(visit.Date).toLocaleString("es-MX") : "Sin fecha disponible"}</small>
+                  </article>)}
+                  {!customerVisits.length ? <p>Sin visitas registradas.</p> : null}
+                </div>
+              )}
             </div>
           </section>
         ) : null}
@@ -897,6 +957,7 @@ export const PosV2LoyaltyPage = () => {
                 <button type="button" onClick={() => setCouponEditing(null)} aria-label="Cerrar edición">×</button>
               </div>
               <form className="pos-v2-loyalty__form" onSubmit={handleUpdateCoupon}>
+                <CouponBranchScope value={couponEditing.branchIds} onChange={ids=>setCouponEditing(previous=>previous?{...previous,branchIds:ids}:previous)} token={session.token}/>
                 <label>
                   Descripción
                   <input

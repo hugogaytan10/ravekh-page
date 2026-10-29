@@ -7,6 +7,8 @@ export class RewardCoupon {
     public readonly maxRedemptions: number,
     public readonly totalUsers: number = 0,
     public readonly valid: string = "",
+    public readonly branchIds: number[] | null = null,
+    public readonly branchNames: string[] = [],
   ) {}
 
   canBeRedeemed(currentRedemptions: number): boolean {
@@ -20,6 +22,7 @@ export interface CreateRewardCouponDto {
   description: string;
   maxRedemptions: number;
   valid?: string;
+  branchIds?: number[] | null;
 }
 
 export class RewardVisit {
@@ -81,3 +84,6 @@ export const normalizeDynamicVisitQr = (payload: unknown): DynamicVisitQrToken =
     refreshAfterSeconds: Number.isFinite(seconds) && seconds > 0 ? Math.min(600, Math.max(5, seconds)) : 60,
   };
 };
+
+export const couponBranchLabel = (ids?:number[]|null,names?:string[]):string =>
+  ids?.length ? `Válido en: ${names?.join(', ') || ids.map(id=>`Sucursal #${id}`).join(', ')}` : 'Válido en todas las sucursales';

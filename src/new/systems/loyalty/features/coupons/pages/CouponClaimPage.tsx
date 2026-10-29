@@ -1,3 +1,4 @@
+import {couponBranchLabel} from "../../../rewards-management/model/RewardCoupon";
 import React, { useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate, useParams } from "react-router-dom";
 import cuponsito from "../assets/cuponsito.png";
@@ -183,6 +184,7 @@ const CouponClaimPage: React.FC = () => {
                 <div className="flex-1">
                   <p className="text-base font-extrabold">Cupón disponible</p>
                   <p className="text-sm leading-snug">{coupon.Description}</p>
+                  <p className="text-xs">{couponBranchLabel(coupon.Branch_Ids,coupon.Branch_Names)}</p>
 
                   {!hasCuponesSession() ? (
                     <button

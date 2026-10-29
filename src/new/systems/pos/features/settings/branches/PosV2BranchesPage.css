@@ -580,3 +580,15 @@
 .pos-branches__list{display:grid;grid-template-columns:minmax(0,1fr)}
 .pos-branches__item{min-width:0;cursor:default}
 .pos-branches__sidebar{min-width:0;box-sizing:border-box}
+
+.pos-branches__copy-options {min-width:0; margin:20px 0 0; padding:16px; border:1px solid var(--pos-v2-border); border-radius:8px; display:grid; gap:14px;}
+.pos-branches__copy-options legend {padding:0 6px; font-weight:700;}
+.pos-branches__copy-options p {margin:0; color:var(--pos-v2-text-muted); font-size:13px; line-height:1.5;}
+.pos-branches__copy-options > label:not(.pos-branches__toggle) {display:grid; gap:8px;}
+.pos-branches__inventory-scroll {max-height:480px; overflow:auto;}
+.pos-branches__inventory {width:100%; border-collapse:collapse; font-size:13px;}
+.pos-branches__inventory th {position:sticky; top:0; background:var(--pos-v2-surface); text-align:left;}
+.pos-branches__inventory th, .pos-branches__inventory td {padding:12px 8px; border-bottom:1px solid var(--pos-v2-border);}
+.pos-branches__inventory td:nth-child(2) {text-align:right; white-space:nowrap;}
+.pos-branches__inventory input {min-height:44px; width:100%; min-width:68px; max-width:110px; text-align:right;}
+@media (max-width:600px) {.pos-branches__copy-options {padding:10px;} .pos-branches__inventory th, .pos-branches__inventory td {padding:10px 4px;}}

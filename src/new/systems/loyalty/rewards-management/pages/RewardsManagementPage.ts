@@ -3,20 +3,22 @@ import { RewardService } from "../services/RewardService";
 export class RewardsManagementPage {
   constructor(private readonly service: RewardService) {}
 
-  async lookupCoupon(businessId: number, qrCode: string, token: string): Promise<{ id: number; description: string; maxRedemptions: number }> {
+  async lookupCoupon(businessId: number, qrCode: string, token: string): Promise<{ id: number; description: string; maxRedemptions: number; branchIds:number[]|null; branchNames:string[] }> {
     const coupon = await this.service.getCouponByQr(businessId, qrCode, token);
 
     return {
       id: coupon.id,
       description: coupon.description,
       maxRedemptions: coupon.maxRedemptions,
+      branchIds: coupon.branchIds,
+      branchNames: coupon.branchNames,
     };
   }
 
   async listCoupons(
     businessId: number,
     token: string,
-  ): Promise<Array<{ id: number; qr: string; description: string; maxRedemptions: number; totalUsers: number; valid: string }>> {
+  ): Promise<Array<{ id: number; qr: string; description: string; maxRedemptions: number; totalUsers: number; valid: string; branchIds:number[]|null; branchNames:string[] }>> {
     const coupons = await this.service.listCoupons(businessId, token);
     return coupons.map((coupon) => ({
       id: coupon.id,
@@ -25,20 +27,23 @@ export class RewardsManagementPage {
       maxRedemptions: coupon.maxRedemptions,
       totalUsers: coupon.totalUsers,
       valid: coupon.valid,
+      branchIds: coupon.branchIds,
+      branchNames: coupon.branchNames,
     }));
   }
 
   async createCoupon(
     businessId: number,
-    payload: { qr: string; description: string; maxRedemptions: number; valid?: string },
+    payload: { qr: string; description: string; maxRedemptions: number; valid?: string; branchIds?:number[]|null },
     token: string,
-  ): Promise<{ id: number; qr: string; description: string; maxRedemptions: number; valid: string }> {
+  ): Promise<{ id: number; qr: string; description: string; maxRedemptions: number; valid: string; branchIds:number[]|null; branchNames:string[] }> {
     const coupon = await this.service.createCoupon({
       businessId,
       qr: payload.qr,
       description: payload.description,
       maxRedemptions: payload.maxRedemptions,
       valid: payload.valid,
+      branchIds: payload.branchIds,
     }, token);
 
     return {
@@ -47,21 +52,24 @@ export class RewardsManagementPage {
       description: coupon.description,
       maxRedemptions: coupon.maxRedemptions,
       valid: coupon.valid,
+      branchIds: coupon.branchIds,
+      branchNames: coupon.branchNames,
     };
   }
 
   async updateCoupon(
     couponId: number,
     businessId: number,
-    payload: { qr: string; description: string; maxRedemptions: number; valid?: string },
+    payload: { qr: string; description: string; maxRedemptions: number; valid?: string; branchIds?:number[]|null },
     token: string,
-  ): Promise<{ id: number; qr: string; description: string; maxRedemptions: number; valid: string }> {
+  ): Promise<{ id: number; qr: string; description: string; maxRedemptions: number; valid: string; branchIds:number[]|null; branchNames:string[] }> {
     const coupon = await this.service.updateCoupon(couponId, {
       businessId,
       qr: payload.qr,
       description: payload.description,
       maxRedemptions: payload.maxRedemptions,
       valid: payload.valid,
+      branchIds: payload.branchIds,
     }, token);
 
     return {
@@ -70,6 +78,8 @@ export class RewardsManagementPage {
       description: coupon.description,
       maxRedemptions: coupon.maxRedemptions,
       valid: coupon.valid,
+      branchIds: coupon.branchIds,
+      branchNames: coupon.branchNames,
     };
   }
 

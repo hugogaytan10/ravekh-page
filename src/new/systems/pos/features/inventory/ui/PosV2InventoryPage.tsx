@@ -1,3 +1,4 @@
+import {StockTransferModal} from './StockTransferModal';
 import { posMoneyFormatter as moneyFormatter } from "../../../shared/config/posCurrency";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { ModernSystemsFactory } from "../../../../../index";
@@ -167,6 +168,7 @@ export const PosV2InventoryPage = () => {
             <h2>Inventario operativo</h2>
             <p>Consulta productos, detecta faltantes y ajusta stock por artículo.</p>
           </div>
+          <StockTransferModal token={session.token} onTransferred={()=>{setToast("Traspaso completado.");void loadCards();setQuery("");}}/>
           <button type="button" onClick={loadCards} disabled={loading}>Actualizar</button>
         </header>
 

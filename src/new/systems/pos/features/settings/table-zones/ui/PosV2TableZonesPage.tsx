@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
 import { PosV2Shell } from "../../../../shared/ui/PosV2Shell";
 import { POS_SESSION_STORAGE_KEYS } from "../../../../shared/config/posSession";
-import { buildPosAuthHeaders } from "../../../../shared/config/posBranch";
+import { buildPosAuthHeaders,readActivePosBranchId,onPosBranchUpdated } from "../../../../shared/config/posBranch";
 import { usePlanActionGuard } from "../../../../shared/hooks/usePlanActionGuard";
 import { PlanUpgradeModal } from "../../../../shared/ui/PlanUpgradeModal";
 import { POS_V2_PATHS } from "../../../../routing/PosV2Paths";
@@ -77,6 +77,7 @@ export const PosV2TableZonesPage = () => {
   const [token] = useState(() => window.localStorage.getItem(TOKEN_KEY) ?? "");
   const [businessIdInput] = useState(() => window.localStorage.getItem(BUSINESS_ID_KEY) ?? "");
 
+  const [branchId,setBranchId]=useState(()=>readActivePosBranchId());
   const [zones, setZones] = useState<ZoneVm[]>([]);
   const [tables, setTables] = useState<TableVm[]>([]);
   const [searchZone, setSearchZone] = useState("");
@@ -114,8 +115,8 @@ export const PosV2TableZonesPage = () => {
   const totalKnownTables = Math.max(knownTablesCount, tables.length);
 
   const headers = useMemo(
-    () => buildPosAuthHeaders(cleanToken),
-    [cleanToken],
+    () => buildPosAuthHeaders(cleanToken,{branchId}),
+    [branchId,cleanToken],
   );
 
   useEffect(() => {
@@ -134,7 +135,7 @@ export const PosV2TableZonesPage = () => {
       .catch(() => {
         // Keep the stored plan if business details cannot be refreshed.
       });
-  }, [businessId, hasSession, headers]);
+  }, [branchId,businessId, hasSession, headers]);
 
   const openTableLimitUpgradeModal = () => setShowTableLimitUpgrade(true);
 
@@ -156,6 +157,10 @@ export const PosV2TableZonesPage = () => {
     return false;
   };
 
+  useEffect(()=>onPosBranchUpdated(branch=>{
+    setBranchId(branch.id);setZones([]);setTables([]);setSelectedZoneId('');setKnownTablesCount(0);
+    setIsZoneModalOpen(false);setIsQuickModalOpen(false);setIsTableModalOpen(false);setDeleteTarget(null);
+  }),[]);
   const loadZones = useCallback(async () => {
     if (!hasSession) {
       setError("Completa token y business id válidos para administrar zonas y mesas.");
@@ -173,6 +178,7 @@ export const PosV2TableZonesPage = () => {
 
       const payload = (await response.json().catch(() => null)) as { data?: ZoneApiResponse[] } | ZoneApiResponse[] | null;
       const rawZones = Array.isArray(payload) ? payload : (Array.isArray(payload?.data) ? payload.data : []);
+      if(readActivePosBranchId()!==branchId)return;
       const preloadedTablesCount = rawZones.reduce(
         (count, zone) => count + (Array.isArray(zone.Tables) ? zone.Tables.length : 0),
         0,

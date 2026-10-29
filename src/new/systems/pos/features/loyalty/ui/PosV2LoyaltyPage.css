@@ -121,3 +121,9 @@
 .pos-v2-loyalty__card--dynamic{width:min(100%,560px);justify-self:center}
 .pos-v2-loyalty__card--dynamic .pos-v2-loyalty__coupon-qr{border:0}
 .pos-v2-loyalty__card--dynamic .pos-v2-loyalty__coupon-qr img{width:min(260px,100%)}
+
+.pos-v2-loyalty__coupon-scope{margin:0;padding:12px;border:1px solid var(--pos-v2-border);border-radius:8px;min-width:0}
+.pos-v2-loyalty__coupon-scope legend{padding:0 6px;font-weight:600}
+.pos-v2-loyalty__coupon-scope label{display:flex;flex-direction:row;align-items:center;gap:10px;padding:8px 0}
+.pos-v2-loyalty__coupon-scope input[type=checkbox],.pos-v2-loyalty__coupon-scope input[type=radio]{width:18px;height:18px;min-width:18px;margin:0;accent-color:var(--pos-v2-accent)}
+.pos-v2-loyalty__coupon-scope>div{padding-left:12px}
