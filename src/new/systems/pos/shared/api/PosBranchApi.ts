@@ -1,11 +1,12 @@
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { PosBranch } from "../config/posBranch";
 
-export type BranchCopyInventoryRow = {kind: 'product' | 'variant'; id: number; name: string; stock: number | null};
+export type BranchCopyInventoryRow = {productId?: number; kind: 'product' | 'variant'; id: number; name: string; stock: number | null};
 export type BranchCopyOptions = {
   version: 2;
   categories: boolean;
   products: boolean;
+  productIds?: number[];
   prices: boolean;
   shipping: boolean;
   tables?:boolean;
@@ -124,9 +125,10 @@ export class PosBranchApi {
   }
 
   async create(input: CreatePosBranchInput, token: string): Promise<PosBranch> {
-    if(input.copyOptions?.tables){
-      const capabilities=await this.httpClient.request<{tableCopyVersion?:number}>({method:'GET',path:'branches/copy-capabilities',token,skipBranchHeader:true});
-      if(capabilities.tableCopyVersion!==1)throw new Error('La copia de mesas aún no está disponible en el servidor.');
+    if(input.copyOptions?.tables || input.copyOptions?.productIds !== undefined){
+      const capabilities=await this.httpClient.request<{tableCopyVersion?:number;productSelectionVersion?:number}>({method:'GET',path:'branches/copy-capabilities',token,skipBranchHeader:true});
+      if(input.copyOptions?.productIds !== undefined && capabilities.productSelectionVersion!==1)throw new Error('La selección de productos aún no está disponible en el servidor.');
+      if(input.copyOptions?.tables && capabilities.tableCopyVersion!==1)throw new Error('La copia de mesas aún no está disponible en el servidor.');
     }
     const response = await this.httpClient.request<ApiWrapper<BranchResponse>>({
       method: "POST",

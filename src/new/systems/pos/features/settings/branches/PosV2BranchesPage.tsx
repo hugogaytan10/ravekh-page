@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
 import { PosBranchApi, PosBranchEmployee, initialBranchCopyOptions } from "../../../shared/api/PosBranchApi";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
@@ -6,7 +6,7 @@ import { persistPosBranch, PosBranch, readActivePosBranchId } from "../../../sha
 import { readPosSessionSnapshot, resolvePosOperatorRole } from "../../../shared/config/posSession";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import "./PosV2BranchesPage.css";
-import {BranchCopyOptions} from "./BranchCopyOptions";
+import {BranchCopyOptions, type BranchCopyNextStep} from "./BranchCopyOptions";
 
 type EmployeeOption = { Id?: number; Name?: string; LastName?: string; Email?: string; Role?: string };
 type BranchForm = { name:string; code:string; slug:string; phoneNumber:string; whatsApp:string; address:string; references:string; catalogEnabled:boolean };
@@ -27,7 +27,10 @@ export const PosV2BranchesPage=()=>{
   const [copyFrom,setCopyFrom]=useState<number|"">("");
   const [copyOptions,setCopyOptions]=useState(initialBranchCopyOptions);
   const [copyReadySource,setCopyReadySource]=useState<number|null>(null);
-  const selectCopySource=(id:number|"")=>{setCopyFrom(id);setCopyOptions(initialBranchCopyOptions());setCopyReadySource(null);};
+  const [copyNextStep,setCopyNextStep]=useState<BranchCopyNextStep|null>(null);
+  const handleCopyReady=useCallback((sourceId:number|null,nextStep?:BranchCopyNextStep)=>{setCopyReadySource(sourceId);setCopyNextStep(nextStep??null);},[]);
+  const preparingCopy=creating&&copyFrom!==""&&copyReadySource!==copyFrom&&!copyNextStep;
+  const selectCopySource=(id:number|"")=>{setCopyFrom(id);setCopyOptions(initialBranchCopyOptions());setCopyReadySource(null);setCopyNextStep(null);};
   const [employees,setEmployees]=useState<EmployeeOption[]>([]);
   const [assigned,setAssigned]=useState<PosBranchEmployee[]>([]);
   const [busy,setBusy]=useState(false);
@@ -62,7 +65,7 @@ export const PosV2BranchesPage=()=>{
   const save=async(e:FormEvent)=>{
     e.preventDefault();if(!isAdmin||!session.token)return;
     if(!form.name.trim()||!form.code.trim()||!form.slug.trim()){setError("Nombre, código y slug son obligatorios.");return}
-    if(creating && copyFrom !== "" && copyReadySource !== copyFrom){setError("Carga la sucursal origen y revisa las cantidades antes de continuar.");return;}
+    if(creating && copyFrom !== "" && copyReadySource !== copyFrom){setError("Selecciona los productos y confirma su inventario para continuar.");return;}
     setBusy(true);setError("");setMessage("");
     try{
       if(creating){if(copyFrom==="")await api.copyCapabilities(session.token);const created=await api.create({name:form.name.trim(),code:form.code.trim(),slug:slugify(form.slug),phoneNumber:form.phoneNumber.trim()||null,whatsApp:form.whatsApp.trim()||null,address:form.address.trim()||null,references:form.references.trim()||null,catalogEnabled:form.catalogEnabled,copyCatalogFromBranchId:copyFrom===""?null:Number(copyFrom),copyOptions:copyFrom!==""?copyOptions:{version:2,categories:false,products:false,prices:false,shipping:false,inventoryMode:'zero',inventory:[]}},session.token);setCreating(false);await load();setSelectedId(created.id);setMessage("Sucursal creada con las opciones de catálogo e inventario elegidas.")}
@@ -78,8 +81,8 @@ export const PosV2BranchesPage=()=>{
       <div className="pos-branches__grid"><label>Nombre<input autoCorrect="on" spellCheck={true} value={form.name} onChange={e=>change("name",e.target.value)} required/></label><label>Código<input value={form.code} onChange={e=>change("code",e.target.value)} required/></label><label>Slug público<input value={form.slug} onChange={e=>change("slug",slugify(e.target.value))} required/></label><label>Teléfono<input value={form.phoneNumber} onChange={e=>change("phoneNumber",e.target.value)}/></label><label>WhatsApp<input value={form.whatsApp} onChange={e=>change("whatsApp",e.target.value)}/></label><label className="pos-branches__span-2">Dirección<input autoCorrect="on" spellCheck={true} value={form.address} onChange={e=>change("address",e.target.value)}/></label><label className="pos-branches__span-2">Referencias<textarea autoCorrect="on" spellCheck={true} rows={2} value={form.references} onChange={e=>change("references",e.target.value)}/></label></div>
       <label className="pos-branches__toggle"><input type="checkbox" checked={form.catalogEnabled} onChange={e=>change("catalogEnabled",e.target.checked)}/><span>Catálogo público habilitado</span></label>
       {creating?<><label className="pos-branches__copy">Copiar desde<select value={copyFrom} disabled={busy} onChange={e=>selectCopySource(e.target.value?Number(e.target.value):"")}><option value="">Empezar vacía</option>{branches.map(b=><option value={b.id} key={b.id}>{b.name}</option>)}</select></label>
-        {copyFrom!==""&&session.token?<BranchCopyOptions key={copyFrom} api={api} sourceId={copyFrom} token={session.token} disabled={busy} value={copyOptions} onChange={setCopyOptions} onReady={setCopyReadySource}/>:null}</>:null}
-      {error?<div className="pos-branches__error">{error}</div>:null}{message?<div className="pos-branches__success">{message}</div>:null}<div className="pos-branches__actions"><button className="is-primary" disabled={busy || (creating && copyFrom!=="" && copyReadySource!==copyFrom)}>{busy?"Guardando…":creating?"Crear sucursal":"Guardar cambios"}</button>{!creating&&selected&&!selected.isMain?<button type="button" className="is-danger" disabled={busy} onClick={()=>void deactivate()}>Desactivar</button>:null}</div>
+        {copyFrom!==""&&session.token?<BranchCopyOptions key={copyFrom} api={api} sourceId={copyFrom} sourceName={branches.find(branch=>branch.id===copyFrom)?.name??"la tienda seleccionada"} token={session.token} disabled={busy} value={copyOptions} onChange={setCopyOptions} onReady={handleCopyReady}/>:null}</>:null}
+      {error?<div className="pos-branches__error">{error}</div>:null}{message?<div className="pos-branches__success">{message}</div>:null}<div className="pos-branches__actions"><button className="is-primary" type={creating&&copyNextStep?"button":"submit"} disabled={busy||preparingCopy} onClick={creating&&copyNextStep?copyNextStep.onClick:undefined}>{busy?"Guardando…":preparingCopy?"Cargando productos…":creating?copyNextStep?.label??"Crear sucursal":"Guardar cambios"}</button>{!creating&&selected&&!selected.isMain?<button type="button" className="is-danger" disabled={busy} onClick={()=>void deactivate()}>Desactivar</button>:null}</div>
     </form>
     {!creating&&selected?<section className="pos-branches__card"><div className="pos-branches__card-heading"><div><h2>Personal asignado</h2><p>Elige quién puede operar esta sucursal.</p></div></div><div className="pos-branches__employees">{employees.map(emp=>{const id=Number(emp.Id??0);const checked=assigned.some(a=>a.employeeId===id&&a.active);return <label className="pos-branches__employee" key={id}><span><strong>{`${emp.Name??""} ${emp.LastName??""}`.trim()||emp.Email||`Empleado ${id}`}</strong><small>{emp.Email} · {emp.Role}</small></span><input type="checkbox" checked={checked} disabled={busy||id===session.employeeId} onChange={()=>void toggleEmployee(emp)}/></label>})}</div></section>:null}
     </div>:null}</div></PosV2Shell>;

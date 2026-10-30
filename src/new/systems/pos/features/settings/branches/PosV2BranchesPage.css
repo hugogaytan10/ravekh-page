@@ -592,3 +592,64 @@
 .pos-branches__inventory td:nth-child(2) {text-align:right; white-space:nowrap;}
 .pos-branches__inventory input {min-height:44px; width:100%; min-width:68px; max-width:110px; text-align:right;}
 @media (max-width:600px) {.pos-branches__copy-options {padding:10px;} .pos-branches__inventory th, .pos-branches__inventory td {padding:10px 4px;}}
+
+/* Copy flow: one dialog, consecutive product and inventory views. */
+.pos-branches__copy-summary {display:flex; align-items:center; justify-content:space-between; gap:16px; width:100%; padding:14px 0; border:0; border-bottom:1px solid var(--pos-v2-border); background:transparent; color:var(--pos-v2-text); text-align:left; font:inherit; cursor:pointer;}
+.pos-branches__copy-summary > span:first-child {display:grid; gap:5px; min-width:0;}
+.pos-branches__copy-summary small {color:var(--pos-v2-text-muted); font-size:13px; font-weight:400;}
+.pos-branches__copy-summary > span:last-child {display:flex; align-items:center; gap:6px; flex-shrink:0;}
+.pos-branches__copy-toggles {display:grid; gap:12px;}
+.pos-branches__copy-toggles .pos-branches__toggle {margin:0;}
+.pos-branch-copy-flow {box-sizing:border-box; margin:auto; width:min(760px,calc(100vw - 32px)); height:min(800px,90dvh); max-width:none; max-height:90dvh; padding:0; border:1px solid var(--pos-v2-border); border-radius:12px; background:var(--pos-v2-surface); color:var(--pos-v2-text); font:inherit; overflow:hidden;}
+.pos-branch-copy-flow[open] {display:flex; flex-direction:column;}
+.pos-branch-copy-flow::backdrop {background:rgba(0,0,0,.6);}
+.pos-branch-copy-flow h2,.pos-branch-copy-flow h3,.pos-branch-copy-flow p {margin:0;}
+.pos-branch-copy-flow h2 {font-size:20px; font-weight:700;}
+.pos-branch-copy-flow h3 {font-size:16px; font-weight:650;}
+.pos-branch-copy-flow p {font-size:13px; color:var(--pos-v2-text-muted); line-height:1.5;}
+.pos-branch-copy-flow button {display:inline-flex; align-items:center; justify-content:center; gap:8px; min-height:42px; padding:9px 13px; border:1px solid var(--pos-v2-border); border-radius:8px; background:var(--pos-v2-background); color:var(--pos-v2-text); font:inherit; font-size:13px; font-weight:600; cursor:pointer;}
+.pos-branch-copy-flow button:disabled {opacity:.5; cursor:not-allowed;}
+.pos-branch-copy-flow .is-primary {background:var(--pos-v2-accent); color:var(--pos-v2-text-inverse); border-color:var(--pos-v2-accent);}
+.pos-branch-copy-flow button:focus-visible,.pos-branch-copy-flow input:focus-visible {outline:2px solid var(--pos-v2-accent); outline-offset:2px;}
+.pos-branch-copy-flow input:not([type=checkbox]) {box-sizing:border-box; width:100%; min-height:44px; padding:10px 12px; border:1px solid var(--pos-v2-border); border-radius:8px; background:var(--pos-v2-background); color:var(--pos-v2-text); font:inherit; font-size:14px;}
+.pos-branch-copy-flow input::placeholder {color:var(--pos-v2-text-muted);}
+.pos-branch-copy-flow input[aria-invalid=true] {border-color:var(--pos-v2-danger-text);}
+.pos-branch-copy-flow__header {display:flex; align-items:center; gap:12px; padding:14px 18px;}
+.pos-branch-copy-flow__header h2 {flex:1;}
+.pos-branch-copy-flow__header button {padding:8px; width:42px; border:0; background:transparent; font-size:20px;}
+.pos-branch-copy-flow__progress {display:flex; justify-content:space-between; gap:12px; padding:0 22px 14px; border-bottom:1px solid var(--pos-v2-border); font-size:13px; color:var(--pos-v2-text-muted);}
+.pos-branch-copy-flow__tools {display:grid; gap:12px; padding:18px 22px 8px;}
+.pos-branch-copy-flow__search {display:flex; align-items:center; gap:10px; padding-left:12px; border:1px solid var(--pos-v2-border); border-radius:8px; background:var(--pos-v2-background);}
+.pos-branch-copy-flow__search input:not([type=checkbox]) {border:0; background:transparent;}
+.pos-branch-copy-flow__search svg {flex-shrink:0; color:var(--pos-v2-text-muted);}
+.pos-branch-copy-flow__actions {display:flex; flex-wrap:wrap; gap:10px;}
+.pos-branch-copy-flow__body {min-height:0; flex:1; overflow:auto; padding:18px 22px; overscroll-behavior:contain;}
+.pos-branch-copy-flow__product {display:flex; align-items:center; gap:14px; min-height:56px; padding:10px 0; border-bottom:1px solid var(--pos-v2-border); font-size:14px; cursor:pointer;}
+.pos-branch-copy-flow__product input {width:20px; height:20px; flex-shrink:0; accent-color:var(--pos-v2-accent);}
+.pos-branch-copy-flow__footer {display:grid; gap:10px; padding:16px 22px; border-top:1px solid var(--pos-v2-border);}
+.pos-branch-copy-flow__footer > .is-primary {width:100%;}
+.pos-branch-copy-flow__footer .pos-branch-copy-flow__actions > .is-primary {flex:1;}
+.pos-branch-copy-flow__footer [role=alert] {color:var(--pos-v2-danger-text);}
+.pos-branch-copy-flow__choices {display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; margin-top:16px;}
+.pos-branch-copy-flow button.pos-branch-copy-flow__choice {justify-content:space-between; text-align:left; padding:16px; min-height:94px;}
+.pos-branch-copy-flow__choice > span {display:grid; gap:6px; min-width:0;}
+.pos-branch-copy-flow__choice small {font-weight:400; line-height:1.5; color:var(--pos-v2-text-muted);}
+.pos-branch-copy-flow__choice svg {flex-shrink:0; font-size:21px;}
+.pos-branch-copy-flow .pos-branch-copy-flow__choice.is-selected {background:var(--pos-v2-accent); color:var(--pos-v2-text-inverse); border-color:var(--pos-v2-accent);}
+.pos-branch-copy-flow .pos-branch-copy-flow__choice.is-selected small {color:inherit;}
+.pos-branch-copy-flow__uniform {display:grid; gap:8px; margin-top:20px; font-size:14px;}
+.pos-branch-copy-flow__section-heading {display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom:12px;}
+.pos-branch-copy-flow__fill {display:flex; align-items:end; gap:10px; margin:16px 0;}
+.pos-branch-copy-flow__fill > label {display:grid; gap:8px; flex:1; font-size:12px; color:var(--pos-v2-text-muted);}
+.pos-branch-copy-flow__fill > button {min-height:44px;}
+.pos-branch-copy-flow__quantity-card {display:flex; align-items:center; justify-content:space-between; gap:18px; margin-bottom:10px; padding:14px; border:1px solid var(--pos-v2-border); border-radius:8px; font-size:14px;}
+.pos-branch-copy-flow__quantity-card > span:last-child {display:grid; gap:5px; width:100px; flex-shrink:0; font-size:11px; color:var(--pos-v2-text-muted);}
+.pos-branch-copy-flow__quantity-card input {text-align:center;}
+@media(max-width:600px) {
+  .pos-branch-copy-flow {width:100%; height:100dvh; max-height:100dvh; border-radius:0; border:0;}
+  .pos-branch-copy-flow__choices {grid-template-columns:1fr;}
+  .pos-branch-copy-flow__header,.pos-branch-copy-flow__body,.pos-branch-copy-flow__tools,.pos-branch-copy-flow__footer {padding-left:16px; padding-right:16px;}
+  .pos-branch-copy-flow__progress {padding-left:16px; padding-right:16px; font-size:12px;}
+  .pos-branch-copy-flow__quantity-card {gap:10px;}
+  .pos-branch-copy-flow__quantity-card > span:last-child {width:82px;}
+}
