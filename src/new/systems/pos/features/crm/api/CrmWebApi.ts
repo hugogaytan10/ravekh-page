@@ -27,7 +27,8 @@ export class CrmWebApi {
     return result.data;
   }
   channels() { return this.get<CrmChannel[]>("crm/channels"); }
-  beginMetaOnboarding() { return this.send<{url:string}>("POST", "crm/meta/whatsapp/start", {}); }
+  beginMetaOnboarding() { return this.send<{ticket:string;appId:string;configId:string;graphVersion:string;url:string}>("POST", "crm/meta/whatsapp/start", {}); }
+  completeMetaOnboarding(body:{ticket:string;code:string;wabaId:string;phoneId:string|null;connectionMode:"CLOUD_API"|"COEXISTENCE"}) { return this.send<{Id:number;Status:string;Enabled:boolean}>("POST","crm/meta/whatsapp/complete",body); }
   linkExistingMeta(phoneId:string,wabaId:string,accessToken:string) { return this.send<unknown>("POST", "crm/channels/whatsapp/link-existing", {Phone_Number_Id:phoneId,Waba_Id:wabaId,Access_Token:accessToken}); }
   metaDiagnostic(id:number) { return this.get<MetaDiagnostic>(`crm/channels/whatsapp/${id}/diagnostic`); }
   subscribeWebhook(id:number) { return this.send<unknown>("POST",`crm/channels/whatsapp/${id}/subscribe-webhook`,{}); }
