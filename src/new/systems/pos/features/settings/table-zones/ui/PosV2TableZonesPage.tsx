@@ -1,3 +1,4 @@
+import {authenticatedFetch as fetch} from '../../../../../../core/api/sessionFetch';
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";

@@ -1,3 +1,4 @@
+import {authenticatedFetch as fetch} from './sessionFetch';
 import { HttpClient, HttpRequest } from "./HttpClient";
 import { readActivePosBranchId } from "../../systems/pos/shared/config/posBranch";
 

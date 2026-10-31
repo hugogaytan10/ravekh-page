@@ -1,3 +1,4 @@
+import {authenticatedFetch as fetch} from '../../../../core/api/sessionFetch';
 import { getPosApiBaseUrl } from "./posEnv";
 
 export type PosFeatureLevel = 0 | 1 | 2;

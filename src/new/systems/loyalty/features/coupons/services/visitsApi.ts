@@ -1,3 +1,4 @@
+import {customerFetch as fetch} from '../../../../../core/api/sessionFetch';
 import { COUPONS_API_URL } from "../config/couponsEnv";
 import type { Visits } from "../models/coupon";
 import {
@@ -69,7 +70,7 @@ const redeemVisitQr = async (
   
   const payload = await parseResponsePayload(response);
   if (!response.ok) {
-    if (response.status === 401 || response.status === 403) {
+    if (response.status === 401) {
       setCuponesSession(false);
       setCuponesToken();
       setCuponesUserId();

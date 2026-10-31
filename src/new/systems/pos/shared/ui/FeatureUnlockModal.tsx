@@ -1,3 +1,4 @@
+import {authenticatedFetch as fetch} from '../../../../core/api/sessionFetch';
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { emitPosBusinessUpdated } from "../config/posBusinessEvents";
 import { getPosApiBaseUrl } from "../config/posEnv";

@@ -1,3 +1,4 @@
+import {authenticatedFetch as fetch} from '../../../../../core/api/sessionFetch';
 import {CouponBranchScope} from "./CouponBranchScope";
 import {couponBranchLabel} from "../../../../loyalty/rewards-management/model/RewardCoupon";
 import {buildPosAuthHeaders, onPosBranchUpdated, readActivePosBranchId} from "../../../shared/config/posBranch";

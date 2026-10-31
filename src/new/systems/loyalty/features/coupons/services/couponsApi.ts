@@ -1,3 +1,4 @@
+import {customerFetch as fetch} from '../../../../../core/api/sessionFetch';
 import {buildPosAuthHeaders,readActivePosBranchId} from "../../../../pos/shared/config/posBranch";
 import {readPosSessionSnapshot} from "../../../../pos/shared/config/posSession";
 import {getCuponesToken} from "./session";

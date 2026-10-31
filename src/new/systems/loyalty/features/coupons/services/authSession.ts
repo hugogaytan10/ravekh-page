@@ -17,6 +17,7 @@ type CuponesAuthPayload = {
   Role?: string;
   role?: string;
   Token?: string;
+  RefreshToken?: string;
   token?: string;
 };
 
@@ -51,6 +52,7 @@ const persistCuponesAuthSession = (payload: CuponesAuthPayload): { userId: numbe
   setCuponesUserName(userName);
   setCuponesBusinessId(businessId ?? undefined);
   setCuponesToken(token);
+  localStorage.setItem("cupones-refresh-token", payload.RefreshToken ?? "");
   setCuponesRole(role);
 
   return { userId };

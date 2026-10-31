@@ -15,6 +15,7 @@ type AuthSessionViewModel = {
   employeeName: string;
   email: string;
   token: string;
+  refreshToken: string;
 };
 
 type SecurityQuestionViewModel = {
@@ -65,6 +66,7 @@ export class AuthOnboardingPage {
     employeeName: string;
     email: string;
     token: string;
+    refreshToken: string;
   }): AuthSessionViewModel {
     return {
       employeeId: session.employeeId,
@@ -72,6 +74,7 @@ export class AuthOnboardingPage {
       employeeName: session.employeeName,
       email: session.email,
       token: session.token,
+      refreshToken: session.refreshToken,
     };
   }
 

@@ -1,3 +1,4 @@
+import {authenticatedFetch as fetch} from '../../../../../core/api/sessionFetch';
 import { ChangeEvent, FormEvent, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { FiFileText, FiPrinter } from "react-icons/fi";

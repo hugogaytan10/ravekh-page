@@ -1,3 +1,4 @@
+import {authenticatedFetch as fetch} from '../../../../../core/api/sessionFetch';
 import {readActivePosBranchId} from "../../../shared/config/posBranch";
 
 export type CatalogAiItemStatus =

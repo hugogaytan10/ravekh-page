@@ -1,3 +1,4 @@
+import {authenticatedFetch as fetch} from '../../../../../core/api/sessionFetch';
 import { shareSaleTicket, type CompletedSale, type CompletedSaleLine } from "./saleTicket";
 import {isVariantAvailableForSale} from "../model/variantAvailability";
 import { DEFAULT_TICKET_CUSTOMIZATION, readTicketCustomization, escapeTicketHtml, ticketContactHtml, ticketFooterHtml } from "../../../shared/config/posTicket";

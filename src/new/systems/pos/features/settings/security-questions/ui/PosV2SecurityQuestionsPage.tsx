@@ -1,3 +1,4 @@
+import {authenticatedFetch as fetch} from '../../../../../../core/api/sessionFetch';
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { PosV2Shell } from "../../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
