@@ -7,7 +7,7 @@ import "../../landing-ravekh/pages/LandingPage.css";
 export const PrivacyPolicyPage = () => {
   const { policySlug } = useParams<{ policySlug: string }>();
   const policy = PRIVACY_POLICIES.find((item) => item.slug === policySlug);
-  const returnPath = policySlug === "ravekh-crm" ? "/crm" : "/";
+  const returnPath = policySlug === "ravekh-crm" ? "/landing/crm" : "/";
   const returnLabel = policySlug === "ravekh-crm" ? "Volver a RAVEKH CRM" : "Volver al inicio";
 
   if (!policy) {

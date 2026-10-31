@@ -11,7 +11,7 @@ const sections = [
 export const TermsPage = () => (
   <main className="min-h-screen bg-fondo-oscuro text-white px-4 py-10 md:px-10">
     <div className="max-w-5xl mx-auto">
-      <Link to="/crm" className="inline-flex mb-6 text-sm underline">← Volver a RAVEKH CRM</Link>
+      <Link to="/landing/crm" className="inline-flex mb-6 text-sm underline">← Volver a RAVEKH CRM</Link>
       <div className="rounded-2xl border border-white/20 bg-white/5 p-5 md:p-8">
         <h1 className="text-3xl md:text-4xl font-bold">Términos del servicio — RAVEKH CRM</h1>
         <p className="text-white/80 mt-2">Borrador informativo pendiente de revisión legal.</p>

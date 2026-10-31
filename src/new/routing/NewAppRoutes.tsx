@@ -96,7 +96,7 @@ const RouteSeo = () => {
       };
     }
 
-    if (pathname === "/crm") {
+    if (pathname === "/landing/crm") {
       return {
         title: "RAVEKH CRM | Gestión de clientes y conversaciones de WhatsApp",
         description: "Conoce RAVEKH CRM, una plataforma para organizar conversaciones de WhatsApp Business, gestionar clientes y facilitar el seguimiento comercial de tu negocio.",
@@ -145,7 +145,7 @@ const RouteSeo = () => {
       };
     }
 
-    if (pathname.startsWith("/pos") || pathname.startsWith("/v2/pos") || pathname.startsWith("/coupons")) {
+    if (pathname === "/crm" || pathname.startsWith("/pos") || pathname.startsWith("/v2/pos") || pathname.startsWith("/coupons")) {
       return {
         title: "Ravekh App",
         description: "Aplicación de operación interna de Ravekh.",
@@ -184,7 +184,7 @@ export const NewAppRoutes = () => {
       <RouteSeo />
       <Routes>
         <Route path="/" element={<LandingPageRavekhPage />} />
-        <Route path="/crm" element={<CrmLandingPage />} />
+        <Route path="/landing/crm" element={<CrmLandingPage />} />
         <Route path="/maincatalogo" element={<MainCatalogPage />} />
         <Route path="/catalogo-digital" element={<MainCatalogPage />} />
         <Route path="/RavekhBoutique" element={<RavekhBoutiquePage />} />
