@@ -3,8 +3,6 @@ import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
 import { CrmWebApi, Conversation, CrmMessage, CrmContact, CrmOpportunity, CrmActivity, CrmChannel, CrmAgent, MetaDiagnostic } from "../api/CrmWebApi";
 import "./PosV2CrmPage.css";
-import { loadFacebookSdk, launchMetaSignup } from "../api/metaEmbeddedSignup";
-import type { MetaSignupConfig } from "../api/metaEmbeddedSignup";
 
 type View = "inbox" | "contacts" | "opportunities" | "activities" | "channels" | "agent";
 const errorText = (error: unknown) => error instanceof Error ? error.message : "Ocurrió un error de conexión.";
@@ -29,7 +27,6 @@ export function PosV2CrmPage() {
   const [channels,setChannels] = useState<CrmChannel[]>([]);
   const [agents,setAgents] = useState<CrmAgent[]>([]);
   const [diagnostics,setDiagnostics] = useState<Record<number,MetaDiagnostic>>({});
-  const [metaReady,setMetaReady] = useState<(MetaSignupConfig & {ticket:string;createdAt:number})|null>(null);
   const [metaPhone,setMetaPhone] = useState("");
   const [metaWaba,setMetaWaba] = useState("");
   const [metaToken,setMetaToken] = useState("");
@@ -113,32 +110,31 @@ export function PosV2CrmPage() {
     catch(cause){setError(errorText(cause));}finally{setBusy(false);}
   };
   const beginMeta = async () => {
-    if(busy)return;
-    if(!metaReady || Date.now()-metaReady.createdAt>8*60*1000){
-      setBusy(true);setError("");setSuccess("");
-      try {
-        const [config] = await Promise.all([api.beginMetaOnboarding(),loadFacebookSdk()]);
-        setMetaReady({...config,createdAt:Date.now()});
-        setSuccess("Conexión preparada. Pulsa «Continuar con Meta» para autorizar tu WhatsApp.");
-      }catch(cause){setError(errorText(cause));setMetaReady(null);}
-      finally{setBusy(false);}
-      return;
-    }
-    // FB.login must execute synchronously during this click to preserve browser user activation.
-    setBusy(true);setError("");setSuccess("");
-    const ticket=metaReady.ticket;
-    let signup:Promise<Awaited<ReturnType<typeof launchMetaSignup>>>;
-    try { signup=launchMetaSignup(metaReady); }
-    catch(cause){setError(errorText(cause));setBusy(false);setMetaReady(null);return;}
+    if (busy) return;
+    // Reserve the popup synchronously on the user click to avoid popup blockers.
+    const popup = window.open("", "ravekh-meta-onboarding", "width=560,height=760");
+    setBusy(true);
+    setError("");
+    setSuccess("");
     try {
-      const result=await signup;
-      const saved=await api.completeMetaOnboarding({ticket,...result});
-      setSuccess(saved.Status==='WEBHOOK_SUBSCRIBED'
-        ? "WhatsApp registrado y webhook suscrito. Comprueba la activación del canal."
-        : "WhatsApp registrado. Hay pasos pendientes de verificación o suscripción.");
-      await refresh("channels");
-    }catch(cause){setError(errorText(cause));}
-    finally{setBusy(false);setMetaReady(null);}
+      const result = await api.beginMetaOnboarding();
+      if (!result.url || !result.url.startsWith("https://")) {
+        throw new Error("El backend no devolvió una URL segura para conectar con Meta.");
+      }
+      if (popup && !popup.closed) {
+        popup.location.assign(result.url);
+        popup.focus();
+        setSuccess("Se abrió la conexión desde RAVEKH. Completa los pasos en la ventana y después actualiza los canales.");
+      } else {
+        // Preserve the ticket only in the URL; don't expose it through a log or another UI.
+        window.location.assign(result.url);
+      }
+    } catch (cause) {
+      if (popup && !popup.closed) popup.close();
+      setError(errorText(cause));
+    } finally {
+      setBusy(false);
+    }
   };
   const filtered = conversations.filter(c => `${c.Contact_Name || ""} ${c.Subject || ""} ${c.Last_Message_Body || ""}`.toLowerCase().includes(filter.toLowerCase()));
   return <PosV2Shell title="CRM" subtitle="Conversaciones y seguimiento comercial">
@@ -170,8 +166,8 @@ export function PosV2CrmPage() {
       {view === "opportunities" && <section className="rvk-crm__panel"><h3>Oportunidades</h3><div className="rvk-crm__rows">{opportunities.map(o=><div key={o.Id}><span><strong>{o.Title}</strong><small>{o.Status || "OPEN"}</small></span><span>{Number(o.Amount || 0).toLocaleString("es-MX",{style:"currency",currency:o.Currency || "MXN"})}</span></div>)}{!loading && !opportunities.length && <p>No hay oportunidades registradas.</p>}</div></section>}
       {view === "channels" && <section className="rvk-crm__panel rvk-crm__settings">
         <h3>Conectar WhatsApp con Meta</h3><p>Conecta tu cuenta de WhatsApp Business a RAVEKH. La conexión se registra primero como pendiente y solo se activa tras la verificación real del webhook de Meta.</p>
-        <button type="button" disabled={busy} onClick={()=>void beginMeta()}>{busy ? "Procesando…" : metaReady && Date.now()-metaReady.createdAt<=8*60*1000 ? "Continuar con Meta" : "Preparar conexión con Meta"}</button>
-        <p className="rvk-crm__hint">Meta se abrirá directamente desde esta pantalla, sin ventana intermedia de RAVEKH.</p>
+        <button type="button" disabled={busy} onClick={()=>void beginMeta()}>{busy ? "Procesando…" : "Conectar con Meta"}</button>
+        <p className="rvk-crm__hint">Se abrirá la página segura de conexión de RAVEKH y, desde ella, el diálogo de Meta. Al terminar, actualiza los canales.</p>
         <p className="rvk-crm__hint">Si ya tienes una aplicación y un número configurado directamente en Meta, también puedes vincularlos manualmente.</p>
         <form className="rvk-crm__form" onSubmit={e=>{e.preventDefault();void perform(async()=>{await api.linkExistingMeta(metaPhone.trim(),metaWaba.trim(),metaToken.trim());setMetaToken("");},"Número registrado; revisa su diagnóstico y suscribe el webhook.","channels");}}>
           <input aria-label="ID del número de Meta" placeholder="Phone Number ID" value={metaPhone} onChange={e=>setMetaPhone(e.target.value)} pattern="[0-9]{5,30}" required />
