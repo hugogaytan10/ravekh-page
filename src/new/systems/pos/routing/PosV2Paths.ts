@@ -27,7 +27,7 @@ export const POS_V2_PATHS = {
   catalog: "/catalog",
   customers: "/customers",
   pendingPayments: "/pending-payments",
-  crm: "/crm",
+  crm: "/pos/crm",
   employees: "/employees",
   onlineStore: "/online-store",
   health: "/health",
