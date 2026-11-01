@@ -50,6 +50,12 @@ export function PosV2CrmPage() {
     finally { setLoading(false); }
   }, [api, token]);
   useEffect(() => { void refresh(view); }, [refresh, view]);
+  useEffect(() => {
+    if (view !== "channels") return;
+    const refreshChannels = () => { void refresh("channels"); };
+    window.addEventListener("focus", refreshChannels);
+    return () => window.removeEventListener("focus", refreshChannels);
+  }, [refresh, view]);
   const open = async (conversation: Conversation) => {
     const request = ++conversationRequest.current;
     setError(""); setSelected(conversation); setMessages([]); setConversationLoading(true); setAiPreview(""); setSendMode("internal");
@@ -113,6 +119,10 @@ export function PosV2CrmPage() {
     if (busy) return;
     // Reserve the popup synchronously on the user click to avoid popup blockers.
     const popup = window.open("", "ravekh-meta-onboarding", "width=560,height=760");
+    if (!popup || popup.closed) {
+      setError("Permite las ventanas emergentes para conectar con Meta y vuelve a intentarlo.");
+      return;
+    }
     setBusy(true);
     setError("");
     setSuccess("");
@@ -124,10 +134,9 @@ export function PosV2CrmPage() {
       if (popup && !popup.closed) {
         popup.location.assign(result.url);
         popup.focus();
-        setSuccess("Se abrió la conexión desde RAVEKH. Completa los pasos en la ventana y después actualiza los canales.");
+        setSuccess("Se abrió la conexión desde RAVEKH. Completa los pasos y regresa aquí para ver el canal registrado.");
       } else {
-        // Preserve the ticket only in the URL; don't expose it through a log or another UI.
-        window.location.assign(result.url);
+        throw new Error("La ventana de conexión se cerró. Vuelve a conectar con Meta.");
       }
     } catch (cause) {
       if (popup && !popup.closed) popup.close();
@@ -167,7 +176,7 @@ export function PosV2CrmPage() {
       {view === "channels" && <section className="rvk-crm__panel rvk-crm__settings">
         <h3>Conectar WhatsApp con Meta</h3><p>Conecta tu cuenta de WhatsApp Business a RAVEKH. La conexión se registra primero como pendiente y solo se activa tras la verificación real del webhook de Meta.</p>
         <button type="button" disabled={busy} onClick={()=>void beginMeta()}>{busy ? "Procesando…" : "Conectar con Meta"}</button>
-        <p className="rvk-crm__hint">Se abrirá la página segura de conexión de RAVEKH y, desde ella, el diálogo de Meta. Al terminar, actualiza los canales.</p>
+        <p className="rvk-crm__hint">Se abrirá la página segura de conexión de RAVEKH y, desde ella, el diálogo de Meta. Al terminar, regresa aquí para actualizar los canales automáticamente.</p>
         <p className="rvk-crm__hint">Si ya tienes una aplicación y un número configurado directamente en Meta, también puedes vincularlos manualmente.</p>
         <form className="rvk-crm__form" onSubmit={e=>{e.preventDefault();void perform(async()=>{await api.linkExistingMeta(metaPhone.trim(),metaWaba.trim(),metaToken.trim());setMetaToken("");},"Número registrado; revisa su diagnóstico y suscribe el webhook.","channels");}}>
           <input aria-label="ID del número de Meta" placeholder="Phone Number ID" value={metaPhone} onChange={e=>setMetaPhone(e.target.value)} pattern="[0-9]{5,30}" required />
