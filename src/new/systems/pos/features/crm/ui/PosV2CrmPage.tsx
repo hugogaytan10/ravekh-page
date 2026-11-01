@@ -56,6 +56,54 @@ export function PosV2CrmPage() {
     window.addEventListener("focus", refreshChannels);
     return () => window.removeEventListener("focus", refreshChannels);
   }, [refresh, view]);
+  const selectedId = selected?.Id;
+  useEffect(() => {
+    if (!token || view !== "inbox" || busy || loading || conversationLoading) return;
+    let disposed = false;
+    let running = false;
+    let dirty = false;
+    let syncError = "";
+    const syncInbox = async () => {
+      if (document.hidden || disposed) return;
+      if (running) { dirty = true; return; }
+      dirty = false;
+      const request = conversationRequest.current;
+      running = true;
+      try {
+        const [list, current, entries] = await Promise.all([
+          api.conversations(),
+          selectedId ? api.conversation(selectedId) : Promise.resolve(null),
+          selectedId ? api.messages(selectedId) : Promise.resolve(null),
+        ]);
+        if (disposed || request !== conversationRequest.current) return;
+        setConversations(list);
+        if (current) setSelected(value => value?.Id === selectedId ? { ...value, ...current } : value);
+        if (entries) setMessages(entries.slice().reverse());
+        if (syncError) setError(value => value === syncError ? "" : value);
+      } catch (cause) {
+        if (!disposed && request === conversationRequest.current) {
+          syncError = errorText(cause);
+          setError(syncError);
+        }
+      } finally { running = false; if (dirty && !disposed) void syncInbox(); }
+    };
+    let disconnect:(()=>void)|undefined;
+    const resume = () => {
+      if(document.hidden){disconnect?.();disconnect=undefined;return;}
+      if(!disconnect)disconnect=api.subscribeInbox(()=>void syncInbox(),message=>{
+        if(!disposed){syncError=message;setError(message);}
+      });
+    };
+    resume();
+    window.addEventListener("focus", resume);
+    document.addEventListener("visibilitychange", resume);
+    return () => {
+      disposed = true;
+      disconnect?.();
+      window.removeEventListener("focus", resume);
+      document.removeEventListener("visibilitychange", resume);
+    };
+  }, [api, token, view, selectedId, busy, loading, conversationLoading]);
   const open = async (conversation: Conversation) => {
     const request = ++conversationRequest.current;
     setError(""); setSelected(conversation); setMessages([]); setConversationLoading(true); setAiPreview(""); setSendMode("internal");

@@ -26,6 +26,49 @@ export class CrmWebApi {
     if (!result?.success) throw new Error(result?.message || "No se pudo completar la operación.");
     return result.data;
   }
+  subscribeInbox(onChange:()=>void,onError:(message:string)=>void):()=>void {
+    let closed=false;
+    let controller:AbortController|undefined;
+    let retry:ReturnType<typeof setTimeout>|undefined;
+    const connect=async()=>{
+      controller=new AbortController();
+      try {
+        const response=await fetch(new URL("crm/inbox/events",getPosApiBaseUrl()),{
+          method:"POST",headers:{Authorization:`Bearer ${this.token}`,Accept:"text/event-stream"},
+          signal:controller.signal,cache:"no-store",
+        });
+        if(!response.ok||!response.body){
+          if(response.status===401||response.status===403)closed=true;
+          throw new Error(`No se pudo conectar el chat en vivo (HTTP ${response.status}).`);
+        }
+        if(!response.headers.get("content-type")?.includes("text/event-stream"))throw new Error("Respuesta inválida del chat en vivo.");
+        const reader=response.body.getReader();
+        const decoder=new TextDecoder();
+        let buffer="";
+        try {
+          while(!closed){
+            const {done,value}=await reader.read();
+            if(done)break;
+            buffer+=decoder.decode(value,{stream:true});
+            buffer=buffer.replace(/\r\n/g,"\n");
+            let end:number;
+            while((end=buffer.indexOf("\n\n"))!==-1){
+              const frame=buffer.slice(0,end);buffer=buffer.slice(end+2);
+              if(frame.split("\n").some(line=>line==="data: refresh")&&!closed)onChange();
+            }
+            if(buffer.length>65536)throw new Error("Evento inválido del chat en vivo.");
+          }
+        } finally { await reader.cancel().catch(()=>undefined); }
+        if(!closed)onError("Se perdió la conexión del chat. Reconectando…");
+      }catch(error){
+        if(!controller.signal.aborted)onError(error instanceof Error?error.message:"No se pudo conectar el chat en vivo.");
+      }finally{
+        if(!closed)retry=setTimeout(()=>void connect(),2000);
+      }
+    };
+    void connect();
+    return()=>{closed=true;controller?.abort();if(retry)clearTimeout(retry);};
+  }
   channels() { return this.get<CrmChannel[]>("crm/channels"); }
   beginMetaOnboarding() { return this.send<{ticket:string;appId:string;configId:string;graphVersion:string;url:string}>("POST", "crm/meta/whatsapp/start", {}); }
   completeMetaOnboarding(body:{ticket:string;code:string;wabaId:string;phoneId:string|null;connectionMode:"CLOUD_API"|"COEXISTENCE"}) { return this.send<{Id:number;Status:string;Enabled:boolean}>("POST","crm/meta/whatsapp/complete",body); }
