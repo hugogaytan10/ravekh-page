@@ -1,3 +1,4 @@
+import {authenticatedFetch as fetch} from '../../../../core/api/sessionFetch';
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { emitPosBusinessUpdated } from "../config/posBusinessEvents";
 import { getPosApiBaseUrl } from "../config/posEnv";
@@ -190,7 +191,6 @@ const postJson = async <T,>(path: string, payload: unknown, token: string): Prom
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      token,
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(payload),

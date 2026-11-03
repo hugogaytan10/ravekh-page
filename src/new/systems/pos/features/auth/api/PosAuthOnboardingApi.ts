@@ -18,6 +18,7 @@ type LoginResponse = {
   Name?: string;
   Email?: string;
   Token?: string;
+  RefreshToken?: string;
   message?: string;
 };
 
@@ -27,11 +28,13 @@ type SignUpResponse = {
     Name?: string;
     Email?: string;
     Token?: string;
+  RefreshToken?: string;
   };
   Business?: {
     Id?: number;
   };
   Token?: string;
+  RefreshToken?: string;
   message?: string;
 };
 
@@ -79,6 +82,7 @@ async getSecurityQuestionStatus(employeeId: number, token: string): Promise<Secu
       response.Name ?? "",
       response.Email ?? credentials.email,
       response.Token ?? "",
+      response.RefreshToken ?? "",
     );
   }
 
@@ -123,6 +127,7 @@ async getSecurityQuestionStatus(employeeId: number, token: string): Promise<Secu
       response.Employee?.Name ?? payload.employee.name,
       response.Employee?.Email ?? payload.employee.email,
       response.Token ?? response.Employee?.Token ?? "",
+      response.RefreshToken ?? response.Employee?.RefreshToken ?? "",
     );
   }
 

@@ -1,3 +1,4 @@
+import {authenticatedFetch as fetch} from '../../../../core/api/sessionFetch';
 import { getPosApiBaseUrl } from "./posEnv";
 
 export type PosFeatureLevel = 0 | 1 | 2;
@@ -90,7 +91,6 @@ export const fetchPosBusinessFeatures = async (businessId: number, token: string
   const response = await fetch(new URL(`business/${businessId}`, apiBaseUrl).toString(), {
     headers: {
       "Content-Type": "application/json",
-      token,
       Authorization: `Bearer ${token}`,
     },
   });

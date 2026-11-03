@@ -15,6 +15,7 @@ const setCuponesSession = (isActive: boolean) => {
     localStorage.setItem(SESSION_KEY, "true");
   } else {
     localStorage.removeItem(SESSION_KEY);
+    localStorage.removeItem("cupones-refresh-token");
   }
 };
 
@@ -63,6 +64,7 @@ const setCuponesToken = (token?: string) => {
     localStorage.setItem(TOKEN_KEY, token);
   } else {
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem("cupones-refresh-token");
   }
 };
 

@@ -82,6 +82,7 @@ export const CatalogAiSessionRefreshModal = ({
 
       const refreshedSession: PersistedPosSession = {
         token: session.token,
+        refreshToken: session.refreshToken,
         businessId: session.businessId,
         employeeId: session.employeeId,
         email: session.email,

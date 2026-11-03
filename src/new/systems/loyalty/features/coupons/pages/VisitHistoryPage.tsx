@@ -306,7 +306,7 @@ const VisitHistoryPage: React.FC = () => {
                             <div>
                               <p className="text-sm font-semibold">{formatVisitDate(visit.Date)}</p>
                               <p className="text-[11px] font-semibold" style={{ color: theme.textMuted }}>
-                                Visita #{visitNumber}
+                                {visit.BranchName || "Sucursal no registrada"} · Visita #{visitNumber}
                               </p>
                             </div>
                             <span

@@ -1,5 +1,6 @@
 export const POS_SESSION_STORAGE_KEYS = {
   token: "pos-v2-token",
+  refreshToken: "pos-v2-refresh-token",
   businessId: "pos-v2-business-id",
   employeeId: "pos-v2-employee-id",
   email: "pos-v2-email",
@@ -131,6 +132,7 @@ export const clearPendingPosUpgradeContext = (): void => {
 export const clearPosSessionSnapshot = (): void => {
   try {
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.token);
+    window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.refreshToken);
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.businessId);
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.employeeId);
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.email);

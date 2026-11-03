@@ -5,6 +5,7 @@ export class AuthSession {
     public readonly employeeName: string,
     public readonly email: string,
     public readonly token: string,
+    public readonly refreshToken: string = "",
   ) {}
 
   isValid(): boolean {
