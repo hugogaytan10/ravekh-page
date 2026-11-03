@@ -49,7 +49,6 @@ export class FetchHttpClient implements HttpClient {
 
     if (request.token) {
       headers.Authorization = `Bearer ${request.token}`;
-      headers.token = request.token;
 
       if (!request.skipBranchHeader) {
         const branchId = request.branchId ?? readActivePosBranchId();

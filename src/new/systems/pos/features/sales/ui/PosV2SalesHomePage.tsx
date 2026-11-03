@@ -32,7 +32,6 @@ import {
   readPosPrinters,
 } from "../../../shared/config/posPrinters";
 import {
-  hasPosDynamicVisitsQrModule,
   hasPosLoyaltyModule,
   normalizePosCouponsPlan,
 } from "../../../shared/config/posLoyaltyPlan";
@@ -105,6 +104,9 @@ type SaleLimitDetails = {
 };
 
 type SaleMutationResponse = {
+  data?: {orderId?: number; commandId?: number};
+  commandId?: number;
+  orderId?: number;
   message?: string;
   error?: string;
   code?: string;
@@ -679,7 +681,6 @@ export const PosV2SalesHomePage = () => {
     fetch(new URL(`business/${businessId}`, API_BASE_URL).toString(), {
       headers: {
         "Content-Type": "application/json",
-        token,
         Authorization: `Bearer ${token}`,
       },
     })
@@ -1938,6 +1939,8 @@ export const PosV2SalesHomePage = () => {
       );
       setTicketShareMessage("");
       setCompletedSale({
+        commandId: Number(responseData?.data?.commandId ?? responseData?.commandId) || undefined,
+        orderId: Number(responseData?.data?.orderId ?? responseData?.orderId) || undefined,
         folio,
         paymentMethodLabel,
         table: selectedTableName,
@@ -1981,7 +1984,9 @@ export const PosV2SalesHomePage = () => {
     return hasFolio && hasTotal && hasItems;
   };
 
-  const resolveVisitQrUrlForTicket = async (): Promise<string | null> => {
+  const resolveVisitQrUrlForTicket = async (sale: CompletedSale): Promise<string | null> => {
+    const saleId = sale.orderId ?? sale.commandId;
+    if (!saleId) throw new Error("La venta debe estar guardada antes de generar su QR.");
     const { token, businessId } = getCurrentSession();
     if (!token || !businessId || !hasPosLoyaltyModule(couponsPlan)) return null;
 
@@ -1991,46 +1996,12 @@ export const PosV2SalesHomePage = () => {
         ? window.location.origin
         : "https://ravekh.com");
 
-    if (hasPosDynamicVisitsQrModule(couponsPlan)) {
-      const dynamicResponse = await fetch(
-        new URL("visits/qr/dynamic/next", API_BASE_URL).toString(),
-        {
-          method: "POST",
-          headers: {...buildPosAuthHeaders(token), "X-Visit-Scope":"branch-v1"},
-          body: JSON.stringify({ businessId, domain: couponsDomain }),
-        },
-      );
-
-      const dynamicPayload = (await dynamicResponse
-        .json()
-        .catch(() => null)) as {
-        qrUrl?: string;
-        data?: { qrUrl?: string };
-      } | null;
-
-      const dynamicQrUrl = String(
-        dynamicPayload?.qrUrl ?? dynamicPayload?.data?.qrUrl ?? "",
-      ).trim();
-      if (!dynamicResponse.ok || !dynamicQrUrl) {
-        throw new Error(
-          "No fue posible generar el QR dinámico de visita para este ticket.",
-        );
-      }
-
-      return dynamicQrUrl;
-    }
-
     const response = await fetch(
-      new URL("visits/qr/generate", API_BASE_URL).toString(),
+      new URL(`${sale.orderId ? "orders" : "commands"}/${saleId}/visit-qr`, API_BASE_URL).toString(),
       {
         method: "POST",
-        headers: {...buildPosAuthHeaders(token), "X-Visit-Scope":"branch-v1"},
-        body: JSON.stringify({
-          businessId,
-          quantity: 1,
-          ttlMinutes: 60,
-          domain: couponsDomain,
-        }),
+        headers: buildPosAuthHeaders(token),
+        body: JSON.stringify({quantity: 1, domain: couponsDomain}),
       },
     );
 
@@ -2105,7 +2076,7 @@ export const PosV2SalesHomePage = () => {
 
     if (settings.showVisitQr && !isFreeSalesPlan && hasPosLoyaltyModule(couponsPlan)) {
       try {
-        visitQrUrl = await resolveVisitQrUrlForTicket();
+        visitQrUrl = await resolveVisitQrUrlForTicket(sale);
       } catch (error) {
         setUiMessage(
           error instanceof Error

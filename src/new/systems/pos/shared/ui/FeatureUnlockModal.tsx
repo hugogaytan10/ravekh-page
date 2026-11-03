@@ -191,7 +191,6 @@ const postJson = async <T,>(path: string, payload: unknown, token: string): Prom
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      token,
       Authorization: `Bearer ${token}`,
     },
     body: JSON.stringify(payload),

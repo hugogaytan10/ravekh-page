@@ -109,15 +109,19 @@ export function createSessionTransport(options: {
     const headers = new Headers(init.headers);
     const legacy = headers.get('token');
     const bearer = headers.get('Authorization')?.replace(/^Bearer\s+/i, '');
-    if (legacy && bearer && legacy !== bearer) return send(input, init);
+    if (legacy && bearer && legacy !== bearer) throw new Error('Los headers de autenticación contienen credenciales distintas.');
     const explicit = legacy || bearer;
+    if (explicit) {
+      headers.set('Authorization', `Bearer ${explicit}`);
+      headers.delete('token');
+    }
     const original = await options.store.read();
-    if (!original || (explicit && !identityMatches(explicit, original.Token))) return send(input, init);
+    if (!original || (explicit && !identityMatches(explicit, original.Token))) return send(input, {...init, headers});
     let session = await ensureSession();
     if (!session || !identityMatches(original.Token, session.Token)) throw new SessionExpiredError();
     const request = () => {
       headers.set('Authorization', `Bearer ${session!.Token}`);
-      headers.set('token', session!.Token);
+      headers.delete('token');
       return send(input, { ...init, headers });
     };
     let response = await request();

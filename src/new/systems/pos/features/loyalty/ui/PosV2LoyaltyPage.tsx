@@ -262,7 +262,7 @@ export const PosV2LoyaltyPage = () => {
     setBusinessInfoError(null);
     try {
       const response = await fetch(new URL(`business/${session.businessId}`, API_BASE_URL).toString(), {
-        headers: { "Content-Type": "application/json", token: session.token, Authorization: `Bearer ${session.token}` },
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${session.token}` },
       });
       if (!response.ok) throw new Error("No se pudieron verificar tus permisos de fidelidad. Intenta nuevamente.");
       const payload = await response.json() as Record<string, unknown>;

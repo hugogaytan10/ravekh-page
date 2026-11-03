@@ -119,7 +119,6 @@ export const buildPosAuthHeaders = (
   }
 
   if (token) {
-    headers.token = token;
     headers.Authorization = `Bearer ${token}`;
   }
 

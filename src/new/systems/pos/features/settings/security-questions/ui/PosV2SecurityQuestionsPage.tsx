@@ -60,7 +60,6 @@ const requestJson = async <TResponse,>(path: string, token: string, init?: Reque
 
   if (token) {
     headers.Authorization = `Bearer ${token}`;
-    headers.token = token;
   }
 
   const response = await fetch(new URL(path, API_BASE_URL).toString(), {

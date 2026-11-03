@@ -91,7 +91,6 @@ export const fetchPosBusinessFeatures = async (businessId: number, token: string
   const response = await fetch(new URL(`business/${businessId}`, apiBaseUrl).toString(), {
     headers: {
       "Content-Type": "application/json",
-      token,
       Authorization: `Bearer ${token}`,
     },
   });
