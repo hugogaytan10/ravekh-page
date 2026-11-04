@@ -7,14 +7,14 @@
 .pos-v2-upgrade-plan__card {
   width: min(100%, 560px);
   padding: 1.25rem;
-  border-radius:8px;
-  border:1px solid var(--pos-v2-border);
-  background:var(--pos-v2-surface);
-  box-shadow: none;
+  border-radius: 1.25rem;
+  border: 1px solid #dbeafe;
+  background: linear-gradient(135deg, #ffffff 0%, #eff6ff 100%);
+  box-shadow: 0 18px 55px rgba(15, 23, 42, 0.12);
 }
 
 .pos-v2-upgrade-plan__card span {
-  color:var(--pos-v2-accent-text);
+  color: #1d4ed8;
   font-weight: 900;
   text-transform: uppercase;
   font-size: 0.78rem;
@@ -26,7 +26,7 @@
 }
 
 .pos-v2-upgrade-plan__card p {
-  color: var(--pos-v2-text-muted);
+  color: #475569;
   line-height: 1.55;
 }
 
@@ -47,14 +47,14 @@
 
 .pos-v2-upgrade-plan__primary {
   border: 0;
-  background:var(--pos-v2-accent);
-  color: var(--pos-v2-text-inverse);
+  background: #2563eb;
+  color: #fff;
 }
 
 .pos-v2-upgrade-plan__secondary {
-  border: 1px solid var(--pos-v2-border);
-  background: var(--pos-v2-surface);
-  color: var(--pos-v2-text);
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
 }
 
 .pos-v2-upgrade-plan__todo {
