@@ -2285,7 +2285,7 @@ export const ProductsV2PosPage = () => {
                 }
               }}
             >
-              <summary className="pos-v2-products__secondary">✦ Crear con IA <span className="pos-v2-products__create-chevron" aria-hidden="true"><FiChevronRight size={18} /></span></summary>
+              <summary className="pos-v2-products__secondary">Crear con IA <span className="pos-v2-products__create-chevron" aria-hidden="true"><FiChevronRight size={18} /></span></summary>
               <div className="pos-v2-products__create-options" onClick={(event) => {
                 if ((event.target as HTMLElement).closest("button")) {
                   event.currentTarget.closest("details")?.removeAttribute("open");
