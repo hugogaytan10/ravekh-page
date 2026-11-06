@@ -70,6 +70,18 @@ body {
     
 }
 
+.pos-v2-route-loading {
+    min-height: 100vh;
+    background: #f3f4f6;
+}
+
+:root[data-theme="dark"] .pos-v2-route-loading {
+    background:
+        radial-gradient(circle at 8% -10%, rgba(167, 139, 250, 0.2), transparent 35%),
+        radial-gradient(circle at 100% 0%, rgba(192, 132, 252, 0.18), transparent 30%),
+        linear-gradient(180deg, #090014 0%, #0b1022 100%);
+}
+
 .theme-icon {
     filter: var(--icon-filter);
 }
