@@ -1,3 +1,4 @@
+import { productCsvHeaders } from "../model/productCsvHeaders";
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { POS_ENDPOINTS } from "../../../shared/api/posEndpoints";
 import { toPaginationMeta } from "../../../shared/model/Pagination";
@@ -486,7 +487,7 @@ export class PosProductsApi implements IProductsRepository {
     const lines = this.parseCsvLineArray(normalized);
     if (lines.length < 2) return [];
 
-    const headers = lines[0].map((header) => String(header ?? "").trim());
+    const headers = productCsvHeaders(lines[0]);
     const rows: Record<string, string>[] = [];
 
     for (let index = 1; index < lines.length; index += 1) {

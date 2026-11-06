@@ -36,6 +36,7 @@ const SettingsPage: React.FC = () => {
       'cupones-name',
       'cupones-role',
       'cupones-token',
+      'cupones-refresh-token',
       'cupones-user-id',
       'idBusiness',
       'nombre',

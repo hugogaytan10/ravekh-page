@@ -1,3 +1,4 @@
+import {authenticatedFetch as fetch} from '../../../../../core/api/sessionFetch';
 import { shareSaleTicket, type CompletedSale, type CompletedSaleLine } from "./saleTicket";
 import {isVariantAvailableForSale} from "../model/variantAvailability";
 import { DEFAULT_TICKET_CUSTOMIZATION, readTicketCustomization, escapeTicketHtml, ticketContactHtml, ticketFooterHtml } from "../../../shared/config/posTicket";
@@ -21,7 +22,7 @@ import {
 import "./PosV2SalesHomePage.css";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
-import { buildPosAuthHeaders } from "../../../shared/config/posBranch";
+import { buildPosAuthHeaders,readActivePosBranchId,onPosBranchUpdated } from "../../../shared/config/posBranch";
 import {
   POS_SESSION_STORAGE_KEYS,
   readPosSessionSnapshot,
@@ -31,7 +32,6 @@ import {
   readPosPrinters,
 } from "../../../shared/config/posPrinters";
 import {
-  hasPosDynamicVisitsQrModule,
   hasPosLoyaltyModule,
   normalizePosCouponsPlan,
 } from "../../../shared/config/posLoyaltyPlan";
@@ -104,6 +104,9 @@ type SaleLimitDetails = {
 };
 
 type SaleMutationResponse = {
+  data?: {orderId?: number; commandId?: number};
+  commandId?: number;
+  orderId?: number;
   message?: string;
   error?: string;
   code?: string;
@@ -346,12 +349,17 @@ export const PosV2SalesHomePage = () => {
   } | null>(null);
   const [isCompletingSale, setIsCompletingSale] = useState(false);
   const [tables, setTables] = useState<TableVm[]>([]);
+  const [tableBranchId,setTableBranchId]=useState(()=>readActivePosBranchId());
   const [tableZones, setTableZones] = useState<TableZoneVm[]>([]);
   const [tablesByZone, setTablesByZone] = useState<Record<number, TableVm[]>>(
     {},
   );
   const [selectedTableZoneId, setSelectedTableZoneId] = useState<string>("");
   const [selectedTableId, setSelectedTableId] = useState<string>("");
+  useEffect(()=>onPosBranchUpdated(branch=>{
+    setTableBranchId(branch.id);setTableZones([]);setTables([]);setTablesByZone({});
+    setSelectedTableZoneId('');setSelectedTableId('');
+  }),[]);
   const [completedSale, setCompletedSale] = useState<CompletedSale | null>(
     null,
   );
@@ -673,7 +681,6 @@ export const PosV2SalesHomePage = () => {
     fetch(new URL(`business/${businessId}`, API_BASE_URL).toString(), {
       headers: {
         "Content-Type": "application/json",
-        token,
         Authorization: `Bearer ${token}`,
       },
     })
@@ -868,6 +875,7 @@ export const PosV2SalesHomePage = () => {
         return { normalizedZones, preloadedTables };
       })
       .then(({ normalizedZones, preloadedTables }) => {
+        if(readActivePosBranchId()!==tableBranchId)return;
         debugLog(
           "Zonas cargadas desde endpoint /restaurant/branch/zones",
           normalizedZones,
@@ -877,6 +885,7 @@ export const PosV2SalesHomePage = () => {
         setTablesError(null);
       })
       .catch((error) => {
+        if(readActivePosBranchId()!==tableBranchId)return;
         console.error("[POS-V2-SALES] Error al cargar zonas", error);
         setTables([]);
         setTableZones([]);
@@ -888,7 +897,7 @@ export const PosV2SalesHomePage = () => {
         );
       })
       .finally(() => setLoadingTables(false));
-  }, []);
+  }, [tableBranchId]);
 
   useEffect(() => {
     if (isFreeSalesPlan || tableZones.length === 0) {
@@ -1930,6 +1939,8 @@ export const PosV2SalesHomePage = () => {
       );
       setTicketShareMessage("");
       setCompletedSale({
+        commandId: Number(responseData?.data?.commandId ?? responseData?.commandId) || undefined,
+        orderId: Number(responseData?.data?.orderId ?? responseData?.orderId) || undefined,
         folio,
         paymentMethodLabel,
         table: selectedTableName,
@@ -1973,7 +1984,9 @@ export const PosV2SalesHomePage = () => {
     return hasFolio && hasTotal && hasItems;
   };
 
-  const resolveVisitQrUrlForTicket = async (): Promise<string | null> => {
+  const resolveVisitQrUrlForTicket = async (sale: CompletedSale): Promise<string | null> => {
+    const saleId = sale.orderId ?? sale.commandId;
+    if (!saleId) throw new Error("La venta debe estar guardada antes de generar su QR.");
     const { token, businessId } = getCurrentSession();
     if (!token || !businessId || !hasPosLoyaltyModule(couponsPlan)) return null;
 
@@ -1983,46 +1996,12 @@ export const PosV2SalesHomePage = () => {
         ? window.location.origin
         : "https://ravekh.com");
 
-    if (hasPosDynamicVisitsQrModule(couponsPlan)) {
-      const dynamicResponse = await fetch(
-        new URL("visits/qr/dynamic/next", API_BASE_URL).toString(),
-        {
-          method: "POST",
-          headers: buildPosAuthHeaders(token),
-          body: JSON.stringify({ businessId, domain: couponsDomain }),
-        },
-      );
-
-      const dynamicPayload = (await dynamicResponse
-        .json()
-        .catch(() => null)) as {
-        qrUrl?: string;
-        data?: { qrUrl?: string };
-      } | null;
-
-      const dynamicQrUrl = String(
-        dynamicPayload?.qrUrl ?? dynamicPayload?.data?.qrUrl ?? "",
-      ).trim();
-      if (!dynamicResponse.ok || !dynamicQrUrl) {
-        throw new Error(
-          "No fue posible generar el QR dinámico de visita para este ticket.",
-        );
-      }
-
-      return dynamicQrUrl;
-    }
-
     const response = await fetch(
-      new URL("visits/qr/generate", API_BASE_URL).toString(),
+      new URL(`${sale.orderId ? "orders" : "commands"}/${saleId}/visit-qr`, API_BASE_URL).toString(),
       {
         method: "POST",
         headers: buildPosAuthHeaders(token),
-        body: JSON.stringify({
-          businessId,
-          quantity: 1,
-          ttlMinutes: 60,
-          domain: couponsDomain,
-        }),
+        body: JSON.stringify({quantity: 1, domain: couponsDomain}),
       },
     );
 
@@ -2097,7 +2076,7 @@ export const PosV2SalesHomePage = () => {
 
     if (settings.showVisitQr && !isFreeSalesPlan && hasPosLoyaltyModule(couponsPlan)) {
       try {
-        visitQrUrl = await resolveVisitQrUrlForTicket();
+        visitQrUrl = await resolveVisitQrUrlForTicket(sale);
       } catch (error) {
         setUiMessage(
           error instanceof Error

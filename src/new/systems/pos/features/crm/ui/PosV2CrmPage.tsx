@@ -50,6 +50,60 @@ export function PosV2CrmPage() {
     finally { setLoading(false); }
   }, [api, token]);
   useEffect(() => { void refresh(view); }, [refresh, view]);
+  useEffect(() => {
+    if (view !== "channels") return;
+    const refreshChannels = () => { void refresh("channels"); };
+    window.addEventListener("focus", refreshChannels);
+    return () => window.removeEventListener("focus", refreshChannels);
+  }, [refresh, view]);
+  const selectedId = selected?.Id;
+  useEffect(() => {
+    if (!token || view !== "inbox" || busy || loading || conversationLoading) return;
+    let disposed = false;
+    let running = false;
+    let dirty = false;
+    let syncError = "";
+    const syncInbox = async () => {
+      if (document.hidden || disposed) return;
+      if (running) { dirty = true; return; }
+      dirty = false;
+      const request = conversationRequest.current;
+      running = true;
+      try {
+        const [list, current, entries] = await Promise.all([
+          api.conversations(),
+          selectedId ? api.conversation(selectedId) : Promise.resolve(null),
+          selectedId ? api.messages(selectedId) : Promise.resolve(null),
+        ]);
+        if (disposed || request !== conversationRequest.current) return;
+        setConversations(list);
+        if (current) setSelected(value => value?.Id === selectedId ? { ...value, ...current } : value);
+        if (entries) setMessages(entries.slice().reverse());
+        if (syncError) setError(value => value === syncError ? "" : value);
+      } catch (cause) {
+        if (!disposed && request === conversationRequest.current) {
+          syncError = errorText(cause);
+          setError(syncError);
+        }
+      } finally { running = false; if (dirty && !disposed) void syncInbox(); }
+    };
+    let disconnect:(()=>void)|undefined;
+    const resume = () => {
+      if(document.hidden){disconnect?.();disconnect=undefined;return;}
+      if(!disconnect)disconnect=api.subscribeInbox(()=>void syncInbox(),message=>{
+        if(!disposed){syncError=message;setError(message);}
+      });
+    };
+    resume();
+    window.addEventListener("focus", resume);
+    document.addEventListener("visibilitychange", resume);
+    return () => {
+      disposed = true;
+      disconnect?.();
+      window.removeEventListener("focus", resume);
+      document.removeEventListener("visibilitychange", resume);
+    };
+  }, [api, token, view, selectedId, busy, loading, conversationLoading]);
   const open = async (conversation: Conversation) => {
     const request = ++conversationRequest.current;
     setError(""); setSelected(conversation); setMessages([]); setConversationLoading(true); setAiPreview(""); setSendMode("internal");
@@ -110,14 +164,34 @@ export function PosV2CrmPage() {
     catch(cause){setError(errorText(cause));}finally{setBusy(false);}
   };
   const beginMeta = async () => {
-    // A transient backend-issued ticket is the only onboarding credential in the URL.
-    // Pre-open the window on user gesture to prevent popup blockers.
-    const popup=window.open("", "ravekh-meta-onboarding", "width=560,height=760");
-    await perform(async()=>{const result=await api.beginMetaOnboarding();
-      if(!result.url.startsWith("https://") && !result.url.startsWith("http://"))throw new Error("URL de Meta no válida.");
-      if(popup)popup.location.assign(result.url);else window.location.assign(result.url);
-    },"Se abrió la conexión con Meta. Al terminar, vuelve y actualiza los canales.");
-    // La ventana puede estar ahora en otro origen; no se inspecciona su location.
+    if (busy) return;
+    // Reserve the popup synchronously on the user click to avoid popup blockers.
+    const popup = window.open("", "ravekh-meta-onboarding", "width=560,height=760");
+    if (!popup || popup.closed) {
+      setError("Permite las ventanas emergentes para conectar con Meta y vuelve a intentarlo.");
+      return;
+    }
+    setBusy(true);
+    setError("");
+    setSuccess("");
+    try {
+      const result = await api.beginMetaOnboarding();
+      if (!result.url || !result.url.startsWith("https://")) {
+        throw new Error("El backend no devolvió una URL segura para conectar con Meta.");
+      }
+      if (popup && !popup.closed) {
+        popup.location.assign(result.url);
+        popup.focus();
+        setSuccess("Se abrió la conexión desde RAVEKH. Completa los pasos y regresa aquí para ver el canal registrado.");
+      } else {
+        throw new Error("La ventana de conexión se cerró. Vuelve a conectar con Meta.");
+      }
+    } catch (cause) {
+      if (popup && !popup.closed) popup.close();
+      setError(errorText(cause));
+    } finally {
+      setBusy(false);
+    }
   };
   const filtered = conversations.filter(c => `${c.Contact_Name || ""} ${c.Subject || ""} ${c.Last_Message_Body || ""}`.toLowerCase().includes(filter.toLowerCase()));
   return <PosV2Shell title="CRM" subtitle="Conversaciones y seguimiento comercial">
@@ -149,7 +223,8 @@ export function PosV2CrmPage() {
       {view === "opportunities" && <section className="rvk-crm__panel"><h3>Oportunidades</h3><div className="rvk-crm__rows">{opportunities.map(o=><div key={o.Id}><span><strong>{o.Title}</strong><small>{o.Status || "OPEN"}</small></span><span>{Number(o.Amount || 0).toLocaleString("es-MX",{style:"currency",currency:o.Currency || "MXN"})}</span></div>)}{!loading && !opportunities.length && <p>No hay oportunidades registradas.</p>}</div></section>}
       {view === "channels" && <section className="rvk-crm__panel rvk-crm__settings">
         <h3>Conectar WhatsApp con Meta</h3><p>Conecta tu cuenta de WhatsApp Business a RAVEKH. La conexión se registra primero como pendiente y solo se activa tras la verificación real del webhook de Meta.</p>
-        <button type="button" disabled={busy} onClick={()=>void beginMeta()}>Conectar con Meta</button>
+        <button type="button" disabled={busy} onClick={()=>void beginMeta()}>{busy ? "Procesando…" : "Conectar con Meta"}</button>
+        <p className="rvk-crm__hint">Se abrirá la página segura de conexión de RAVEKH y, desde ella, el diálogo de Meta. Al terminar, regresa aquí para actualizar los canales automáticamente.</p>
         <p className="rvk-crm__hint">Si ya tienes una aplicación y un número configurado directamente en Meta, también puedes vincularlos manualmente.</p>
         <form className="rvk-crm__form" onSubmit={e=>{e.preventDefault();void perform(async()=>{await api.linkExistingMeta(metaPhone.trim(),metaWaba.trim(),metaToken.trim());setMetaToken("");},"Número registrado; revisa su diagnóstico y suscribe el webhook.","channels");}}>
           <input aria-label="ID del número de Meta" placeholder="Phone Number ID" value={metaPhone} onChange={e=>setMetaPhone(e.target.value)} pattern="[0-9]{5,30}" required />

@@ -1,3 +1,4 @@
+import {couponBranchLabel} from "../../../rewards-management/model/RewardCoupon";
 import React, { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { CuponesNav } from "../interface/CouponsNav";
@@ -122,6 +123,7 @@ const MyCouponsPage: React.FC = () => {
               <div className="flex-1">
                 <p className="text-base font-extrabold">Cupón reclamado</p>
                 <p className="text-sm leading-snug">{coupon.Description}</p>
+                  <p className="text-xs">{couponBranchLabel(coupon.Branch_Ids,coupon.Branch_Names)}</p>
                 <button
                   type="button"
                   className="mt-3 inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-xs font-bold shadow-[0_6px_14px_rgba(0,0,0,0.18)]"

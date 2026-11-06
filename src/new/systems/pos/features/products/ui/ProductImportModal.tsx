@@ -96,13 +96,18 @@ export const ProductImportModal = ({
           <div className="pos-v2-products__import-panel">
             <div>
               <h4>Importar CSV simple</h4>
-              <p>Selecciona un archivo .csv. El frontend lo leerá y enviará las filas al backend como JSON, manteniendo el flujo actual.</p>
+              <p>Selecciona un CSV UTF-8 con columnas separadas por comas. Nombre es obligatorio; puedes agregar Precio, Código de barras, Existencias, Costo, Categoría, Subcategoría, Descripción e Imagen (URL). También se aceptan los encabezados anteriores.</p>
             </div>
             <label className="pos-v2-products__file-drop">
               <span>Archivo CSV</span>
               <input type="file" accept=".csv,text/csv" disabled={importing} onChange={(event) => setCsvFile(event.target.files?.[0] ?? null)} />
               <strong>{csvFile?.name ?? "Seleccionar CSV"}</strong>
             </label>
+            <div className="pos-v2-products__import-help">
+              <strong>Ejemplo de CSV</strong>
+              <pre>{`Nombre,Precio,Existencias
+Café,35,10`}</pre>
+            </div>
           </div>
         ) : (
           <div className="pos-v2-products__import-panel">

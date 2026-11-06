@@ -7,6 +7,8 @@ export type CompletedSaleLine = {
   lineTotal: number;
 };
 export type CompletedSale = {
+  orderId?: number;
+  commandId?: number;
   folio: string;
   paymentMethodLabel: string;
   table: string;

@@ -1,3 +1,4 @@
+import {authenticatedFetch as fetch} from './sessionFetch';
 import { HttpClient, HttpRequest } from "./HttpClient";
 import { readActivePosBranchId } from "../../systems/pos/shared/config/posBranch";
 
@@ -48,12 +49,14 @@ export class FetchHttpClient implements HttpClient {
 
     if (request.token) {
       headers.Authorization = `Bearer ${request.token}`;
-      headers.token = request.token;
 
       if (!request.skipBranchHeader) {
         const branchId = request.branchId ?? readActivePosBranchId();
         if (Number.isInteger(branchId) && branchId > 0) {
           headers["X-Branch-Id"] = String(branchId);
+          if(/^(?:coupons|couponhasusers)(?:\/|$)/.test(request.path)) headers["X-Coupon-Scope"]="branch-v1";
+          if(/^(?:visits|visits\/qr\/(?:generate|dynamic\/next))$/.test(request.path)) headers["X-Visit-Scope"]="branch-v1";
+          if(/^(?:categories|products)(?:\/|$)/.test(request.path)) headers['X-Category-Scope']='branch-v1';
         }
       }
     }
