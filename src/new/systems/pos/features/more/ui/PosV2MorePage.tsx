@@ -4,7 +4,7 @@ import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { QRCodeSVG } from "qrcode.react";
-import { FiBox, FiChevronDown, FiShoppingCart, FiStar } from "react-icons/fi";
+import { FiChevronDown } from "react-icons/fi";
 import { MORE_MODULE_SECTIONS } from "../config/moreModules";
 import {
   MoreModuleExecutionContext,
@@ -16,11 +16,8 @@ import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import {
   clearPosSessionSnapshot,
   isSalesOnlyOperator,
-  POS_SESSION_STORAGE_KEYS,
   readPosSessionSnapshot,
   resolvePosOperatorRole,
-  readPosStringList,
-  writePosStringList,
 } from "../../../shared/config/posSession";
 import { POS_V2_PATHS } from "../../../routing/PosV2Paths";
 import { buildPosPublicCatalogUrl } from "../../../shared/config/posExternalLinks";
@@ -50,7 +47,6 @@ import "./PosV2MorePage.css";
 
 const MODULE_ICONS: Record<string, typeof FiSettings> = { "online-store": FiShoppingBag, branches: FiMapPin, customers: FiUsers, "pending-payments": FiCreditCard, employees: FiUserCheck, coupons: FiGift, visits: FiCamera, printers: FiPrinter, "cash-closing": FiDollarSign, settings: FiSettings, intelligence: FiTrendingUp };
 const API_BASE_URL = getPosApiBaseUrl();
-const FAVORITES_KEY = POS_SESSION_STORAGE_KEYS.moreFavorites;
 const BANNER_COLORS = ["#4338CA", "#0EA5E9", "#059669", "#D946EF", "#F97316"];
 const wrapBannerText = (value: string, lineLength: number, maxLines: number) => {
   const words = value.trim().split(/\s+/).filter(Boolean);
@@ -76,9 +72,6 @@ export const PosV2MorePage = () => {
     payload: string;
   } | null>(null);
   const [betaError, setBetaError] = useState<string>("");
-  const [favorites, setFavorites] = useState<string[]>(() =>
-    readPosStringList(FAVORITES_KEY),
-  );
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false);
   const [actionMessage, setActionMessage] = useState<string>("");
   const [features, setFeatures] =
@@ -174,21 +167,6 @@ export const PosV2MorePage = () => {
     item.status === "available" ||
     (item.actionType === "beta-action" &&
       modulePage.supportsInlineExecution(item.id));
-  const workingItems = useMemo(
-    () => allItems.filter((item) => isReadyModule(item)),
-    [allItems],
-  );
-  const summary = useMemo(
-    () => ({
-      total: workingItems.length,
-      working: workingItems.length,
-      favorites: favorites.length,
-    }),
-    [workingItems.length, favorites.length],
-  );
-  const favoriteItems = allItems
-    .filter((item) => favorites.includes(item.id))
-    .sort((a, b) => a.title.localeCompare(b.title, "es-MX"));
   const normalizedQuery = query.trim().toLowerCase();
 
   const filteredSections = useMemo(() => {
@@ -314,10 +292,6 @@ export const PosV2MorePage = () => {
   }, [sessionSnapshot.businessId, sessionSnapshot.token]);
 
   useEffect(() => {
-    writePosStringList(FAVORITES_KEY, favorites);
-  }, [favorites]);
-
-  useEffect(() => {
     if (!actionMessage) return;
     const timeout = window.setTimeout(() => setActionMessage(""), 2800);
     return () => window.clearTimeout(timeout);
@@ -349,14 +323,6 @@ export const PosV2MorePage = () => {
       window.removeEventListener("keydown", onEsc);
     };
   }, [showCatalogQr]);
-
-  const toggleFavorite = (moduleId: string) => {
-    setFavorites((current) =>
-      current.includes(moduleId)
-        ? current.filter((id) => id !== moduleId)
-        : [...current, moduleId],
-    );
-  };
 
   const handleSignOut = () => {
     clearPosSessionSnapshot();
@@ -666,20 +632,6 @@ export const PosV2MorePage = () => {
           </button>
         </section>
 
-        {favoriteItems.length > 0 ? (
-          <section className="pos-v2-more__favorites" aria-label="Favoritos">
-            <div className="pos-v2-more__section-head"><h3>Favoritos</h3></div>
-            <div className="pos-v2-more__grid">
-              {favoriteItems.map((item) => (
-                <button key={`favorite-${item.id}`} type="button"
-                  className="pos-v2-more__module-link" onClick={() => void openModule(item)}>
-                  <span>{item.title}</span><span aria-hidden="true">›</span>
-                </button>
-              ))}
-            </div>
-          </section>
-        ) : null}
-
         {filteredSections.map((section) => (
           <section
             key={section.title}
@@ -697,13 +649,6 @@ export const PosV2MorePage = () => {
                     onClick={() => void openModule(item)} disabled={betaLoadingId === item.id}>
                     <span className="pos-v2-more__module-icon" aria-hidden="true">{(() => { const Icon = MODULE_ICONS[item.id] || FiSettings; return <Icon size={24} />; })()}</span><span>{betaLoadingId === item.id ? "Cargando…" : item.title}</span>
                     <FiChevronRight className="pos-v2-more__module-chevron" aria-hidden="true" />
-                  </button>
-                  <button type="button"
-                    className={`pos-v2-more__favorite ${favorites.includes(item.id) ? "is-active" : ""}`}
-                    onClick={() => toggleFavorite(item.id)}
-                    aria-label={favorites.includes(item.id) ? `Quitar ${item.title} de favoritos` : `Agregar ${item.title} a favoritos`}
-                    aria-pressed={favorites.includes(item.id)}>
-                    {favorites.includes(item.id) ? "★" : "☆"}
                   </button>
                 </div>
               ))}

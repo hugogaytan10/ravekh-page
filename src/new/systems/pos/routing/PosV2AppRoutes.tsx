@@ -39,7 +39,7 @@ const PosV2CrmPage = lazy(() => import("../features/crm/ui/PosV2CrmPage").then(m
 
 const withAuth = (element: JSX.Element) => (
   <PosV2RequireAuth>
-    <Suspense fallback={<p role="status">Cargando…</p>}>{element}</Suspense>
+    <Suspense fallback={null}>{element}</Suspense>
   </PosV2RequireAuth>
 );
 
