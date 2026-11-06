@@ -12,8 +12,8 @@
   width: min(100%, 440px);
   border-radius: 1.25rem;
   border: 1px solid #dbeafe;
-  background: var(--pos-v2-surface);
-  box-shadow: none;
+  background: #fff;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.28);
   padding: 1.25rem;
 }
 
@@ -35,16 +35,16 @@
 
 .pos-plan-upgrade-modal__card p {
   margin-top: 0.55rem;
-  color: var(--pos-v2-text-muted);
+  color: #475569;
   line-height: 1.55;
 }
 
 .pos-plan-upgrade-modal__plan {
-  color: var(--pos-v2-text) !important;
+  color: #0f172a !important;
 }
 
 .pos-plan-upgrade-modal__error {
-  color: var(--pos-v2-danger-text) !important;
+  color: #dc2626 !important;
 }
 
 .pos-plan-upgrade-modal__actions {
@@ -71,11 +71,11 @@
 .pos-plan-upgrade-modal__primary {
   border: 0;
   background: #2563eb;
-  color: var(--pos-v2-text-inverse);
+  color: #fff;
 }
 
 .pos-plan-upgrade-modal__secondary {
-  border: 1px solid var(--pos-v2-border);
-  background: var(--pos-v2-surface);
-  color: var(--pos-v2-text);
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #0f172a;
 }
