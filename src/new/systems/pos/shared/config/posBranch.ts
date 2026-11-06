@@ -1,3 +1,5 @@
+import {getPosApiBaseUrl} from "./posEnv";
+
 export const POS_BRANCH_STORAGE_KEYS = {
   activeBranchId: "pos-v2-branch-id",
   activeBranchName: "pos-v2-branch-name",
@@ -29,9 +31,12 @@ export type PosBranchSnapshot = {
   slug: string;
 };
 
+const storageKey = (key: string): string =>
+  `${key}:${encodeURIComponent(getPosApiBaseUrl().replace(/\/+$/, ""))}`;
+
 const safeGet = (key: string): string => {
   try {
-    return (window.localStorage.getItem(key) ?? "").trim();
+    return (window.localStorage.getItem(storageKey(key)) ?? "").trim();
   } catch {
     return "";
   }
@@ -39,7 +44,7 @@ const safeGet = (key: string): string => {
 
 const safeSet = (key: string, value: string): void => {
   try {
-    window.localStorage.setItem(key, value);
+    window.localStorage.setItem(storageKey(key), value);
   } catch {
     // localStorage can be unavailable in private/constrained contexts.
   }
@@ -47,7 +52,7 @@ const safeSet = (key: string, value: string): void => {
 
 const safeRemove = (key: string): void => {
   try {
-    window.localStorage.removeItem(key);
+    window.localStorage.removeItem(storageKey(key));
   } catch {
     // ignore storage failures
   }

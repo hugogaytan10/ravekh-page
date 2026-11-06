@@ -1845,12 +1845,12 @@ export const PosV2SalesHomePage = () => {
       Customer_Id: selectedCustomerId ? Number(selectedCustomerId) : undefined,
       ...(payLater ? { Status: "PENDIENTE", AmountReceived: advance } : { PaymentMethod: paymentMethod }),
       Total: totals.total,
-      Discount: totals.discount,
+      Discount: discountValue,
       Tax: Boolean(salesTax && applyTax),
       TaxValue: salesTax && applyTax ? salesTax.value : null,
       IsPercent: salesTax && applyTax ? salesTax.isPercent : false,
-      TotalTaxes: totals.taxAmount,
-      TotalDiscount: totals.discount,
+      TotalTaxes: totals.total,
+      TotalDiscount: totals.taxableBase,
       MoneyTipe: readPosCurrency().code,
     };
 

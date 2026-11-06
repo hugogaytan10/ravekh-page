@@ -173,13 +173,17 @@ export const PosV2EmployeesPage = () => {
   };
 
   const removeEmployee = async (employeeId: number) => {
-    if (!token) return;
+    if (!token || saving) return;
+    setSaving(true);
+    setError(null);
     try {
       await page.deleteEmployee(employeeId, token);
       setDeleteCandidate(null);
       await loadEmployees();
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "No se pudo eliminar el empleado.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -256,10 +260,11 @@ export const PosV2EmployeesPage = () => {
           <section className="pos-v2-employees__modal" role="dialog" aria-modal="true">
             <article className="pos-v2-employees__confirm">
               <h3>Eliminar empleado</h3>
-              <p>¿Seguro que deseas eliminar a <strong>{deleteCandidate.name}</strong>? Esta acción no se puede deshacer.</p>
+              <p>¿Seguro que deseas eliminar a <strong>{deleteCandidate.name}</strong>? Perderá el acceso; sus ventas y cortes se conservarán. Podrás terminar sus cortes pendientes desde Corte de caja.</p>
+              {error ? <p role="alert">{error}</p> : null}
               <div className="pos-v2-employees__actions">
-                <button type="button" onClick={() => setDeleteCandidate(null)}>Cancelar</button>
-                <button type="button" className="is-danger" onClick={() => removeEmployee(deleteCandidate.id)}>Eliminar</button>
+                <button type="button" disabled={saving} onClick={() => setDeleteCandidate(null)}>Cancelar</button>
+                <button type="button" className="is-danger" disabled={saving} onClick={() => removeEmployee(deleteCandidate.id)}>{saving ? "Eliminando..." : "Eliminar"}</button>
               </div>
             </article>
           </section>

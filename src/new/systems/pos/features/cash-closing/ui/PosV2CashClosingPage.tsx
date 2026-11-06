@@ -3,7 +3,7 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { cashClosingCsv } from "../model/CashClosing";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
-import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
+import { POS_SESSION_STORAGE_KEYS, resolvePosOperatorRole } from "../../../shared/config/posSession";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { usePlanActionGuard } from "../../../shared/hooks/usePlanActionGuard";
 import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
@@ -44,18 +44,6 @@ const getSafeSession = (): SessionState => {
   };
 };
 
-const getOwnerCapability = (token: string): boolean => {
-  if (!token || !token.includes(".")) return false;
-  try {
-    const payload = JSON.parse(window.atob(token.split(".")[1] || ""));
-    const role = String(payload.role ?? payload.Role ?? payload.typeUser ?? payload.TypeUser ?? "").toLowerCase();
-    const isOwnerFlag = payload.isOwner ?? payload.IsOwner ?? payload.owner ?? payload.Owner;
-    return role.includes("owner") || role.includes("due") || role.includes("admin") || isOwnerFlag === true || isOwnerFlag === 1;
-  } catch {
-    return false;
-  }
-};
-
 export const PosV2CashClosingPage = () => {
   const [session] = useState<SessionState>(() => getSafeSession());
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(() => (session.employeeId > 0 ? String(session.employeeId) : ""));
@@ -69,7 +57,9 @@ export const PosV2CashClosingPage = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string>("");
-  const canCloseCash = useMemo(() => getOwnerCapability(session.token), [session.token]);
+  const operatorRole = resolvePosOperatorRole(session.token);
+  const canManageEmployees = operatorRole === "admin" || operatorRole === "manager";
+  const canCloseCash = canManageEmployees || operatorRole === "staff";
   const hasSalesToClose = currentTotal > 0;
   const { runWithPlanAccess, blockedAction, closeBlockedActionModal, goToUpgradePlan, checkingPlanAccess } = usePlanActionGuard();
 
@@ -121,11 +111,12 @@ export const PosV2CashClosingPage = () => {
 
     try {
       const loadedEmployees = await page.listEmployees(session.businessId, session.token);
-      setEmployees(loadedEmployees);
+      const availableEmployees = canManageEmployees ? loadedEmployees : loadedEmployees.filter(employee => employee.id === session.employeeId);
+      setEmployees(availableEmployees);
 
-      const fallbackEmployee = loadedEmployees[0]?.id ?? 0;
+      const fallbackEmployee = availableEmployees[0]?.id ?? 0;
       const selected = Number(selectedEmployeeId);
-      const activeEmployeeId = Number.isFinite(selected) && selected > 0 ? selected : fallbackEmployee;
+      const activeEmployeeId = availableEmployees.some(employee => employee.id === selected) ? selected : fallbackEmployee;
 
       if (!activeEmployeeId) {
         setError("No encontramos empleados activos para registrar cortes.");
@@ -191,7 +182,7 @@ export const PosV2CashClosingPage = () => {
     }
 
     if (!canCloseCash) {
-      setError("Solo dueños/administradores pueden confirmar el corte de caja.");
+      setError("Tu sesión no tiene permiso para confirmar cortes de caja.");
       return;
     }
 
@@ -237,7 +228,7 @@ export const PosV2CashClosingPage = () => {
         {!session.hasSession ? <p className="pos-v2-cash-closing__error">No hay sesión activa. Inicia sesión para gestionar cierres.</p> : null}
         {error ? <p className="pos-v2-cash-closing__error">{error}</p> : null}
         {toast ? <p className="pos-v2-cash-closing__toast">{toast}</p> : null}
-        {!canCloseCash ? <p className="pos-v2-cash-closing__warning">Solo cuentas dueñas/administradoras pueden ejecutar el cierre.</p> : null}
+        {!canCloseCash ? <p className="pos-v2-cash-closing__warning">Tu sesión no tiene permiso para ejecutar el cierre.</p> : null}
         {session.hasSession && canCloseCash && !loading && !error && !hasSalesToClose ? (
           <p className="pos-v2-cash-closing__warning">No hay ventas registradas todavía (total en $0.00), así que el corte está deshabilitado.</p>
         ) : null}
@@ -247,7 +238,7 @@ export const PosV2CashClosingPage = () => {
           <form onSubmit={handleSubmit} className="pos-v2-cash-closing__form">
             <label>
               Empleado
-              <select value={selectedEmployeeId} onChange={(event) => setSelectedEmployeeId(event.target.value)} disabled={loading || saving || checkingPlanAccess || employees.length === 0}>
+              <select value={selectedEmployeeId} onChange={(event) => setSelectedEmployeeId(event.target.value)} disabled={!canManageEmployees || loading || saving || checkingPlanAccess || employees.length === 0}>
                 <option value="">Selecciona...</option>
                 {employees.map((employee) => (
                   <option key={employee.id} value={String(employee.id)}>{employee.fullName}</option>

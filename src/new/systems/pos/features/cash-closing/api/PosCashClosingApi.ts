@@ -13,7 +13,7 @@ export class PosCashClosingApi implements ICashClosingRepository{
   constructor(private readonly httpClient:HttpClient){}
 
   async listEmployeesByBusiness(businessId:number,token:string):Promise<EmployeeSummary[]>{
-    const response=await this.httpClient.request<EmployeeResponse[]>({method:"GET",path:`employee/business/${businessId}`,token});
+    const response=await this.httpClient.request<EmployeeResponse[]>({method:"GET",path:`employee/business/${businessId}`,query:{includeInactive:1},token});
     return response.map(employee=>({id:employee.Id,fullName:`${employee.Name} ${employee.LastName??""}`.trim()}));
   }
 
