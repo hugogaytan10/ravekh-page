@@ -1023,7 +1023,7 @@ export const FacturaElectronicaPage = () => {
       try {
         const posApiBaseUrl = getPosApiBaseUrl();
         const response = await fetch(new URL(`business/${sessionSnapshot.businessId}`, posApiBaseUrl).toString(), {
-          headers: { "Content-Type": "application/json", token: sessionSnapshot.token, Authorization: `Bearer ${sessionSnapshot.token}` },
+          headers: { "Content-Type": "application/json", Authorization: `Bearer ${sessionSnapshot.token}` },
         });
         const payload = response.ok ? await response.json() : null;
         if (cancelled || !payload) return;

@@ -1,3 +1,4 @@
+import {authenticatedFetch as fetch} from '../../../../../../core/api/sessionFetch';
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { PosV2Shell } from "../../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../../shared/config/posEnv";
@@ -59,7 +60,6 @@ const requestJson = async <TResponse,>(path: string, token: string, init?: Reque
 
   if (token) {
     headers.Authorization = `Bearer ${token}`;
-    headers.token = token;
   }
 
   const response = await fetch(new URL(path, API_BASE_URL).toString(), {

@@ -145,3 +145,14 @@
   .pos-v2-loyalty__modal { padding: 0.5rem; }
   .pos-v2-loyalty__modal-card { border-radius: 12px; }
 }
+
+.pos-v2-loyalty__card { min-width: 0; }
+.pos-v2-loyalty__coupon-qr img { display: block; max-width: 100%; }
+.pos-v2-loyalty__coupon-scope { margin: 0; padding: 0.75rem; border: 1px solid #e2e8f0; border-radius: 10px; min-width: 0; }
+.pos-v2-loyalty__coupon-scope legend { padding: 0 0.375rem; font-weight: 600; }
+.pos-v2-loyalty__coupon-scope label { display: flex; flex-direction: row; align-items: center; gap: 0.625rem; padding: 0.5rem 0; }
+.pos-v2-loyalty__coupon-scope input[type=checkbox], .pos-v2-loyalty__coupon-scope input[type=radio] { width: 18px; height: 18px; min-width: 18px; min-height: 18px; margin: 0; accent-color: #6d01d1; }
+.pos-v2-loyalty__coupon-scope > div { padding-left: 0.75rem; }
+:root[data-theme="dark"] .pos-v2-loyalty__coupon-scope { border-color: #334155; }
+:root[data-theme="dark"] .pos-v2-loyalty__coupon-scope legend { color: #e2e8f0; }
+:root[data-theme="dark"] .pos-v2-loyalty__coupon-scope input[type=checkbox], :root[data-theme="dark"] .pos-v2-loyalty__coupon-scope input[type=radio] { accent-color: #8b5cf6; }

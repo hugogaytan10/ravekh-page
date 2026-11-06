@@ -7,6 +7,8 @@ interface CreateCouponPayload {
 }
 
 interface Coupon {
+  Branch_Ids?: number[] | null;
+  Branch_Names?: string[];
   Id: number;
   Business_Id: number;
   QR: string;
@@ -31,6 +33,8 @@ interface ClaimCouponPayload {
 }
 
 interface Visits {
+  Branch_Id?: number | null;
+  BranchName?: string | null;
   Id?: number;
   Business_Id: number;
   User_Id: number;

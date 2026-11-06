@@ -5,6 +5,7 @@ import {
 
 export type PersistedPosSession = {
   token: string;
+  refreshToken?: string;
   businessId: number;
   employeeId: number;
   email: string;
@@ -16,6 +17,7 @@ export const POS_SESSION_UPDATED_EVENT = "ravekh:pos-session-updated";
 
 export const persistPosSession = (session: PersistedPosSession): void => {
   clearPendingPosUpgradeContext();
+  window.localStorage.setItem(POS_SESSION_STORAGE_KEYS.refreshToken, session.refreshToken ?? '');
 
   window.localStorage.setItem(
     POS_SESSION_STORAGE_KEYS.token,

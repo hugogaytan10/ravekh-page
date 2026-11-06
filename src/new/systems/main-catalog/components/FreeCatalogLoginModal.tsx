@@ -95,6 +95,7 @@ const FreeCatalogLoginModal = ({ open, planName = "tu plan", onAuthenticated, on
 
   const persistSession = (session: { token: string; businessId: number; employeeId: number; email: string }) => {
     window.localStorage.setItem(POS_SESSION_STORAGE_KEYS.token, session.token);
+    window.localStorage.setItem(POS_SESSION_STORAGE_KEYS.refreshToken, session.refreshToken);
     window.localStorage.setItem(POS_SESSION_STORAGE_KEYS.businessId, String(session.businessId));
     window.localStorage.setItem(POS_SESSION_STORAGE_KEYS.employeeId, String(session.employeeId));
     window.localStorage.setItem(POS_SESSION_STORAGE_KEYS.email, session.email);

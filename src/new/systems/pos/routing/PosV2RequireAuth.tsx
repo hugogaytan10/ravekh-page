@@ -22,10 +22,16 @@ export const PosV2RequireAuth = ({ children }: PosV2RequireAuthProps) => {
     const onVisible = () => { if (document.visibilityState === "visible") refresh(); };
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("pageshow", refresh);
+    const onTokensUpdated = (event: Event) => {
+      const detail = (event as CustomEvent).detail;
+      if (!detail?.customer && detail?.expired) refresh();
+    };
+    window.addEventListener("ravekh:auth-tokens-updated", onTokensUpdated);
     const timer = window.setInterval(refresh, 60_000);
     return () => {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("pageshow", refresh);
+      window.removeEventListener("ravekh:auth-tokens-updated", onTokensUpdated);
       window.clearInterval(timer);
     };
   }, []);
