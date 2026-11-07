@@ -28,8 +28,8 @@ type ProductResponse = {
   Stock?: number | null;
   Image?: string | null;
   Images?: string[] | null;
-  ForSale?: boolean;
-  Available?: boolean;
+  ForSale?: boolean | number | string | null;
+  Available?: boolean | number | string | null;
   Variants?: LegacyVariantResponse[] | null;
 };
 
@@ -183,8 +183,8 @@ export class PosProductApi implements IProductRepository {
       item.Color?.trim() || null,
       item.Image ?? null,
       Array.isArray(item.Images) ? item.Images.filter(Boolean) : [],
-      item.ForSale ?? true,
-      item.Available ?? true,
+      Number(item.ForSale ?? 1) === 1,
+      Number(item.Available ?? 1) === 1,
       Array.isArray(item.Variants) ? item.Variants.filter(isVariantAvailableForSale).map((variant) => this.toDomainVariant(variant)) : [],
     );
   }
