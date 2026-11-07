@@ -16,7 +16,6 @@ export const PosV2RequireAuth = ({ children }: PosV2RequireAuthProps) => {
   const session = readPosSessionSnapshot();
   const location = useLocation();
   const [revision, setRevision] = useState(0);
-  const [currencySession, setCurrencySession] = useState("");
   useEffect(() => {
     const refresh = () => setRevision(value => value + 1);
     const onVisible = () => { if (document.visibilityState === "visible") refresh(); };
@@ -35,7 +34,6 @@ export const PosV2RequireAuth = ({ children }: PosV2RequireAuthProps) => {
       window.clearInterval(timer);
     };
   }, []);
-  const sessionKey = `${session.businessId}:${session.token}`;
   useEffect(() => {
     if (!session.token || !session.businessId) return;
     let active = true;
@@ -46,10 +44,9 @@ export const PosV2RequireAuth = ({ children }: PosV2RequireAuthProps) => {
         if (business.Plan) window.localStorage.setItem("plan", business.Plan);
         window.dispatchEvent(new CustomEvent(POS_BUSINESS_UPDATED_EVENT, {detail: readPosBusinessFeatures(business)}));
       })
-      .catch(() => undefined)
-      .finally(() => { if (active) setCurrencySession(sessionKey); });
+      .catch(() => undefined);
     return () => { active = false; };
-  }, [session.businessId, session.token, sessionKey, revision]);
+  }, [session.businessId, session.token, revision]);
   if (!session.token || !session.businessId) {
     return <Navigate to={POS_V2_PATHS.login} replace />;
   }
@@ -61,6 +58,5 @@ export const PosV2RequireAuth = ({ children }: PosV2RequireAuthProps) => {
     }
   }
 
-  if (currencySession !== sessionKey) return <p role="status">Cargando negocio…</p>;
   return <>{children}</>;
 };
