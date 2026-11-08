@@ -3,19 +3,14 @@ import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { cashClosingCsv } from "../model/CashClosing";
 import { ModernSystemsFactory } from "../../../../../index";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
-import { POS_SESSION_STORAGE_KEYS } from "../../../shared/config/posSession";
+import { readPosSessionSnapshot, resolvePosOperatorRole } from "../../../shared/config/posSession";
+import type { EmployeeSummary } from "../interface/ICashClosingRepository";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { usePlanActionGuard } from "../../../shared/hooks/usePlanActionGuard";
 import { PlanUpgradeModal } from "../../../shared/ui/PlanUpgradeModal";
 import "./PosV2CashClosingPage.css";
 
 const API_BASE_URL = getPosApiBaseUrl();
-const TOKEN_KEY = POS_SESSION_STORAGE_KEYS.token;
-const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
-const EMPLOYEE_ID_KEY = POS_SESSION_STORAGE_KEYS.employeeId;
-
-
-type EmployeeOption = { id: number; fullName: string };
 type ClosingView = {
   id: number;
   employeeId: number;
@@ -24,42 +19,13 @@ type ClosingView = {
   employeeName: string;
 };
 
-type SessionState = {
-  token: string;
-  businessId: number;
-  employeeId: number;
-  hasSession: boolean;
-};
-
-const getSafeSession = (): SessionState => {
-  const token = (window.localStorage.getItem(TOKEN_KEY) ?? "").trim();
-  const businessId = Number(window.localStorage.getItem(BUSINESS_ID_KEY) ?? "");
-  const employeeId = Number(window.localStorage.getItem(EMPLOYEE_ID_KEY) ?? "");
-
-  return {
-    token,
-    businessId,
-    employeeId,
-    hasSession: token.length > 0 && Number.isFinite(businessId) && businessId > 0,
-  };
-};
-
-const getOwnerCapability = (token: string): boolean => {
-  if (!token || !token.includes(".")) return false;
-  try {
-    const payload = JSON.parse(window.atob(token.split(".")[1] || ""));
-    const role = String(payload.role ?? payload.Role ?? payload.typeUser ?? payload.TypeUser ?? "").toLowerCase();
-    const isOwnerFlag = payload.isOwner ?? payload.IsOwner ?? payload.owner ?? payload.Owner;
-    return role.includes("owner") || role.includes("due") || role.includes("admin") || isOwnerFlag === true || isOwnerFlag === 1;
-  } catch {
-    return false;
-  }
-};
-
 export const PosV2CashClosingPage = () => {
-  const [session] = useState<SessionState>(() => getSafeSession());
+  const [session] = useState(readPosSessionSnapshot);
+  const hasSession = Boolean(session.token) && session.businessId > 0;
+  const role = resolvePosOperatorRole(session.token);
+  const canManageClosings = role === "admin" || role === "manager";
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>(() => (session.employeeId > 0 ? String(session.employeeId) : ""));
-  const [employees, setEmployees] = useState<EmployeeOption[]>([]);
+  const [employees, setEmployees] = useState<EmployeeSummary[]>([]);
   const [recentClosings, setRecentClosings] = useState<ClosingView[]>([]);
   const [currentTotal, setCurrentTotal] = useState(0);
   const [currentCurrency, setCurrentCurrency] = useState(() => readPosCurrency().code as string);
@@ -69,7 +35,6 @@ export const PosV2CashClosingPage = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string>("");
-  const canCloseCash = useMemo(() => getOwnerCapability(session.token), [session.token]);
   const hasSalesToClose = currentTotal > 0;
   const { runWithPlanAccess, blockedAction, closeBlockedActionModal, goToUpgradePlan, checkingPlanAccess } = usePlanActionGuard();
 
@@ -110,8 +75,8 @@ export const PosV2CashClosingPage = () => {
     });
   };
 
-  const refreshData = async () => {
-    if (!session.hasSession) {
+  const refreshData = async (requestedEmployeeId = Number(selectedEmployeeId), listedEmployees?: EmployeeSummary[]) => {
+    if (!hasSession) {
       setError("No hay sesión activa para consultar corte de caja.");
       return;
     }
@@ -120,25 +85,23 @@ export const PosV2CashClosingPage = () => {
     setError(null);
 
     try {
-      const loadedEmployees = await page.listEmployees(session.businessId, session.token);
-      setEmployees(loadedEmployees);
+      let employeeId = session.employeeId;
+      if (canManageClosings) {
+        const loadedEmployees = listedEmployees ?? await page.listEmployees(session.businessId, session.token);
+        setEmployees(loadedEmployees);
+        employeeId = loadedEmployees.find(employee => employee.id === requestedEmployeeId)?.id
+          ?? loadedEmployees[0]?.id ?? 0;
+      }
 
-      const fallbackEmployee = loadedEmployees[0]?.id ?? 0;
-      const selected = Number(selectedEmployeeId);
-      const activeEmployeeId = Number.isFinite(selected) && selected > 0 ? selected : fallbackEmployee;
-
-      if (!activeEmployeeId) {
-        setError("No encontramos empleados activos para registrar cortes.");
+      if (!Number.isSafeInteger(employeeId) || employeeId <= 0) {
+        setError("No encontramos un empleado para consultar cortes.");
         setCurrentTotal(0);
         setRecentClosings([]);
         return;
       }
 
-      if (!selectedEmployeeId || Number(selectedEmployeeId) !== activeEmployeeId) {
-        setSelectedEmployeeId(String(activeEmployeeId));
-      }
-
-      await refreshEmployeeData(activeEmployeeId, session.token);
+      setSelectedEmployeeId(String(employeeId));
+      await refreshEmployeeData(employeeId, session.token);
     } catch {
       setError("No se pudo cargar la información del corte de caja. Verifica token, negocio y conectividad.");
       setCurrentTotal(0);
@@ -149,10 +112,9 @@ export const PosV2CashClosingPage = () => {
   };
 
   useEffect(() => {
-    if (session.hasSession) {
-      refreshData();
-    }
-  }, [session.hasSession]);
+    if (hasSession) void refreshData();
+    return () => { requestSequence.current++; };
+  }, [hasSession]);
 
   useEffect(() => {
     if (!toast) return;
@@ -160,38 +122,17 @@ export const PosV2CashClosingPage = () => {
     return () => window.clearTimeout(timeout);
   }, [toast]);
 
-  useEffect(() => {
-    const employeeId = Number(selectedEmployeeId);
-    if (!session.hasSession || !Number.isFinite(employeeId) || employeeId <= 0) return;
-
-    const run = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        await refreshEmployeeData(employeeId, session.token);
-      } catch {
-        setError("No se pudo refrescar el corte para el empleado seleccionado.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    run();
-    return () => { requestSequence.current++; };
-  }, [selectedEmployeeId]);
-
   const handleSubmit = async (event: FormEvent) => {
     event.preventDefault();
 
-    const employeeId = Number(selectedEmployeeId);
-
-    if (!Number.isFinite(employeeId) || employeeId <= 0) {
-      setError("Selecciona un empleado válido para registrar el corte.");
+    if (!canManageClosings) {
+      setError("Tu cuenta no tiene permiso para confirmar el corte de caja.");
       return;
     }
 
-    if (!canCloseCash) {
-      setError("Solo dueños/administradores pueden confirmar el corte de caja.");
+    const employeeId = Number(selectedEmployeeId);
+    if (!employees.some(employee => employee.id === employeeId)) {
+      setError("Selecciona un empleado válido para registrar el corte.");
       return;
     }
 
@@ -224,42 +165,44 @@ export const PosV2CashClosingPage = () => {
   };
 
   return (
-    <PosV2Shell title="Corte de caja" subtitle="Consulta y registra los cortes de tus empleados.">
+    <PosV2Shell title="Corte de caja" subtitle={canManageClosings ? "Consulta y registra los cortes de tus empleados." : "Consulta tu corte de caja."}>
       <section className="pos-v2-cash-closing">
         <header className="pos-v2-cash-closing__header">
           <div>
             <h2>Cierre de turno</h2>
-            <p>Selecciona un empleado para consultar su total actual y el historial de cortes de esta sucursal.</p>
+            <p>{canManageClosings ? "Selecciona un empleado para consultar su total y su historial de cortes." : "Consulta tu total y tu historial de cortes en esta sucursal."}</p>
           </div>
-          <button type="button" onClick={refreshData} disabled={loading || saving || checkingPlanAccess}>Actualizar</button>
+          <button type="button" onClick={() => void refreshData()} disabled={loading || saving || checkingPlanAccess}>Actualizar</button>
         </header>
 
-        {!session.hasSession ? <p className="pos-v2-cash-closing__error">No hay sesión activa. Inicia sesión para gestionar cierres.</p> : null}
+        {!hasSession ? <p className="pos-v2-cash-closing__error">No hay sesión activa. Inicia sesión para gestionar cierres.</p> : null}
         {error ? <p className="pos-v2-cash-closing__error">{error}</p> : null}
         {toast ? <p className="pos-v2-cash-closing__toast">{toast}</p> : null}
-        {!canCloseCash ? <p className="pos-v2-cash-closing__warning">Solo cuentas dueñas/administradoras pueden ejecutar el cierre.</p> : null}
-        {session.hasSession && canCloseCash && !loading && !error && !hasSalesToClose ? (
+        {!canManageClosings && <p className="pos-v2-cash-closing__warning">Solo administradores y gerentes pueden registrar cortes.</p>}
+        {hasSession && canManageClosings && !loading && !error && !hasSalesToClose ? (
           <p className="pos-v2-cash-closing__warning">No hay ventas registradas todavía (total en $0.00), así que el corte está deshabilitado.</p>
         ) : null}
 
-        <section className="pos-v2-cash-closing__card">
-          <h3>Registrar corte</h3>
-          <form onSubmit={handleSubmit} className="pos-v2-cash-closing__form">
-            <label>
-              Empleado
-              <select value={selectedEmployeeId} onChange={(event) => setSelectedEmployeeId(event.target.value)} disabled={loading || saving || checkingPlanAccess || employees.length === 0}>
-                <option value="">Selecciona...</option>
-                {employees.map((employee) => (
-                  <option key={employee.id} value={String(employee.id)}>{employee.fullName}</option>
-                ))}
-              </select>
-            </label>
-            <p className="pos-v2-cash-closing__hint">
-              Total para el corte actual: <strong>{moneyFormatter.format(currentTotal)}</strong>
-            </p>
-            <button type="submit" disabled={saving || loading || checkingPlanAccess || !canCloseCash || !hasSalesToClose}>{saving ? "Guardando..." : checkingPlanAccess ? "Validando plan..." : "Confirmar corte"}</button>
-          </form>
-        </section>
+        {canManageClosings && (
+          <section className="pos-v2-cash-closing__card">
+            <h3>Registrar corte</h3>
+            <form onSubmit={handleSubmit} className="pos-v2-cash-closing__form">
+              <label>
+                Empleado
+                <select value={selectedEmployeeId} onChange={event => void refreshData(Number(event.target.value), employees)} disabled={loading || saving || checkingPlanAccess || employees.length === 0}>
+                  <option value="" disabled>Selecciona...</option>
+                  {employees.map((employee) => (
+                    <option key={employee.id} value={String(employee.id)}>{employee.fullName}{employee.active ? "" : " (dado de baja)"}</option>
+                    ))}
+                </select>
+              </label>
+              <p className="pos-v2-cash-closing__hint">
+                Total para el corte actual: <strong>{moneyFormatter.format(currentTotal)}</strong>
+              </p>
+              <button type="submit" disabled={saving || loading || checkingPlanAccess || !hasSalesToClose}>{saving ? "Guardando..." : checkingPlanAccess ? "Validando plan..." : "Confirmar corte"}</button>
+            </form>
+          </section>
+        )}
 
         <section className="pos-v2-cash-closing__grid">
           <article className="pos-v2-cash-closing__card">
@@ -267,7 +210,7 @@ export const PosV2CashClosingPage = () => {
             {loading ? <p>Cargando resumen...</p> : null}
             {!loading ? (
               <div className="pos-v2-cash-closing__current">
-                <p><strong>Empleado:</strong> {employees.find((employee) => String(employee.id) === selectedEmployeeId)?.fullName ?? "Sin seleccionar"}</p>
+                {canManageClosings && <p><strong>Empleado:</strong> {employees.find(employee => String(employee.id) === selectedEmployeeId)?.fullName ?? "Sin seleccionar"}</p>}
                 <p><strong>Total:</strong> <span className={currentTotal > 0 ? "is-positive" : "is-equal"}>{moneyFormatter.format(currentTotal)}</span></p>
               </div>
             ) : null}

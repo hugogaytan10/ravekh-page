@@ -1,3 +1,4 @@
+import type { EmployeeSummary } from "../interface/ICashClosingRepository";
 import { CashClosingService } from "../services/CashClosingService";
 import { CashClosingPreview, CreateCashClosingDto } from "../model/CashClosing";
 
@@ -12,7 +13,7 @@ export interface CashClosingViewModel {
 export class CashClosingPage {
   constructor(private readonly service: CashClosingService) {}
 
-  async listEmployees(businessId: number, token: string): Promise<Array<{ id: number; fullName: string }>> {
+  async listEmployees(businessId: number, token: string): Promise<EmployeeSummary[]> {
     return this.service.listEmployees(businessId, token);
   }
 
