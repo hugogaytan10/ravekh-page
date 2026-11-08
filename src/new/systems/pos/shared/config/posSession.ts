@@ -4,7 +4,6 @@ export const POS_SESSION_STORAGE_KEYS = {
   businessId: "pos-v2-business-id",
   employeeId: "pos-v2-employee-id",
   email: "pos-v2-email",
-  moreFavorites: "pos-v2-more-favorites",
 } as const;
 
 const POS_PENDING_UPGRADE_CONTEXT_KEY = "pos-v2-pending-upgrade-context";
@@ -137,24 +136,6 @@ export const clearPosSessionSnapshot = (): void => {
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.employeeId);
     window.localStorage.removeItem(POS_SESSION_STORAGE_KEYS.email);
     window.localStorage.removeItem("plan");
-  } catch {
-    // ignore localStorage failures in constrained environments
-  }
-};
-
-export const readPosStringList = (key: string): string[] => {
-  try {
-    const stored = window.localStorage.getItem(key);
-    const parsed = stored ? JSON.parse(stored) : [];
-    return Array.isArray(parsed) ? parsed.filter((item): item is string => typeof item === "string") : [];
-  } catch {
-    return [];
-  }
-};
-
-export const writePosStringList = (key: string, values: string[]): void => {
-  try {
-    window.localStorage.setItem(key, JSON.stringify(values));
   } catch {
     // ignore localStorage failures in constrained environments
   }
