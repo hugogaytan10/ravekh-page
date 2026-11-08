@@ -24,11 +24,19 @@ export function createSessionTransport(options: {
   const send = options.fetch ?? globalThis.fetch.bind(globalThis);
   let renewing: { key: string; promise: Promise<SessionTokens> } | null = null;
 
-  const claims = (token: string): { id?: number; role?: string; exp?: number } => {
+  const claims = (token: string): { id?: number; role?: string; exp?: number; iat?: number } => {
     try {
       const payload = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
       return JSON.parse(options.decodeBase64(payload.padEnd(Math.ceil(payload.length / 4) * 4, '=')));
     } catch { return {}; }
+  };
+
+  const renewalDue = (token: string): boolean => {
+    const {exp, iat} = claims(token);
+    const expiration = Number(exp);
+    const lifetime = expiration - Number(iat);
+    const margin = Number.isFinite(lifetime) && lifetime > 0 ? Math.min(30, lifetime / 10) : 0;
+    return Number.isFinite(expiration) && expiration * 1000 <= Date.now() + margin * 1000;
   };
 
   const identityMatches = (a: string, b: string): boolean => {
@@ -71,7 +79,10 @@ export function createSessionTransport(options: {
         }
         if (!response.ok) throw new Error(`No se pudo renovar la sesiÃ³n (${response.status}).`);
         const pair = await response.json() as SessionTokens;
-        if (!pair.Token || !pair.RefreshToken || !identityMatches(snapshot.Token, pair.Token)) {
+        const nextExpiration = Number(claims(pair.Token).exp);
+        if (typeof pair.Token !== 'string' || typeof pair.RefreshToken !== 'string'
+          || !pair.Token || !pair.RefreshToken.trim() || !identityMatches(snapshot.Token, pair.Token)
+          || !Number.isFinite(nextExpiration) || nextExpiration * 1000 <= Date.now()) {
           throw new Error('Respuesta de renovaciÃ³n de sesiÃ³n invÃ¡lida.');
         }
         if (await options.store.replace(snapshot, pair)) return pair;
@@ -89,7 +100,7 @@ export function createSessionTransport(options: {
     const current = await options.store.read();
     if (!current) return null;
     const expiration = Number(claims(current.Token).exp);
-    if (expiration && expiration * 1000 <= Date.now() + 30000) {
+    if (renewalDue(current.Token)) {
       if (current.RefreshToken) return refresh(current);
       if (expiration * 1000 <= Date.now()) {
         await options.store.replace(current, null);
@@ -133,7 +144,12 @@ export function createSessionTransport(options: {
       response = await request();
     }
     const renewed = response.headers.get('x-access-token');
-    if (response.ok && renewed && renewed !== session.Token && identityMatches(session.Token, renewed)) {
+    const renewedExpiration = renewed ? Number(claims(renewed).exp) : NaN;
+    const expiration = Number(claims(session.Token).exp);
+    // Publishing a token on every response restarts token-dependent screen loads.
+    const needsRenewal = !Number.isFinite(expiration) || renewalDue(session.Token);
+    if (needsRenewal && response.ok && renewed && renewed !== session.Token && identityMatches(session.Token, renewed)
+      && Number.isFinite(renewedExpiration) && renewedExpiration * 1000 > Date.now()) {
       await options.store.replace(session, { ...session, Token: renewed });
     }
     return response;

@@ -125,7 +125,7 @@ export const PosV2MorePage = () => {
     () => isSalesOnlyOperator(sessionSnapshot.token),
     [sessionSnapshot.token],
   );
-  const allowedModuleIdsForSalesOnly = useMemo(() => new Set(["printers", "settings"]), []);
+  const allowedModuleIdsForSalesOnly = useMemo(() => new Set(["printers", "settings", "cash-closing"]), []);
 
   const selectedCatalogBranch = useMemo(
     () =>

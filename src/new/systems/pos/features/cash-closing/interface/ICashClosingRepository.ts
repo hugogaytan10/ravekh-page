@@ -3,6 +3,7 @@ import { CashClosing, CashClosingPreview, CreateCashClosingDto } from "../model/
 export interface EmployeeSummary {
   id: number;
   fullName: string;
+  active: boolean;
 }
 
 export interface ICashClosingRepository {

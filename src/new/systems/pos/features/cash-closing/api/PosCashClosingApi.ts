@@ -3,7 +3,7 @@ import { EmployeeSummary, ICashClosingRepository } from "../interface/ICashClosi
 import { CashClosing, CashClosingPreview, CreateCashClosingDto } from "../model/CashClosing";
 import { readPosCurrency } from "../../../shared/config/posCurrency";
 
-type EmployeeResponse={Id:number;Name:string;LastName?:string};
+type EmployeeResponse={Id:number;Name:string;LastName?:string;Active?:boolean|number};
 type CashClosingResponse={Id:number;Employee_Id?:number;Employees_Id?:number;Branch_Id?:number;Total?:number;Date?:string;Employee_Name?:string};
 type PreviewData={employeeId?:number;byCurrency?:Array<{currency?:string;total?:number}>};
 type PreviewResponse={data?:PreviewData}|PreviewData;
@@ -13,8 +13,12 @@ export class PosCashClosingApi implements ICashClosingRepository{
   constructor(private readonly httpClient:HttpClient){}
 
   async listEmployeesByBusiness(businessId:number,token:string):Promise<EmployeeSummary[]>{
-    const response=await this.httpClient.request<EmployeeResponse[]>({method:"GET",path:`employee/business/${businessId}`,token});
-    return response.map(employee=>({id:employee.Id,fullName:`${employee.Name} ${employee.LastName??""}`.trim()}));
+    const response=await this.httpClient.request<EmployeeResponse[]|null>({method:"GET",path:`employee/business/${businessId}`,query:{includeInactive:1},token});
+    return (response??[]).map(employee=>({
+      id:employee.Id,
+      fullName:`${employee.Name} ${employee.LastName??""}`.trim(),
+      active:Number(employee.Active??1)===1,
+    }));
   }
 
   async listByEmployee(employeeId:number,token:string):Promise<CashClosing[]>{

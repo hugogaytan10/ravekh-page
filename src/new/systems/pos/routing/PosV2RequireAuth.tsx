@@ -52,7 +52,7 @@ export const PosV2RequireAuth = ({ children }: PosV2RequireAuthProps) => {
   }
 
   if (isSalesOnlyOperator(session.token)) {
-    const allowedPaths = new Set<string>([POS_V2_PATHS.sales, POS_V2_PATHS.more, POS_V2_PATHS.printers, POS_V2_PATHS.facturaElectronica, POS_V2_PATHS.settings, POS_V2_PATHS.account, POS_V2_PATHS.deleteAccount, POS_V2_PATHS.currency, POS_V2_PATHS.securityQuestions]);
+    const allowedPaths = new Set<string>([POS_V2_PATHS.sales, POS_V2_PATHS.more, POS_V2_PATHS.cashClosing, POS_V2_PATHS.printers, POS_V2_PATHS.facturaElectronica, POS_V2_PATHS.settings, POS_V2_PATHS.account, POS_V2_PATHS.deleteAccount, POS_V2_PATHS.currency, POS_V2_PATHS.securityQuestions]);
     if (!allowedPaths.has(location.pathname)) {
       return <Navigate to={POS_V2_PATHS.sales} replace />;
     }

@@ -28,14 +28,14 @@ const setup = (handler, initial = {Token: token(), RefreshToken: 'refresh-1'}) =
   return {...client, calls, read: () => stored, set: value => {stored = value;}};
 };
 
-test('adds only access token, saves renewed response token', async () => {
+test('uses Bearer and keeps a healthy token stable despite response renewal', async () => {
   const renewed = token(1, 7200);
   const client = setup(() => reply({}, 200, {'x-access-token': renewed}));
   const originalToken = client.read().Token;
   await client.authenticatedFetch('https://api.example/api/orders');
   assert.equal(client.calls[0].headers.get('Authorization'), `Bearer ${originalToken}`);
   assert.equal(client.calls[0].headers.get('RefreshToken'), null);
-  assert.equal(client.read().Token, renewed);
+  assert.equal(client.read().Token, originalToken);
 });
 
 test('concurrent expired requests share one refresh, persist both tokens', async () => {
@@ -50,7 +50,7 @@ test('concurrent expired requests share one refresh, persist both tokens', async
   assert.deepEqual(JSON.parse(refreshes[0].body), {RefreshToken: 'refresh-1'});
   assert.equal(refreshes[0].headers.get('Authorization'), null);
   assert.deepEqual(client.read(), pair);
-  assert(client.calls.filter(call => !call.url.endsWith('refresh-token')).every(call => call.headers.get('token') === pair.Token));
+  assert(client.calls.filter(call => !call.url.endsWith('refresh-token')).every(call => call.headers.get('Authorization') === `Bearer ${pair.Token}`));
 });
 
 test('401 retries once with identical mutation body and idempotency key', async () => {
@@ -66,7 +66,7 @@ test('401 retries once with identical mutation body and idempotency key', async 
   const writes = client.calls.filter(call => !call.url.endsWith('refresh-token'));
   assert.equal(writes.length, 2);
   assert(writes.every(call => call.body === body && call.headers.get('Idempotency-Key') === 'sale-123'));
-  assert.equal(writes[1].headers.get('token'), fresh);
+  assert.equal(writes[1].headers.get('Authorization'), `Bearer ${fresh}`);
 });
 
 test('does not loop when retry also returns 401', async () => {
@@ -133,7 +133,7 @@ test('stale explicit token for same account uses latest stored access token', as
   await client.authenticatedFetch('https://api.example/api/orders', {
     headers: {token: token(1, -100), Authorization: `Bearer ${token(1, -100)}`},
   });
-  assert.equal(client.calls[0].headers.get('token'), client.read().Token);
+  assert.equal(client.calls[0].headers.get('token'), null);
   assert.equal(client.calls[0].headers.get('Authorization'), `Bearer ${client.read().Token}`);
 });
 
@@ -141,25 +141,23 @@ test('explicit token for another account is never replaced with active user', as
   const client = setup(() => reply());
   const other = token(2);
   await client.authenticatedFetch('https://api.example/api/orders', {headers: {token: other}});
-  assert.equal(client.calls[0].headers.get('token'), other);
-  assert.equal(client.calls[0].headers.get('Authorization'), null);
+  assert.equal(client.calls[0].headers.get('token'), null);
+  assert.equal(client.calls[0].headers.get('Authorization'), `Bearer ${other}`);
 });
 
 test('updating a business authenticates, while creating one remains public', async () => {
   const client = setup(() => reply());
   await client.authenticatedFetch('https://api.example/api/business/7', {method: 'PUT', body: '{}'});
   await client.authenticatedFetch('https://api.example/api/business', {method: 'POST', body: '{}'});
-  assert.equal(client.calls[0].headers.get('token'), client.read().Token);
-  assert.equal(client.calls[1].headers.get('token'), null);
+  assert.equal(client.calls[0].headers.get('Authorization'), `Bearer ${client.read().Token}`);
+  assert.equal(client.calls[1].headers.get('Authorization'), null);
 });
 
 test('never conceals conflicting token and Authorization identities', async () => {
   const client = setup(() => reply({}, 401));
   const legacy = client.read().Token, bearer = `Bearer ${token(2)}`;
-  assert.equal((await client.authenticatedFetch('https://api.example/api/orders', {
+  await assert.rejects(client.authenticatedFetch('https://api.example/api/orders', {
     headers: {token: legacy, Authorization: bearer},
-  })).status, 401);
-  assert.equal(client.calls.length, 1);
-  assert.equal(client.calls[0].headers.get('token'), legacy);
-  assert.equal(client.calls[0].headers.get('Authorization'), bearer);
+  }), /credenciales distintas/);
+  assert.equal(client.calls.length, 0);
 });
