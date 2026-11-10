@@ -3,7 +3,7 @@ import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 
 export type Conversation = { Id: number; Contact_Name?: string; Subject?: string; Status: string; Channel?: string; Control_Mode?: string; Version: number; Last_Message_Body?: string; Unread_Count?: number };
-export type CrmMessage = { Id: number; Body: string; Direction: string; Sender_Type?: string; Created_At: string; Delivery_Status?: string };
+export type CrmMessage = { Id: number; Local_Key?: string; Body: string; Direction: string; Sender_Type?: string; Created_At: string; Delivery_Status?: string };
 export type CrmContact = { Id: number; Name: string; Email?: string; PhoneNumber?: string; Source?: string };
 export type CrmOpportunity = { Id: number; Title: string; Status?: string; Amount?: number; Currency?: string; Contact_Id?: number };
 export type CrmActivity = { Id: number; Title: string; Status: string; Kind: string; Due_At?: string };
@@ -42,6 +42,8 @@ export class CrmWebApi {
           throw new Error(`No se pudo conectar el chat en vivo (HTTP ${response.status}).`);
         }
         if(!response.headers.get("content-type")?.includes("text/event-stream"))throw new Error("Respuesta inválida del chat en vivo.");
+        // Catch up on every handshake, including the first subscription.
+        if(!closed)onChange();
         const reader=response.body.getReader();
         const decoder=new TextDecoder();
         let buffer="";
@@ -75,7 +77,7 @@ export class CrmWebApi {
   linkExistingMeta(phoneId:string,wabaId:string,accessToken:string) { return this.send<unknown>("POST", "crm/channels/whatsapp/link-existing", {Phone_Number_Id:phoneId,Waba_Id:wabaId,Access_Token:accessToken}); }
   metaDiagnostic(id:number) { return this.get<MetaDiagnostic>(`crm/channels/whatsapp/${id}/diagnostic`); }
   subscribeWebhook(id:number) { return this.send<unknown>("POST",`crm/channels/whatsapp/${id}/subscribe-webhook`,{}); }
-  sendWhatsApp(conversationId:number,body:string) { return this.send<unknown>("POST",`crm/channels/whatsapp/${conversationId}/messages`,{Body:body}); }
+  sendWhatsApp(conversationId:number,body:string) { return this.send<{Id:number;Delivery_Status?:string}>("POST",`crm/channels/whatsapp/${conversationId}/messages`,{Body:body}); }
   agents() { return this.get<CrmAgent[]>("crm/ai/agents"); }
   createAgent(name:string,instructions:string) { return this.send<unknown>("POST","crm/ai/agents",{Name:name,Instructions:instructions}); }
   updateAgent(id:number,body:{Name?:string;Instructions?:string;Enabled?:boolean}) { return this.send<unknown>("PATCH",`crm/ai/agents/${id}`,body); }
@@ -88,7 +90,7 @@ export class CrmWebApi {
   activities() { return this.get<CrmActivity[]>("crm/activities"); }
   createContact(body: { Name: string; Email?: string; PhoneNumber?: string }) { return this.send<{Id:number}>("POST", "crm/contacts", body); }
   createConversation(contactId: number) { return this.send<{Id:number}>("POST", "crm/inbox/conversations", { Contact_Id: contactId }); }
-  sendInternal(id: number, body: string) { return this.send<{Id:number}>("POST", `crm/inbox/conversations/${id}/messages`, { Body: body }); }
+  sendInternal(id: number, body: string) { return this.send<{Id:number;Delivery_Status?:string}>("POST", `crm/inbox/conversations/${id}/messages`, { Body: body }); }
   takeover(conv: Conversation) { return this.send<unknown>("POST", `crm/inbox/conversations/${conv.Id}/takeover`, { Expected_Version: conv.Version }); }
   releaseToAi(conv: Conversation) { return this.send<unknown>("POST", `crm/inbox/conversations/${conv.Id}/release-to-ai`, { Expected_Version: conv.Version }); }
   markRead(id: number, messageId: number) { return this.send<unknown>("PUT", `crm/inbox/conversations/${id}/read`, { Last_Read_Message_Id: messageId }); }
