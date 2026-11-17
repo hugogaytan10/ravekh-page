@@ -1,12 +1,19 @@
 import {authenticatedFetch as fetch} from '../../../../core/api/sessionFetch';
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { emitPosBusinessUpdated } from "../config/posBusinessEvents";
+import { hasRequiredPlan, type PosPlan } from "../config/posPlanAccess";
 import { getPosApiBaseUrl } from "../config/posEnv";
 import { clearPendingPosUpgradeContext, readPendingPosUpgradeContext, readPosSessionSnapshot } from "../config/posSession";
 import "./FeatureUnlockModal.css";
 
 export type UnlockFeature = "Pos" | "Catalog" | "Fidelity" | "DynamicQr";
-export type UnlockPlanKey = "START" | "PRO" | "MAX";
+export type UnlockPlanKey = "ESSENTIAL" | "START" | "PRO";
+
+export const OFFICIAL_MONTHLY_PRICES: Record<UnlockPlanKey, number> = {
+  ESSENTIAL: 89,
+  START: 199,
+  PRO: 399,
+};
 
 export type UnlockModalProps = {
   open: boolean;
@@ -17,6 +24,9 @@ export type UnlockModalProps = {
   onUpgrade?: () => void;
   onPaymentSuccess?: () => void;
   unlockFeature?: UnlockFeature;
+  minimumPlan?: PosPlan;
+  catalogAiPacks?: boolean;
+  cfdiPacks?: {units: number; amount: number}[];
   initialPlan?: {
     amount: number;
     plan: UnlockPlanKey;
@@ -32,7 +42,9 @@ type PaymentSelection = {
   label: string;
   description: string;
   amount: number;
-  kind: "PLAN";
+  kind: "PLAN" | "MODULES";
+  batches?: number;
+  cfdiUnits?: number;
   plan?: PlanKey;
   planFeatures?: PlanFeature[];
 };
@@ -50,6 +62,7 @@ type PaymentIntentResponse = {
   customer?: string;
   ephemeralKey?: string;
   paymentIntentId?: string;
+  amountCents?: number;
   paymentId?: string | number;
   status?: string;
 };
@@ -69,17 +82,8 @@ declare global {
   }
 }
 
-const PLAN_CONFIG: Record<PlanKey, PlanSelection> = {
-  START: { amount: 299, plan: "START" },
-  PRO: { amount: 599, plan: "PRO" },
-  MAX: { amount: 1299, plan: "MAX" },
-};
-
-const PLAN_CHOICES: PlanSelection[] = [
-  PLAN_CONFIG.START,
-  PLAN_CONFIG.PRO,
-  PLAN_CONFIG.MAX,
-];
+const PLAN_CHOICES: PlanSelection[] = (Object.keys(OFFICIAL_MONTHLY_PRICES) as PlanKey[])
+  .map(plan => ({ plan, amount: OFFICIAL_MONTHLY_PRICES[plan] }));
 
 const STRIPE_JS_SRC = "https://js.stripe.com/v3/";
 const stripeScriptPromise: { current: Promise<void> | null } = { current: null };
@@ -215,25 +219,22 @@ const getPaymentStatus = (value: unknown): string => {
 
 const getPlanDisplayName = (plan: PlanKey): string => {
   const labels: Record<PlanKey, string> = {
+    ESSENTIAL: "Essential",
     START: "Start",
     PRO: "Pro",
-    MAX: "Max",
   };
 
   return labels[plan];
 };
 
-const getRequestedPlanFeature = (unlockFeature?: UnlockFeature): PlanFeature =>
-  unlockFeature === "Pos" ? "Pos" : "Catalog";
-
-const buildPlanPaymentSelection = (selectedPlan: PlanSelection, unlockFeature?: UnlockFeature, label?: string): PaymentSelection => ({
+const buildPlanPaymentSelection = (selectedPlan: PlanSelection, label?: string): PaymentSelection => ({
   id: selectedPlan.plan.toLowerCase(),
   label: label ?? getPlanDisplayName(selectedPlan.plan),
   description: `Plan ${label ?? getPlanDisplayName(selectedPlan.plan)}.`,
   amount: selectedPlan.amount,
   kind: "PLAN",
   plan: selectedPlan.plan,
-  planFeatures: [getRequestedPlanFeature(unlockFeature)],
+  planFeatures: ["Catalog", "Pos"],
 });
 
 export const FeatureUnlockModal = ({
@@ -245,6 +246,9 @@ export const FeatureUnlockModal = ({
   onUpgrade,
   onPaymentSuccess,
   unlockFeature,
+  catalogAiPacks = false,
+  cfdiPacks,
+  minimumPlan = unlockFeature === "Fidelity" || unlockFeature === "DynamicQr" ? "START" : "ESSENTIAL",
   initialPlan,
 }: UnlockModalProps) => {
   const [step, setStep] = useState<CheckoutStep>(initialPlan ? "payment" : "plans");
@@ -279,8 +283,8 @@ export const FeatureUnlockModal = ({
 
     autoCheckoutKeyRef.current = checkoutKey;
     setStep("payment");
-    void createPayment(buildPlanPaymentSelection(initialPlan, unlockFeature, initialPlan.label));
-  }, [initialPlan, open, unlockFeature]);
+    void createPayment(buildPlanPaymentSelection(initialPlan, initialPlan.label));
+  }, [initialPlan, open]);
 
   useEffect(() => {
     if (step !== "payment" || !payment?.publishableKey || !payment.clientSecret || !paymentElementRef.current) return;
@@ -338,7 +342,7 @@ export const FeatureUnlockModal = ({
 
   const selectPlan = (plan: PlanSelection) => {
     setError("");
-    void createPayment(buildPlanPaymentSelection(plan, unlockFeature));
+    void createPayment(buildPlanPaymentSelection(plan));
   };
 
   async function createPayment(selection: PaymentSelection) {
@@ -367,11 +371,20 @@ export const FeatureUnlockModal = ({
         amount: selection.amount,
         planName: selection.plan,
         currency: "MXN",
+        durationDays: 30,
+        notes: "official-monthly",
         planFeatures: selection.planFeatures ?? [],
       };
 
-      const { response, data } = await postJson<PaymentIntentResponse>("createGeneralPayment", payload, context.token);
+      const { response, data } = selection.cfdiUnits !== undefined
+        ? await postJson<PaymentIntentResponse>("stripe/pos/addons/cfdi", {units: selection.cfdiUnits}, context.token)
+        : selection.batches === undefined
+        ? await postJson<PaymentIntentResponse>("createGeneralPayment", payload, context.token)
+        : await postJson<PaymentIntentResponse>("stripe/pos/addons/catalog-ai", { batches: selection.batches }, context.token);
 
+      if (response.ok && selection.cfdiUnits !== undefined && data?.amountCents !== Math.round(selection.amount * 100)) {
+        throw new Error("El importe del bloque cambió. Actualiza la página antes de volver a intentarlo.");
+      }
       if (!response.ok || !data?.publishableKey || !data.clientSecret) {
         warnUnlockCheckout("payment:create:invalid-response", {
           ok: response.ok,
@@ -468,14 +481,53 @@ export const FeatureUnlockModal = ({
   const renderBody = () => {
     const currentStep = initialPlan && step === "plans" ? "payment" : step;
 
+    if (currentStep === "plans" && cfdiPacks) {
+      return (
+        <>
+          <h3>Comprar bloques de CFDI</h3>
+          <div className="pos-feature-unlock__plans">
+            {cfdiPacks.map(pack => (
+              <button key={pack.units} type="button" disabled={loading} onClick={() => void createPayment({
+                id: `cfdi-${pack.units}`, label: `${pack.units} CFDI`, description: "Bloque de CFDI",
+                amount: pack.amount / 100, kind: "MODULES", cfdiUnits: pack.units,
+              })}>
+                <strong>{pack.units} CFDI</strong>
+                <span>{(pack.amount / 100).toLocaleString("es-MX", {style: "currency", currency: "MXN"})} MXN</span>
+              </button>
+            ))}
+          </div>
+        </>
+      );
+    }
+    if (currentStep === "plans" && catalogAiPacks) {
+      return (
+        <>
+          <h3>Comprar lotes adicionales de IA</h3>
+          <p>Cada lote agrega 50 productos a tu saldo del mes actual.</p>
+          <div className="pos-feature-unlock__plans">
+            {[[1, 59], [2, 99], [5, 149]].map(([batches, amount]) => {
+              const label = batches === 1 ? "1 lote de IA" : `${batches} lotes de IA`;
+              return (
+                <button key={batches} type="button" disabled={loading} onClick={() => void createPayment({
+                  id: `catalog-ai-${batches}`, label, description: label, amount, kind: "MODULES", batches,
+                })}>
+                  <strong>{label}</strong>
+                  <span>${amount} MXN</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      );
+    }
     if (currentStep === "plans") {
       return (
         <>
           <span className="pos-feature-unlock__badge">Selecciona un plan</span>
           <h3>Elige el plan</h3>
-          <p>Selecciona Start, Pro o Max con los precios mensuales del catálogo.</p>
+          <p>Selecciona un plan mensual.</p>
           <div className="pos-feature-unlock__plans">
-            {PLAN_CHOICES.map((plan) => (
+            {PLAN_CHOICES.filter(plan => hasRequiredPlan(plan.plan, minimumPlan)).map((plan) => (
               <button key={plan.plan} type="button" onClick={() => selectPlan(plan)} disabled={loading}>
                 <strong>{getPlanDisplayName(plan.plan)}</strong>
                 <small>Plan mensual</small>
@@ -525,7 +577,7 @@ export const FeatureUnlockModal = ({
           <h3>No pudimos completar el proceso</h3>
           <p className="pos-feature-unlock__error">{error || "Ocurrió un error inesperado. Intenta nuevamente."}</p>
           <div className="pos-feature-unlock__actions">
-            <button type="button" className="is-secondary" onClick={() => setStep("plans")}>Elegir otro plan</button>
+            <button type="button" className="is-secondary" onClick={() => setStep("plans")}>{catalogAiPacks || cfdiPacks ? "Volver a paquetes" : "Elegir otro plan"}</button>
             <button type="button" onClick={startUpgrade}>{buttonText}</button>
           </div>
         </>

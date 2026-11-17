@@ -1,6 +1,7 @@
+import {mexicoReportDate} from "../../../shared/hooks/useDayOnlyReports";
 import { HttpClient } from "../../../../core/api/HttpClient";
 import { IReportingRepository } from "../interface/IReportingRepository";
-import { IncomePoint, ReportLeaderboardItem, ReportProductItem, ReportRange, ReportSale, SalesReport, SalesSummary, SalesTicketsPage } from "../model/SalesReport";
+import { IncomePoint, ReportLeaderboardItem, ReportProductItem, ReportRange, ReportSale, SalesSummary, SalesTicketsPage } from "../model/SalesReport";
 
 type OverviewCurrency={MoneyTipe?:string;sales?:number;transactions?:number;items?:number;cost?:number;estimatedGrossProfit?:number;averageTicket?:number};
 type OverviewResponse={data?:{byCurrency?:OverviewCurrency[]}}|{byCurrency?:OverviewCurrency[]};
@@ -12,22 +13,27 @@ type EmployeeRow={employeeId?:number;name?:string;transactions?:number;total?:nu
 type IncomeRow={Id?:number;Name?:string;Amount?:number;Date?:string;MoneyTipe?:string;Order_Id?:number|null;Command_Id?:number|null;Source?:string};
 
 const iso=(d:Date)=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-const rangeDates=(range:ReportRange)=>{const now=new Date();if(range==="DAY"){const x=iso(now);return{from:x,to:x}}if(range==="MONTH")return{from:iso(new Date(now.getFullYear(),now.getMonth(),1)),to:iso(new Date(now.getFullYear(),now.getMonth()+1,0))};return{from:iso(new Date(now.getFullYear(),0,1)),to:iso(new Date(now.getFullYear(),11,31))}};
+const rangeDates = (range: ReportRange) => {
+  const today = mexicoReportDate();
+  const [year, month, day] = today.split("-").map(Number);
+  if (range === "DAY") return {from: today, to: today};
+  if (range === "WEEK") return {from: new Date(Date.UTC(year, month - 1, day - 6)).toISOString().slice(0, 10), to: today};
+  if (range === "MONTH") return {from: today.slice(0, 7) + "-01", to: iso(new Date(year, month, 0))};
+  return {from: `${year}-01-01`, to: `${year}-12-31`};
+};
 const unwrap=<T,>(payload:T|ListWrapper<T>):T[]=>Array.isArray(payload)?payload:(payload as ListWrapper<T>)?.data??[];
 const currencyRow=(rows:OverviewCurrency[])=>rows.find(row=>String(row.MoneyTipe??"").toUpperCase()==="MXN")??rows[0]??{};
 
 export class PosReportingApi implements IReportingRepository{
   constructor(private readonly httpClient:HttpClient){}
 
-  async getSalesReport(businessId:number,token?:string,branchId?:number):Promise<SalesReport>{
-    if(!token)return SalesReport.empty(businessId);
-    const [day,month,year]=await Promise.all([this.summary("DAY",token,branchId),this.summary("MONTH",token,branchId),this.summary("YEAR",token,branchId)]);
-    return new SalesReport(businessId,day,month,year);
+  async getSummary(range: ReportRange, token?: string, branchId?: number): Promise<SalesSummary> {
+    return token ? this.summary(range, token, branchId) : SalesSummary.empty();
   }
 
   async getIncomeSeries(_businessId:number,range:ReportRange,token?:string,branchId?:number):Promise<IncomePoint[]>{
     if(!token)return[];const dates=rangeDates(range);
-    const response=await this.httpClient.request<ListWrapper<TimelineRow>|TimelineRow[]>({method:"GET",path:"reports/branch/timeline",token,branchId,query:dates});
+    const response=await this.httpClient.request<ListWrapper<TimelineRow>|TimelineRow[]>({method:"GET",path:"reports/branch/timeline",token,branchId,query:{...dates,planLimitsVersion:1}});
     return unwrap(response).map(row=>new IncomePoint(String(row.day??row.Day??""),Number(row.total??0)));
   }
 
@@ -45,12 +51,12 @@ export class PosReportingApi implements IReportingRepository{
   }
 
   async getProductsLeaderboard(_businessId:number,range:ReportRange,token:string,branchId?:number):Promise<ReportProductItem[]>{
-    const dates=rangeDates(range);const response=await this.httpClient.request<ListWrapper<TopItemRow>|TopItemRow[]>({method:"GET",path:"reports/branch/top-items",token,branchId,query:{...dates,limit:20}});
+    const dates=rangeDates(range);const response=await this.httpClient.request<ListWrapper<TopItemRow>|TopItemRow[]>({method:"GET",path:"reports/branch/top-items",token,branchId,query:{...dates,limit:20,planLimitsVersion:1}});
     return unwrap(response).map(row=>new ReportProductItem(Number(row.itemId??row.productId??0),[row.productName,row.variantDescription].filter(Boolean).join(" · "),Number(row.quantity??0),Number(row.revenue??0),Number(row.estimatedProfit??0)));
   }
 
   async getEmployeesLeaderboard(_businessId:number,range:ReportRange,token:string,branchId?:number):Promise<ReportLeaderboardItem[]>{
-    const dates=rangeDates(range);const response=await this.httpClient.request<ListWrapper<EmployeeRow>|EmployeeRow[]>({method:"GET",path:"reports/branch/employees",token,branchId,query:dates});
+    const dates=rangeDates(range);const response=await this.httpClient.request<ListWrapper<EmployeeRow>|EmployeeRow[]>({method:"GET",path:"reports/branch/employees",token,branchId,query:{...dates,planLimitsVersion:1}});
     return unwrap(response).map(row=>new ReportLeaderboardItem(Number(row.employeeId??0),String(row.name??"Empleado"),Number(row.total??0),Number(row.transactions??0)));
   }
 
@@ -62,8 +68,8 @@ export class PosReportingApi implements IReportingRepository{
   private async summary(range:ReportRange,token:string,branchId?:number):Promise<SalesSummary>{
     const dates=rangeDates(range);
     const [overview,payments]=await Promise.all([
-      this.httpClient.request<OverviewResponse>({method:"GET",path:"reports/branch/overview",token,branchId,query:dates}),
-      this.httpClient.request<ListWrapper<PaymentRow>|PaymentRow[]>({method:"GET",path:"reports/branch/payment-methods",token,branchId,query:dates}),
+      this.httpClient.request<OverviewResponse>({method:"GET",path:"reports/branch/overview",token,branchId,query:{...dates,planLimitsVersion:1}}),
+      this.httpClient.request<ListWrapper<PaymentRow>|PaymentRow[]>({method:"GET",path:"reports/branch/payment-methods",token,branchId,query:{...dates,planLimitsVersion:1}}),
     ]);
     const data="data" in overview?(overview.data??{}):overview;const row=currencyRow(data.byCurrency??[]);const paymentRows=unwrap(payments).filter(item=>String(item.MoneyTipe??"MXN").toUpperCase()===String(row.MoneyTipe??"MXN").toUpperCase());
     const tx=Math.max(0,Number(row.transactions??0));const cash=paymentRows.filter(item=>String(item.paymentMethod??"").toUpperCase()==="EFECTIVO").reduce((n,item)=>n+Number(item.transactions??0),0);const card=paymentRows.filter(item=>String(item.paymentMethod??"").toUpperCase().includes("TARJETA")).reduce((n,item)=>n+Number(item.transactions??0),0);
@@ -71,6 +77,6 @@ export class PosReportingApi implements IReportingRepository{
   }
 
   private async incomeRows(from:string,to:string,token:string,branchId?:number):Promise<IncomeRow[]>{
-    const response=await this.httpClient.request<ListWrapper<IncomeRow>|IncomeRow[]>({method:"GET",path:"finances/branch/income",token,branchId,query:{from,to}});return unwrap(response);
+    const response=await this.httpClient.request<ListWrapper<IncomeRow>|IncomeRow[]>({method:"GET",path:"finances/branch/income",token,branchId,query:{from,to,planLimitsVersion:1}});return unwrap(response);
   }
 }

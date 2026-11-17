@@ -79,7 +79,7 @@ export class PosCustomerApi implements ICustomerRepository {
       method: "POST",
       path: "customers",
       token,
-      body: this.toApiPayload(payload),
+      body: { ...this.toApiPayload(payload), planLimitsVersion: 1 },
     });
 
     return this.toDomain(response);

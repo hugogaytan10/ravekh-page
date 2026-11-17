@@ -577,6 +577,11 @@ export const CatalogStorefrontPage = () => {
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
+  const brandingPlan = normalizePlan(store?.plan);
+  const branding = ["PRO", "MAX"].includes(brandingPlan)
+    ? "discreet"
+    : brandingPlan === "START" ? "visible" : "high";
+
   return (
     <main className="catalog-v2">
       <Helmet>
@@ -620,6 +625,12 @@ export const CatalogStorefrontPage = () => {
           ) : null}
         </div>
       </header>
+      {store && branding !== "discreet" && (
+        <p className={`catalog-v2__ravekh-credit catalog-v2__ravekh-credit--${branding}`}>
+          Catálogo creado con <Link to="/">RAVEKH</Link>
+        </p>
+      )}
+
 
 
       {catalogUnavailable ? (
@@ -874,6 +885,11 @@ export const CatalogStorefrontPage = () => {
           Ver carrito ({totalItems}) · {totalLabel}
         </Link>
       ) : null}
+      {store && branding === "discreet" && (
+        <p className="catalog-v2__ravekh-credit catalog-v2__ravekh-credit--discreet">
+          Catálogo creado con <Link to="/">RAVEKH</Link>
+        </p>
+      )}
     </main>
   );
 };

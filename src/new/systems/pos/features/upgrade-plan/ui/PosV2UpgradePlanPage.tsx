@@ -31,7 +31,7 @@ export const PosV2UpgradePlanPage = () => {
 
         </article>
       </section>
-      <FeatureUnlockModal open={checkoutOpen} onClose={() => setCheckoutOpen(false)} title={`Activa ${requiredPlan === "GRATUITO" ? "tu plan" : requiredPlan}`} message="Elige tu plan y completa el pago para activar las funciones de tu negocio." onPaymentSuccess={() => { setCheckoutOpen(false); navigate(safeFrom); }} />
+      <FeatureUnlockModal minimumPlan={requiredPlan} open={checkoutOpen} onClose={() => setCheckoutOpen(false)} title={`Activa ${requiredPlan === "GRATUITO" ? "tu plan" : requiredPlan}`} message="Elige tu plan y completa el pago para activar las funciones de tu negocio." onPaymentSuccess={() => { setCheckoutOpen(false); navigate(safeFrom); }} />
     </PosV2Shell>
   );
 };

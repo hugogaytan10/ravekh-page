@@ -1,3 +1,4 @@
+import {mexicoReportDate, useDayOnlyReports} from "../../../shared/hooks/useDayOnlyReports";
 import { posMoneyFormatter as moneyFormatter } from "../../../shared/config/posCurrency";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -21,7 +22,7 @@ const BUSINESS_ID_KEY = POS_SESSION_STORAGE_KEYS.businessId;
 
 type FinanceFormMode = "income" | "expense";
 type FinanceFilter = "all" | FinanceFormMode;
-type PeriodView = "month" | "today";
+type PeriodView = "month" | "today" | "week" | "custom";
 
 type FinanceTransactionViewModel = {
   id: string;
@@ -92,7 +93,12 @@ export const PosV2FinancePage = () => {
   const navigate = useNavigate();
   const [session] = useState(() => getSafeSession());
   const [month, setMonth] = useState(() => new Date().getMonth());
-  const [periodView, setPeriodView] = useState<PeriodView>("month");
+  const [selectedPeriod, setPeriodView] = useState<PeriodView>("month");
+  const dayOnly = useDayOnlyReports(session.businessId, session.token);
+  const periodView = dayOnly ? "today" : selectedPeriod;
+  const [customFrom, setCustomFrom] = useState(mexicoReportDate);
+  const [customTo, setCustomTo] = useState(mexicoReportDate);
+  const [rangeMovement, setRangeMovement] = useState<{ income: FinanceEntry[]; expenses: FinanceEntry[] }>({income: [], expenses: []});
   const [name, setName] = useState("");
   const [amount, setAmount] = useState("0");
   const [formMode, setFormMode] = useState<FinanceFormMode>("income");
@@ -162,7 +168,7 @@ export const PosV2FinancePage = () => {
       expenses: movement.expenses.filter((entry) => isTodayEntry(entry.createdAt)),
     };
     const hasTodayEndpointsData = todayMovement.income.length > 0 || todayMovement.expenses.length > 0;
-    const sourceMovement = periodView === "today" ? (hasTodayEndpointsData ? todayMovement : fallbackTodayMovement) : movement;
+    const sourceMovement = periodView === "today" ? (hasTodayEndpointsData ? todayMovement : fallbackTodayMovement) : periodView === "month" ? movement : rangeMovement;
     const base = [
       ...sourceMovement.income.map((entry, index) => {
         const isPosSale = Boolean(entry.orderId) || entry.source === "POS";
@@ -221,7 +227,7 @@ export const PosV2FinancePage = () => {
       .filter((item) => (typeFilter === "all" ? true : item.type === typeFilter))
       .filter((item) => (normalizedSearch ? item.concept.toLowerCase().includes(normalizedSearch) : true))
       .sort((a, b) => (b.occurredAt?.getTime() ?? 0) - (a.occurredAt?.getTime() ?? 0));
-  }, [branchNameById, isAllBranches, movement, todayMovement, periodView, typeFilter, search]);
+  }, [branchNameById, isAllBranches, movement, todayMovement, rangeMovement, periodView, typeFilter, search]);
 
   const activeCategories = formMode === "income" ? INCOME_CATEGORIES : EXPENSE_CATEGORIES;
 
@@ -291,7 +297,7 @@ export const PosV2FinancePage = () => {
 
     const overviewPromise = Promise.all(
       financeBranchIds.map((branchId) =>
-        page.loadOverview(session.businessId, session.token, branchId),
+        page.loadOverview(session.businessId, session.token, branchId, dayOnly),
       ),
     ).then((rows) =>
       rows.reduce(
@@ -306,7 +312,7 @@ export const PosV2FinancePage = () => {
       ),
     );
 
-    const movementPromise = Promise.all(
+    const movementPromise = dayOnly ? Promise.resolve({income: [], expenses: []}) : Promise.all(
       financeBranchIds.map((branchId) =>
         page.loadMonthMovement(session.businessId, month, session.token, branchId),
       ),
@@ -324,14 +330,21 @@ export const PosV2FinancePage = () => {
       expenses: rows.flatMap((row) => row.expenses),
     }));
 
-    const [overviewResult, movementResult, todayMovementResult] = await Promise.allSettled([
-      overviewPromise,
-      movementPromise,
-      todayMovementPromise,
+    const today = mexicoReportDate();
+    const weekStart = new Date(Date.parse(today + "T00:00:00Z") - 6 * 86400000).toISOString().slice(0, 10);
+    const from = periodView === "week" ? weekStart : customFrom;
+    const to = periodView === "week" ? today : customTo;
+    const rangePromise = (periodView === "week" || periodView === "custom") && from && to && from <= to
+      ? Promise.all(financeBranchIds.map(branchId => page.loadRangeMovement(from, to, session.token, branchId)))
+          .then(rows => ({income: rows.flatMap(row => row.income), expenses: rows.flatMap(row => row.expenses)}))
+      : Promise.resolve({income: [], expenses: []});
+    const [overviewResult, movementResult, todayMovementResult, rangeResult] = await Promise.allSettled([
+      overviewPromise, movementPromise, todayMovementPromise, rangePromise,
     ]);
 
     if (requestId !== financeRequestRef.current) return;
 
+    setRangeMovement(rangeResult.status === "fulfilled" ? rangeResult.value : {income: [], expenses: []});
     if (overviewResult.status === "fulfilled") {
       setOverview(overviewResult.value);
     }
@@ -356,8 +369,9 @@ export const PosV2FinancePage = () => {
       setError("No se pudo cargar el detalle de ingresos/egresos del periodo seleccionado.");
     }
 
+    if (rangeResult.status === "rejected") setError("No se pudo cargar el detalle del rango seleccionado.");
     setLoading(false);
-  }, [financeBranchIds, hasSession, month, page, session.businessId, session.token]);
+  }, [financeBranchIds, hasSession, month, page, session.businessId, session.token, dayOnly, periodView, customFrom, customTo]);
 
   useEffect(() => {
     return onPosBranchUpdated((branch) => {
@@ -555,12 +569,12 @@ export const PosV2FinancePage = () => {
               </label>
             ) : null}
 
-            <label>
+            {!dayOnly && <label>
               Mes
               <select value={month} onChange={(event) => setMonth(Number(event.target.value))}>
                 {monthOptions.map((monthLabel, index) => <option key={monthLabel} value={index}>{monthLabel}</option>)}
               </select>
-            </label>
+            </label>}
 
             <button type="button" className="pos-v2-finance__refresh" onClick={() => refreshData()} disabled={loading}>
               {loading ? "Actualizando…" : "Actualizar"}
@@ -599,10 +613,12 @@ export const PosV2FinancePage = () => {
             ))
           ) : (
             <>
+              {!dayOnly && <>
               <article><span>Entradas del mes</span><strong>{moneyFormatter.format(derivedOverview.monthIncome)}</strong></article>
               <article><span>Ventas del mes</span><strong>{moneyFormatter.format(monthSalesTotal)}</strong></article>
               <article><span>Transacciones de venta</span><strong>{monthSales.length}</strong></article>
               <article><span>Salidas del mes</span><strong>{moneyFormatter.format(derivedOverview.monthExpenses)}</strong></article>
+              </>}
               <article><span>Resultado operativo hoy</span><strong className={derivedOverview.todayNet >= 0 ? "is-income" : "is-expense"}>{derivedOverview.todayNet >= 0 ? "+" : ""}{moneyFormatter.format(derivedOverview.todayNet)}</strong></article>
               <article><span>Movimientos registrados</span><strong>{financeTimeline.length}</strong></article>
             </>
@@ -610,7 +626,7 @@ export const PosV2FinancePage = () => {
         </section>
 
         <section className="pos-v2-finance__insights">
-          <article>
+          {!dayOnly && <article>
             <h3>Salud mensual</h3>
             <p>Egresos del mes: <strong>{moneyFormatter.format(derivedOverview.monthExpenses)}</strong> de <strong>{moneyFormatter.format(derivedOverview.monthIncome)}</strong> en ingresos.</p>
             <div className="pos-v2-finance__progress" role="presentation" aria-hidden="true"><span style={{ width: `${derivedOverview.monthBurnRate}%` }} /></div>
@@ -619,7 +635,7 @@ export const PosV2FinancePage = () => {
               <span className={`pos-v2-finance__health-badge ${burnRateStatus.tone}`}>{burnRateStatus.label}</span>
             </div>
             <small>{burnRateStatus.description}</small>
-          </article>
+          </article>}
           <article>
             <h3>Resultado de hoy</h3>
             <p className={derivedOverview.todayNet >= 0 ? "is-income" : "is-expense"}>{derivedOverview.todayNet >= 0 ? "+" : ""}{moneyFormatter.format(derivedOverview.todayNet)}</p>
@@ -647,9 +663,17 @@ export const PosV2FinancePage = () => {
               <h3>Movimientos</h3>
               <div className="pos-v2-finance__toolbar">
                 <div className="pos-v2-finance__period-toggle" role="group" aria-label="Rango de movimientos">
+                  {!dayOnly && <>
                   <button type="button" className={periodView === "month" ? "is-active" : ""} onClick={() => setPeriodView("month")}>Mes</button>
+                  <button type="button" className={periodView === "week" ? "is-active" : ""} onClick={() => setPeriodView("week")}>Semana</button>
+                  <button type="button" className={periodView === "custom" ? "is-active" : ""} onClick={() => setPeriodView("custom")}>Personalizado</button>
+                  </>}
                   <button type="button" className={periodView === "today" ? "is-active" : ""} onClick={() => setPeriodView("today")}>Hoy</button>
                 </div>
+                {periodView === "custom" && <>
+                  <label>Desde <input type="date" value={customFrom} max={customTo} onChange={event => setCustomFrom(event.target.value)} /></label>
+                  <label>Hasta <input type="date" value={customTo} min={customFrom} onChange={event => setCustomTo(event.target.value)} /></label>
+                </>}
                 <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value as FinanceFilter)} aria-label="Filtrar por tipo">
                   <option value="all">Todo</option>
                   <option value="income">Ingresos</option>

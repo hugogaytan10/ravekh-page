@@ -1,5 +1,6 @@
 const PLAN_LIMITS: Record<string, number> = {
   GRATUITO: 0,
+  ESSENTIAL: 0,
   PRUEBA: 0,
   "GRATUITO ONLINE": 0,
   START: 100,

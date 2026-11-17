@@ -1,4 +1,4 @@
-export type ReportRange = "DAY" | "MONTH" | "YEAR";
+export type ReportRange = "DAY" | "WEEK" | "MONTH" | "YEAR";
 
 const toFiniteNumber = (value: unknown): number => {
   const parsed = Number(value);

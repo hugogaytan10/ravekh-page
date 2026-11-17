@@ -1,3 +1,6 @@
+import {Navigate} from "react-router-dom";
+import {usePosCrmVisibility} from "../../../shared/hooks/usePosCrmVisibility";
+import {POS_V2_PATHS} from "../../../routing/PosV2Paths";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { readPosSessionSnapshot } from "../../../shared/config/posSession";
@@ -21,6 +24,13 @@ const mergeMessages = (entries:CrmMessage[], current:CrmMessage[], sending=false
 };
 const errorText = (error: unknown) => error instanceof Error ? error.message : "Ocurrió un error de conexión.";
 export function PosV2CrmPage() {
+  const session = useMemo(() => readPosSessionSnapshot(), []);
+  const visible = usePosCrmVisibility(session.businessId, session.token);
+  if (visible === null) return null;
+  return visible ? <CrmWorkspace /> : <Navigate to={POS_V2_PATHS.more} replace />;
+}
+
+function CrmWorkspace() {
   const { token } = useMemo(() => readPosSessionSnapshot(), []);
   const api = useMemo(() => new CrmWebApi(token || ""), [token]);
   const [view, setView] = useState<View>("inbox");

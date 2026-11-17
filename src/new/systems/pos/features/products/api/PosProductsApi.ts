@@ -439,7 +439,7 @@ export class PosProductsApi implements IProductsRepository {
       method: "POST",
       path: POS_ENDPOINTS.productImport(businessId),
       token,
-      body: { rows },
+      body: { rows, planLimitsVersion: 1 },
     });
 
     const imported = Number(response?.imported ?? response?.total ?? 0);
@@ -461,6 +461,7 @@ export class PosProductsApi implements IProductsRepository {
 
     const formData = new FormData();
     formData.append("file", file);
+    formData.append("planLimitsVersion", "1");
 
     const response = await this.httpClient.request<{ imported?: number; message?: string; total?: number; created?: number; updated?: number; errors?: string[] }>({
       method: "POST",

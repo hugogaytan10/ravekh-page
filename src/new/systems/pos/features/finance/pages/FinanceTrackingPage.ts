@@ -21,8 +21,9 @@ export class FinanceTrackingPage {
     businessId: number,
     token: string,
     branchId?: number,
+    dayOnly?: boolean,
   ): Promise<FinanceOverviewViewModel> {
-    const overview = await this.service.getOverview(businessId, token, branchId);
+    const overview = await this.service.getOverview(businessId, token, branchId, dayOnly);
 
     return {
       monthIncome: overview.monthIncome,
@@ -31,6 +32,10 @@ export class FinanceTrackingPage {
       todayIncome: overview.todayIncome,
       todayExpenses: overview.todayExpenses,
     };
+  }
+
+  loadRangeMovement(from: string, to: string, token: string, branchId?: number) {
+    return this.service.getRangeMovement(from, to, token, branchId);
   }
 
   async loadMonthMovement(

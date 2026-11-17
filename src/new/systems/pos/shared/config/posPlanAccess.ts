@@ -1,4 +1,4 @@
-export type PosPlan =  "GRATUITO" | "START" | "PRO" | "MAX";
+export type PosPlan =  "GRATUITO" | "ESSENTIAL" | "START" | "PRO" | "MAX";
 
 export type PlanProtectedAction =
   | "products.printPdf"
@@ -28,9 +28,10 @@ export type PlanActionRule = {
 
 export const POS_PLAN_LEVELS: Record<PosPlan, number> = {
   GRATUITO: 1,
-  START: 2,
-  PRO: 3,
-  MAX: 4,
+  ESSENTIAL: 2,
+  START: 3,
+  PRO: 4,
+  MAX: 5,
 };
 
 const POS_PLAN_ALIASES: Record<string, PosPlan> = {
@@ -46,8 +47,9 @@ const POS_PLAN_ALIASES: Record<string, PosPlan> = {
 
 const PRODUCT_IMAGE_LIMITS: Record<PosPlan, number> = {
   GRATUITO: 1,
+  ESSENTIAL: 1,
   START: 3,
-  PRO: 10,
+  PRO: 5,
   MAX: Infinity,
 };
 
@@ -149,7 +151,7 @@ export const POS_PLAN_ACTION_RULES: Record<PlanProtectedAction, PlanActionRule> 
 export const normalizePosPlan = (rawPlan?: string | null): PosPlan => {
   const normalized = String(rawPlan ?? "").trim().toUpperCase();
   if (!normalized) return "GRATUITO";
-  if (normalized === "GRATUITO" || normalized === "START" || normalized === "PRO" || normalized === "MAX") return normalized;
+  if (normalized === "GRATUITO" || normalized === "ESSENTIAL" || normalized === "START" || normalized === "PRO" || normalized === "MAX") return normalized;
   return POS_PLAN_ALIASES[normalized] ?? "GRATUITO";
 };
 

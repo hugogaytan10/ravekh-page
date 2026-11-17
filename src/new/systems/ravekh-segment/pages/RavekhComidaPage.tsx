@@ -3,13 +3,11 @@ import { FreeCatalogLoginModal } from "../../main-catalog/components/FreeCatalog
 import { FeatureUnlockModal } from "../../pos/shared/ui/FeatureUnlockModal";
 import { trackMetaEvent } from "../../../../../scripts/metaPixel";
 import {
-  billingCycleCopy,
   buildCatalogCheckoutPlan,
   catalogPlans,
   FREE_CATALOG_PLAN_NAME,
   hasStoredPosSession,
   LOGIN_POS_PATH,
-  type BillingCycle,
   type CatalogCheckoutPlan,
 } from "./catalogPricingShared";
 
@@ -227,10 +225,8 @@ function Social() {
 
 /* ─── PRICING ─────────────────────────────────────────── */
 function Pricing() {
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
   const [loginModalPlan, setLoginModalPlan] = useState<CatalogCheckoutPlan | null>(null);
   const [unlockModalPlan, setUnlockModalPlan] = useState<CatalogCheckoutPlan | null>(null);
-  const activeBilling = billingCycleCopy[billingCycle];
 
   return (
     <section id="planes" style={{ background: C.dark, padding: "100px clamp(20px,6vw,80px)" }}>
@@ -240,12 +236,7 @@ function Pricing() {
           <h2 style={{ fontFamily: "'Fraunces', serif", fontSize: "clamp(28px,4vw,52px)", fontWeight: 600, color: C.white, margin: "0 0 16px" }}>Empieza hoy.<br /><em style={{ color: C.chili }}>Crece a tu ritmo.</em></h2>
           <p style={{ fontFamily: "Inter, sans-serif", fontSize: 15, color: "rgba(255,251,245,.45)", margin: 0 }}>Sin contratos largos. Sin letra chica.</p>
         </div>
-        <div role="group" style={{ display: "flex", justifyContent: "center", gap: 8, marginBottom: 12 }}>
-          {(Object.keys(billingCycleCopy) as BillingCycle[]).map(cycle => (
-            <button key={cycle} type="button" onClick={() => setBillingCycle(cycle)} style={{ padding: "10px 22px", border: `1px solid ${billingCycle === cycle ? C.chili : C.borderDk}`, background: billingCycle === cycle ? C.chili : "transparent", color: billingCycle === cycle ? C.white : "rgba(255,251,245,.4)", fontFamily: "Inter, sans-serif", fontSize: 11, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", cursor: "pointer" }}>{billingCycleCopy[cycle].label}</button>
-          ))}
-        </div>
-        <p style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "rgba(255,251,245,.35)", textAlign: "center", margin: "0 0 36px" }}>{activeBilling.helper}</p>
+
         <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(250px,1fr))", gap: 16 }}>
           {catalogPlans.map(p => (
             <div key={p.name} style={{ padding: "44px 28px", border: p.recommended ? `1px solid ${C.chili}` : `1px solid ${C.borderDk}`, background: p.recommended ? "#200800" : "#141414", position: "relative", display: "flex", flexDirection: "column" }}>
@@ -253,10 +244,10 @@ function Pricing() {
               <p style={{ fontFamily: "Inter, sans-serif", fontSize: 10, letterSpacing: 3, color: C.chili, textTransform: "uppercase", margin: "0 0 12px" }}>{p.name}</p>
               <h3 style={{ fontFamily: "'Fraunces', serif", fontSize: 20, color: C.white, fontWeight: 400, margin: "0 0 8px" }}>{p.limit}</h3>
               <div style={{ display: "flex", alignItems: "baseline", gap: 4, margin: "24px 0 8px" }}>
-                <span style={{ fontFamily: "'Fraunces', serif", fontSize: 40, color: p.recommended ? C.chili : C.white, fontWeight: 600 }}>{p.prices[billingCycle]}</span>
-                <span style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "rgba(255,251,245,.4)" }}>{p.periodLabel[billingCycle]}</span>
+                <span style={{ fontFamily: "'Fraunces', serif", fontSize: 40, color: p.recommended ? C.chili : C.white, fontWeight: 600 }}>{p.price}</span>
+                <span style={{ fontFamily: "Inter, sans-serif", fontSize: 13, color: "rgba(255,251,245,.4)" }}>{p.periodLabel}</span>
               </div>
-              {billingCycle === "annual" && p.annualNote && <p style={{ fontFamily: "Inter, sans-serif", fontSize: 12, color: C.chili, margin: "0 0 18px" }}>{p.annualNote}</p>}
+
               <ul style={{ margin: "18px 0 36px", padding: 0, listStyle: "none", display: "flex", flexDirection: "column", gap: 12, flex: 1 }}>
                 {p.benefits.map(f => (
                   <li key={f} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
@@ -265,7 +256,7 @@ function Pricing() {
                   </li>
                 ))}
               </ul>
-              <a href={p.name === FREE_CATALOG_PLAN_NAME ? LOGIN_POS_PATH : "#planes"} onClick={(e) => { trackMetaEvent("Contact", { content_name: p.name, plan_price: p.prices[billingCycle] }); if (p.name !== FREE_CATALOG_PLAN_NAME) { e.preventDefault(); const plan = buildCatalogCheckoutPlan(p, billingCycle); if (!plan) return; if (!hasStoredPosSession()) { setLoginModalPlan(plan); return; } setUnlockModalPlan(plan); } }} style={{ display: "block", textAlign: "center", padding: "14px 0", background: p.recommended ? C.chili : "transparent", border: p.recommended ? "none" : `1px solid ${C.borderDk}`, color: p.recommended ? C.white : "rgba(255,251,245,.4)", fontFamily: "Inter, sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", textDecoration: "none" }}>Elegir plan</a>
+              <a href={p.name === FREE_CATALOG_PLAN_NAME ? LOGIN_POS_PATH : "#planes"} onClick={(e) => { trackMetaEvent("Contact", { content_name: p.name, plan_price: p.price }); if (p.name !== FREE_CATALOG_PLAN_NAME) { e.preventDefault(); const plan = buildCatalogCheckoutPlan(p); if (!plan) return; if (!hasStoredPosSession()) { setLoginModalPlan(plan); return; } setUnlockModalPlan(plan); } }} style={{ display: "block", textAlign: "center", padding: "14px 0", background: p.recommended ? C.chili : "transparent", border: p.recommended ? "none" : `1px solid ${C.borderDk}`, color: p.recommended ? C.white : "rgba(255,251,245,.4)", fontFamily: "Inter, sans-serif", fontSize: 12, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", textDecoration: "none" }}>Elegir plan</a>
             </div>
           ))}
         </div>

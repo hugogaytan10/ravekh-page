@@ -51,7 +51,7 @@ import {
 
 const ALL_PRODUCTS_SEARCH_DEBOUNCE_MS = 450;
 const FREE_PLAN_ORDER_LIMIT_CODE = "FREE_PLAN_ORDER_LIMIT_REACHED";
-const FREE_PLAN_SALES_LIMIT = 50;
+const FREE_PLAN_SALES_LIMIT = 100;
 const POS_UPGRADE_PLAN_PATH = "/upgrade-plan";
 
 type SaleItemVm = {
@@ -510,7 +510,7 @@ export const PosV2SalesHomePage = () => {
     return (
       code === FREE_PLAN_ORDER_LIMIT_CODE ||
       (message.includes("plan gratuito") &&
-        message.includes("50") &&
+        (message.includes("50") || message.includes("100")) &&
         message.includes("venta"))
     );
   };
