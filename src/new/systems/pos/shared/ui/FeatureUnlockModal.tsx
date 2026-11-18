@@ -54,7 +54,7 @@ type PlanSelection = {
   plan: PlanKey;
 };
 
-type CheckoutStep = "plans" | "payment" | "success" | "error";
+type CheckoutStep = "review" | "plans" | "payment" | "success" | "error";
 
 type PaymentIntentResponse = {
   publishableKey?: string;
@@ -251,6 +251,8 @@ export const FeatureUnlockModal = ({
   minimumPlan = unlockFeature === "Fidelity" || unlockFeature === "DynamicQr" ? "START" : "ESSENTIAL",
   initialPlan,
 }: UnlockModalProps) => {
+  const [addonOptions,setAddonOptions]=useState<{code:string;capability:string;label:string;amount:number}[]>([]);
+  const [chosenAddons,setChosenAddons]=useState<{code:string;quantity:number}[]>([]);
   const [step, setStep] = useState<CheckoutStep>(initialPlan ? "payment" : "plans");
   const [selectedSelection, setSelectedSelection] = useState<PaymentSelection | null>(null);
   const [payment, setPayment] = useState<PaymentIntentResponse | null>(null);
@@ -285,6 +287,17 @@ export const FeatureUnlockModal = ({
     setStep("payment");
     void createPayment(buildPlanPaymentSelection(initialPlan, initialPlan.label));
   }, [initialPlan, open]);
+
+  useEffect(()=>{
+    if(!open||initialPlan||catalogAiPacks||cfdiPacks||autoCheckoutKeyRef.current)return;
+    const context=resolveCheckoutContext();
+    if(!context.token)return;
+    let active=true;
+    void fetch(new URL('stripe/pos/addons/recurring',getApiBaseUrl()).toString(),{headers:{Authorization:`Bearer ${context.token}`}})
+      .then(async response=>{if(!response.ok)return;const summary=await response.json();const previous=summary.previousPlan as PlanKey;if(active&&!autoCheckoutKeyRef.current&&OFFICIAL_MONTHLY_PRICES[previous]&&hasRequiredPlan(previous,minimumPlan)){autoCheckoutKeyRef.current='previous-selection';await createPayment(buildPlanPaymentSelection({plan:previous,amount:OFFICIAL_MONTHLY_PRICES[previous]}));}})
+      .catch(()=>{});
+    return ()=>{active=false;};
+  },[open,initialPlan,catalogAiPacks,cfdiPacks,minimumPlan]);
 
   useEffect(() => {
     if (step !== "payment" || !payment?.publishableKey || !payment.clientSecret || !paymentElementRef.current) return;
@@ -341,11 +354,12 @@ export const FeatureUnlockModal = ({
   };
 
   const selectPlan = (plan: PlanSelection) => {
+    autoCheckoutKeyRef.current='user-selection';
     setError("");
     void createPayment(buildPlanPaymentSelection(plan));
   };
 
-  async function createPayment(selection: PaymentSelection) {
+  async function createPayment(selection: PaymentSelection, confirmed=false) {
     logUnlockCheckout("payment:create:start", {
       selected: selection.label,
       kind: selection.kind,
@@ -365,7 +379,19 @@ export const FeatureUnlockModal = ({
     setLoading(true);
     setError("");
     try {
+      if(selection.kind==='PLAN'&&!confirmed) {
+        const response=await fetch(new URL('stripe/pos/addons/recurring?plan='+selection.plan,getApiBaseUrl()).toString(),{headers:{Authorization:`Bearer ${context.token}`}});
+        if(!response.ok)throw new Error('No se pudo recuperar tu selección anterior. Intenta otra vez.');
+        const summary=await response.json();
+        setAddonOptions(summary.offers||[]);
+        const previous=summary.previousAddons??(summary.manualGrants||[]).flatMap((grant:{code:string;units:number})=>grant.code==='POS_EXTRA_BRANCHES'?[{code:'BRANCH_1',quantity:grant.units||1}]:grant.code==='POS_EXTRA_EMPLOYEES'?[{code:'EMPLOYEES_'+(grant.units<=1?1:grant.units<=3?3:10),quantity:1}]:grant.code==='POS_DAILY_ALERTS'?[{code:'DAILY_ALERTS',quantity:1}]:[]);
+        setChosenAddons(previous.filter((item:{code:string})=>summary.offers.some((offer:{code:string})=>offer.code===item.code)));
+        setSelectedSelection(selection);
+        setStep('review');
+        return;
+      }
       const payload = {
+        prepaidAddons:chosenAddons,
         businessId: context.businessId,
         kind: "PLAN",
         amount: selection.amount,
@@ -382,7 +408,7 @@ export const FeatureUnlockModal = ({
         ? await postJson<PaymentIntentResponse>("createGeneralPayment", payload, context.token)
         : await postJson<PaymentIntentResponse>("stripe/pos/addons/catalog-ai", { batches: selection.batches }, context.token);
 
-      if (response.ok && selection.cfdiUnits !== undefined && data?.amountCents !== Math.round(selection.amount * 100)) {
+      if (response.ok && (selection.kind==='PLAN'||selection.cfdiUnits !== undefined) && data?.amountCents !== Math.round(selection.amount * 100)) {
         throw new Error("El importe del bloque cambió. Actualiza la página antes de volver a intentarlo.");
       }
       if (!response.ok || !data?.publishableKey || !data.clientSecret) {
@@ -479,8 +505,25 @@ export const FeatureUnlockModal = ({
   };
 
   const renderBody = () => {
-    const currentStep = initialPlan && step === "plans" ? "payment" : step;
+    const currentStep = step;
 
+    if(currentStep==='review'&&selectedSelection) {
+      const extras=chosenAddons.reduce((sum,item)=>sum+(addonOptions.find(offer=>offer.code===item.code)?.amount||0)*item.quantity,0);
+      const total=OFFICIAL_MONTHLY_PRICES[selectedSelection.plan!]+extras/100;
+      return <>
+        <h3>Revisa tu selección anterior</h3>
+        <p>Plan {selectedSelection.plan} · ${OFFICIAL_MONTHLY_PRICES[selectedSelection.plan!]} MXN por un mes desde el pago.</p>
+        <p>Puedes conservar, quitar o agregar complementos antes de pagar.</p>
+        {addonOptions.map(offer=>{const selected=chosenAddons.find(item=>item.code===offer.code);return <div key={offer.code}>
+          <label><input type="checkbox" checked={Boolean(selected)} onChange={()=>setChosenAddons(current=>selected?current.filter(item=>item.code!==offer.code):[...current.filter(item=>addonOptions.find(candidate=>candidate.code===item.code)?.capability!==offer.capability),{code:offer.code,quantity:1}])}/>{offer.label} · ${offer.amount/100} MXN</label>
+          {selected&&offer.code==='BRANCH_1'&&<label>Cantidad de sucursales <input type="number" min={1} max={100} value={selected.quantity} onChange={event=>{const quantity=Number(event.target.value);if(Number.isInteger(quantity)&&quantity>=1&&quantity<=100)setChosenAddons(current=>current.map(item=>item.code===offer.code?{...item,quantity}:item));}}/></label>}
+        </div>;})}
+        <p>Pago por 1 mes: <strong>${total.toFixed(2)} MXN</strong>. Sin cobros automáticos. Al vencer vuelves a Gratuito y puedes renovar cuando quieras.</p>
+        <p>Eliminar empleados o sucursales no reembolsa el periodo ya pagado. Las activaciones de administración conservan su vigencia.</p>
+        <button type="button" disabled={loading} onClick={()=>void createPayment({...selectedSelection,amount:total},true)}>Continuar al pago</button>
+        <button type="button" disabled={loading} onClick={()=>setStep('plans')}>Elegir otro plan</button>
+      </>;
+    }
     if (currentStep === "plans" && cfdiPacks) {
       return (
         <>

@@ -64,9 +64,11 @@ const wrapBannerText = (value: string, lineLength: number, maxLines: number) => 
 };
 
 type AddonOffer = {code: string; label: string; amount: number};
-type AddonCharge = {amount: number; periodEnd: number | null; status: string; cancelAtPeriodEnd: boolean};
+type AddonCharge = {billingMode?:"manual"|"prepaid"|"automatic";amount: number; periodEnd: number | null; status: string; cancelAtPeriodEnd: boolean};
 type MonthlyBilling = {
   offers: AddonOffer[];
+  previousPlan?:string;
+  manualGrants?:{code:string;units:number|null;expiresAt:string|null}[];
   subscriptions: (AddonCharge & {code: string; units: number; choices: AddonOffer[];
     next: {code: string; units: number; amount: number; effectiveAt: number | null} | null})[];
   billing: {plan: string; planAmount: number | null; planExpiresAt: string | null; recurringSubtotal: number;
@@ -708,33 +710,22 @@ export const PosV2MorePage = () => {
         {addons?.billing && (
           <section className="pos-v2-more__plan-banner" aria-label="Resumen mensual del plan">
             <div>
-              <h3>Resumen mensual</h3>
+              <h3>Mi plan y complementos</h3>
               <p>Plan {addons.billing.plan} · {addons.billing.planAmount === null ? "Sin precio mensual de referencia" : `${addonPrice(addons.billing.planAmount)} MXN de referencia`}</p>
               {addons.billing.planExpiresAt && <p>Vigencia del plan base: {addons.billing.planExpiresAt.slice(0, 10)}</p>}
               <p>En uso: {addons.billing.usage.employees} empleados y {addons.billing.usage.additionalBranches} sucursales adicionales a la matriz.</p>
-              <p>Complementos al renovar: <strong>{addonPrice(addons.billing.recurringSubtotal)} MXN/mes</strong></p>
+              <p>Suscripciones automáticas anteriores: <strong>{addonPrice(addons.billing.recurringSubtotal)} MXN/mes</strong></p>
               {addons.billing.planAmount !== null && <p>
                 Plan base y complementos: <strong>{addonPrice(addons.billing.planAmount + addons.billing.recurringSubtotal)} MXN/mes estimados</strong>
               </p>}
-              <small>Las fechas de cobro pueden ser distintas. El estimado excluye ajustes proporcionales e impuestos adicionales.</small>
+              <small>El plan se paga cuando tú decidas. Al vencer vuelves a Gratuito; al pagar podrás ajustar tu selección anterior.</small>
               {addons.billing.crm && <p>
                 CRM · {addonPrice(addons.billing.crm.amount)} MXN/mes
                 {addons.billing.crm.periodEnd && ` · ${addons.billing.crm.cancelAtPeriodEnd ? "Termina" : "Renueva"} el ${addonDate(addons.billing.crm.periodEnd)}`}
               </p>}
-              <p role="note">Eliminar un empleado o desactivar una sucursal libera espacio. El complemento sigue cobrándose hasta que cambies su cupo o lo canceles.</p>
-              {addons.offers.map(offer => (
-                <div key={offer.code}>
-                  {offer.code === "BRANCH_1" && <label>
-                    Sucursales a contratar
-                    <input type="number" min={1} max={100} value={branchQuantity}
-                      onChange={event => setBranchQuantity(Number(event.target.value))} />
-                  </label>}
-                  <button className="pos-v2-more__plan-primary" type="button" disabled={addonBusy || (offer.code === "BRANCH_1" && (!Number.isInteger(branchQuantity) || branchQuantity < 1 || branchQuantity > 100))}
-                    onClick={() => void openAddon(offer.code, "checkout", offer.code === "BRANCH_1" ? branchQuantity : undefined)}>
-                    {offer.code === "BRANCH_1" ? addonLabel(offer.code) : offer.label} · {addonPrice(offer.amount * (offer.code === "BRANCH_1" ? branchQuantity : 1))} MXN/mes
-                  </button>
-                </div>
-              ))}
+              <p role="note">Eliminar empleados o sucursales no reembolsa el periodo ya pagado. No se generan cobros nuevos por eliminar o conservar registros.</p>
+              <button type="button" className="pos-v2-more__plan-primary" onClick={openChangePlanModal}>Revisar plan y complementos antes de pagar</button>
+              {addons.manualGrants?.map(grant=><p key={grant.code}>{grant.code==='POS_EXTRA_EMPLOYEES'?`${grant.units} empleados adicionales`:grant.code==='POS_EXTRA_BRANCHES'?`${grant.units} sucursales adicionales`:grant.code==='POS_DAILY_ALERTS'?'Alertas diarias':grant.code==='POS_PURCHASED_CFDI'?`${grant.units} CFDI`:grant.code==='POS_EXTRA_CATALOG_AI'?`${grant.units} productos IA`:'CRM'} · Activado por administración{grant.expiresAt?' · Vigente hasta '+grant.expiresAt.slice(0,10):' · Sin vencimiento'}</p>)}
               {addons.subscriptions.map(item => {
                 const branches = item.code === "BRANCH_1";
                 const employees = item.code.startsWith("EMPLOYEES");
@@ -745,8 +736,8 @@ export const PosV2MorePage = () => {
                 return (
                   <div key={item.code}>
                     <h4>{addonLabel(item.code)}{branches || employees ? ` · ${item.units} contratados` : ""}</h4>
-                    <p>{addonPrice(item.amount)} MXN/mes
-                      {item.periodEnd && ` · ${item.cancelAtPeriodEnd ? "Termina" : "Renueva"} el ${addonDate(item.periodEnd)}`}
+                    <p>{item.billingMode==='manual'?'Activado por administración':item.billingMode==='prepaid'?'Periodo pagado':addonPrice(item.amount)+' MXN/mes'}
+                      {item.periodEnd && ` · ${item.billingMode==='prepaid'||item.billingMode==='manual'?"Vigente hasta":"Renueva"} el ${addonDate(item.periodEnd)}`}
                     </p>
                     {item.next && <p>
                       Cambio a {item.next.units} · {addonPrice(item.next.amount)} MXN/mes
@@ -771,8 +762,7 @@ export const PosV2MorePage = () => {
                         Cambiar a {addonPrice(amount)} MXN/mes
                       </button>
                     </>}
-                    <button className="pos-v2-more__plan-primary" type="button" disabled={addonBusy}
-                      onClick={() => void openAddon(item.code, "portal")}>Administrar cobro en Stripe</button>
+                    <>{(!item.billingMode||item.billingMode==='automatic')&&<button className="pos-v2-more__plan-primary" type="button" disabled={addonBusy} onClick={()=>void openAddon(item.code,"portal")}>Administrar suscripción anterior en Stripe</button>}</>
                   </div>
                 );
               })}
