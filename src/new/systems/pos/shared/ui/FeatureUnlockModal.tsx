@@ -1,3 +1,5 @@
+import {OFFICIAL_MONTHLY_PRICES,PLAN_DETAILS,type OfficialPaidPlan} from '../config/posPlanDetails';
+export {OFFICIAL_MONTHLY_PRICES} from '../config/posPlanDetails';
 import {authenticatedFetch as fetch} from '../../../../core/api/sessionFetch';
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { emitPosBusinessUpdated } from "../config/posBusinessEvents";
@@ -7,13 +9,7 @@ import { clearPendingPosUpgradeContext, readPendingPosUpgradeContext, readPosSes
 import "./FeatureUnlockModal.css";
 
 export type UnlockFeature = "Pos" | "Catalog" | "Fidelity" | "DynamicQr";
-export type UnlockPlanKey = "ESSENTIAL" | "START" | "PRO";
-
-export const OFFICIAL_MONTHLY_PRICES: Record<UnlockPlanKey, number> = {
-  ESSENTIAL: 89,
-  START: 199,
-  PRO: 399,
-};
+export type UnlockPlanKey = OfficialPaidPlan;
 
 export type UnlockModalProps = {
   open: boolean;
@@ -586,11 +582,14 @@ export const FeatureUnlockModal = ({
           <p>Selecciona un plan mensual.</p>
           <div className="pos-feature-unlock__plans">
             {PLAN_CHOICES.filter(plan => hasRequiredPlan(plan.plan, minimumPlan)).map((plan) => (
-              <button key={plan.plan} type="button" onClick={() => selectPlan(plan)} disabled={loading}>
-                <strong>{getPlanDisplayName(plan.plan)}</strong>
-                <small>Plan mensual</small>
-                <span>${plan.amount} MXN</span>
-              </button>
+              <article key={plan.plan} className="pos-feature-unlock__plan-option">
+                <div className="pos-feature-unlock__plan-heading"><strong>{getPlanDisplayName(plan.plan)}</strong><span>${plan.amount} MXN / mes</span></div>
+                <details className="pos-feature-unlock__plan-benefits">
+                  <summary>Ver todos los beneficios</summary>
+                  <ul>{PLAN_DETAILS[plan.plan].benefits.map(benefit=><li key={benefit}>{benefit}</li>)}</ul>
+                </details>
+                <button className="pos-feature-unlock__plan-select" type="button" onClick={()=>selectPlan(plan)} disabled={loading}>Elegir {getPlanDisplayName(plan.plan)}</button>
+              </article>
             ))}
           </div>
         </>

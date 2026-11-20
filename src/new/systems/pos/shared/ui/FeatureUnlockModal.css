@@ -370,3 +370,45 @@
   outline: 2px solid #a78bfa;
   outline-offset: 3px;
 }
+.pos-feature-unlock__plan-option {
+  padding: 1rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #f8fafc;
+}
+.pos-feature-unlock__plan-heading {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: .4rem 1rem;
+}
+.pos-feature-unlock__plan-benefits { margin: .75rem 0; }
+.pos-feature-unlock__plan-benefits summary {
+  cursor: pointer;
+  font-size: .85rem;
+  font-weight: 600;
+  padding: .3rem 0;
+}
+.pos-feature-unlock__plan-benefits summary:focus-visible { outline: 2px solid currentColor; outline-offset: 3px; }
+.pos-feature-unlock__plan-benefits ul {
+  margin: .6rem 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: .35rem;
+  font-size: .85rem;
+  line-height: 1.5;
+}
+.pos-feature-unlock__plans .pos-feature-unlock__plan-select {
+  width: 100%;
+  min-height: 42px;
+  display: block;
+  text-align: center;
+  font-weight: 700;
+  border-color: #111827;
+  background: #111827;
+  color: #fff;
+}
+:root[data-theme="dark"] .pos-feature-unlock__plan-option { background: #1f2937; border-color: #475569; }
+:root[data-theme="dark"] .pos-feature-unlock__plan-heading span { color: #e2e8f0; }
+:root[data-theme="dark"] .pos-feature-unlock__plans .pos-feature-unlock__plan-select { background: #f8fafc; color: #0f172a; }

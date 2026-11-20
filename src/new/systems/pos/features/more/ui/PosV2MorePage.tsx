@@ -725,7 +725,7 @@ export const PosV2MorePage = () => {
               </p>}
               <p role="note">Eliminar empleados o sucursales no reembolsa el periodo ya pagado. No se generan cobros nuevos por eliminar o conservar registros.</p>
               <button type="button" className="pos-v2-more__plan-primary" onClick={openChangePlanModal}>Revisar plan y complementos antes de pagar</button>
-              {addons.manualGrants?.map(grant=><p key={grant.code}>{grant.code==='POS_EXTRA_EMPLOYEES'?`${grant.units} empleados adicionales`:grant.code==='POS_EXTRA_BRANCHES'?`${grant.units} sucursales adicionales`:grant.code==='POS_DAILY_ALERTS'?'Alertas diarias':grant.code==='POS_PURCHASED_CFDI'?`${grant.units} CFDI`:grant.code==='POS_EXTRA_CATALOG_AI'?`${grant.units} productos IA`:'CRM'} · Activado por administración{grant.expiresAt?' · Vigente hasta '+grant.expiresAt.slice(0,10):' · Sin vencimiento'}</p>)}
+              {addons.manualGrants?.filter(grant=>grant.code!=='POS_PURCHASED_CFDI').map(grant=><p key={grant.code}>{grant.code==='POS_EXTRA_EMPLOYEES'?`${grant.units} empleados adicionales`:grant.code==='POS_EXTRA_BRANCHES'?`${grant.units} sucursales adicionales`:grant.code==='POS_DAILY_ALERTS'?'Alertas diarias':grant.code==='POS_EXTRA_CATALOG_AI'?`${grant.units} productos IA`:'CRM'} · Activado por administración{grant.expiresAt?' · Vigente hasta '+grant.expiresAt.slice(0,10):' · Sin vencimiento'}</p>)}
               {addons.subscriptions.map(item => {
                 const branches = item.code === "BRANCH_1";
                 const employees = item.code.startsWith("EMPLOYEES");

@@ -1,4 +1,5 @@
-import { OFFICIAL_MONTHLY_PRICES, type UnlockPlanKey } from "../../pos/shared/ui/FeatureUnlockModal";
+import {OFFICIAL_MONTHLY_PRICES,PLAN_DETAILS,type OfficialPaidPlan} from "../../pos/shared/config/posPlanDetails";
+type UnlockPlanKey = OfficialPaidPlan;
 
 export type VerticalCatalogPlan = {
   name: string;
@@ -25,14 +26,14 @@ export const catalogPlans: VerticalCatalogPlan[] = [
     price: "$0 MXN",
     periodLabel: "Gratis",
     limit: "Prueba el catálogo y el punto de venta",
-    benefits: ["50 productos", "1 imagen por producto", "50 visitas al catálogo al mes", "100 ventas POS al mes", "Reportes del día"],
+    benefits: PLAN_DETAILS.GRATUITO.benefits,
   },
   {
     name: "Essential",
     price: `$${OFFICIAL_MONTHLY_PRICES.ESSENTIAL} MXN`,
     periodLabel: "al mes",
     limit: "Publica y vende sin límite",
-    benefits: ["Productos, ventas y visitas ilimitados", "1 imagen por producto", "1 matriz", "1 empleado", "Reportes del día"],
+    benefits: PLAN_DETAILS.ESSENTIAL.benefits,
     checkoutPlanKey: "ESSENTIAL",
   },
   {
@@ -40,7 +41,7 @@ export const catalogPlans: VerticalCatalogPlan[] = [
     price: `$${OFFICIAL_MONTHLY_PRICES.START} MXN`,
     periodLabel: "al mes",
     limit: "Opera tu negocio",
-    benefits: ["Productos, ventas, visitas y clientes ilimitados", "3 imágenes por producto", "4 mesas", "2 empleados más el dueño", "5 cupones activos", "Reportes básicos"],
+    benefits: PLAN_DETAILS.START.benefits,
     recommended: true,
     checkoutPlanKey: "START",
   },
@@ -49,7 +50,7 @@ export const catalogPlans: VerticalCatalogPlan[] = [
     price: `$${OFFICIAL_MONTHLY_PRICES.PRO} MXN`,
     periodLabel: "al mes",
     limit: "Administra tu negocio",
-    benefits: ["5 imágenes por producto", "Matriz y 1 sucursal", "5 empleados más el dueño", "50 cupones activos", "Análisis avanzado"],
+    benefits: PLAN_DETAILS.PRO.benefits,
     checkoutPlanKey: "PRO",
   },
 ];
