@@ -6,7 +6,15 @@ import { emitPosBusinessUpdated } from "../config/posBusinessEvents";
 import { hasRequiredPlan, type PosPlan } from "../config/posPlanAccess";
 import { getPosApiBaseUrl } from "../config/posEnv";
 import { clearPendingPosUpgradeContext, readPendingPosUpgradeContext, readPosSessionSnapshot } from "../config/posSession";
+import essentialIcon from '../../../../../assets/plans/free.svg';
+import startIcon from '../../../../../assets/plans/start.svg';
+import proIcon from '../../../../../assets/plans/pro.svg';
 import "./FeatureUnlockModal.css";
+const PLAN_PRESENTATION = {
+  ESSENTIAL: {icon: essentialIcon, description: 'Lo esencial para vender sin límites.'},
+  START: {icon: startIcon, description: 'Más herramientas para tu día a día.'},
+  PRO: {icon: proIcon, description: 'Más equipo, sucursales y análisis.'},
+};
 
 export type UnlockFeature = "Pos" | "Catalog" | "Fidelity" | "DynamicQr";
 export type UnlockPlanKey = OfficialPaidPlan;
@@ -578,12 +586,17 @@ export const FeatureUnlockModal = ({
       return (
         <>
           <span className="pos-feature-unlock__badge">Selecciona un plan</span>
-          <h3>Elige el plan</h3>
-          <p>Selecciona un plan mensual.</p>
-          <div className="pos-feature-unlock__plans">
+          <h3>Encuentra tu siguiente paso</h3>
+          <p>Elige tu plan. Después podrás personalizar los complementos.</p>
+          <div className="pos-feature-unlock__plans pos-feature-unlock__plan-grid">
             {PLAN_CHOICES.filter(plan => hasRequiredPlan(plan.plan, minimumPlan)).map((plan) => (
-              <article key={plan.plan} className="pos-feature-unlock__plan-option">
-                <div className="pos-feature-unlock__plan-heading"><strong>{getPlanDisplayName(plan.plan)}</strong><span>${plan.amount} MXN / mes</span></div>
+              <article key={plan.plan} className={`pos-feature-unlock__plan-option${plan.plan === "PRO" ? " is-pro" : ""}`}>
+                <div className="pos-feature-unlock__plan-heading">
+                  <div><strong>{getPlanDisplayName(plan.plan)}</strong><p>{PLAN_PRESENTATION[plan.plan].description}</p></div>
+                  <img className="pos-feature-unlock__plan-icon" src={PLAN_PRESENTATION[plan.plan].icon} alt="" width="64" height="80" />
+                </div>
+                <div className="pos-feature-unlock__plan-price"><b><small>$</small>{plan.amount}</b><span>MXN / mes</span></div>
+                <ul className="pos-feature-unlock__plan-highlights">{PLAN_DETAILS[plan.plan].benefits.slice(1, 5).map(benefit => <li key={benefit}><span aria-hidden="true">✓</span>{benefit}</li>)}</ul>
                 <details className="pos-feature-unlock__plan-benefits">
                   <summary>Ver todos los beneficios</summary>
                   <ul>{PLAN_DETAILS[plan.plan].benefits.map(benefit=><li key={benefit}>{benefit}</li>)}</ul>
@@ -646,7 +659,8 @@ return null;
 
   return (
     <section className="pos-feature-unlock" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
-      <article className={`pos-feature-unlock__card${step === 'review' ? ' pos-feature-unlock__card--review' : ''}`} onClick={(event) => event.stopPropagation()}>
+      <article className={`pos-feature-unlock__card${step === 'review' ? ' pos-feature-unlock__card--review' : ''}${step === 'plans' && !catalogAiPacks && !cfdiPacks ? ' pos-feature-unlock__card--plans' : ''}`} onClick={(event) => event.stopPropagation()}>
+        <button type="button" className="pos-feature-unlock__close" aria-label="Cerrar planes" onClick={onClose}>×</button>
         {renderBody()}
       </article>
     </section>
