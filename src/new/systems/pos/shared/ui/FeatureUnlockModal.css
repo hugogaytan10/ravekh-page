@@ -217,3 +217,156 @@
 :root[data-theme="dark"] .pos-feature-unlock__plans span {
   color: #cbd5e1;
 }
+
+.pos-feature-unlock__addons {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.pos-feature-unlock__addon {
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  background: #f8fafc;
+  overflow: hidden;
+}
+
+.pos-feature-unlock__addon.is-selected {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+}
+
+.pos-feature-unlock__addon-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  min-height: 64px;
+  padding: 0.8rem;
+  cursor: pointer;
+}
+
+.pos-feature-unlock__addon-choice input {
+  flex: 0 0 auto;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: #7c3aed;
+}
+
+.pos-feature-unlock__addon-choice strong,
+.pos-feature-unlock__addon-price {
+  display: block;
+  line-height: 1.4;
+}
+
+.pos-feature-unlock__addon-price {
+  margin-top: 0.2rem;
+  color: #475569;
+  font-size: 0.85rem;
+}
+
+.pos-feature-unlock__addon-quantity {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin: 0 0.8rem 0.8rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid #ddd6fe;
+  font-size: 0.85rem;
+}
+
+.pos-feature-unlock__addon-quantity input {
+  box-sizing: border-box;
+  width: 80px;
+  min-height: 44px;
+  padding: 0.5rem;
+  border: 1px solid #94a3b8;
+  border-radius: 8px;
+  background: #fff;
+  color: #0f172a;
+  font: inherit;
+}
+
+.pos-feature-unlock__addon input:focus-visible {
+  outline: 2px solid #7c3aed;
+  outline-offset: 3px;
+}
+
+.pos-feature-unlock__total {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.5rem 1rem;
+  border-top: 1px solid #cbd5e1;
+  padding-top: 1rem;
+}
+
+.pos-feature-unlock__total strong {
+  font-size: 1.65rem;
+  line-height: 1.2;
+}
+
+.pos-feature-unlock__total small {
+  font-size: 0.85rem;
+}
+
+.pos-feature-unlock__card p.pos-feature-unlock__note {
+  font-size: 0.8rem;
+}
+
+.pos-feature-unlock__actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
+}
+
+:root[data-theme="dark"] .pos-feature-unlock__addon {
+  background: #0f172a;
+  border-color: #475569;
+}
+
+:root[data-theme="dark"] .pos-feature-unlock__addon.is-selected {
+  background: #241c42;
+  border-color: #a78bfa;
+}
+
+:root[data-theme="dark"] .pos-feature-unlock__addon-price {
+  color: #cbd5e1;
+}
+
+:root[data-theme="dark"] .pos-feature-unlock__addon-quantity {
+  border-color: #6d5b97;
+}
+
+:root[data-theme="dark"] .pos-feature-unlock__addon-quantity input {
+  background: #111827;
+  color: #f8fafc;
+}
+.pos-feature-unlock__card--review {
+  width: min(100%, 680px);
+  gap: 0.65rem;
+}
+
+.pos-feature-unlock__card--review h3 {
+  font-size: 1.55rem;
+  line-height: 1.2;
+}
+
+@media (min-width: 560px) {
+  .pos-feature-unlock__addons {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .pos-feature-unlock__addon:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+.pos-feature-unlock__card--review .pos-feature-unlock__actions button:not(.is-secondary) {
+  background: #7c3aed;
+}
+
+.pos-feature-unlock__card--review .pos-feature-unlock__actions button:focus-visible {
+  outline: 2px solid #a78bfa;
+  outline-offset: 3px;
+}
