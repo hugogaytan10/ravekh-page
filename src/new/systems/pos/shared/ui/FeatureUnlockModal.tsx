@@ -511,17 +511,32 @@ export const FeatureUnlockModal = ({
       const extras=chosenAddons.reduce((sum,item)=>sum+(addonOptions.find(offer=>offer.code===item.code)?.amount||0)*item.quantity,0);
       const total=OFFICIAL_MONTHLY_PRICES[selectedSelection.plan!]+extras/100;
       return <>
-        <h3>Revisa tu selección anterior</h3>
-        <p>Plan {selectedSelection.plan} · ${OFFICIAL_MONTHLY_PRICES[selectedSelection.plan!]} MXN por un mes desde el pago.</p>
+        <h3>Revisa tu plan y complementos</h3>
+        <p>Plan {getPlanDisplayName(selectedSelection.plan!)} · ${OFFICIAL_MONTHLY_PRICES[selectedSelection.plan!].toFixed(2)} MXN por un mes desde el pago.</p>
         <p>Puedes conservar, quitar o agregar complementos antes de pagar.</p>
-        {addonOptions.map(offer=>{const selected=chosenAddons.find(item=>item.code===offer.code);return <div key={offer.code}>
-          <label><input type="checkbox" checked={Boolean(selected)} onChange={()=>setChosenAddons(current=>selected?current.filter(item=>item.code!==offer.code):[...current.filter(item=>addonOptions.find(candidate=>candidate.code===item.code)?.capability!==offer.capability),{code:offer.code,quantity:1}])}/>{offer.label} · ${offer.amount/100} MXN</label>
-          {selected&&offer.code==='BRANCH_1'&&<label>Cantidad de sucursales <input type="number" min={1} max={100} value={selected.quantity} onChange={event=>{const quantity=Number(event.target.value);if(Number.isInteger(quantity)&&quantity>=1&&quantity<=100)setChosenAddons(current=>current.map(item=>item.code===offer.code?{...item,quantity}:item));}}/></label>}
-        </div>;})}
-        <p>Pago por 1 mes: <strong>${total.toFixed(2)} MXN</strong>. Sin cobros automáticos. Al vencer vuelves a Gratuito y puedes renovar cuando quieras.</p>
-        <p>Eliminar empleados o sucursales no reembolsa el periodo ya pagado. Las activaciones de administración conservan su vigencia.</p>
-        <button type="button" disabled={loading} onClick={()=>void createPayment({...selectedSelection,amount:total},true)}>Continuar al pago</button>
-        <button type="button" disabled={loading} onClick={()=>setStep('plans')}>Elegir otro plan</button>
+        <div className="pos-feature-unlock__addons">
+          {addonOptions.map(offer => {
+            const selected = chosenAddons.find(item => item.code === offer.code);
+            return <div className={`pos-feature-unlock__addon${selected ? ' is-selected' : ''}`} key={offer.code}>
+              <label className="pos-feature-unlock__addon-choice">
+                <input type="checkbox" checked={Boolean(selected)} onChange={() => setChosenAddons(current => selected ? current.filter(item => item.code !== offer.code) : [...current.filter(item => addonOptions.find(candidate => candidate.code === item.code)?.capability !== offer.capability), {code: offer.code, quantity: 1}])}/>
+                <span><strong>{offer.label}</strong><span className="pos-feature-unlock__addon-price">${(offer.amount / 100).toFixed(2)} MXN / mes{offer.code === 'BRANCH_1' ? ' por sucursal' : ''}</span></span>
+              </label>
+              {selected && offer.code === 'BRANCH_1' && <label className="pos-feature-unlock__addon-quantity">Cantidad de sucursales
+                <input type="number" min={1} max={100} value={selected.quantity} onChange={event => {const quantity = Number(event.target.value); if (Number.isInteger(quantity) && quantity >= 1 && quantity <= 100) setChosenAddons(current => current.map(item => item.code === offer.code ? {...item, quantity} : item));}}/>
+              </label>}
+            </div>;
+          })}
+        </div>
+        <div className="pos-feature-unlock__total" aria-live="polite" aria-atomic="true">
+          <span>Pago por 1 mes</span><strong>${total.toFixed(2)} <small>MXN</small></strong>
+        </div>
+        <p>Sin cobros automáticos. Al vencer vuelves a Gratuito y puedes renovar cuando quieras.</p>
+        <p className="pos-feature-unlock__note">Eliminar empleados o sucursales no reembolsa el periodo ya pagado. Las activaciones de administración conservan su vigencia.</p>
+        <div className="pos-feature-unlock__actions">
+          <button type="button" className="is-secondary" disabled={loading} onClick={() => setStep('plans')}>Elegir otro plan</button>
+          <button type="button" disabled={loading} onClick={() => void createPayment({...selectedSelection, amount: total}, true)}>Continuar al pago</button>
+        </div>
       </>;
     }
     if (currentStep === "plans" && cfdiPacks) {
@@ -632,7 +647,7 @@ return null;
 
   return (
     <section className="pos-feature-unlock" role="dialog" aria-modal="true" aria-label={title} onClick={onClose}>
-      <article className="pos-feature-unlock__card" onClick={(event) => event.stopPropagation()}>
+      <article className={`pos-feature-unlock__card${step === 'review' ? ' pos-feature-unlock__card--review' : ''}`} onClick={(event) => event.stopPropagation()}>
         {renderBody()}
       </article>
     </section>
