@@ -85,7 +85,13 @@ const comparisonRows = [
   { label: "Clientes", values: ["—", "—", "Ilimitados", "Ilimitados"] },
   { label: "Mesas", values: ["—", "—", "4", "Ilimitadas"] },
   { label: "Cupones activos", values: ["—", "—", "5", "50"] },
-  { label: "Reportes", values: ["Del día", "Del día", "Básicos", "Detallados"] },
+  { label: "Reportes", values: ["Del día", "Del día", "Básicos: día, semana, mes y rango", "Detallados y análisis avanzado"] },
+  { label: "Variantes por producto", values: ["—", "—", "10", "Ilimitadas"] },
+  { label: "Excel al mes", values: ["No incluido", "No incluido", "2 lotes de hasta 50 productos", "5 lotes de hasta 50 productos"] },
+  { label: "Productos con IA al mes", values: ["No incluida", "No incluida", "100 (2 lotes de 50)", "250 (5 lotes de 50)"] },
+  { label: "Cupo IA para carga masiva y chat", values: ["—", "—", "Compartido", "Compartido"] },
+  { label: "Alertas inteligentes", values: ["—", "—", "Cada 15 días", "Dos veces por semana"] },
+  { label: "Marca RAVEKH", values: ["Destacada", "Destacada", "Visible", "Discreta"] },
 ];
 
 const ProductPreview = () => (
