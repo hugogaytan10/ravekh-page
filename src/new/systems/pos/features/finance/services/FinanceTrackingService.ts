@@ -4,8 +4,12 @@ import { CreateFinanceEntryInput, FinanceEntry, FinanceOverview } from "../model
 export class FinanceTrackingService {
   constructor(private readonly repository: IFinanceRepository) {}
 
-  async getOverview(businessId: number, token: string, branchId?: number): Promise<FinanceOverview> {
-    return this.repository.getOverview(businessId, token, branchId);
+  async getOverview(businessId: number, token: string, branchId?: number, dayOnly?: boolean): Promise<FinanceOverview> {
+    return this.repository.getOverview(businessId, token, branchId, dayOnly);
+  }
+
+  getRangeMovement(from: string, to: string, token: string, branchId?: number) {
+    return this.repository.getRangeMovement(from, to, token, branchId);
   }
 
   async getMonthMovement(

@@ -63,8 +63,8 @@ const ACCEPTED_IMAGE_TYPES = new Set([
   "image/png",
   "image/webp",
 ]);
-const FREE_PRODUCT_LIMIT = 20;
-const START_PRODUCT_VARIANT_LIMIT = 2;
+const FREE_PRODUCT_LIMIT = 50;
+const START_PRODUCT_VARIANT_LIMIT = 10;
 const FREE_PRODUCT_PLAN_VALUES = new Set([
   "GRATUITO",
   "PRUEBA",
@@ -445,6 +445,7 @@ export const ProductsV2PosPage = () => {
   const [productLimitUpgrade, setProductLimitUpgrade] =
     useState<ProductLimitUpgradeState | null>(null);
   const [productPlanUnlockModal, setProductPlanUnlockModal] = useState<{
+    catalogAiPacks?: boolean;
     title: string;
     message: string;
     buttonText: string;
@@ -650,6 +651,10 @@ export const ProductsV2PosPage = () => {
 
   const openCatalogAiUpgradeModal = () => {
     const quotaReached = catalogAiImportQuota > 0;
+    if (quotaReached && (isStartPlan || normalizePlanValue(features.plan ?? productsLimit) === "PRO")) {
+      setProductPlanUnlockModal({catalogAiPacks: true, title: "Comprar lotes adicionales de IA", message: "Agrega productos a tu cuota mensual.", buttonText: "Ver paquetes"});
+      return;
+    }
     setProductPlanUnlockModal({
       title: quotaReached ? "Límite de importaciones alcanzado" : "Activa START",
       message: quotaReached
@@ -713,7 +718,7 @@ export const ProductsV2PosPage = () => {
   };
 
   const canAddProductVariants = (): boolean => {
-    if (isFreePlan) {
+    if (isFreePlan || normalizePlanValue(features.plan ?? productsLimit) === "ESSENTIAL") {
       openProductVariantUpgradeModal();
       return false;
     }
@@ -770,7 +775,7 @@ export const ProductsV2PosPage = () => {
 
     if (
       code !== "FREE_PRODUCT_LIMIT_REACHED" &&
-      !/plan gratuito permite hasta 20 productos/i.test(message)
+      !/plan gratuito permite hasta (?:20|50) productos/i.test(message)
     ) {
       return null;
     }
@@ -3628,9 +3633,12 @@ export const ProductsV2PosPage = () => {
           message={productPlanUnlockModal?.message}
           buttonText={productPlanUnlockModal?.buttonText}
           unlockFeature={productPlanUnlockModal?.unlockFeature}
+          minimumPlan={productPlanUnlockModal?.catalogAiPacks ? undefined : "START"}
+          catalogAiPacks={productPlanUnlockModal?.catalogAiPacks}
           onPaymentSuccess={() => {
             setProductPlanUnlockModal(null);
             void loadProducts(currentPage);
+            void refreshCatalogAiQuota();
           }}
         />
 

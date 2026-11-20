@@ -552,10 +552,8 @@ export const CatalogStorefrontPage = () => {
     }
   };
 
-  // Un producto publicado no debe desaparecer sólo porque todavía no tenga foto.
-  // StorefrontProductGrid ya renderiza el placeholder "Sin imagen".
   const productsWithImage = useMemo(
-    () => filteredProducts,
+    () => filteredProducts.filter((product) => Boolean(product.image && product.image.trim().length > 0)),
     [filteredProducts],
   );
   const handleFilterCategory = (categoryId: number | null) => {
@@ -578,6 +576,11 @@ export const CatalogStorefrontPage = () => {
     navigate({ search: safePage > 1 ? `?page=${safePage}` : "" }, { replace: true });
     window.scrollTo({ top: 0, behavior: "smooth" });
   };
+
+  const brandingPlan = normalizePlan(store?.plan);
+  const branding = ["PRO", "MAX"].includes(brandingPlan)
+    ? "discreet"
+    : brandingPlan === "START" ? "visible" : "high";
 
   return (
     <main className="catalog-v2">
@@ -622,6 +625,12 @@ export const CatalogStorefrontPage = () => {
           ) : null}
         </div>
       </header>
+      {store && branding !== "discreet" && (
+        <p className={`catalog-v2__ravekh-credit catalog-v2__ravekh-credit--${branding}`}>
+          Catálogo creado con <Link to="/">RAVEKH</Link>
+        </p>
+      )}
+
 
 
       {catalogUnavailable ? (
@@ -876,6 +885,11 @@ export const CatalogStorefrontPage = () => {
           Ver carrito ({totalItems}) · {totalLabel}
         </Link>
       ) : null}
+      {store && branding === "discreet" && (
+        <p className="catalog-v2__ravekh-credit catalog-v2__ravekh-credit--discreet">
+          Catálogo creado con <Link to="/">RAVEKH</Link>
+        </p>
+      )}
     </main>
   );
 };

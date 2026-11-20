@@ -104,7 +104,7 @@ export class LoyaltyApi implements IRewardRepository {
     await this.requireCouponScope(payload,token);
     const response = await this.httpClient.request<CouponEnvelope | CouponResponse | number>({
       method: "POST",
-      path: "coupons",
+      path: "coupons?activeLimit=v1",
       token,
       body: {
         Business_Id: payload.businessId,
@@ -127,7 +127,7 @@ export class LoyaltyApi implements IRewardRepository {
     await this.requireCouponScope(payload,token);
     const response = await this.httpClient.request<CouponEnvelope | CouponResponse | number>({
       method: "PUT",
-      path: `coupons/${couponId}`,
+      path: `coupons/${couponId}?activeLimit=v1`,
       token,
       body: {
         Business_Id: payload.businessId,

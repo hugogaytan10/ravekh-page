@@ -1,3 +1,4 @@
+import {mexicoReportDate, useDayOnlyReports} from "../../../shared/hooks/useDayOnlyReports";
 import { loadReportTicket, renderReportTicket } from "./reportTicket";
 import { readTicketCustomization } from "../../../shared/config/posTicket";
 import { readPosPrinters, getDefaultPosPrinter } from "../../../shared/config/posPrinters";
@@ -49,6 +50,7 @@ const BRAND_INDIGO = "#4c1d95";
 
 const RANGE_OPTIONS: Array<{ value: ReportRange; label: string }> = [
   { value: "DAY", label: "Hoy" },
+  { value: "WEEK", label: "Semana" },
   { value: "MONTH", label: "Mes" },
   { value: "YEAR", label: "Año" },
 ];
@@ -189,7 +191,7 @@ export const PosV2ReportingPage = () => {
   const [branchesLoading, setBranchesLoading] = useState(false);
   const [branchError, setBranchError] = useState<string | null>(null);
 
-  const [range, setRange] = useState<ReportRange>("MONTH");
+  const [selectedRange, setRange] = useState<ReportRange>("MONTH");
   const [paymentFilter, setPaymentFilter] = useState<"TODOS" | "EFECTIVO" | "TARJETA">("TODOS");
   const [summary, setSummary] = useState<ReportSummaryViewModel>(DEFAULT_SUMMARY);
   const [series, setSeries] = useState<IncomePoint[]>([]);
@@ -203,15 +205,22 @@ export const PosV2ReportingPage = () => {
   const [topProducts, setTopProducts] = useState<TopChartItem[]>([]);
   const [topEmployees, setTopEmployees] = useState<TopChartItem[]>([]);
   const [topCustomers, setTopCustomers] = useState<TopChartItem[]>([]);
-  const [tableRange, setTableRange] = useState<ReportRange>("DAY");
+  const [selectedTableRange, setTableRange] = useState<ReportRange>("DAY");
   const [salesQuery, setSalesQuery] = useState("");
   const [salesStatus, setSalesStatus] = useState<"TODOS" | "PEDIDO" | "ENTREGADO" | "CANCELADO">("TODOS");
-  const [salesDates, setSalesDates] = useState(initialSalesDates);
+  const [selectedSalesDates, setSalesDates] = useState(initialSalesDates);
   const [salesTickets, setSalesTickets] = useState<SalesTicket[]>([]);
   const [salesTicketsLoading, setSalesTicketsLoading] = useState(false);
   const [salesTicketsPage, setSalesTicketsPage] = useState(1);
   const [salesTicketsTotalPages, setSalesTicketsTotalPages] = useState(1);
   const [salesTicketsTotalItems, setSalesTicketsTotalItems] = useState(0);
+  const dayOnly = useDayOnlyReports(session.businessId, session.token);
+  const today = mexicoReportDate();
+  const dayDates = useMemo(() => ({from: today, to: today}), [today]);
+  const range = dayOnly ? "DAY" : selectedRange;
+  const tableRange = dayOnly ? "DAY" : selectedTableRange;
+  const salesDates = dayOnly ? dayDates : selectedSalesDates;
+  const rangeOptions = dayOnly ? RANGE_OPTIONS.slice(0, 1) : RANGE_OPTIONS;
   const reportRequestRef = useRef(0);
   const salesRequestRef = useRef(0);
   const topChartsRequestRef = useRef(0);
@@ -841,7 +850,9 @@ export const PosV2ReportingPage = () => {
       ? today
       : period === "MONTH"
         ? new Date(today.getFullYear(), today.getMonth(), 1)
-        : new Date(today.getFullYear(), 0, 1);
+        : period === "WEEK"
+          ? new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6)
+          : new Date(today.getFullYear(), 0, 1);
     setSalesTicketsPage(1);
     setSalesDates({ from: toDateInput(from), to: toDateInput(today) });
   };
@@ -948,7 +959,7 @@ export const PosV2ReportingPage = () => {
             <label>
               Rango
               <select value={range} onChange={(event) => setRange(event.target.value as ReportRange)}>
-                {RANGE_OPTIONS.map((option) => (
+                {rangeOptions.map((option) => (
                   <option key={option.value} value={option.value}>{option.label}</option>
                 ))}
               </select>
@@ -1040,7 +1051,7 @@ export const PosV2ReportingPage = () => {
               </div>
               <div className="pos-v2-reporting__sales-controls">
                 <div className="pos-v2-reporting__payment-tabs" aria-label="Rangos rápidos">
-                  {RANGE_OPTIONS.map((option) => (
+                  {rangeOptions.map((option) => (
                     <button key={`sales-range-${option.value}`} type="button" onClick={() => setQuickSalesRange(option.value)} disabled={salesTicketsLoading}>
                       {option.label}
                     </button>
@@ -1051,6 +1062,7 @@ export const PosV2ReportingPage = () => {
                   <input
                     type="date"
                     value={salesDates.from}
+                    disabled={dayOnly}
                     max={salesDates.to}
                     onChange={(event) => {
                       setSalesTicketsPage(1);
@@ -1063,6 +1075,7 @@ export const PosV2ReportingPage = () => {
                   <input
                     type="date"
                     value={salesDates.to}
+                    disabled={dayOnly}
                     min={salesDates.from}
                     onChange={(event) => {
                       setSalesTicketsPage(1);
@@ -1122,7 +1135,7 @@ export const PosV2ReportingPage = () => {
                 <label>
                   Periodo
                   <select value={tableRange} onChange={(event) => setTableRange(event.target.value as ReportRange)} disabled={salesLoading || !hasToken}>
-                    {RANGE_OPTIONS.map((option) => <option key={`table-${option.value}`} value={option.value}>{option.label}</option>)}
+                    {rangeOptions.map((option) => <option key={`table-${option.value}`} value={option.value}>{option.label}</option>)}
                   </select>
                 </label>
                 <div className="pos-v2-reporting__payment-tabs">

@@ -1,3 +1,4 @@
+import {mexicoReportDate} from "../../../shared/hooks/useDayOnlyReports";
 import { HttpClient } from "../../../../../core/api/HttpClient";
 import { IFinanceRepository } from "../interface/IFinanceRepository";
 import { CreateFinanceEntryInput, FinanceEntry, FinanceOverview } from "../model/FinanceEntry";
@@ -28,11 +29,6 @@ const monthRange = (month: number) => {
   return { from: isoDate(from), to: isoDate(to) };
 };
 
-const todayRange = () => {
-  const today = isoDate(new Date());
-  return { from: today, to: today };
-};
-
 const toFinanceEntry = (row: FinanceEntryResponse, fallbackName = ""): FinanceEntry =>
   new FinanceEntry(
     String(row.Name ?? fallbackName).trim(),
@@ -49,13 +45,14 @@ const toFinanceEntry = (row: FinanceEntryResponse, fallbackName = ""): FinanceEn
 export class PosFinanceApi implements IFinanceRepository {
   constructor(private readonly httpClient: HttpClient) {}
 
-  async getOverview(_businessId: number, token: string, branchId?: number): Promise<FinanceOverview> {
+  async getOverview(_businessId: number, token: string, branchId?: number, dayOnly = false): Promise<FinanceOverview> {
     const now = new Date();
     const month = monthRange(now.getMonth());
-    const today = todayRange();
+    const date = mexicoReportDate();
+    const today = {from: date, to: date};
 
     const [monthSummary, todaySummary] = await Promise.all([
-      this.summary(month.from, month.to, token, branchId),
+      dayOnly ? Promise.resolve({income: 0, expenses: 0}) : this.summary(month.from, month.to, token, branchId),
       this.summary(today.from, today.to, token, branchId),
     ]);
 
@@ -65,6 +62,14 @@ export class PosFinanceApi implements IFinanceRepository {
       todaySummary.income,
       todaySummary.expenses,
     );
+  }
+
+  async getRangeMovement(from: string, to: string, token: string, branchId?: number) {
+    const [income, expenses] = await Promise.all([
+      this.list("income", from, to, token, branchId),
+      this.list("expenses", from, to, token, branchId),
+    ]);
+    return {income, expenses};
   }
 
   async getIncomeByMonth(
@@ -78,8 +83,8 @@ export class PosFinanceApi implements IFinanceRepository {
   }
 
   async getIncomeToday(_businessId: number, token: string, branchId?: number): Promise<FinanceEntry[]> {
-    const range = todayRange();
-    return this.list("income", range.from, range.to, token, branchId);
+    const today = mexicoReportDate();
+    return this.list("income", today, today, token, branchId);
   }
 
   async getExpensesByMonth(
@@ -93,8 +98,8 @@ export class PosFinanceApi implements IFinanceRepository {
   }
 
   async getExpensesToday(_businessId: number, token: string, branchId?: number): Promise<FinanceEntry[]> {
-    const range = todayRange();
-    return this.list("expenses", range.from, range.to, token, branchId);
+    const today = mexicoReportDate();
+    return this.list("expenses", today, today, token, branchId);
   }
 
   async createIncome(
@@ -167,7 +172,7 @@ export class PosFinanceApi implements IFinanceRepository {
       path: `finances/branch/${kind}`,
       token,
       branchId,
-      query: { from, to },
+      query: { from, to, planLimitsVersion: 1 },
     });
 
     const rows = Array.isArray(response) ? response : response.data ?? [];
@@ -185,7 +190,7 @@ export class PosFinanceApi implements IFinanceRepository {
       path: "finances/branch/summary",
       token,
       branchId,
-      query: { from, to },
+      query: { from, to, planLimitsVersion: 1 },
     });
 
     const data = "data" in response ? response.data ?? {} : response;

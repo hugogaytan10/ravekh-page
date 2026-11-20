@@ -4,9 +4,8 @@ import { IncomePoint, ReportLeaderboardItem, ReportProductItem, ReportRange, Rep
 export class ReportingService {
   constructor(private readonly repository: IReportingRepository) {}
 
-  async getSummaryByRange(businessId: number, range: ReportRange, token?: string, branchId?: number): Promise<SalesSummary> {
-    const report = await this.repository.getSalesReport(businessId, token, branchId);
-    return report.getSummary(range);
+  async getSummaryByRange(_businessId: number, range: ReportRange, token?: string, branchId?: number): Promise<SalesSummary> {
+    return this.repository.getSummary(range, token, branchId);
   }
 
   async getIncomeSeries(businessId: number, range: ReportRange, token?: string, branchId?: number): Promise<IncomePoint[]> {

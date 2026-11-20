@@ -1,3 +1,5 @@
+import { FeatureUnlockModal } from "../../../shared/ui/FeatureUnlockModal";
+import { FetchHttpClient } from "../../../../../core/api/FetchHttpClient";
 import { useEffect, useMemo, useState } from "react";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
@@ -842,6 +844,17 @@ const isBillableConceptLine = (concept: InvoiceConceptLine): boolean => {
 export const FacturaElectronicaPage = () => {
   const apiBaseUrl = useMemo(() => getFacturaElectronicaApiBaseUrl(), []);
   const sessionSnapshot = useMemo(() => readPosSessionSnapshot(), []);
+  const [cfdiPacks, setCfdiPacks] = useState<{units: number; amount: number}[]>([]);
+  const [showCfdiCheckout, setShowCfdiCheckout] = useState(false);
+  useEffect(() => {
+    if (!sessionSnapshot.token) return;
+    let active = true;
+    const client = new FetchHttpClient(getPosApiBaseUrl());
+    void client.request<{units: number; amount: number}[]>({
+      method: "GET", path: "stripe/pos/addons/cfdi", token: sessionSnapshot.token,
+    }).then(items => { if (active) setCfdiPacks(items); }).catch(() => undefined);
+    return () => { active = false; };
+  }, [sessionSnapshot.token]);
   const [activeSection, setActiveSection] = useState<SectionId>("setup");
   const [businessDraft, setBusinessDraft] = useState<BusinessAccountDraft>(() => createInitialBusinessDraft());
   const [issuerDraft, setIssuerDraft] = useState<IssuerFiscalDraft>(() => createEmptyIssuerDraft());
@@ -1447,6 +1460,9 @@ export const FacturaElectronicaPage = () => {
       <section className="factura-electronica">
         <header className="factura-electronica__hero">
           <h2>Facturación Electrónica</h2>
+          {cfdiPacks.length > 0 && <button type="button" onClick={() => setShowCfdiCheckout(true)}>Comprar CFDI</button>}
+          <FeatureUnlockModal open={showCfdiCheckout} onClose={() => setShowCfdiCheckout(false)}
+            title="Comprar CFDI" cfdiPacks={cfdiPacks} />
           <p>La configuración fiscal se guarda una sola vez. La emisión usa el emisor, CSD, lugar de expedición y serie ya configurados.</p>
           <div className={`factura-electronica__notice ${setup.readyToInvoice ? "factura-electronica__notice--success" : ""}`}>{setupNotice}</div>
           {!apiBaseUrl ? <div className="factura-electronica__notice">{getFacturaElectronicaEnvHelp()}</div> : null}

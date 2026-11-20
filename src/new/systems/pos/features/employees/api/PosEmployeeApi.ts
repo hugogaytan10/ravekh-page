@@ -48,7 +48,7 @@ export class PosEmployeeApi implements IEmployeeRepository {
       method: "POST",
       path: "employee",
       token,
-      body: this.toApiPayload(payload),
+      body: { ...this.toApiPayload(payload), planLimitsVersion: 1 },
     });
 
     return this.toDomain(response, payload);

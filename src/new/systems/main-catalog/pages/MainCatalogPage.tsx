@@ -1,16 +1,14 @@
 /// <reference types="vite/client" />
-import { useMemo, useState, type ReactNode, type SVGProps } from "react";
+import { useState, type ReactNode, type SVGProps } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { FreeCatalogLoginModal } from "../components/FreeCatalogLoginModal";
 import { POS_SESSION_STORAGE_KEYS } from "../../pos/shared/config/posSession";
 import { FeatureUnlockModal } from "../../pos/shared/ui/FeatureUnlockModal";
 import {
-  billingCycleCopy,
   buildCatalogCheckoutPlan,
   catalogPlans,
   FREE_CATALOG_PLAN_NAME,
   LOGIN_POS_PATH,
-  type BillingCycle,
   type CatalogCheckoutPlan,
   type VerticalCatalogPlan,
 } from "../../ravekh-segment/pages/catalogPricingShared";
@@ -20,7 +18,6 @@ import "./MainCatalogPage.css";
 import demoVideo from "../../../assets/recorrido-catalogo.mp4";
 const MAIN_SALES_PATH = "/MainSales";
 const DEMO_CATALOG_PATH = "/v2/catalogo/1";
-const START_INTRO_PRICE = 189;
 const WHATSAPP_URL = "https://wa.me/524451113370?text=Hola%20Ravekh%2C%20quiero%20informaci%C3%B3n%20sobre%20el%20cat%C3%A1logo%20digital";
 
 type FeatureItem = {
@@ -78,53 +75,18 @@ const steps = [
   ["04", "Recibe el pedido", "El cliente arma su carrito y te manda una solicitud mucho más clara."],
 ];
 
-// Commercial copy is separated from entitlements: only benefits present in the pricing configuration are asserted.
-const planPresentation: Record<string, { audience: string; highlight: string; additions: string[]; caveat?: string }> = {
-  "Catálogo Gratuito": {
-    audience: "Para probar tu catálogo antes de contratar",
-    highlight: "Publica y comparte tu primer catálogo",
-    additions: ["Enlace para compartir", "1 foto por producto", "50 visitas mensuales por catálogo", "Datos guardados offline"],
-    caveat: "El límite de productos no está especificado en esta configuración.",
-  },
-  "Catálogo Básico": {
-    audience: "Para negocios que ya quieren vender en serio",
-    highlight: "Productos ilimitados y respaldo en la nube",
-    additions: ["Todo lo necesario para publicar productos", "Productos ilimitados · 3 imagen por producto", "Importación masiva de productos", "Reportes", "Sincronización en la nube"],
-  },
-  "Catálogo Intermedio": {
-    audience: "Para negocios en crecimiento",
-    highlight: "Más capacidad y seguimiento comercial",
-    additions: ["Todo lo incluido en Básico", "Mayor capacidad configurada para el negocio", "Mejor seguimiento comercial", "Preparación para crecer con POS"],
-    caveat: "Los límites y herramientas adicionales de PRO requieren confirmación.",
-  },
-  "Catálogo Pro": {
-    audience: "Para operaciones que necesitan atención prioritaria",
-    highlight: "Soporte prioritario y facturación",
-    additions: ["Todo lo incluido en Intermedio", "Capacidad personalizada", "Soporte prioritario", "100 facturas timbradas al mes ante el SAT"],
-    caveat: "La capacidad personalizada se define según tu operación.",
-  },
-};
-
 const comparisonRows = [
-  { label: "Enlace de catálogo", values: ["Sí", "Sí", "Sí", "Sí"] },
-  { label: "Fotos por producto", values: ["1", "3", "8", "Sin límite"] },
-  { label: "Visitas mensuales", values: ["50", "Sin límite", "Sin límite", "Sin límite"] },
-  { label: "Productos", values: ["Límite por confirmar", "Ilimitados", "Incluidos", "Personalizados"] },
-  { label: "Importación masiva", values: ["No anunciada", "Sí", "Sí", "Sí"] },
-  { label: "Reportes y nube", values: ["No anunciados", "Sí", "Sí", "Sí"] },
-  { label: "Seguimiento comercial adicional", values: ["No anunciado", "No anunciado", "Sí*", "Sí*"] },
-  { label: "Soporte prioritario", values: ["No anunciado", "No anunciado", "No anunciado", "Sí"] },
-  { label: "Facturas SAT / mes", values: ["No anunciadas", "No anunciadas", "No anunciadas", "100"] },
+  { label: "Productos", values: ["50", "Ilimitados", "Ilimitados", "Ilimitados"] },
+  { label: "Fotos por producto", values: ["1", "1", "3", "5"] },
+  { label: "Visitas mensuales al catálogo", values: ["50", "Ilimitadas", "Ilimitadas", "Ilimitadas"] },
+  { label: "Ventas POS mensuales", values: ["100", "Ilimitadas", "Ilimitadas", "Ilimitadas"] },
+  { label: "Sucursales incluidas", values: ["Matriz", "Matriz", "Matriz", "Matriz + 1"] },
+  { label: "Empleados incluidos", values: ["1", "1", "2 + dueño", "5 + dueño"] },
+  { label: "Clientes", values: ["—", "—", "Ilimitados", "Ilimitados"] },
+  { label: "Mesas", values: ["—", "—", "4", "Ilimitadas"] },
+  { label: "Cupones activos", values: ["—", "—", "5", "50"] },
+  { label: "Reportes", values: ["Del día", "Del día", "Básicos", "Detallados"] },
 ];
-
-const getCheckoutPlan = (plan: VerticalCatalogPlan, billingCycle: BillingCycle): CatalogCheckoutPlan | null => {
-  const checkout = buildCatalogCheckoutPlan(plan, billingCycle);
-  if (!checkout) return null;
-  if (billingCycle === "monthly" && checkout.plan === "START") {
-    return { ...checkout, amount: START_INTRO_PRICE };
-  }
-  return checkout;
-};
 
 const ProductPreview = () => (
   <div className="catalog-landing-preview" aria-label="Vista ilustrativa del catálogo Ravekh">
@@ -157,21 +119,18 @@ const FeatureCard = ({ icon, title, text }: FeatureItem) => (
 
 export const MainCatalogPage = () => {
   const navigate = useNavigate();
-  const [billingCycle, setBillingCycle] = useState<BillingCycle>("monthly");
   const [loginModalPlan, setLoginModalPlan] = useState<CatalogCheckoutPlan | null>(null);
   const [unlockModalPlan, setUnlockModalPlan] = useState<CatalogCheckoutPlan | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const activeBilling = billingCycleCopy[billingCycle];
-  const startPlan = useMemo(() => catalogPlans.find((plan) => plan.checkoutPlanKey === "START"), []);
 
   const choosePlan = (plan: VerticalCatalogPlan) => {
-    trackMetaEvent("Contact", { content_name: plan.name, plan_price: plan.prices[billingCycle] });
+    trackMetaEvent("Contact", { content_name: plan.name, plan_price: plan.price });
     if (plan.name === FREE_CATALOG_PLAN_NAME) {
       navigate(LOGIN_POS_PATH);
       return;
     }
-    const checkoutPlan = getCheckoutPlan(plan, billingCycle);
+    const checkoutPlan = buildCatalogCheckoutPlan(plan);
     if (!checkoutPlan) return;
     const hasSession = Boolean(window.localStorage.getItem(POS_SESSION_STORAGE_KEYS.token));
     if (!hasSession) {
@@ -297,34 +256,26 @@ export const MainCatalogPage = () => {
       <section className="catalog-landing-section catalog-landing-pricing" id="planes">
         <div className="catalog-landing-container">
           <div className="catalog-landing-heading catalog-landing-heading--center"><span>PLANES</span><h2>Empieza con lo que necesitas hoy.</h2><p>Todos entran al mismo sistema. Puedes comenzar gratis o activar más capacidad cuando tu negocio lo requiera.</p></div>
-          <div className="catalog-landing-billing"><div>{(Object.keys(billingCycleCopy) as BillingCycle[]).map((cycle) => <button key={cycle} type="button" className={billingCycle === cycle ? "is-active" : ""} onClick={() => setBillingCycle(cycle)}>{billingCycleCopy[cycle].label}</button>)}</div><p>{activeBilling.helper}</p></div>
           <div className="catalog-landing-plan-guidance">
             <strong>¿Cuál te conviene?</strong>
-            <p><b>Gratis</b> para explorar · <b>Básico</b> para publicar sin límite de productos · <b>Intermedio</b> para crecer · <b>Pro</b> para soporte prioritario y facturación.</p>
+            <p><b>Gratuito</b> para probar · <b>Essential</b> para vender sin límite · <b>Start</b> para operar · <b>Pro</b> para administrar.</p>
           </div>
           <div className="catalog-landing-pricing-grid">
             {catalogPlans.map((plan) => {
-              const isStart = plan.checkoutPlanKey === "START";
-              const presentation = planPresentation[plan.name];
-              const displayedPrice = billingCycle === "monthly" && isStart ? `$${START_INTRO_PRICE} MXN` : plan.prices[billingCycle];
               return <article key={plan.name} className={`catalog-landing-plan ${plan.recommended ? "catalog-landing-plan--recommended" : ""}`}>
                 {plan.recommended ? <span className="catalog-landing-plan__badge">IDEAL PARA EMPEZAR A VENDER</span> : null}
-                <div className="catalog-landing-plan__name"><span>{plan.name}</span><h3>{presentation.highlight}</h3><p className="catalog-landing-plan__audience">{presentation.audience}</p></div>
-                <div className="catalog-landing-plan__price"><strong>{displayedPrice}</strong><span>{billingCycle === "monthly" && isStart ? "el primer mes" : plan.periodLabel[billingCycle]}</span></div>
-                {billingCycle === "monthly" && isStart ? <p className="catalog-landing-plan__note">A partir del segundo mes: {startPlan?.prices.monthly} / mes.</p> : billingCycle === "annual" && plan.annualNote ? <p className="catalog-landing-plan__note">{plan.annualNote} · cobro anual</p> : <div className="catalog-landing-plan__note-spacer" />}
+                <div className="catalog-landing-plan__name"><span>{plan.name}</span><h3>{plan.limit}</h3></div>
+                <div className="catalog-landing-plan__price"><strong>{plan.price}</strong><span>{plan.periodLabel}</span></div>
                 <p className="catalog-landing-plan__includes">LO QUE INCLUYE</p>
-                <ul>{presentation.additions.map((benefit) => <li key={benefit}><span>✓</span>{benefit}</li>)}</ul>
-                {presentation.caveat ? <p className="catalog-landing-plan__caveat">{presentation.caveat}</p> : null}
+                <ul>{plan.benefits.map((benefit) => <li key={benefit}><span>✓</span>{benefit}</li>)}</ul>
                 <button type="button" className={plan.recommended ? "catalog-landing-plan__button catalog-landing-plan__button--primary" : "catalog-landing-plan__button"} onClick={() => choosePlan(plan)}>{plan.name === FREE_CATALOG_PLAN_NAME ? "Comenzar gratis" : `Elegir ${plan.name.replace("Catálogo ", "")}`}</button>
               </article>;
             })}
           </div>
           <div className="catalog-landing-comparison" id="comparar-planes">
-            <div className="catalog-landing-comparison__heading"><div><span>COMPARACIÓN DETALLADA</span><h3>Las diferencias, sin letra pequeña.</h3></div><p>Compara lo que está descrito actualmente en la configuración de los paquetes.</p></div>
+            <div className="catalog-landing-comparison__heading"><div><span>COMPARACIÓN DETALLADA</span><h3>Las diferencias, sin letra pequeña.</h3></div><p>Compara los límites incluidos en cada plan.</p></div>
             <div className="catalog-landing-comparison__scroll"><table><thead><tr><th scope="col">Función</th>{catalogPlans.map(plan => <th scope="col" key={plan.name}>{plan.name.replace("Catálogo ", "")}</th>)}</tr></thead><tbody>{comparisonRows.map(row => <tr key={row.label}><th scope="row">{row.label}</th>{row.values.map((value, index) => <td key={`${row.label}-${index}`}>{value}</td>)}</tr>)}</tbody></table></div>
-            <p className="catalog-landing-comparison__disclaimer">* La configuración disponible no detalla las funciones exactas ni los límites de seguimiento comercial en Intermedio/Pro. “No anunciado” no necesariamente significa que una función esté deshabilitada. Confirma los alcances antes de contratar.</p>
           </div>
-          <p className="catalog-landing-pricing-footnote">Precios tomados de la configuración de tu proyecto. En Básico mensual: $189 MXN el primer mes y $299 MXN al mes después. En anual, el cobro se realiza por 12 meses.</p>
         </div>
       </section>
 

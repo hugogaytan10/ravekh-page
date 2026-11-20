@@ -261,6 +261,7 @@ export const PosV2EmployeesPage = () => {
             <article className="pos-v2-employees__confirm">
               <h3>Eliminar empleado</h3>
               <p>¿Seguro que deseas eliminar a <strong>{deleteCandidate.name}</strong>? Perderá el acceso; sus ventas y cortes se conservarán. Podrás terminar sus cortes pendientes desde Corte de caja.</p>
+              <p>Eliminar al empleado libera un lugar. El paquete contratado sigue cobrándose hasta que lo cambies o lo canceles en Más.</p>
               {error ? <p role="alert">{error}</p> : null}
               <div className="pos-v2-employees__actions">
                 <button type="button" disabled={saving} onClick={() => setDeleteCandidate(null)}>Cancelar</button>

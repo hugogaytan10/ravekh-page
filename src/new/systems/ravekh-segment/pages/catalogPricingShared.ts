@@ -1,15 +1,12 @@
-import type { UnlockPlanKey } from "../../pos/shared/ui/FeatureUnlockModal";
-
-export type BillingCycle = "monthly" | "annual";
+import { OFFICIAL_MONTHLY_PRICES, type UnlockPlanKey } from "../../pos/shared/ui/FeatureUnlockModal";
 
 export type VerticalCatalogPlan = {
   name: string;
-  prices: Record<BillingCycle, string>;
-  periodLabel: Record<BillingCycle, string>;
+  price: string;
+  periodLabel: string;
   limit: string;
   benefits: string[];
   recommended?: boolean;
-  annualNote?: string;
   checkoutPlanKey?: UnlockPlanKey;
 };
 
@@ -22,92 +19,47 @@ export type CatalogCheckoutPlan = {
 export const LOGIN_POS_PATH = "/login-punto-venta";
 export const FREE_CATALOG_PLAN_NAME = "Catálogo Gratuito";
 
-export const billingCycleCopy: Record<BillingCycle, { label: string; helper: string }> = {
-  monthly: {
-    label: "Mensual",
-    helper: "Paga mes a mes y cambia de plan cuando tu negocio lo necesite.",
-  },
-  annual: {
-    label: "Anual",
-    helper: "Paga una vez al año y deja tu catálogo cubierto por 12 meses.",
-  },
-};
-
 export const catalogPlans: VerticalCatalogPlan[] = [
   {
     name: FREE_CATALOG_PLAN_NAME,
-    prices: { monthly: "0.00 MXN", annual: "0.00 MXN" },
-    periodLabel: { monthly: "Gratis", annual: "Gratis" },
-    limit: "Límite de productos/fotos editable",
-    benefits: [
-      "Link de catálogo",
-      "1 Imagen por producto",
-      "50 Visitas al mes por catálogo",
-      "Sin acceso a impuesto por venta",
-      "Guardado 100% offline",
-    ],
+    price: "$0 MXN",
+    periodLabel: "Gratis",
+    limit: "Prueba el catálogo y el punto de venta",
+    benefits: ["50 productos", "1 imagen por producto", "50 visitas al catálogo al mes", "100 ventas POS al mes", "Reportes del día"],
   },
   {
-    name: "Catálogo Básico",
-    prices: { monthly: "299.00 MXN", annual: "2,988.00 MXN" },
-    periodLabel: { monthly: "al mes", annual: "al año" },
-    limit: "Perfecto para empezar con un catálogo simple",
-    benefits: [
-      "Importación masiva",
-      "Acceso a reportes",
-      "Productos ilimitados",
-      "Hasta 3 imágenes por producto",
-      "Sincronización en la nube",
-    ],
+    name: "Essential",
+    price: `$${OFFICIAL_MONTHLY_PRICES.ESSENTIAL} MXN`,
+    periodLabel: "al mes",
+    limit: "Publica y vende sin límite",
+    benefits: ["Productos, ventas y visitas ilimitados", "1 imagen por producto", "1 matriz", "1 empleado", "Reportes del día"],
+    checkoutPlanKey: "ESSENTIAL",
+  },
+  {
+    name: "Start",
+    price: `$${OFFICIAL_MONTHLY_PRICES.START} MXN`,
+    periodLabel: "al mes",
+    limit: "Opera tu negocio",
+    benefits: ["Productos, ventas, visitas y clientes ilimitados", "3 imágenes por producto", "4 mesas", "2 empleados más el dueño", "5 cupones activos", "Reportes básicos"],
     recommended: true,
-    annualNote: "Equivale a $249 MXN al mes",
     checkoutPlanKey: "START",
   },
   {
-    name: "Catálogo Intermedio",
-    prices: { monthly: "599.00 MXN", annual: "5,988.00 MXN" },
-    periodLabel: { monthly: "al mes", annual: "al año" },
-    limit: "Para negocios con más variedad de productos",
-    benefits: [
-      "Todo lo del plan Básico",
-      "Hasta 10 imágenes por producto",
-      "Mayor capacidad de productos",
-      "Mejor seguimiento comercial",
-      "Preparado para crecer a POS",
-    ],
-    annualNote: "Equivale a $499 MXN al mes",
+    name: "Pro",
+    price: `$${OFFICIAL_MONTHLY_PRICES.PRO} MXN`,
+    periodLabel: "al mes",
+    limit: "Administra tu negocio",
+    benefits: ["5 imágenes por producto", "Matriz y 1 sucursal", "5 empleados más el dueño", "50 cupones activos", "Análisis avanzado"],
     checkoutPlanKey: "PRO",
-  },
-  {
-    name: "Catálogo Pro",
-    prices: { monthly: "1299.00 MXN", annual: "13,788.00 MXN" },
-    periodLabel: { monthly: "al mes", annual: "al año" },
-    limit: "Para catálogos con máxima flexibilidad",
-    benefits: [
-      "Todo lo del plan Intermedio",
-      "Imágenes ilimitadas por producto",
-      "Capacidad de productos personalizada",
-      "Soporte prioritario",
-      "100 Facturas timbradas al mes ante el SAT",
-    ],
-    annualNote: "Equivale a $1,149 MXN al mes",
-    checkoutPlanKey: "MAX",
   },
 ];
 
-export const parsePlanAmount = (price: string) => {
-  const amount = Number(price.replace(/[^0-9.]/g, ""));
-  return Number.isFinite(amount) ? amount : 0;
-};
-
-export const buildCatalogCheckoutPlan = (plan: VerticalCatalogPlan, billingCycle: BillingCycle): CatalogCheckoutPlan | null => {
-  if (!plan.checkoutPlanKey) {
-    return null;
-  }
+export const buildCatalogCheckoutPlan = (plan: VerticalCatalogPlan): CatalogCheckoutPlan | null => {
+  if (!plan.checkoutPlanKey) return null;
 
   return {
     name: plan.name,
-    amount: parsePlanAmount(plan.prices[billingCycle]),
+    amount: OFFICIAL_MONTHLY_PRICES[plan.checkoutPlanKey],
     plan: plan.checkoutPlanKey,
   };
 };

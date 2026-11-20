@@ -136,6 +136,7 @@ export class PosBranchApi {
       token,
       skipBranchHeader: true,
       body: {
+        planLimitsVersion: 1,
         name: input.name,
         code: input.code,
         slug: input.slug,

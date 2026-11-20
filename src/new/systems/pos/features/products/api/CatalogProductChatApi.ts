@@ -132,6 +132,8 @@ const ERROR_MESSAGES: Record<string, string> = {
   INVALID_IMAGE_TYPE: "El formato de una imagen no es compatible.",
   FILE_TOO_LARGE: "Una imagen supera el tamaño permitido.",
   DRAFT_INCOMPLETE: "Aún faltan datos antes de crear el producto.",
+  AI_IMPORT_PLAN_REQUIRED: "Tu plan no incluye la carga de productos con IA.",
+  AI_IMPORT_QUOTA_EXCEEDED: "Alcanzaste la cuota mensual de carga de productos con IA.",
   AI_UNAVAILABLE: "El asistente no está disponible por el momento.",
 };
 

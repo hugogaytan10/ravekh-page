@@ -1,3 +1,4 @@
+import {usePosCrmVisibility} from "../../../shared/hooks/usePosCrmVisibility";
 import { FiShoppingBag, FiMapPin, FiUsers, FiCreditCard, FiUserCheck, FiGift, FiCamera, FiPrinter, FiDollarSign, FiSettings, FiTrendingUp, FiChevronRight } from "react-icons/fi";
 import { ModernSystemsFactory } from "../../../../../index";
 import { PosV2Shell } from "../../../shared/ui/PosV2Shell";
@@ -62,6 +63,23 @@ const wrapBannerText = (value: string, lineLength: number, maxLines: number) => 
   return lines;
 };
 
+type AddonOffer = {code: string; label: string; amount: number};
+type AddonCharge = {billingMode?:"manual"|"prepaid"|"automatic";amount: number; periodEnd: number | null; status: string; cancelAtPeriodEnd: boolean};
+type MonthlyBilling = {
+  offers: AddonOffer[];
+  previousPlan?:string;
+  manualGrants?:{code:string;units:number|null;expiresAt:string|null}[];
+  subscriptions: (AddonCharge & {code: string; units: number; choices: AddonOffer[];
+    next: {code: string; units: number; amount: number; effectiveAt: number | null} | null})[];
+  billing: {plan: string; planAmount: number | null; planExpiresAt: string | null; recurringSubtotal: number;
+    crm: AddonCharge | null; usage: {employees: number; additionalBranches: number}} | null;
+};
+
+const addonPrice = (cents: number) => (cents / 100).toLocaleString("es-MX", {style: "currency", currency: "MXN"});
+const addonDate = (timestamp: number) => new Date(timestamp * 1000).toLocaleDateString("es-MX", {timeZone: "America/Mexico_City"});
+const addonLabel = (code: string) => code.startsWith("EMPLOYEES") ? "Empleados adicionales"
+  : code === "BRANCH_1" ? "Sucursales adicionales" : "Alertas diarias";
+
 export const PosV2MorePage = () => {
   const navigate = useNavigate();
   const [query, setQuery] = useState("");
@@ -117,6 +135,79 @@ export const PosV2MorePage = () => {
     return factory.createPosProductsService();
   }, []);
   const sessionSnapshot = useMemo(() => readPosSessionSnapshot(), []);
+  const crmVisible = usePosCrmVisibility(sessionSnapshot.businessId, sessionSnapshot.token);
+  const addonApi = useMemo(() => new FetchHttpClient(API_BASE_URL), []);
+  const [addons, setAddons] = useState<MonthlyBilling | null>(null);
+  const [addonBusy, setAddonBusy] = useState(false);
+  const [addonError, setAddonError] = useState("");
+  const [addonMessage, setAddonMessage] = useState("");
+  const [branchQuantity, setBranchQuantity] = useState(1);
+  const [selectedEmployeePack, setSelectedEmployeePack] = useState("");
+  useEffect(() => {
+    const token = sessionSnapshot.token;
+    if (!token || resolvePosOperatorRole(token) !== "admin") return;
+    let mounted = true;
+    void addonApi.request<MonthlyBilling>({method: "GET", path: "stripe/pos/addons/recurring", token})
+      .then(result => {
+        if (!mounted) return;
+        setAddons(result);
+        const branches = result.subscriptions.find(item => item.code === "BRANCH_1");
+        if (branches) setBranchQuantity(branches.next?.units ?? branches.units);
+      })
+      .catch(() => { if (mounted) setAddons(null); });
+    return () => { mounted = false; };
+  }, [addonApi, sessionSnapshot.token]);
+
+  const openAddon = async (code: string, action: "checkout" | "portal" | "change",
+    quantity?: number, change?: {amount: number; units: number; currentUnits: number}) => {
+    const billing = addons?.billing;
+    if (billing && action === "checkout") {
+      const offer = addons?.offers.find(item => item.code === code);
+      if (offer) {
+        const amount = offer.amount * (quantity ?? 1);
+        const total = billing.planAmount === null ? null : billing.planAmount + billing.recurringSubtotal + amount;
+        if (!window.confirm(`Complemento: ${addonPrice(amount)} MXN/mes.${total === null ? "" : ` Total mensual estimado: ${addonPrice(total)} MXN.`}`)) return;
+      }
+    }
+    if (change) {
+      const detail = change.units > change.currentUnits
+        ? "Stripe cobrará hoy el ajuste proporcional. El cupo se habilitará al confirmar el pago."
+        : "El cupo actual y su cobro se mantienen hasta tu próxima renovación.";
+      const current = addons?.subscriptions.find(item =>
+        code.startsWith("EMPLOYEES") ? item.code.startsWith("EMPLOYEES") : item.code === code);
+      const total = billing && current && billing.planAmount !== null
+        ? billing.planAmount + billing.recurringSubtotal - current.amount + change.amount : null;
+      if (!window.confirm(`Nuevo importe del complemento: ${addonPrice(change.amount)} MXN/mes.${total === null ? "" : ` Total mensual estimado: ${addonPrice(total)} MXN.`} ${detail}`)) return;
+    }
+    setAddonBusy(true);
+    setAddonError("");
+    setAddonMessage("");
+    try {
+      const result = await addonApi.request<{url?: string; effectiveAt?: number}>({
+        method: "POST", path: `stripe/pos/addons/recurring/${action}`,
+        token: sessionSnapshot.token, body: {code, quantity},
+      });
+      if (action === "change") {
+        setAddonMessage(result.effectiveAt
+          ? `Cambio programado para el ${addonDate(result.effectiveAt)}.`
+          : "Cambio enviado. El cupo se actualiza al confirmar el pago.");
+        setAddons(await addonApi.request<MonthlyBilling>({
+          method: "GET", path: "stripe/pos/addons/recurring", token: sessionSnapshot.token,
+        }));
+        setSelectedEmployeePack("");
+        return;
+      }
+      const url = new URL(result.url ?? "");
+      if (url.protocol !== "https:" || !["checkout.stripe.com", "billing.stripe.com"].includes(url.hostname)) {
+        throw new Error("Stripe devolvió una dirección de pago inválida.");
+      }
+      window.location.assign(url.href);
+    } catch (error) {
+      setAddonError(error instanceof Error ? error.message : "No se pudo abrir Stripe.");
+    } finally {
+      setAddonBusy(false);
+    }
+  };
   const branchApi = useMemo(
     () => new PosBranchApi(new FetchHttpClient(API_BASE_URL)),
     [],
@@ -159,10 +250,10 @@ export const PosV2MorePage = () => {
     2,
   );
   const allItems = useMemo(() => {
-    const items = MORE_MODULE_SECTIONS.flatMap((section) => section.items);
+    const items = MORE_MODULE_SECTIONS.flatMap((section) => section.items).filter(item => item.id !== "crm" || crmVisible === true);
     if (!isSalesOnlyUser) return items;
     return items.filter((item) => allowedModuleIdsForSalesOnly.has(item.id));
-  }, [allowedModuleIdsForSalesOnly, isSalesOnlyUser]);
+  }, [allowedModuleIdsForSalesOnly, isSalesOnlyUser, crmVisible]);
   const isReadyModule = (item: MoreModuleLink): boolean =>
     item.status === "available" ||
     (item.actionType === "beta-action" &&
@@ -172,6 +263,7 @@ export const PosV2MorePage = () => {
   const filteredSections = useMemo(() => {
     return MORE_MODULE_SECTIONS.map((section) => {
       const items = section.items.filter((item) => {
+        if (item.id === "crm" && crmVisible !== true) return false;
         if (item.id === "intelligence" && resolvePosOperatorRole(sessionSnapshot.token) !== "admin") return false;
         const matchesRole =
           !isSalesOnlyUser || allowedModuleIdsForSalesOnly.has(item.id);
@@ -189,6 +281,7 @@ export const PosV2MorePage = () => {
       return { ...section, items };
     }).filter((section) => section.items.length > 0);
   }, [
+    crmVisible,
     allowedModuleIdsForSalesOnly,
     isSalesOnlyUser,
     normalizedQuery,
@@ -614,6 +707,70 @@ export const PosV2MorePage = () => {
             ))}
           </select>
         </section>
+        {addons?.billing && (
+          <section className="pos-v2-more__plan-banner" aria-label="Resumen mensual del plan">
+            <div>
+              <h3>Mi plan y complementos</h3>
+              <p>Plan {addons.billing.plan} · {addons.billing.planAmount === null ? "Sin precio mensual de referencia" : `${addonPrice(addons.billing.planAmount)} MXN de referencia`}</p>
+              {addons.billing.planExpiresAt && <p>Vigencia del plan base: {addons.billing.planExpiresAt.slice(0, 10)}</p>}
+              <p>En uso: {addons.billing.usage.employees} empleados y {addons.billing.usage.additionalBranches} sucursales adicionales a la matriz.</p>
+              <p>Suscripciones automáticas anteriores: <strong>{addonPrice(addons.billing.recurringSubtotal)} MXN/mes</strong></p>
+              {addons.billing.planAmount !== null && <p>
+                Plan base y complementos: <strong>{addonPrice(addons.billing.planAmount + addons.billing.recurringSubtotal)} MXN/mes estimados</strong>
+              </p>}
+              <small>El plan se paga cuando tú decidas. Al vencer vuelves a Gratuito; al pagar podrás ajustar tu selección anterior.</small>
+              {addons.billing.crm && <p>
+                CRM · {addonPrice(addons.billing.crm.amount)} MXN/mes
+                {addons.billing.crm.periodEnd && ` · ${addons.billing.crm.cancelAtPeriodEnd ? "Termina" : "Renueva"} el ${addonDate(addons.billing.crm.periodEnd)}`}
+              </p>}
+              <p role="note">Eliminar empleados o sucursales no reembolsa el periodo ya pagado. No se generan cobros nuevos por eliminar o conservar registros.</p>
+              <button type="button" className="pos-v2-more__plan-primary" onClick={openChangePlanModal}>Revisar plan y complementos antes de pagar</button>
+              {addons.manualGrants?.map(grant=><p key={grant.code}>{grant.code==='POS_EXTRA_EMPLOYEES'?`${grant.units} empleados adicionales`:grant.code==='POS_EXTRA_BRANCHES'?`${grant.units} sucursales adicionales`:grant.code==='POS_DAILY_ALERTS'?'Alertas diarias':grant.code==='POS_PURCHASED_CFDI'?`${grant.units} CFDI`:grant.code==='POS_EXTRA_CATALOG_AI'?`${grant.units} productos IA`:'CRM'} · Activado por administración{grant.expiresAt?' · Vigente hasta '+grant.expiresAt.slice(0,10):' · Sin vencimiento'}</p>)}
+              {addons.subscriptions.map(item => {
+                const branches = item.code === "BRANCH_1";
+                const employees = item.code.startsWith("EMPLOYEES");
+                const selected = item.choices.find(choice => choice.code === (branches ? item.code : selectedEmployeePack));
+                const units = branches ? branchQuantity : Number(selectedEmployeePack.split("_")[1]);
+                const amount = selected ? selected.amount * (branches ? units : 1) : 0;
+                const pending = Boolean(item.next);
+                return (
+                  <div key={item.code}>
+                    <h4>{addonLabel(item.code)}{branches || employees ? ` · ${item.units} contratados` : ""}</h4>
+                    <p>{item.billingMode==='manual'?'Activado por administración':item.billingMode==='prepaid'?'Periodo pagado':addonPrice(item.amount)+' MXN/mes'}
+                      {item.periodEnd && ` · ${item.billingMode==='prepaid'||item.billingMode==='manual'?"Vigente hasta":"Renueva"} el ${addonDate(item.periodEnd)}`}
+                    </p>
+                    {item.next && <p>
+                      Cambio a {item.next.units} · {addonPrice(item.next.amount)} MXN/mes
+                      {item.next.effectiveAt ? ` a partir del ${addonDate(item.next.effectiveAt)}` : " al confirmar el ajuste"}
+                    </p>}
+                    {(branches || employees) && !pending && !item.cancelAtPeriodEnd && item.status === "active" && <>
+                      {branches ? <label>
+                        Nuevo cupo de sucursales
+                        <input type="number" min={1} max={100} value={branchQuantity}
+                          onChange={event => setBranchQuantity(Number(event.target.value))} />
+                      </label> : <label>
+                        Nuevo paquete de empleados
+                        <select value={selectedEmployeePack} onChange={event => setSelectedEmployeePack(event.target.value)}>
+                          <option value="">Selecciona el paquete</option>
+                          {item.choices.filter(choice => choice.code !== item.code).map(choice =>
+                            <option value={choice.code} key={choice.code}>{choice.label} · {addonPrice(choice.amount)} MXN/mes</option>)}
+                        </select>
+                      </label>}
+                      <button type="button" className="pos-v2-more__plan-primary"
+                        disabled={addonBusy || !selected || !Number.isInteger(units) || units < 1 || units > 100 || units === item.units}
+                        onClick={() => selected && void openAddon(selected.code, "change", branches ? units : undefined, {amount, units, currentUnits: item.units})}>
+                        Cambiar a {addonPrice(amount)} MXN/mes
+                      </button>
+                    </>}
+                    <>{(!item.billingMode||item.billingMode==='automatic')&&<button className="pos-v2-more__plan-primary" type="button" disabled={addonBusy} onClick={()=>void openAddon(item.code,"portal")}>Administrar suscripción anterior en Stripe</button>}</>
+                  </div>
+                );
+              })}
+              {addonError && <p role="alert">{addonError}</p>}
+              {addonMessage && <p role="status">{addonMessage}</p>}
+            </div>
+          </section>
+        )}
         <section className="pos-v2-more__plan-banner" aria-label="Cambiar plan">
           <div>
             <span className="pos-v2-more__plan-eyebrow">Plan actual</span><h3>Cambiar de plan</h3>
