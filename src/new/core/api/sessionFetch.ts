@@ -39,7 +39,14 @@ const createTransport = (customer: boolean) => {
 };
 const pos = createTransport(false);
 const customer = createTransport(true);
-export const authenticatedFetch = pos.authenticatedFetch;
+export const authenticatedFetch = (input: string, init: RequestInit = {}) => {
+  const headers = new Headers(init.headers);
+  const url = new URL(input);
+  if (apiBaseUrl() && url.href.startsWith(apiBaseUrl()) && /\/business\/\d+\/?$/.test(url.pathname)) {
+    headers.set('X-POS-Plan-Version', '2');
+  }
+  return pos.authenticatedFetch(input, {...init, headers});
+};
 export const ensurePosSession = pos.ensureSession;
 // Coupon administration may explicitly supply the POS identity on the same page.
 export const customerFetch = (input: string, init: RequestInit = {}) => {
