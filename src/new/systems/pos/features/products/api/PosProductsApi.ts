@@ -697,7 +697,7 @@ export class PosProductsApi implements IProductsRepository {
     // Enviar Stock al endpoint del producto provocaría que el backend rechace la
     // actualización (y, peor aún, conceptualmente duplicaría inventario).
     if (!usesVariants) {
-      body.Stock = payload.stock ?? 0;
+      body.Stock = payload.stock === undefined ? 0 : payload.stock;
       body.MinStock = payload.minStock ?? null;
       body.OptStock = payload.optStock ?? null;
     }
@@ -736,7 +736,7 @@ export class PosProductsApi implements IProductsRepository {
       Price: variant.price ?? null,
       PromotionPrice: variant.promotionPrice ?? null,
       CostPerItem: variant.costPerItem ?? null,
-      Stock: variant.stock ?? 0,
+      Stock: variant.stock === undefined ? 0 : variant.stock,
       ExpDate: variant.expDate ?? null,
       MinStock: variant.minStock ?? null,
       OptStock: variant.optStock ?? null,
