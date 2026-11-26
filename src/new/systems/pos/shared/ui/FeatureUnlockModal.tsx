@@ -1,3 +1,6 @@
+import {useNavigate} from 'react-router-dom';
+import {POS_V2_PATHS} from '../../routing/PosV2Paths';
+import {clearPosSessionSnapshot} from '../config/posSession';
 import {OFFICIAL_MONTHLY_PRICES,PLAN_DETAILS,type OfficialPaidPlan} from '../config/posPlanDetails';
 export {OFFICIAL_MONTHLY_PRICES} from '../config/posPlanDetails';
 import {authenticatedFetch as fetch} from '../../../../core/api/sessionFetch';
@@ -179,8 +182,8 @@ const resolveCheckoutContext = () => {
   const pendingUpgrade = readPendingPosUpgradeContext();
   const storedUser = getStoredObject("user") ?? getStoredObject("User");
   const storedBusiness = getStoredObject("business") ?? getStoredObject("Business");
-  const businessId = Number(pendingUpgrade?.businessId ?? storedUser?.Business_Id ?? storedUser?.businessId ?? storedBusiness?.Id ?? storedBusiness?.id ?? session.businessId);
-  const token = String(pendingUpgrade?.token ?? storedUser?.Token ?? storedUser?.token ?? session.token ?? "").trim();
+  const businessId = Number(pendingUpgrade?.businessId ?? (session.businessId || storedUser?.Business_Id || storedUser?.businessId || storedBusiness?.Id || storedBusiness?.id));
+  const token = String(pendingUpgrade?.token ?? (session.token || storedUser?.Token || storedUser?.token || "")).trim();
 
   const context = {
     businessId: Number.isFinite(businessId) ? businessId : 0,
@@ -257,6 +260,8 @@ export const FeatureUnlockModal = ({
 }: UnlockModalProps) => {
   const [addonOptions,setAddonOptions]=useState<{code:string;capability:string;label:string;amount:number}[]>([]);
   const [chosenAddons,setChosenAddons]=useState<{code:string;quantity:number}[]>([]);
+  const navigate = useNavigate();
+  const [needsLogin, setNeedsLogin] = useState(false);
   const [step, setStep] = useState<CheckoutStep>(initialPlan ? "payment" : "plans");
   const [selectedSelection, setSelectedSelection] = useState<PaymentSelection | null>(null);
   const [payment, setPayment] = useState<PaymentIntentResponse | null>(null);
@@ -276,6 +281,7 @@ export const FeatureUnlockModal = ({
       setElements(null);
       setLoading(false);
       setError("");
+      setNeedsLogin(false);
       autoCheckoutKeyRef.current = "";
     }
   }, [initialPlan, open]);
@@ -375,7 +381,8 @@ export const FeatureUnlockModal = ({
     const context = resolveCheckoutContext();
     if (!context.businessId || !context.token) {
       warnUnlockCheckout("payment:create:missing-context", { businessId: context.businessId, hasToken: Boolean(context.token) });
-      setError("No encontramos una sesión activa del negocio para crear el pago.");
+      setNeedsLogin(true);
+      setError("Inicia sesión para autorizar el pago de tu negocio.");
       setStep("error");
       return;
     }
@@ -385,7 +392,7 @@ export const FeatureUnlockModal = ({
     try {
       if(selection.kind==='PLAN'&&!confirmed) {
         const response=await fetch(new URL('stripe/pos/addons/recurring?plan='+selection.plan,getApiBaseUrl()).toString(),{headers:{Authorization:`Bearer ${context.token}`}});
-        if(!response.ok)throw new Error('No se pudo recuperar tu selección anterior. Intenta otra vez.');
+        if(!response.ok){if(response.status===401)setNeedsLogin(true);throw new Error(response.status===401?'Tu sesión venció. Inicia sesión para continuar.':'No se pudo recuperar tu selección anterior. Intenta otra vez.');}
         const summary=await response.json();
         setAddonOptions(summary.offers||[]);
         const previous=summary.previousAddons??(summary.manualGrants||[]).flatMap((grant:{code:string;units:number})=>grant.code==='POS_EXTRA_BRANCHES'?[{code:'BRANCH_1',quantity:grant.units||1}]:grant.code==='POS_EXTRA_EMPLOYEES'?[{code:'EMPLOYEES_'+(grant.units<=1?1:grant.units<=3?3:10),quantity:1}]:grant.code==='POS_DAILY_ALERTS'?[{code:'DAILY_ALERTS',quantity:1}]:[]);
@@ -416,6 +423,7 @@ export const FeatureUnlockModal = ({
         throw new Error("El importe del bloque cambió. Actualiza la página antes de volver a intentarlo.");
       }
       if (!response.ok || !data?.publishableKey || !data.clientSecret) {
+        if (response.status === 401) setNeedsLogin(true);
         warnUnlockCheckout("payment:create:invalid-response", {
           ok: response.ok,
           status: response.status,
@@ -648,7 +656,7 @@ export const FeatureUnlockModal = ({
           <p className="pos-feature-unlock__error">{error || "Ocurrió un error inesperado. Intenta nuevamente."}</p>
           <div className="pos-feature-unlock__actions">
             <button type="button" className="is-secondary" onClick={() => setStep("plans")}>{catalogAiPacks || cfdiPacks ? "Volver a paquetes" : "Elegir otro plan"}</button>
-            <button type="button" onClick={startUpgrade}>{buttonText}</button>
+            <button type="button" onClick={needsLogin ? () => {clearPendingPosUpgradeContext();clearPosSessionSnapshot();navigate(POS_V2_PATHS.login,{replace:true});} : startUpgrade}>{needsLogin ? "Iniciar sesión" : buttonText}</button>
           </div>
         </>
       );

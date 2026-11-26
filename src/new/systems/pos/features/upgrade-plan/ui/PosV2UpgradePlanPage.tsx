@@ -1,3 +1,5 @@
+import {Navigate} from 'react-router-dom';
+import {readPosSessionSnapshot, readPendingPosUpgradeContext} from '../../../shared/config/posSession';
 import { FeatureUnlockModal } from "../../../shared/ui/FeatureUnlockModal";
 import { useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -17,8 +19,10 @@ export const PosV2UpgradePlanPage = () => {
 
   const safeFrom = useMemo(() => from.startsWith("/") && !from.startsWith("//") ? from : POS_V2_PATHS.more, [from]);
 
-  return (
-    <PosV2Shell title="Actualizar plan" subtitle="Desbloquea funciones premium para tu negocio.">
+  const session = readPosSessionSnapshot();
+  if (!session.token && !readPendingPosUpgradeContext()) return <Navigate to={POS_V2_PATHS.login} replace />;
+  const content = (
+    <>
       <section className="pos-v2-upgrade-plan">
         <article className="pos-v2-upgrade-plan__card">
           <span>Plan requerido</span>
@@ -32,6 +36,7 @@ export const PosV2UpgradePlanPage = () => {
         </article>
       </section>
       <FeatureUnlockModal minimumPlan={requiredPlan} open={checkoutOpen} onClose={() => setCheckoutOpen(false)} title={`Activa ${requiredPlan === "GRATUITO" ? "tu plan" : requiredPlan}`} message="Elige tu plan y completa el pago para activar las funciones de tu negocio." onPaymentSuccess={() => { setCheckoutOpen(false); navigate(safeFrom); }} />
-    </PosV2Shell>
+    </>
   );
+  return session.token ? <PosV2Shell title="Actualizar plan" subtitle="Desbloquea funciones premium para tu negocio.">{content}</PosV2Shell> : <main className="pos-v2-upgrade-plan">{content}</main>;
 };

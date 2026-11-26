@@ -2122,3 +2122,5 @@ button.is-active{
 .pos-v2-sales-home .pos-v2-sales-home__continue:disabled,:root[data-theme="dark"] .pos-v2-sales-home__continue:disabled,:root[data-theme="dark"] .pos-v2-sales-home__complete:disabled{background:var(--pos-v2-surface-alt);color:var(--pos-v2-text-muted);border:1px solid var(--pos-v2-border);opacity:1;filter:none;cursor:not-allowed}
 
 .pos-v2-sales-home__variant-option input:focus-visible + button { outline: 2px solid var(--pos-v2-accent); outline-offset: 1px; }
+
+.pos-v2-sales-home__original-price { color: #64748b; font-size: .78rem; }

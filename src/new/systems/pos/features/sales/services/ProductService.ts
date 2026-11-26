@@ -31,6 +31,7 @@ export class ProductService {
           product.forSale,
           product.available,
           product.variants,
+          product.promotionPrice,
         );
       });
   }

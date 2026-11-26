@@ -58,6 +58,7 @@ type SaleItemVm = {
   id: number;
   name: string;
   price: number;
+  originalPrice?: number;
   stock: number | null;
   categoryId: number | null;
   category: string;
@@ -432,6 +433,7 @@ export const PosV2SalesHomePage = () => {
     id: number;
     name: string;
     price: number;
+    promotionPrice?: number | null;
     stock: number | null;
     categoryId: number | null;
     categoryName: string | null;
@@ -450,7 +452,8 @@ export const PosV2SalesHomePage = () => {
   }): SaleItemVm => ({
     id: item.id,
     name: item.name,
-    price: item.price,
+    price: item.promotionPrice ?? item.price,
+    originalPrice: item.promotionPrice ? item.price : undefined,
     stock: item.stock,
     categoryId: item.categoryId,
     category: item.categoryName?.trim() || "General",
@@ -2419,6 +2422,7 @@ export const PosV2SalesHomePage = () => {
                     ) : null}
                   </div>
                   <div className="pos-v2-sales-home__product-side">
+                    {product.originalPrice !== undefined ? <del className="pos-v2-sales-home__original-price">{posMoneyFormatter.format(product.originalPrice)}</del> : null}
                     <strong>{posMoneyFormatter.format(product.price)}</strong>
                     <button
                       type="button"

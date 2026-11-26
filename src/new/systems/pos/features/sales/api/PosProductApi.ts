@@ -24,7 +24,8 @@ type ProductResponse = {
   Category_Name?: string | null;
   Name: string;
   Color?: string | null;
-  Price?: number | null;
+  Price?: number | string | null;
+  PromotionPrice?: number | string | null;
   Stock?: number | null;
   Image?: string | null;
   Images?: string[] | null;
@@ -170,7 +171,8 @@ export class PosProductApi implements IProductRepository {
 
   private toDomain(item: ProductResponse): Product {
     const stock = typeof item.Stock === "number" && Number.isFinite(item.Stock) ? item.Stock : null;
-    const price = typeof item.Price === "number" && Number.isFinite(item.Price) ? item.Price : 0;
+    const price = Number.isFinite(Number(item.Price)) ? Number(item.Price) : 0;
+    const promotion = item.PromotionPrice == null ? null : Number(item.PromotionPrice);
 
     return new Product(
       item.Id,
@@ -186,6 +188,7 @@ export class PosProductApi implements IProductRepository {
       Number(item.ForSale ?? 1) === 1,
       Number(item.Available ?? 1) === 1,
       Array.isArray(item.Variants) ? item.Variants.filter(isVariantAvailableForSale).map((variant) => this.toDomainVariant(variant)) : [],
+      promotion !== null && Number.isFinite(promotion) && promotion > 0 && promotion < price ? promotion : null,
     );
   }
 

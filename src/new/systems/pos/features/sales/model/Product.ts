@@ -23,6 +23,7 @@ export class Product {
     public readonly forSale: boolean,
     public readonly available: boolean,
     public readonly variants: SalesProductVariant[] = [],
+    public readonly promotionPrice: number | null = null,
   ) {}
 
   hasStock(): boolean {

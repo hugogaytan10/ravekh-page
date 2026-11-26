@@ -77,6 +77,6 @@ export const POS_V2_APP_ROUTES = (
     <Route path={POS_V2_PATHS.visits} element={withAuth(<PosV2LoyaltyPage />)} />
     <Route path={POS_V2_PATHS.catalog} element={withAuth(<PosV2FeatureRouteGuard feature="catalog"><PosV2CatalogPage /></PosV2FeatureRouteGuard>)} />
     <Route path={POS_V2_PATHS.health} element={withAuth(<PosHealthV2Screen />)} />
-    <Route path={POS_V2_PATHS.upgradePlan} element={withAuth(<PosV2UpgradePlanPage />)} />
+    <Route path={POS_V2_PATHS.upgradePlan} element={<PosV2UpgradePlanPage />} />
   </>
 );

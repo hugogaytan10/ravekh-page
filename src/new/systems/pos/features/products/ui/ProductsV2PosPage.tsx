@@ -2640,11 +2640,11 @@ export const ProductsV2PosPage = () => {
                       </div>
 
                       <div className="pos-v2-products__card-meta">
-                        <strong>
+                        {product.promotionPrice != null && product.promotionPrice > 0 && product.price != null && product.promotionPrice < product.price ? <span><del>{posMoneyFormatter.format(product.price)}</del> <strong>{posMoneyFormatter.format(product.promotionPrice)}</strong></span> : <strong>
                           {product.price == null
                             ? "--"
                             : posMoneyFormatter.format(product.price)}
-                        </strong>
+                        </strong>}
                         <small>Stock: {product.stock ?? "--"}</small>
                       </div>
                       {product.wholesalePrices.length > 0 ? (

@@ -5,6 +5,7 @@ export type LoginSessionLimitPayload = {
   role: string;
   businessId?: number;
   employeeId?: number;
+  planCheckoutToken?: string;
 };
 
 export type LoginFailureState = {
@@ -23,6 +24,7 @@ export const processLoginFailure = (cause: unknown): LoginFailureState => {
     return {
       sessionLimit: {
         code: "PLAN_DEVICE_LIMIT_EXCEEDED",
+        planCheckoutToken: typeof payload.planCheckoutToken === "string" ? payload.planCheckoutToken : undefined,
         error: typeof payload.error === "string" ? payload.error : undefined,
         plan: String(payload.plan ?? ""),
         role: String(payload.role ?? ""),
@@ -42,7 +44,7 @@ export const processLoginFailure = (cause: unknown): LoginFailureState => {
 };
 
 export const canIncreaseSessionLimit = (payload: LoginSessionLimitPayload): boolean =>
-  payload.plan.trim().toUpperCase() !== "MAX";
+  payload.role.trim().toUpperCase() === "ADMINISTRADOR" && payload.plan.trim().toUpperCase() !== "MAX";
 
 export const getSessionClosurePath = (payload: LoginSessionLimitPayload): string => {
   const isAdministrator = payload.role.trim().toUpperCase() === "ADMINISTRADOR";

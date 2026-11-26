@@ -1,3 +1,4 @@
+import {ensurePosSession} from '../../../../../core/api/sessionFetch';
 import { usePosTheme } from "../../../shared/ui/usePosTheme";
 import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
@@ -13,6 +14,8 @@ import { getBusinessLogoDimensionWarning, uploadBusinessLogoToCloudinary } from 
 import { getPosApiBaseUrl } from "../../../shared/config/posEnv";
 import {
   clearPendingPosUpgradeContext,
+  storePendingPosUpgradeContext,
+  clearPosSessionSnapshot,
   POS_SESSION_STORAGE_KEYS,
 } from "../../../shared/config/posSession";
 import { persistPosSession } from "../../../shared/config/posSessionRuntime";
@@ -118,8 +121,17 @@ export const PosV2LoginPage = () => {
   useEffect(() => {
     const existingToken = window.localStorage.getItem(TOKEN_KEY);
     if (existingToken) {
-      navigate(POS_V2_PATHS.sales, { replace: true });
-      return;
+      let active = true;
+      void ensurePosSession().then(async session => {
+        if (!session || !active) return;
+        await new FetchHttpClient(API_BASE_URL).request({method:'GET',path:'feature-flags',token:session.Token,skipBranchHeader:true});
+        if (active) navigate(POS_V2_PATHS.sales, {replace:true});
+      }).catch((cause: {status?: number}) => {
+        if (!active) return;
+        if (cause.status === 401 || cause.status === 403) clearPosSessionSnapshot();
+        // A connection failure must still let the user enter credentials.
+      });
+      return () => {active = false;};
     }
 
     const searchParams = new URLSearchParams(location.search);
@@ -287,6 +299,11 @@ export const PosV2LoginPage = () => {
       currentPlan: sessionLimit.plan,
       from: POS_V2_PATHS.login,
     });
+    if (!sessionLimit.planCheckoutToken) {
+      setSessionLimitActionError('No se pudo autorizar el pago. Vuelve a iniciar sesión o cierra las sesiones anteriores.');
+      return;
+    }
+    storePendingPosUpgradeContext({token:sessionLimit.planCheckoutToken,businessId});
     setSessionLimit(null);
     navigate(`${POS_V2_PATHS.upgradePlan}?${params.toString()}`);
   };
