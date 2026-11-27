@@ -24,20 +24,14 @@ const resolveCatalogBaseUrl = (): string => {
 
   if (!configured) {
     if (typeof window !== "undefined") {
-      return `${window.location.origin}/v2/catalogo`;
+      return `${window.location.origin}/catalogo`;
     }
 
-    return "/v2/catalogo";
+    return "/catalogo";
   }
 
-  // Canonicalizamos la ruta vieja /catalogo a la ruta moderna /v2/catalogo.
-  // Se conserva host/dominio configurado.
-  if (
-    /\/catalogo$/i.test(configured) &&
-    !/\/v2\/catalogo$/i.test(configured)
-  ) {
-    return configured.replace(/\/catalogo$/i, "/v2/catalogo");
-  }
+  // Se conserva host/dominio configurado y se retira el prefijo anterior.
+  if (/\/v2\/catalogo$/i.test(configured)) return configured.replace(/\/v2\/catalogo$/i, "/catalogo");
 
   return configured;
 };

@@ -122,7 +122,7 @@ export const CatalogStorefrontPage = () => {
   const catalogDescription = store?.name
     ? `Explora productos y realiza pedidos en el catálogo digital de ${store.name}.`
     : "Explora productos, revisa detalles y realiza pedidos desde el catálogo digital de Ravekh.";
-  const catalogUrl = typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}` : `/v2/catalogo/${businessId}`;
+  const catalogUrl = typeof window !== "undefined" ? `${window.location.origin}${window.location.pathname}` : `/catalogo/${businessId}`;
   const catalogImage = buildAbsoluteCatalogUrl(store?.logo);
   const activeCategoryIds = useMemo(
     () => selectedCategoryIds.length > 0

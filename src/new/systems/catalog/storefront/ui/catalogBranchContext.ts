@@ -22,7 +22,7 @@ const normalizeSlug = (value?: string | null) => {
 export const buildCatalogPath = (businessId: string | number, branchSlug?: string | null) => {
   const normalizedBusinessId = String(businessId ?? "").trim();
   const slug = normalizeSlug(branchSlug);
-  return slug ? `/v2/catalogo/${normalizedBusinessId}/${encodeURIComponent(slug)}` : `/v2/catalogo/${normalizedBusinessId}`;
+  return slug ? `/catalogo/${normalizedBusinessId}/${encodeURIComponent(slug)}` : `/catalogo/${normalizedBusinessId}`;
 };
 
 export const getCatalogCartKey = (businessId: string | number, branchSlug?: string | null) => {

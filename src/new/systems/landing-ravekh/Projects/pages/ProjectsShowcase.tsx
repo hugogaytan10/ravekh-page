@@ -16,7 +16,7 @@ const projects: ProjectItem[] = [
       "Punto de venta moderno para ventas, inventario, caja, reportes, finanzas y operación diaria.",
     status: "Terminado",
     stack: ["React", "TypeScript", "Vite"],
-    link: "/v2/login-punto-venta",
+    link: "/login-punto-venta",
   },
   {
     title: "Ravekh Lealtad",
@@ -32,7 +32,7 @@ const projects: ProjectItem[] = [
       "Catálogo online con productos, carrito, detalle y flujo de pedido para negocios locales.",
     status: "Terminado",
     stack: ["Storefront", "Carrito", "Pedidos"],
-    link: "/v2/catalogo/1",
+    link: "/catalogo/1",
   },
   {
     title: "Landing Ravekh",

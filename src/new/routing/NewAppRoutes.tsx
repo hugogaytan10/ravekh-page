@@ -19,20 +19,15 @@ import { RavekhAccesoriosPage } from "../systems/ravekh-segment/pages/RavekhAcce
 import { RavekhComidaPage } from "../systems/ravekh-segment/pages/RavekhComidaPage";
 import { CrmLandingPage } from "../systems/crm-ravekh";
 import { TermsPage } from "../systems/legal/pages/TermsPage";
-const LegacyCatalogRedirect = () => {
-  const { idBusiness } = useParams<{ idBusiness: string }>();
-  return <Navigate to={`/v2/catalogo/${idBusiness ?? ""}`} replace />;
-};
-
-const V2ProductRedirect = () => {
-  const { productId, phone } = useParams<{ productId: string; phone: string }>();
-  return <Navigate to={`/catalogo/producto/${productId ?? ""}/${phone ?? ""}`} replace />;
+const V2CatalogRedirect = () => {
+  const location = useLocation();
+  return <Navigate to={`${location.pathname.replace(/^\/v2/, "")}${location.search}${location.hash}`} replace />;
 };
 
 const LegacyCategoryRedirect = () => {
   const { idCategoria } = useParams<{ idCategoria: string }>();
   const search = idCategoria ? `?category=${encodeURIComponent(idCategoria)}` : "";
-  return <Navigate to={`/v2/catalogo/0${search}`} replace />;
+  return <Navigate to={`/catalogo/0${search}`} replace />;
 };
 
 const LEGACY_LOYALTY_PATH_SEGMENTS: Array<[string, string]> = [
@@ -129,7 +124,7 @@ const RouteSeo = () => {
     }
 
 
-    if (pathname.startsWith("/v2/catalogo") || pathname.startsWith("/catalogo")) {
+    if (pathname.startsWith("/catalogo")) {
       return {
         title: "Catálogo digital | Ravekh",
         description: "Explora productos, revisa detalles y realiza pedidos desde el catálogo digital de Ravekh.",
@@ -194,13 +189,11 @@ export const NewAppRoutes = () => {
         <Route path="/RavekhAbarrotes" element={<RavekhAbarrotesPage />} />
         <Route path="/RavekhAccesorios" element={<RavekhAccesoriosPage />} />
         <Route path="/RavekhComida" element={<RavekhComidaPage />} />
-      {/* Catálogo v2 moderno y desacoplado */}
-        <Route path="/v2/catalogo/:Id/:branchSlug" element={<CatalogStorefrontPage />} />
-        <Route path="/v2/catalogo/:Id" element={<CatalogStorefrontPage />} />
+      {/* Catálogo moderno y desacoplado */}
         <Route path="/catalogo/:Id/:branchSlug" element={<CatalogStorefrontPage />} />
-        <Route path="/v2/catalogo/:Id/:branchSlug/categoria/:categoryId" element={<CatalogStorefrontPage />} />
         <Route path="/catalogo/:Id/:branchSlug/categoria/:categoryId" element={<CatalogStorefrontPage />} />
-        <Route path="/v2/catalogo/:Id/categoria/:categoryId" element={<CatalogStorefrontPage />} />
+        <Route path="/catalogo/:Id/categoria/:categoryId" element={<CatalogStorefrontPage />} />
+        <Route path="/catalogo/:Id" element={<CatalogStorefrontPage />} />
         <Route path="/catalogo/producto/:productId/:phone" element={<CatalogProductDetailPage />} />
         <Route path="/catalogo/pedido" element={<CatalogCartPage />} />
         <Route path="/catalogo/pedido-info" element={<CatalogOrderInfoPage />} />
@@ -210,10 +203,7 @@ export const NewAppRoutes = () => {
         <Route path="/terminos/ravekh-crm" element={<TermsPage />} />
 
       {/* Compatibilidad de URLs antiguas sin dependencias a módulos legacy */}
-        <Route path="/catalogo/:idBusiness" element={<LegacyCatalogRedirect />} />
-        <Route path="/v2/catalogo/producto/:productId/:phone" element={<V2ProductRedirect />} />
-        <Route path="/v2/catalogo/pedido" element={<Navigate to="/catalogo/pedido" replace />} />
-        <Route path="/v2/catalogo/pedido-info" element={<Navigate to="/catalogo/pedido-info" replace />} />
+        <Route path="/v2/catalogo/*" element={<V2CatalogRedirect />} />
         <Route path="/categoria/:idCategoria" element={<LegacyCategoryRedirect />} />
         <Route path="/v2/loyalty/customer/*" element={<LoyaltyLegacyRedirect />} />
         <Route path="/v2/loyalty/clone/*" element={<LoyaltyLegacyRedirect />} />
